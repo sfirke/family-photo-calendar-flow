@@ -24,14 +24,21 @@ const Index = () => {
         try {
           console.log('Loading images from Google Photos album:', publicAlbumUrl);
           const albumImages = await getImagesFromAlbum(publicAlbumUrl);
-          setBackgroundImages(albumImages);
-          setCurrentBg(0); // Reset to first image when album changes
+          if (albumImages.length > 0) {
+            setBackgroundImages(albumImages);
+            setCurrentBg(0); // Reset to first image when album changes
+            console.log(`Loaded ${albumImages.length} images from album`);
+          } else {
+            console.log('No images found in album, using defaults');
+            setBackgroundImages(getDefaultBackgroundImages());
+          }
         } catch (error) {
           console.error('Failed to load album images:', error);
           // Fall back to default images
           setBackgroundImages(getDefaultBackgroundImages());
         }
       } else {
+        console.log('No album URL provided, using default images');
         setBackgroundImages(getDefaultBackgroundImages());
       }
     };
@@ -41,9 +48,18 @@ const Index = () => {
 
   // Background rotation effect
   useEffect(() => {
+    if (backgroundImages.length === 0) return;
+
+    const intervalTime = backgroundDuration * 60 * 1000; // Convert minutes to milliseconds
+    console.log(`Setting background rotation interval to ${backgroundDuration} minutes (${intervalTime}ms)`);
+    
     const interval = setInterval(() => {
-      setCurrentBg((prev) => (prev + 1) % backgroundImages.length);
-    }, backgroundDuration * 60 * 1000);
+      setCurrentBg((prev) => {
+        const next = (prev + 1) % backgroundImages.length;
+        console.log(`Switching background from image ${prev} to image ${next}`);
+        return next;
+      });
+    }, intervalTime);
 
     return () => clearInterval(interval);
   }, [backgroundDuration, backgroundImages.length]);
