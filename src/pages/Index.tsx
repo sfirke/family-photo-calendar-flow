@@ -1,7 +1,9 @@
+
 import React, { useState, useEffect } from 'react';
 import Calendar from '@/components/Calendar';
 import WeatherWidget from '@/components/WeatherWidget';
 import SettingsModal from '@/components/SettingsModal';
+import GooglePhotosSync from '@/components/GooglePhotosSync';
 import { Settings, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';

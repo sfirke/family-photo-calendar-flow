@@ -9,8 +9,8 @@ import { Moon, Sun, Monitor } from 'lucide-react';
 interface DisplayTabProps {
   theme: 'light' | 'dark' | 'system';
   onThemeChange: (theme: 'light' | 'dark' | 'system') => void;
-  defaultView: 'timeline' | 'week';
-  onDefaultViewChange: (view: 'timeline' | 'week') => void;
+  defaultView: 'month' | 'timeline' | 'week';
+  onDefaultViewChange: (view: 'month' | 'timeline' | 'week') => void;
 }
 
 const DisplayTab = ({ theme, onThemeChange, defaultView, onDefaultViewChange }: DisplayTabProps) => {
@@ -59,6 +59,12 @@ const DisplayTab = ({ theme, onThemeChange, defaultView, onDefaultViewChange }: 
         </CardHeader>
         <CardContent>
           <RadioGroup value={defaultView} onValueChange={onDefaultViewChange}>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="month" id="month" />
+              <Label htmlFor="month" className="cursor-pointer">
+                Month View
+              </Label>
+            </div>
             <div className="flex items-center space-x-2">
               <RadioGroupItem value="timeline" id="timeline" />
               <Label htmlFor="timeline" className="cursor-pointer">

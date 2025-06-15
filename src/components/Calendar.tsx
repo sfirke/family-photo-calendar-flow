@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import CalendarFilters from './CalendarFilters';
 import TimelineView from './TimelineView';
 import WeekView from './WeekView';
+import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { sampleEvents } from '@/data/sampleEvents';
 import { ViewMode, FilterState } from '@/types/calendar';
@@ -71,6 +72,12 @@ const Calendar = () => {
           className="bg-white/95 backdrop-blur-sm border border-white/20 rounded-md h-10 dark:bg-gray-800/95 dark:border-gray-700/20"
         >
           <ToggleGroupItem
+            value="month"
+            className="text-gray-900 data-[state=on]:bg-gray-100 data-[state=on]:text-gray-900 hover:bg-gray-50 hover:text-gray-900 h-8 px-3 dark:text-gray-100 dark:data-[state=on]:bg-gray-700 dark:data-[state=on]:text-gray-100 dark:hover:bg-gray-700 dark:hover:text-gray-100"
+          >
+            Month
+          </ToggleGroupItem>
+          <ToggleGroupItem
             value="timeline"
             className="text-gray-900 data-[state=on]:bg-gray-100 data-[state=on]:text-gray-900 hover:bg-gray-50 hover:text-gray-900 h-8 px-3 dark:text-gray-100 dark:data-[state=on]:bg-gray-700 dark:data-[state=on]:text-gray-100 dark:hover:bg-gray-700 dark:hover:text-gray-100"
           >
@@ -98,13 +105,20 @@ const Calendar = () => {
       <div className="animate-fade-in">
         {viewMode === 'timeline' ? (
           <TimelineView events={filteredEvents} />
-        ) : (
+        ) : viewMode === 'week' ? (
           <WeekView 
             events={filteredEvents}
             weekOffset={weekOffset}
             onPreviousWeek={handlePreviousWeek}
             onNextWeek={handleNextWeek}
           />
+        ) : (
+          <div className="bg-white/95 backdrop-blur-sm border border-white/20 rounded-lg p-4 dark:bg-gray-800/95 dark:border-gray-700/20">
+            <CalendarComponent 
+              mode="single"
+              className="w-full"
+            />
+          </div>
         )}
       </div>
     </div>

@@ -12,7 +12,7 @@ export interface Event {
   date: Date;
 }
 
-export type ViewMode = 'timeline' | 'week';
+export type ViewMode = 'month' | 'timeline' | 'week';
 
 export interface FilterState {
   Personal: boolean;
