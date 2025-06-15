@@ -14,9 +14,20 @@ const TimelineView = ({ events, getWeatherForDate }: TimelineViewProps) => {
   const next3Days = getNext3Days();
   
   const getEventsForDate = (date: Date) => {
-    return events.filter(event => 
+    const dayEvents = events.filter(event => 
       event.date.toDateString() === date.toDateString()
     );
+    
+    // Separate all-day and regular events
+    const allDayEvents = dayEvents.filter(event => 
+      event.time.toLowerCase().includes('all day') || event.time === '00:00 - 23:59'
+    );
+    const regularEvents = dayEvents.filter(event => 
+      !event.time.toLowerCase().includes('all day') && event.time !== '00:00 - 23:59'
+    );
+    
+    // Return all-day events first, then regular events
+    return [...allDayEvents, ...regularEvents];
   };
 
   const getWeatherIcon = (condition: string) => {

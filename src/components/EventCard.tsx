@@ -14,8 +14,16 @@ interface EventCardProps {
 const EventCard = ({ event, className = '', showBoldHeader = false, viewMode = 'month' }: EventCardProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
+  // Check if event has additional data that would make it expandable
+  const hasAdditionalData = () => {
+    return !!(event.location || event.description || (event.attendees > 0));
+  };
+
+  // Check if event is all-day (assuming all-day events have time as "All day" or similar)
+  const isAllDay = event.time.toLowerCase().includes('all day') || event.time === '00:00 - 23:59';
+
   const handleClick = () => {
-    if (viewMode === 'timeline' || viewMode === 'week') {
+    if ((viewMode === 'timeline' || viewMode === 'week') && hasAdditionalData()) {
       setIsExpanded(!isExpanded);
     }
   };
@@ -41,27 +49,38 @@ const EventCard = ({ event, className = '', showBoldHeader = false, viewMode = '
     return event.color;
   };
 
+  // Timeline view styling
+  const getTimelineStyles = () => {
+    if (viewMode !== 'timeline') return '';
+    
+    if (isAllDay) {
+      return 'w-full'; // Full width for all-day events
+    }
+    return 'w-[35%]'; // 35% width for regular events
+  };
+
   return (
     <div 
       className={`p-3 rounded-lg bg-white/95 backdrop-blur-sm border border-white/30 ${
-        (viewMode === 'timeline' || viewMode === 'week') ? 'cursor-pointer hover:bg-white/100 transition-colors' : ''
-      } ${className}`}
+        (viewMode === 'timeline' || viewMode === 'week') && hasAdditionalData() ? 'cursor-pointer hover:bg-white/100 transition-colors' : ''
+      } ${getTimelineStyles()} ${className}`}
       onClick={handleClick}
     >
-      <div className="flex items-start justify-between">
-        <div className="flex-1 min-w-0">
-          <h4 className={`${showBoldHeader ? 'font-bold' : 'font-medium'} text-gray-900 mb-1 leading-tight truncate`}>
+      <div className={`flex items-start justify-between ${isAllDay && viewMode === 'timeline' ? 'flex-row' : ''}`}>
+        <div className={`flex-1 min-w-0 ${isAllDay && viewMode === 'timeline' ? 'flex items-center gap-4' : ''}`}>
+          <h4 className={`${showBoldHeader ? 'font-bold' : 'font-medium'} text-gray-900 mb-1 leading-tight truncate ${isAllDay && viewMode === 'timeline' ? 'mb-0' : ''}`}>
             {event.title}
           </h4>
           
-          <div className="flex items-center gap-2 text-xs text-gray-600 mb-2">
+          {/* Time display - show "All day" for all-day events in timeline view */}
+          <div className={`flex items-center gap-2 text-xs text-gray-600 ${isAllDay && viewMode === 'timeline' ? 'mb-0' : 'mb-2'}`}>
             <Clock className="h-3 w-3 flex-shrink-0" />
-            <span>{event.time}</span>
+            <span>{isAllDay && viewMode === 'timeline' ? 'All Day' : event.time}</span>
           </div>
 
           {/* Calendar pill for Week and Timeline views */}
           {(viewMode === 'week' || viewMode === 'timeline') && (
-            <div className="mb-2">
+            <div className={`${isAllDay && viewMode === 'timeline' ? 'mb-0' : 'mb-2'}`}>
               <Badge className={`${getCalendarPillColor()} text-white text-xs px-2 py-0.5`}>
                 {event.calendarName || event.category}
               </Badge>
@@ -70,7 +89,7 @@ const EventCard = ({ event, className = '', showBoldHeader = false, viewMode = '
           
           {/* Show location only if provided and in expanded state for timeline/week, or always for other views */}
           {event.location && ((viewMode !== 'timeline' && viewMode !== 'week') || isExpanded) && (
-            <div className="flex items-center gap-2 text-xs text-gray-600 mb-2">
+            <div className={`flex items-center gap-2 text-xs text-gray-600 ${isAllDay && viewMode === 'timeline' ? 'mb-0' : 'mb-2'}`}>
               <MapPin className="h-3 w-3 flex-shrink-0" />
               <span className="truncate">{event.location}</span>
             </div>
@@ -80,13 +99,6 @@ const EventCard = ({ event, className = '', showBoldHeader = false, viewMode = '
           {(viewMode === 'timeline' || viewMode === 'week') && isExpanded && event.description && (
             <div className="text-xs text-gray-600 mb-2 line-clamp-3">
               {event.description}
-            </div>
-          )}
-
-          {/* Show organizer only in expanded timeline/week view */}
-          {(viewMode === 'timeline' || viewMode === 'week') && isExpanded && event.organizer && (
-            <div className="text-xs text-gray-600 mb-2">
-              <span className="font-medium">Organizer:</span> {event.organizer}
             </div>
           )}
 
@@ -105,8 +117,8 @@ const EventCard = ({ event, className = '', showBoldHeader = false, viewMode = '
           )}
         </div>
 
-        {/* Expand/collapse icon for timeline and week view */}
-        {(viewMode === 'timeline' || viewMode === 'week') && (
+        {/* Expand/collapse icon for timeline and week view - only show if has additional data */}
+        {(viewMode === 'timeline' || viewMode === 'week') && hasAdditionalData() && (
           <div className="ml-2 flex-shrink-0">
             {isExpanded ? (
               <ChevronUp className="h-4 w-4 text-gray-400" />
