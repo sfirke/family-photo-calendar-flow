@@ -12,8 +12,6 @@ import { getImagesFromAlbum, getDefaultBackgroundImages } from '@/utils/googlePh
 
 const Index = () => {
   const [currentBg, setCurrentBg] = useState(0);
-  const [nextBg, setNextBg] = useState(1);
-  const [isTransitioning, setIsTransitioning] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [backgroundImages, setBackgroundImages] = useState<string[]>(getDefaultBackgroundImages());
   const { user, loading } = useAuth();
@@ -28,8 +26,7 @@ const Index = () => {
           const albumImages = await getImagesFromAlbum(publicAlbumUrl);
           if (albumImages.length > 0) {
             setBackgroundImages(albumImages);
-            setCurrentBg(0);
-            setNextBg(1 % albumImages.length);
+            setCurrentBg(0); // Reset to first image when album changes
             console.log(`Loaded ${albumImages.length} images from album`);
           } else {
             console.log('No images found in album, using defaults');
@@ -37,6 +34,7 @@ const Index = () => {
           }
         } catch (error) {
           console.error('Failed to load album images:', error);
+          // Fall back to default images
           setBackgroundImages(getDefaultBackgroundImages());
         }
       } else {
@@ -48,28 +46,19 @@ const Index = () => {
     loadBackgroundImages();
   }, [publicAlbumUrl]);
 
-  // Background rotation effect with smooth fade transition
+  // Background rotation effect
   useEffect(() => {
     if (backgroundImages.length === 0) return;
 
-    const intervalTime = backgroundDuration * 60 * 1000;
+    const intervalTime = backgroundDuration * 60 * 1000; // Convert minutes to milliseconds
     console.log(`Setting background rotation interval to ${backgroundDuration} minutes (${intervalTime}ms)`);
     
     const interval = setInterval(() => {
-      setIsTransitioning(true);
-      
-      setTimeout(() => {
-        setCurrentBg(prev => {
-          const next = (prev + 1) % backgroundImages.length;
-          setNextBg((next + 1) % backgroundImages.length);
-          console.log(`Switching background from image ${prev} to image ${next}`);
-          return next;
-        });
-        
-        setTimeout(() => {
-          setIsTransitioning(false);
-        }, 50);
-      }, 500);
+      setCurrentBg((prev) => {
+        const next = (prev + 1) % backgroundImages.length;
+        console.log(`Switching background from image ${prev} to image ${next}`);
+        return next;
+      });
     }, intervalTime);
 
     return () => clearInterval(interval);
@@ -88,36 +77,19 @@ const Index = () => {
 
   return (
     <div className="min-h-screen relative overflow-hidden flex flex-col">
-      {/* Current Background Image */}
+      {/* Background Image */}
       <div 
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat bg-fixed"
+        className="absolute inset-0 bg-cover bg-center bg-no-repeat transition-all duration-1000 ease-in-out"
         style={{ 
-          backgroundImage: `url(${backgroundImages[currentBg]})`,
-          transform: 'scale(1)',
-          filter: 'blur(0px)',
-          transition: isTransitioning ? 'opacity 1000ms ease-in-out' : 'none',
-          opacity: isTransitioning ? 0 : 1
-        }}
-      />
-      
-      {/* Next Background Image (for smooth transition) */}
-      <div 
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat bg-fixed"
-        style={{ 
-          backgroundImage: `url(${backgroundImages[nextBg]})`,
-          transform: 'scale(1)',
-          filter: 'blur(0px)',
-          transition: isTransitioning ? 'opacity 1000ms ease-in-out' : 'none',
-          opacity: isTransitioning ? 1 : 0,
-          zIndex: isTransitioning ? 1 : 0
+          backgroundImage: `url(${backgroundImages[currentBg]})` 
         }}
       />
       
       {/* Glass overlay */}
-      <div className="absolute inset-0 bg-white/10 backdrop-blur-sm dark:bg-black/20 z-10" />
+      <div className="absolute inset-0 bg-white/10 backdrop-blur-sm dark:bg-black/20" />
       
       {/* Content */}
-      <div className="relative z-20 min-h-screen flex flex-col">
+      <div className="relative z-10 min-h-screen flex flex-col">
         {/* Header with gradient overlay */}
         <header className="relative flex items-center justify-between p-6">
           {/* Header gradient overlay */}
@@ -157,7 +129,7 @@ const Index = () => {
         variant="ghost"
         size="sm"
         onClick={() => setShowSettings(true)}
-        className="fixed bottom-6 left-6 z-30 text-white hover:bg-white/20 bg-black/20 backdrop-blur-sm border border-white/20 transition-all duration-200 hover:scale-105"
+        className="fixed bottom-6 left-6 z-20 text-white hover:bg-white/20 bg-black/20 backdrop-blur-sm border border-white/20"
       >
         <Settings className="h-4 w-4" />
       </Button>
