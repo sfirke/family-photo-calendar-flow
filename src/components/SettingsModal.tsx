@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import {
   Dialog,
@@ -48,8 +47,13 @@ const SettingsModal = ({ open, onOpenChange, zipCode, onZipCodeChange }: Setting
         options: {
           redirectTo: `${window.location.origin}/`,
           scopes: 'openid email profile https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/photoslibrary.readonly',
-          // Force redirect instead of popup to avoid X-Frame-Options issues
-          skipBrowserRedirect: false
+          // Ensure full browser redirect - never use popup or iframe
+          skipBrowserRedirect: false,
+          // Additional options to force redirect behavior
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
         }
       });
 
@@ -180,10 +184,10 @@ const SettingsModal = ({ open, onOpenChange, zipCode, onZipCodeChange }: Setting
                       className="bg-blue-600 hover:bg-blue-700 text-white"
                     >
                       <User className="h-4 w-4 mr-2" />
-                      {isLoading ? 'Connecting...' : 'Sign in with Google'}
+                      {isLoading ? 'Redirecting to Google...' : 'Sign in with Google'}
                     </Button>
                     <p className="text-xs text-gray-500 text-center max-w-md">
-                      By connecting, you agree to share your Google Photos library access with this app. You can disconnect at any time.
+                      You'll be redirected to Google to complete the sign-in process. By connecting, you agree to share your Google Photos library access with this app.
                     </p>
                   </div>
                 )}
