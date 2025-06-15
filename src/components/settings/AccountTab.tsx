@@ -105,7 +105,7 @@ const AccountTab = () => {
       <CardHeader>
         <CardTitle>Google Account Connection</CardTitle>
         <CardDescription>
-          Sign in with Google to access your calendar events and enable background slideshows with your personal photos.
+          Sign in with Google to access your calendar events and photo albums for background slideshows.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -142,7 +142,7 @@ const AccountTab = () => {
             </div>
             <h3 className="font-medium">Connect Your Google Account</h3>
             <p className="text-sm text-gray-600 text-center max-w-md">
-              Sign in with Google to access your Photos library and enable background slideshows with your personal photos.
+              Sign in with Google to access your calendar events and photo albums for background slideshows.
             </p>
             <Button 
               onClick={handleGoogleSignIn}

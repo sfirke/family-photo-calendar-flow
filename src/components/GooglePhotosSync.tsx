@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Camera, RefreshCw, AlertCircle } from 'lucide-react';
+import { Camera, RefreshCw, AlertCircle, CheckCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
@@ -18,6 +18,7 @@ const GooglePhotosSync = () => {
   const [albums, setAlbums] = useState<PhotoAlbum[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [lastSync, setLastSync] = useState<Date | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -25,13 +26,22 @@ const GooglePhotosSync = () => {
     if (!user) return;
 
     setIsLoading(true);
+    setError(null);
+    
     try {
+      console.log('Starting Google Photos sync...');
+      
       const { data, error } = await supabase.functions.invoke('sync-google-photos', {
         body: { userId: user.id }
       });
 
       if (error) {
+        console.error('Supabase function error:', error);
         throw error;
+      }
+
+      if (!data.success) {
+        throw new Error(data.error || 'Sync failed');
       }
 
       setAlbums(data.albums || []);
@@ -40,11 +50,14 @@ const GooglePhotosSync = () => {
         title: "Photos synced!",
         description: `Found ${data.albums?.length || 0} albums from your Google Photos.`,
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error syncing photos:', error);
+      const errorMessage = error.message || 'Unable to sync your Google Photos. Please try again.';
+      setError(errorMessage);
+      
       toast({
         title: "Sync failed",
-        description: "Unable to sync your Google Photos. Please try again.",
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {
@@ -64,6 +77,11 @@ const GooglePhotosSync = () => {
 
       if (error) throw error;
       setAlbums(data || []);
+      
+      // Check if we have albums and set last sync time
+      if (data && data.length > 0) {
+        setLastSync(new Date(data[0].created_at));
+      }
     } catch (error) {
       console.error('Error loading albums:', error);
     }
@@ -124,9 +142,27 @@ const GooglePhotosSync = () => {
           </Button>
         </div>
 
+        {error && (
+          <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-md">
+            <AlertCircle className="h-4 w-4 text-red-600 mt-0.5 flex-shrink-0" />
+            <div>
+              <p className="text-sm text-red-800 font-medium">Sync Error</p>
+              <p className="text-sm text-red-700">{error}</p>
+              {error.includes('permissions') && (
+                <p className="text-xs text-red-600 mt-1">
+                  Try reconnecting your Google account from the Account tab.
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+
         {albums.length > 0 && (
           <div className="space-y-2">
-            <h4 className="font-medium">Albums ({albums.length})</h4>
+            <div className="flex items-center gap-2">
+              <CheckCircle className="h-4 w-4 text-green-600" />
+              <h4 className="font-medium">Albums ({albums.length})</h4>
+            </div>
             <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto">
               {albums.slice(0, 6).map((album) => (
                 <div key={album.id} className="p-2 bg-gray-50 rounded text-sm">
@@ -137,6 +173,11 @@ const GooglePhotosSync = () => {
                 </div>
               ))}
             </div>
+            {albums.length > 6 && (
+              <p className="text-xs text-gray-500">
+                Showing 6 of {albums.length} albums
+              </p>
+            )}
           </div>
         )}
       </CardContent>
