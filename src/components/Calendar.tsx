@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Event } from '@/types/calendar';
 import MonthView from './MonthView';
@@ -9,20 +10,24 @@ import { Calendar as CalendarIcon, Clock, List } from 'lucide-react';
 import { sampleEvents } from '@/data/sampleEvents';
 import { useSettings } from '@/contexts/SettingsContext';
 import { useWeather } from '@/contexts/WeatherContext';
+import { useGoogleCalendarEvents } from '@/hooks/useGoogleCalendarEvents';
 
 const Calendar = () => {
-  const [events] = useState<Event[]>(sampleEvents);
   const [view, setView] = useState<'timeline' | 'week' | 'month'>('month');
   const [weekOffset, setWeekOffset] = useState(0);
-  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>(['Personal', 'Work', 'Family', 'Kids', 'Holidays']);
   const { defaultView } = useSettings();
   const { getWeatherForDate } = useWeather();
+  const { googleEvents } = useGoogleCalendarEvents();
 
   useEffect(() => {
     setView(defaultView);
   }, [defaultView]);
 
-  const filteredEvents = events.filter(event => {
+  // Combine sample events with Google Calendar events
+  const allEvents = [...sampleEvents, ...googleEvents];
+
+  const filteredEvents = allEvents.filter(event => {
     if (selectedCategories.length === 0) return true;
     return selectedCategories.includes(event.category);
   });

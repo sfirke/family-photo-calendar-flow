@@ -14,7 +14,7 @@ const WeatherContext = createContext<WeatherContextType | undefined>(undefined);
 export const WeatherProvider = ({ children }: { children: React.ReactNode }) => {
   const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const { zipCode } = useSettings();
+  const { zipCode, weatherApiKey } = useSettings();
 
   useEffect(() => {
     const loadWeather = async () => {
@@ -22,7 +22,7 @@ export const WeatherProvider = ({ children }: { children: React.ReactNode }) => 
       
       setIsLoading(true);
       try {
-        const data = await fetchWeatherData(zipCode);
+        const data = await fetchWeatherData(zipCode, weatherApiKey);
         setWeatherData(data);
       } catch (error) {
         console.error('Failed to load weather:', error);
@@ -32,7 +32,7 @@ export const WeatherProvider = ({ children }: { children: React.ReactNode }) => 
     };
 
     loadWeather();
-  }, [zipCode]);
+  }, [zipCode, weatherApiKey]);
 
   const getWeatherForDate = (date: Date) => {
     if (!weatherData?.forecast) {

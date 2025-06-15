@@ -12,6 +12,8 @@ interface SettingsContextType {
   setBackgroundDuration: (duration: number) => void;
   selectedAlbum: string | null;
   setSelectedAlbum: (albumId: string | null) => void;
+  weatherApiKey: string;
+  setWeatherApiKey: (apiKey: string) => void;
 }
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
@@ -22,6 +24,7 @@ export const SettingsProvider = ({ children }: { children: React.ReactNode }) =>
   const [zipCode, setZipCode] = useState('90210');
   const [backgroundDuration, setBackgroundDuration] = useState(30); // Default 30 minutes
   const [selectedAlbum, setSelectedAlbum] = useState<string | null>(null);
+  const [weatherApiKey, setWeatherApiKey] = useState('');
 
   // Load settings from localStorage on mount
   useEffect(() => {
@@ -30,12 +33,14 @@ export const SettingsProvider = ({ children }: { children: React.ReactNode }) =>
     const savedZipCode = localStorage.getItem('zipCode');
     const savedDuration = localStorage.getItem('backgroundDuration');
     const savedAlbum = localStorage.getItem('selectedAlbum');
+    const savedApiKey = localStorage.getItem('weatherApiKey');
 
     if (savedTheme) setTheme(savedTheme);
     if (savedView) setDefaultView(savedView);
     if (savedZipCode) setZipCode(savedZipCode);
     if (savedDuration) setBackgroundDuration(parseInt(savedDuration));
     if (savedAlbum) setSelectedAlbum(savedAlbum);
+    if (savedApiKey) setWeatherApiKey(savedApiKey);
   }, []);
 
   // Save settings to localStorage when they change
@@ -63,6 +68,10 @@ export const SettingsProvider = ({ children }: { children: React.ReactNode }) =>
     }
   }, [selectedAlbum]);
 
+  useEffect(() => {
+    localStorage.setItem('weatherApiKey', weatherApiKey);
+  }, [weatherApiKey]);
+
   return (
     <SettingsContext.Provider
       value={{
@@ -76,6 +85,8 @@ export const SettingsProvider = ({ children }: { children: React.ReactNode }) =>
         setBackgroundDuration,
         selectedAlbum,
         setSelectedAlbum,
+        weatherApiKey,
+        setWeatherApiKey,
       }}
     >
       {children}

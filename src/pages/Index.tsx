@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import Calendar from '@/components/Calendar';
 import WeatherWidget from '@/components/WeatherWidget';
@@ -19,8 +20,8 @@ const backgroundImages = [
 const Index = () => {
   const [currentBg, setCurrentBg] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
-  const { user, loading, signOut } = useAuth();
-  const { zipCode, backgroundDuration } = useSettings();
+  const { user, loading } = useAuth();
+  const { backgroundDuration } = useSettings();
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -77,7 +78,7 @@ const Index = () => {
           </div>
           
           <div className="flex items-center gap-4 relative z-10">
-            <WeatherWidget zipCode={zipCode} />
+            <WeatherWidget />
             <UserProfileDropdown />
           </div>
         </header>

@@ -23,7 +23,16 @@ interface SettingsModalProps {
 }
 
 const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
-  const { theme, setTheme, defaultView, setDefaultView, zipCode, setZipCode } = useSettings();
+  const { 
+    theme, 
+    setTheme, 
+    defaultView, 
+    setDefaultView, 
+    zipCode, 
+    setZipCode,
+    weatherApiKey,
+    setWeatherApiKey
+  } = useSettings();
   const { setTheme: setActualTheme } = useTheme();
 
   const handleThemeChange = (newTheme: 'light' | 'dark' | 'system') => {
@@ -90,6 +99,8 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
             <WeatherTab 
               zipCode={zipCode}
               onZipCodeChange={setZipCode}
+              weatherApiKey={weatherApiKey}
+              onWeatherApiKeyChange={setWeatherApiKey}
             />
           </TabsContent>
         </Tabs>

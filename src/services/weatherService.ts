@@ -1,5 +1,4 @@
 
-const OPENWEATHER_API_KEY = 'your_api_key_here'; // This should be replaced with actual API key
 const BASE_URL = 'https://api.openweathermap.org/data/2.5';
 
 export interface WeatherData {
@@ -13,23 +12,32 @@ export interface WeatherData {
   }>;
 }
 
-export const fetchWeatherData = async (zipCode: string): Promise<WeatherData> => {
+export const fetchWeatherData = async (zipCode: string, apiKey: string): Promise<WeatherData> => {
+  if (!apiKey) {
+    console.warn('No weather API key provided, using mock data');
+    return getMockWeatherData();
+  }
+
   try {
     // Current weather
     const currentResponse = await fetch(
-      `${BASE_URL}/weather?zip=${zipCode}&appid=${OPENWEATHER_API_KEY}&units=imperial`
+      `${BASE_URL}/weather?zip=${zipCode}&appid=${apiKey}&units=imperial`
     );
     
     if (!currentResponse.ok) {
-      throw new Error('Weather API request failed');
+      throw new Error(`Weather API request failed: ${currentResponse.status}`);
     }
     
     const currentData = await currentResponse.json();
     
     // 5-day forecast
     const forecastResponse = await fetch(
-      `${BASE_URL}/forecast?zip=${zipCode}&appid=${OPENWEATHER_API_KEY}&units=imperial`
+      `${BASE_URL}/forecast?zip=${zipCode}&appid=${apiKey}&units=imperial`
     );
+    
+    if (!forecastResponse.ok) {
+      throw new Error(`Forecast API request failed: ${forecastResponse.status}`);
+    }
     
     const forecastData = await forecastResponse.json();
     
@@ -52,17 +60,21 @@ export const fetchWeatherData = async (zipCode: string): Promise<WeatherData> =>
   } catch (error) {
     console.error('Error fetching weather data:', error);
     // Return mock data as fallback
-    return {
-      temperature: 75,
-      condition: 'Sunny',
-      location: 'Location not found',
-      forecast: Array.from({ length: 7 }, (_, i) => ({
-        date: new Date(Date.now() + i * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        temp: 75,
-        condition: 'Sunny'
-      }))
-    };
+    return getMockWeatherData();
   }
+};
+
+const getMockWeatherData = (): WeatherData => {
+  return {
+    temperature: 75,
+    condition: 'Sunny',
+    location: 'Location not found',
+    forecast: Array.from({ length: 7 }, (_, i) => ({
+      date: new Date(Date.now() + i * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      temp: 75,
+      condition: 'Sunny'
+    }))
+  };
 };
 
 const getWeatherCondition = (main: string): string => {

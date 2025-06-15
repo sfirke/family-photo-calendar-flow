@@ -2,12 +2,9 @@
 import React, { useState, useEffect } from 'react';
 import { Sun, Cloud, CloudRain, Snowflake } from 'lucide-react';
 import { fetchWeatherData, WeatherData } from '@/services/weatherService';
+import { useSettings } from '@/contexts/SettingsContext';
 
-interface WeatherWidgetProps {
-  zipCode: string;
-}
-
-const WeatherWidget = ({ zipCode }: WeatherWidgetProps) => {
+const WeatherWidget = () => {
   const [weatherData, setWeatherData] = useState<WeatherData>({
     temperature: 75,
     condition: 'Sunny',
@@ -15,6 +12,7 @@ const WeatherWidget = ({ zipCode }: WeatherWidgetProps) => {
     forecast: []
   });
   const [isLoading, setIsLoading] = useState(true);
+  const { zipCode, weatherApiKey } = useSettings();
 
   useEffect(() => {
     const loadWeather = async () => {
@@ -22,7 +20,7 @@ const WeatherWidget = ({ zipCode }: WeatherWidgetProps) => {
       
       setIsLoading(true);
       try {
-        const data = await fetchWeatherData(zipCode);
+        const data = await fetchWeatherData(zipCode, weatherApiKey);
         setWeatherData(data);
       } catch (error) {
         console.error('Failed to load weather:', error);
@@ -32,7 +30,7 @@ const WeatherWidget = ({ zipCode }: WeatherWidgetProps) => {
     };
 
     loadWeather();
-  }, [zipCode]);
+  }, [zipCode, weatherApiKey]);
 
   const getWeatherIcon = (condition: string) => {
     switch (condition.toLowerCase()) {
