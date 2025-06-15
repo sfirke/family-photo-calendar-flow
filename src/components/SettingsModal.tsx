@@ -47,11 +47,14 @@ const SettingsModal = ({ open, onOpenChange, zipCode, onZipCodeChange }: Setting
         provider: 'google',
         options: {
           redirectTo: `${window.location.origin}/`,
-          scopes: 'openid email profile https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/photoslibrary.readonly'
+          scopes: 'openid email profile https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/photoslibrary.readonly',
+          // Force redirect instead of popup to avoid X-Frame-Options issues
+          skipBrowserRedirect: false
         }
       });
 
       if (error) {
+        console.error('Google Sign In Error:', error);
         toast({
           title: "Google Sign In Error",
           description: error.message,
@@ -59,6 +62,7 @@ const SettingsModal = ({ open, onOpenChange, zipCode, onZipCodeChange }: Setting
         });
       }
     } catch (error) {
+      console.error('Unexpected error:', error);
       toast({
         title: "Error",
         description: "An unexpected error occurred",
@@ -176,7 +180,7 @@ const SettingsModal = ({ open, onOpenChange, zipCode, onZipCodeChange }: Setting
                       className="bg-blue-600 hover:bg-blue-700 text-white"
                     >
                       <User className="h-4 w-4 mr-2" />
-                      Sign in with Google
+                      {isLoading ? 'Connecting...' : 'Sign in with Google'}
                     </Button>
                     <p className="text-xs text-gray-500 text-center max-w-md">
                       By connecting, you agree to share your Google Photos library access with this app. You can disconnect at any time.
