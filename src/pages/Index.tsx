@@ -92,15 +92,6 @@ const Index = () => {
                 </Button>
               </div>
             )}
-            
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowSettings(true)}
-              className="text-white hover:bg-white/20"
-            >
-              <Settings className="h-4 w-4" />
-            </Button>
           </div>
         </header>
 
@@ -115,6 +106,16 @@ const Index = () => {
           <Calendar />
         </main>
       </div>
+
+      {/* Settings Button - Fixed in lower left corner */}
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => setShowSettings(true)}
+        className="fixed bottom-6 left-6 z-20 text-white hover:bg-white/20 bg-black/20 backdrop-blur-sm border border-white/20"
+      >
+        <Settings className="h-4 w-4" />
+      </Button>
 
       <SettingsModal 
         open={showSettings} 

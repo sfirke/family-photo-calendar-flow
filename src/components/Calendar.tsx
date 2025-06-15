@@ -1,8 +1,6 @@
-
 import React, { useState } from 'react';
 import EventCard from './EventCard';
 import CalendarFilters from './CalendarFilters';
-import { ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 const sampleEvents = [
@@ -81,7 +79,6 @@ const sampleEvents = [
 ];
 
 const Calendar = () => {
-  const [showFilters, setShowFilters] = useState(false);
   const [viewMode, setViewMode] = useState<'timeline' | 'week'>('timeline');
   const [activeFilters, setActiveFilters] = useState({
     Personal: true,
@@ -226,56 +223,42 @@ const Calendar = () => {
 
   return (
     <div className="space-y-6">
-      {/* Calendar Filters Toggle */}
-      <div className="flex items-center gap-4">
-        <Button
-          variant="ghost"
-          onClick={() => setShowFilters(!showFilters)}
-          className="text-white hover:bg-white/20 flex items-center gap-2"
-        >
-          <ChevronDown className={`h-4 w-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
-          Calendars ({Object.values(activeFilters).filter(Boolean).length})
-        </Button>
-        <div className="text-sm text-white/70">
+      {/* Calendar Controls */}
+      <div className="flex items-center gap-4 flex-wrap">
+        <CalendarFilters 
+          activeFilters={activeFilters}
+          onFiltersChange={setActiveFilters}
+        />
+        
+        <div className="flex gap-2">
+          <Button
+            variant={viewMode === 'timeline' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setViewMode('timeline')}
+            className={viewMode === 'timeline' 
+              ? "bg-white/30 border-white/30 text-white hover:bg-white/40" 
+              : "bg-white/20 border-white/30 text-white hover:bg-white/30"
+            }
+          >
+            Timeline
+          </Button>
+          <Button
+            variant={viewMode === 'week' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setViewMode('week')}
+            className={viewMode === 'week' 
+              ? "bg-white/30 border-white/30 text-white hover:bg-white/40" 
+              : "bg-white/20 border-white/30 text-white hover:bg-white/30"
+            }
+          >
+            Week
+          </Button>
+        </div>
+
+        <div className="text-sm text-white/70 ml-auto">
           Upcoming Events ({filteredEvents.length})
         </div>
       </div>
-
-      {/* View Toggle Buttons */}
-      <div className="flex gap-2">
-        <Button
-          variant={viewMode === 'timeline' ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => setViewMode('timeline')}
-          className={viewMode === 'timeline' 
-            ? "bg-white/30 border-white/30 text-white hover:bg-white/40" 
-            : "bg-white/20 border-white/30 text-white hover:bg-white/30"
-          }
-        >
-          Timeline
-        </Button>
-        <Button
-          variant={viewMode === 'week' ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => setViewMode('week')}
-          className={viewMode === 'week' 
-            ? "bg-white/30 border-white/30 text-white hover:bg-white/40" 
-            : "bg-white/20 border-white/30 text-white hover:bg-white/30"
-          }
-        >
-          Week
-        </Button>
-      </div>
-
-      {/* Filters */}
-      {showFilters && (
-        <div className="animate-fade-in">
-          <CalendarFilters 
-            activeFilters={activeFilters}
-            onFiltersChange={setActiveFilters}
-          />
-        </div>
-      )}
 
       {/* Events Display */}
       <div className="animate-fade-in">
