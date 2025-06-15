@@ -84,7 +84,6 @@ const WeekView = ({ events, weekOffset, onPreviousWeek, onNextWeek, getWeatherFo
                 <p className={`text-lg ${isToday ? 'text-yellow-300' : 'text-white/80'}`}>
                   {date.getDate()}
                 </p>
-                {isToday && <div className="w-2 h-2 bg-yellow-300 rounded-full mx-auto mt-1"></div>}
                 
                 {/* Weather Info */}
                 <div className="flex items-center justify-center gap-1 mt-2">
