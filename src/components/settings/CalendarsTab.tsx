@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Calendar, RefreshCw, AlertCircle } from 'lucide-react';
@@ -28,9 +27,9 @@ const CalendarsTab = () => {
       try {
         const parsedIds = JSON.parse(stored);
         setSelectedCalendarIds(parsedIds);
-        console.log('Loaded selected calendar IDs from localStorage:', parsedIds);
+        console.log('CalendarsTab: Loaded selected calendar IDs from localStorage:', parsedIds);
       } catch (error) {
-        console.error('Error parsing stored calendar IDs:', error);
+        console.error('CalendarsTab: Error parsing stored calendar IDs:', error);
       }
     }
   }, []);
@@ -41,7 +40,12 @@ const CalendarsTab = () => {
       const allCalendarIds = calendars.map(cal => cal.id);
       setSelectedCalendarIds(allCalendarIds);
       localStorage.setItem(SELECTED_CALENDARS_KEY, JSON.stringify(allCalendarIds));
-      console.log('Auto-selecting all calendars on first load:', allCalendarIds);
+      console.log('CalendarsTab: Auto-selecting all calendars on first load:', allCalendarIds);
+      
+      // Dispatch custom event to notify other components
+      window.dispatchEvent(new CustomEvent('localStorageChange', {
+        detail: { key: SELECTED_CALENDARS_KEY, newValue: JSON.stringify(allCalendarIds) }
+      }));
     }
   }, [calendars, selectedCalendarIds.length]);
 
@@ -49,11 +53,16 @@ const CalendarsTab = () => {
   const updateSelectedCalendars = (newSelectedIds: string[]) => {
     setSelectedCalendarIds(newSelectedIds);
     localStorage.setItem(SELECTED_CALENDARS_KEY, JSON.stringify(newSelectedIds));
-    console.log('Updated selected calendar IDs:', newSelectedIds);
+    console.log('CalendarsTab: Updated selected calendar IDs:', newSelectedIds);
+    
+    // Dispatch custom event to notify other components
+    window.dispatchEvent(new CustomEvent('localStorageChange', {
+      detail: { key: SELECTED_CALENDARS_KEY, newValue: JSON.stringify(newSelectedIds) }
+    }));
   };
 
   const handleCalendarToggle = (calendarId: string, checked: boolean) => {
-    console.log('Calendar toggle:', calendarId, 'checked:', checked);
+    console.log('CalendarsTab: Calendar toggle:', calendarId, 'checked:', checked);
     let newSelection: string[];
     
     if (checked) {
@@ -68,12 +77,12 @@ const CalendarsTab = () => {
   const selectAllCalendars = () => {
     const allIds = calendars.map(cal => cal.id);
     updateSelectedCalendars(allIds);
-    console.log('Selected all calendars:', allIds);
+    console.log('CalendarsTab: Selected all calendars:', allIds);
   };
 
   const clearAllCalendars = () => {
     updateSelectedCalendars([]);
-    console.log('Cleared all calendar selections');
+    console.log('CalendarsTab: Cleared all calendar selections');
   };
 
   const syncCalendar = async () => {

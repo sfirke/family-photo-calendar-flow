@@ -52,11 +52,54 @@ const Calendar = () => {
     }
   }, [calendars, selectedCalendarIds.length]);
 
+  // Listen for changes to localStorage from other components (like CalendarsTab)
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === SELECTED_CALENDARS_KEY && e.newValue) {
+        try {
+          const newSelectedIds = JSON.parse(e.newValue);
+          setSelectedCalendarIds(newSelectedIds);
+          console.log('Calendar: Updated selected calendar IDs from storage event:', newSelectedIds);
+        } catch (error) {
+          console.error('Calendar: Error parsing storage event data:', error);
+        }
+      }
+    };
+
+    // Listen for storage events from other tabs/components
+    window.addEventListener('storage', handleStorageChange);
+
+    // Also listen for custom events within the same tab
+    const handleCustomStorageChange = (e: CustomEvent) => {
+      if (e.detail.key === SELECTED_CALENDARS_KEY) {
+        try {
+          const newSelectedIds = JSON.parse(e.detail.newValue);
+          setSelectedCalendarIds(newSelectedIds);
+          console.log('Calendar: Updated selected calendar IDs from custom event:', newSelectedIds);
+        } catch (error) {
+          console.error('Calendar: Error parsing custom event data:', error);
+        }
+      }
+    };
+
+    window.addEventListener('localStorageChange' as any, handleCustomStorageChange);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('localStorageChange' as any, handleCustomStorageChange);
+    };
+  }, []);
+
   // Update selected calendars and persist to localStorage
   const handleCalendarChange = (newSelectedIds: string[]) => {
     setSelectedCalendarIds(newSelectedIds);
     localStorage.setItem(SELECTED_CALENDARS_KEY, JSON.stringify(newSelectedIds));
     console.log('Calendar: Updated selected calendar IDs:', newSelectedIds);
+    
+    // Dispatch custom event to notify other components
+    window.dispatchEvent(new CustomEvent('localStorageChange', {
+      detail: { key: SELECTED_CALENDARS_KEY, newValue: JSON.stringify(newSelectedIds) }
+    }));
   };
 
   // Use Google Calendar events if available, otherwise use sample events
