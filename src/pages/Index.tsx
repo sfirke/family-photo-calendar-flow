@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import Calendar from '@/components/Calendar';
 import WeatherWidget from '@/components/WeatherWidget';
@@ -78,7 +79,7 @@ const Index = () => {
     <div className="min-h-screen relative overflow-hidden flex flex-col">
       {/* Background Image */}
       <div 
-        className="absolute inset-0 transition-all duration-1000 ease-in-out"
+        className="absolute inset-0 transition-opacity duration-1000 ease-in-out"
         style={{ 
           backgroundImage: `url(${backgroundImages[currentBg]})`,
           backgroundSize: 'cover',
