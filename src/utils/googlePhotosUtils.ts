@@ -148,18 +148,34 @@ const extractImagesFromHtml = (html: string): string[] => {
       matches.forEach(match => {
         // Clean up the URL (remove quotes if present)
         const cleanUrl = match.replace(/['"]/g, '');
-        // Only add high-quality image URLs
+        
+        // Filter out profile photos and small images
         if (cleanUrl.includes('googleusercontent.com') && 
             !cleanUrl.includes('=s40') && 
             !cleanUrl.includes('=s32') &&
+            !cleanUrl.includes('=s64') &&
+            !cleanUrl.includes('=s96') &&
+            !cleanUrl.includes('=s128') &&
             !cleanUrl.includes('/avatar/') &&
-            cleanUrl.length > 50) {
-          // Modify URL for high quality (1920x1080)
-          let highQualityUrl = cleanUrl.split('=')[0];
-          if (!highQualityUrl.includes('=')) {
-            highQualityUrl += '=w1920-h1080-c';
+            !cleanUrl.includes('-rp-') && // Profile photo identifier
+            !cleanUrl.includes('_rp.') && // Another profile photo pattern
+            !cleanUrl.includes('profile') &&
+            !cleanUrl.includes('face') &&
+            !cleanUrl.includes('contact') &&
+            cleanUrl.length > 60) { // Longer URLs are typically actual photos
+          
+          // Get the base URL without size parameters
+          let baseUrl = cleanUrl.split('=')[0];
+          
+          // Ensure we get the original, full-size image
+          // Remove any existing size parameters and add parameters for original size
+          if (!baseUrl.includes('=')) {
+            // For original size without any resizing: use =s0 or no size parameter
+            // =s0 requests original size, but we can also use =w0-h0 for better compatibility
+            baseUrl += '=s0';
           }
-          foundUrls.add(highQualityUrl);
+          
+          foundUrls.add(baseUrl);
         }
       });
     }
@@ -167,6 +183,8 @@ const extractImagesFromHtml = (html: string): string[] => {
   
   // Try alternative extraction methods if no images found
   if (foundUrls.size === 0) {
+    console.log('No images found with primary patterns, trying alternative extraction...');
+    
     const altPatterns = [
       /"(https:\/\/lh\d+\.googleusercontent\.com[^"]*?)"/g,
       /https:\/\/lh\d+\.googleusercontent\.com\/[^\s"'<>\]]+/g,
@@ -178,9 +196,19 @@ const extractImagesFromHtml = (html: string): string[] => {
       if (altMatches) {
         altMatches.forEach(match => {
           const cleanUrl = match.replace(/['"]/g, '');
-          if (cleanUrl.includes('googleusercontent.com') && cleanUrl.length > 50) {
-            const baseUrl = cleanUrl.split('=')[0];
-            foundUrls.add(baseUrl + '=w1920-h1080-c');
+          
+          // Apply same filtering for alternative patterns
+          if (cleanUrl.includes('googleusercontent.com') && 
+              cleanUrl.length > 60 &&
+              !cleanUrl.includes('/avatar/') &&
+              !cleanUrl.includes('-rp-') &&
+              !cleanUrl.includes('_rp.') &&
+              !cleanUrl.includes('profile') &&
+              !cleanUrl.includes('face') &&
+              !cleanUrl.includes('contact')) {
+            
+            const baseUrl = cleanUrl.split('=')[0] + '=s0';
+            foundUrls.add(baseUrl);
           }
         });
       }
@@ -188,6 +216,8 @@ const extractImagesFromHtml = (html: string): string[] => {
   }
   
   const finalImageUrls = Array.from(foundUrls);
+  console.log(`Extracted ${finalImageUrls.length} high-quality images (excluding profile photos)`);
+  
   return finalImageUrls.slice(0, 50); // Limit to first 50 images for performance
 };
 
