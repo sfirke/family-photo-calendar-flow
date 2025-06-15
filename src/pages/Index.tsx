@@ -3,10 +3,9 @@ import React, { useState, useEffect } from 'react';
 import Calendar from '@/components/Calendar';
 import WeatherWidget from '@/components/WeatherWidget';
 import SettingsModal from '@/components/SettingsModal';
-import AuthModal from '@/components/AuthModal';
 import GoogleCalendarSync from '@/components/GoogleCalendarSync';
 import GooglePhotosSync from '@/components/GooglePhotosSync';
-import { Settings, Sun, LogOut, User } from 'lucide-react';
+import { Settings, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -21,7 +20,6 @@ const backgroundImages = [
 const Index = () => {
   const [currentBg, setCurrentBg] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
-  const [showAuth, setShowAuth] = useState(false);
   const [zipCode, setZipCode] = useState('48226'); // Detroit, MI default
   const { user, loading, signOut } = useAuth();
 
@@ -79,7 +77,7 @@ const Index = () => {
           <div className="flex items-center gap-4">
             <WeatherWidget zipCode={zipCode} />
             
-            {user ? (
+            {user && (
               <div className="flex items-center gap-2">
                 <span className="text-sm text-white/80">
                   {user.user_metadata?.full_name || user.email}
@@ -93,16 +91,6 @@ const Index = () => {
                   <LogOut className="h-4 w-4" />
                 </Button>
               </div>
-            ) : (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowAuth(true)}
-                className="text-white hover:bg-white/20"
-              >
-                <User className="h-4 w-4 mr-2" />
-                Sign In
-              </Button>
             )}
             
             <Button
@@ -133,11 +121,6 @@ const Index = () => {
         onOpenChange={setShowSettings}
         zipCode={zipCode}
         onZipCodeChange={setZipCode}
-      />
-
-      <AuthModal
-        open={showAuth}
-        onOpenChange={setShowAuth}
       />
     </div>
   );
