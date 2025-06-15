@@ -3,12 +3,14 @@ import React from 'react';
 import { Event } from '@/types/calendar';
 import EventCard from './EventCard';
 import { getNext3Days, formatDate } from '@/utils/dateUtils';
+import { Sun, Cloud, CloudRain } from 'lucide-react';
 
 interface TimelineViewProps {
   events: Event[];
+  getWeatherForDate?: (date: Date) => { temp: number; condition: string };
 }
 
-const TimelineView = ({ events }: TimelineViewProps) => {
+const TimelineView = ({ events, getWeatherForDate }: TimelineViewProps) => {
   const next3Days = getNext3Days();
   
   const getEventsForDate = (date: Date) => {
@@ -17,11 +19,28 @@ const TimelineView = ({ events }: TimelineViewProps) => {
     );
   };
 
+  const getWeatherIcon = (condition: string) => {
+    switch (condition.toLowerCase()) {
+      case 'sunny':
+      case 'clear':
+        return <Sun className="h-4 w-4 text-yellow-400" />;
+      case 'cloudy':
+      case 'partly cloudy':
+        return <Cloud className="h-4 w-4 text-gray-300" />;
+      case 'rainy':
+      case 'rain':
+        return <CloudRain className="h-4 w-4 text-blue-400" />;
+      default:
+        return <Sun className="h-4 w-4 text-yellow-400" />;
+    }
+  };
+
   return (
     <div className="space-y-6">
       {next3Days.map((date, index) => {
         const dayEvents = getEventsForDate(date);
         const isToday = date.toDateString() === new Date().toDateString();
+        const weather = getWeatherForDate ? getWeatherForDate(date) : null;
         
         return (
           <div key={index} className="space-y-4">
@@ -31,9 +50,17 @@ const TimelineView = ({ events }: TimelineViewProps) => {
                 {isToday && <span className="ml-2 text-sm text-yellow-300">(Today)</span>}
               </h3>
               <div className="flex-1 h-px bg-white/20"></div>
-              <span className="text-sm text-white/60">
-                {dayEvents.length} event{dayEvents.length !== 1 ? 's' : ''}
-              </span>
+              <div className="flex items-center gap-4 text-sm text-white/60">
+                <span>
+                  {dayEvents.length} event{dayEvents.length !== 1 ? 's' : ''}
+                </span>
+                {weather && (
+                  <div className="flex items-center gap-2">
+                    {getWeatherIcon(weather.condition)}
+                    <span className="text-white/70">{weather.temp}°F</span>
+                  </div>
+                )}
+              </div>
             </div>
             
             {dayEvents.length > 0 ? (

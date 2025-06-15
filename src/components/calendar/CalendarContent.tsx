@@ -23,7 +23,7 @@ const CalendarContent = ({
   getWeatherForDate 
 }: CalendarContentProps) => {
   if (view === 'timeline') {
-    return <TimelineView events={events} />;
+    return <TimelineView events={events} getWeatherForDate={getWeatherForDate} />;
   }
 
   if (view === 'week') {
