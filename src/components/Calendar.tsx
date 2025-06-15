@@ -11,97 +11,19 @@ import { sampleEvents } from '@/data/sampleEvents';
 import { useSettings } from '@/contexts/SettingsContext';
 import { useWeather } from '@/contexts/WeatherContext';
 import { useGoogleCalendarEvents } from '@/hooks/useGoogleCalendarEvents';
-import { useGoogleCalendars } from '@/hooks/useGoogleCalendars';
-
-const SELECTED_CALENDARS_KEY = 'selectedCalendarIds';
+import { useCalendarSelection } from '@/hooks/useCalendarSelection';
 
 const Calendar = () => {
   const [view, setView] = useState<'timeline' | 'week' | 'month'>('month');
   const [weekOffset, setWeekOffset] = useState(0);
-  const [selectedCalendarIds, setSelectedCalendarIds] = useState<string[]>([]);
   const { defaultView } = useSettings();
   const { getWeatherForDate } = useWeather();
   const { googleEvents, isLoading: googleEventsLoading } = useGoogleCalendarEvents();
-  const { calendars, isLoading: calendarsLoading } = useGoogleCalendars();
+  const { selectedCalendarIds, updateSelectedCalendars } = useCalendarSelection();
 
   useEffect(() => {
     setView(defaultView);
   }, [defaultView]);
-
-  // Load selected calendar IDs from localStorage
-  useEffect(() => {
-    const stored = localStorage.getItem(SELECTED_CALENDARS_KEY);
-    if (stored) {
-      try {
-        const parsedIds = JSON.parse(stored);
-        setSelectedCalendarIds(parsedIds);
-        console.log('Calendar: Loaded selected calendar IDs from localStorage:', parsedIds);
-      } catch (error) {
-        console.error('Calendar: Error parsing stored calendar IDs:', error);
-      }
-    } else {
-      console.log('Calendar: No stored calendar IDs found in localStorage');
-    }
-  }, []);
-
-  // Auto-select all available calendars when they are first loaded and no selection exists
-  useEffect(() => {
-    if (calendars.length > 0 && selectedCalendarIds.length === 0) {
-      const allCalendarIds = calendars.map(cal => cal.id);
-      setSelectedCalendarIds(allCalendarIds);
-      localStorage.setItem(SELECTED_CALENDARS_KEY, JSON.stringify(allCalendarIds));
-      console.log('Calendar: Auto-selecting all calendars on first load:', allCalendarIds);
-      console.log('Calendar: Available calendars:', calendars.map(cal => ({ id: cal.id, name: cal.summary })));
-    }
-  }, [calendars, selectedCalendarIds.length]);
-
-  // Listen for changes to localStorage from other components (like CalendarsTab)
-  useEffect(() => {
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === SELECTED_CALENDARS_KEY && e.newValue) {
-        try {
-          const newSelectedIds = JSON.parse(e.newValue);
-          setSelectedCalendarIds(newSelectedIds);
-          console.log('Calendar: Updated selected calendar IDs from storage event:', newSelectedIds);
-        } catch (error) {
-          console.error('Calendar: Error parsing storage event data:', error);
-        }
-      }
-    };
-
-    // Also listen for custom events within the same tab
-    const handleCustomStorageChange = (e: CustomEvent) => {
-      if (e.detail.key === SELECTED_CALENDARS_KEY) {
-        try {
-          const newSelectedIds = JSON.parse(e.detail.newValue);
-          setSelectedCalendarIds(newSelectedIds);
-          console.log('Calendar: Updated selected calendar IDs from custom event:', newSelectedIds);
-        } catch (error) {
-          console.error('Calendar: Error parsing custom event data:', error);
-        }
-      }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    window.addEventListener('localStorageChange' as any, handleCustomStorageChange);
-
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('localStorageChange' as any, handleCustomStorageChange);
-    };
-  }, []);
-
-  // Update selected calendars and persist to localStorage
-  const handleCalendarChange = (newSelectedIds: string[]) => {
-    setSelectedCalendarIds(newSelectedIds);
-    localStorage.setItem(SELECTED_CALENDARS_KEY, JSON.stringify(newSelectedIds));
-    console.log('Calendar: Updated selected calendar IDs:', newSelectedIds);
-    
-    // Dispatch custom event to notify other components
-    window.dispatchEvent(new CustomEvent('localStorageChange', {
-      detail: { key: SELECTED_CALENDARS_KEY, newValue: JSON.stringify(newSelectedIds) }
-    }));
-  };
 
   // Use Google Calendar events if available, otherwise use sample events
   const hasGoogleEvents = googleEvents.length > 0;
@@ -136,9 +58,8 @@ const Calendar = () => {
       }
       const eventCalendarId = event.calendarId || 'primary';
       const calendarMatch = selectedCalendarIds.includes(eventCalendarId);
-      const calendarName = calendars.find(cal => cal.id === eventCalendarId)?.summary || eventCalendarId;
       
-      console.log(`Calendar: Event "${event.title}" - Calendar: "${calendarName}" (${eventCalendarId}), Selected: ${calendarMatch}`);
+      console.log(`Calendar: Event "${event.title}" - Calendar: "${eventCalendarId}", Selected: ${calendarMatch}`);
       return calendarMatch;
     }
     
@@ -160,7 +81,7 @@ const Calendar = () => {
           {hasGoogleEvents && (
             <CalendarSelector 
               selectedCalendarIds={selectedCalendarIds}
-              onCalendarChange={handleCalendarChange}
+              onCalendarChange={updateSelectedCalendars}
             />
           )}
           

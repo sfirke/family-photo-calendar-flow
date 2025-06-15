@@ -1,104 +1,30 @@
 
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Calendar, RefreshCw, AlertCircle } from 'lucide-react';
+import { Calendar, RefreshCw, AlertCircle, BarChart3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useGoogleCalendarEvents } from '@/hooks/useGoogleCalendarEvents';
-import { useGoogleCalendars } from '@/hooks/useGoogleCalendars';
-
-const SELECTED_CALENDARS_KEY = 'selectedCalendarIds';
+import { useCalendarSelection } from '@/hooks/useCalendarSelection';
 
 const CalendarsTab = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [lastSync, setLastSync] = useState<Date | null>(null);
-  const [selectedCalendarIds, setSelectedCalendarIds] = useState<string[]>([]);
   const { user } = useAuth();
   const { toast } = useToast();
   const { refreshEvents } = useGoogleCalendarEvents();
-  const { calendars, isLoading: calendarsLoading, refetch: refetchCalendars } = useGoogleCalendars();
-
-  // Load selected calendar IDs from localStorage on component mount
-  useEffect(() => {
-    const stored = localStorage.getItem(SELECTED_CALENDARS_KEY);
-    if (stored) {
-      try {
-        const parsedIds = JSON.parse(stored);
-        setSelectedCalendarIds(parsedIds);
-        console.log('CalendarsTab: Loaded selected calendar IDs from localStorage:', parsedIds);
-      } catch (error) {
-        console.error('CalendarsTab: Error parsing stored calendar IDs:', error);
-      }
-    } else {
-      console.log('CalendarsTab: No stored calendar selection found');
-    }
-  }, []);
-
-  // Auto-select all calendars when they are first loaded and no previous selection exists
-  useEffect(() => {
-    if (calendars.length > 0 && selectedCalendarIds.length === 0) {
-      const allCalendarIds = calendars.map(cal => cal.id);
-      setSelectedCalendarIds(allCalendarIds);
-      localStorage.setItem(SELECTED_CALENDARS_KEY, JSON.stringify(allCalendarIds));
-      console.log('CalendarsTab: Auto-selecting all calendars on first load:', allCalendarIds);
-      console.log('CalendarsTab: Available calendars:', calendars.map(cal => ({ id: cal.id, name: cal.summary })));
-      
-      // Dispatch custom event to notify other components
-      window.dispatchEvent(new CustomEvent('localStorageChange', {
-        detail: { key: SELECTED_CALENDARS_KEY, newValue: JSON.stringify(allCalendarIds) }
-      }));
-    }
-  }, [calendars, selectedCalendarIds.length]);
-
-  // Save selected calendar IDs to localStorage whenever they change
-  const updateSelectedCalendars = (newSelectedIds: string[]) => {
-    setSelectedCalendarIds(newSelectedIds);
-    localStorage.setItem(SELECTED_CALENDARS_KEY, JSON.stringify(newSelectedIds));
-    console.log('CalendarsTab: Updated selected calendar IDs:', newSelectedIds);
-    console.log('CalendarsTab: Selected calendar names:', newSelectedIds.map(id => {
-      const cal = calendars.find(c => c.id === id);
-      return `"${cal?.summary || id}" (${id})`;
-    }));
-    
-    // Dispatch custom event to notify other components
-    window.dispatchEvent(new CustomEvent('localStorageChange', {
-      detail: { key: SELECTED_CALENDARS_KEY, newValue: JSON.stringify(newSelectedIds) }
-    }));
-  };
-
-  const handleCalendarToggle = (calendarId: string, checked: boolean) => {
-    const calendarName = calendars.find(cal => cal.id === calendarId)?.summary || calendarId;
-    console.log('CalendarsTab: Calendar toggle requested:', { calendarId, calendarName, checked });
-    
-    let newSelection: string[];
-    
-    if (checked) {
-      newSelection = [...selectedCalendarIds, calendarId];
-      console.log(`CalendarsTab: Adding "${calendarName}" to selection`);
-    } else {
-      newSelection = selectedCalendarIds.filter(id => id !== calendarId);
-      console.log(`CalendarsTab: Removing "${calendarName}" from selection`);
-    }
-    
-    updateSelectedCalendars(newSelection);
-  };
-
-  const selectAllCalendars = () => {
-    const allIds = calendars.map(cal => cal.id);
-    console.log('CalendarsTab: Selecting all calendars:', allIds.map(id => {
-      const cal = calendars.find(c => c.id === id);
-      return `"${cal?.summary || id}" (${id})`;
-    }));
-    updateSelectedCalendars(allIds);
-  };
-
-  const clearAllCalendars = () => {
-    console.log('CalendarsTab: Clearing all calendar selections');
-    updateSelectedCalendars([]);
-  };
+  const { 
+    selectedCalendarIds, 
+    calendarsWithEvents, 
+    isLoading: calendarsLoading,
+    toggleCalendar,
+    selectAllCalendars,
+    selectCalendarsWithEvents,
+    clearAllCalendars
+  } = useCalendarSelection();
 
   const syncCalendar = async () => {
     if (!user) return;
@@ -123,10 +49,9 @@ const CalendarsTab = () => {
         description: `Found ${data.events?.length || 0} events from your Google Calendar.`,
       });
 
-      // Refresh events and calendars
-      console.log('CalendarsTab: Refreshing events and calendars...');
+      // Refresh events
+      console.log('CalendarsTab: Refreshing events...');
       await refreshEvents();
-      await refetchCalendars();
       console.log('CalendarsTab: Refresh complete');
     } catch (error) {
       console.error('CalendarsTab: Error syncing calendar:', error);
@@ -163,8 +88,12 @@ const CalendarsTab = () => {
     );
   }
 
-  console.log('CalendarsTab: Rendering with calendars:', calendars.length);
+  const totalEvents = calendarsWithEvents.reduce((sum, cal) => sum + cal.eventCount, 0);
+  const calendarsWithEventsCount = calendarsWithEvents.filter(cal => cal.hasEvents).length;
+
+  console.log('CalendarsTab: Rendering with calendars:', calendarsWithEvents.length);
   console.log('CalendarsTab: Selected calendars:', selectedCalendarIds.length);
+  console.log('CalendarsTab: Total events across all calendars:', totalEvents);
 
   return (
     <div className="space-y-6">
@@ -194,11 +123,35 @@ const CalendarsTab = () => {
               Sync Calendar
             </Button>
           </div>
+
+          {/* Event Summary */}
+          {totalEvents > 0 && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <BarChart3 className="h-4 w-4 text-blue-600" />
+                <span className="font-medium text-blue-900">Event Summary</span>
+              </div>
+              <div className="grid grid-cols-3 gap-4 text-sm">
+                <div>
+                  <div className="font-medium text-blue-900">{totalEvents}</div>
+                  <div className="text-blue-700">Total Events</div>
+                </div>
+                <div>
+                  <div className="font-medium text-blue-900">{calendarsWithEventsCount}</div>
+                  <div className="text-blue-700">Active Calendars</div>
+                </div>
+                <div>
+                  <div className="font-medium text-blue-900">{selectedCalendarIds.length}</div>
+                  <div className="text-blue-700">Selected</div>
+                </div>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
       {/* Available Calendars */}
-      {calendars.length > 0 && (
+      {calendarsWithEvents.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -206,7 +159,7 @@ const CalendarsTab = () => {
               Available Calendars
             </CardTitle>
             <CardDescription>
-              Select which calendars to display in your calendar view
+              Select which calendars to display in your calendar view. Calendars with events are highlighted.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -216,7 +169,8 @@ const CalendarsTab = () => {
                 <span className="text-sm">Loading calendars...</span>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-4">
+                {/* Quick Actions */}
                 <div className="flex gap-2 pb-3 border-b border-gray-200">
                   <Button
                     variant="outline"
@@ -224,7 +178,16 @@ const CalendarsTab = () => {
                     onClick={selectAllCalendars}
                     className="text-xs"
                   >
-                    Select All
+                    Select All ({calendarsWithEvents.length})
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={selectCalendarsWithEvents}
+                    className="text-xs"
+                    disabled={calendarsWithEventsCount === 0}
+                  >
+                    With Events ({calendarsWithEventsCount})
                   </Button>
                   <Button
                     variant="outline"
@@ -235,43 +198,66 @@ const CalendarsTab = () => {
                     Clear All
                   </Button>
                   <div className="ml-auto text-xs text-gray-500 self-center">
-                    {selectedCalendarIds.length} of {calendars.length} selected
+                    {selectedCalendarIds.length} of {calendarsWithEvents.length} selected
                   </div>
                 </div>
 
-                {calendars.map((calendar) => {
-                  const isSelected = selectedCalendarIds.includes(calendar.id);
-                  return (
-                    <div key={calendar.id} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
-                      <Checkbox
-                        id={`calendar-${calendar.id}`}
-                        checked={isSelected}
-                        onCheckedChange={(checked) => handleCalendarToggle(calendar.id, checked === true)}
-                        className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
-                      />
-                      <div className="flex-1">
-                        <label
-                          htmlFor={`calendar-${calendar.id}`}
-                          className="text-sm font-medium text-gray-900 cursor-pointer"
-                        >
-                          {calendar.summary}
-                          {calendar.primary && (
-                            <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                              Primary
-                            </span>
-                          )}
-                        </label>
-                        <p className="text-xs text-gray-500 mt-1">
-                          Calendar ID: {calendar.id}
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })}
+                {/* Calendar List */}
+                <div className="space-y-3">
+                  {calendarsWithEvents
+                    .sort((a, b) => {
+                      // Sort by: primary first, then by event count (descending), then by name
+                      if (a.primary && !b.primary) return -1;
+                      if (!a.primary && b.primary) return 1;
+                      if (a.eventCount !== b.eventCount) return b.eventCount - a.eventCount;
+                      return a.summary.localeCompare(b.summary);
+                    })
+                    .map((calendar) => {
+                      const isSelected = selectedCalendarIds.includes(calendar.id);
+                      return (
+                        <div key={calendar.id} className={`flex items-center space-x-3 p-4 rounded-lg border ${
+                          calendar.hasEvents 
+                            ? 'bg-blue-50 border-blue-200' 
+                            : 'bg-gray-50 border-gray-200'
+                        }`}>
+                          <Checkbox
+                            id={`calendar-${calendar.id}`}
+                            checked={isSelected}
+                            onCheckedChange={(checked) => toggleCalendar(calendar.id, checked === true)}
+                            className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                          />
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <label
+                                htmlFor={`calendar-${calendar.id}`}
+                                className="text-sm font-medium text-gray-900 cursor-pointer"
+                              >
+                                {calendar.summary}
+                              </label>
+                              {calendar.primary && (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                                  Primary
+                                </span>
+                              )}
+                              {calendar.hasEvents && (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                                  {calendar.eventCount} event{calendar.eventCount !== 1 ? 's' : ''}
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-xs text-gray-500">
+                              Calendar ID: {calendar.id}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
                 
                 <div className="pt-3 border-t border-gray-200">
                   <p className="text-xs text-gray-500">
                     Note: Calendar selections are automatically applied to the calendar view and dropdown filter.
+                    Calendars with events are highlighted and sorted by event count.
                   </p>
                 </div>
               </div>
