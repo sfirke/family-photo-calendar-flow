@@ -2,12 +2,21 @@
 // Image extraction utilities for Google Photos HTML content
 
 export const extractImagesFromHtml = (html: string): string[] => {
+  console.log('Starting image extraction from HTML, length:', html.length);
+  
   // Extract image URLs from the HTML
   // Google Photos uses specific patterns for image URLs
   const imageUrlPatterns = [
+    // Standard googleusercontent patterns
     /https:\/\/lh\d+\.googleusercontent\.com\/[^"'\s\]]+/g,
     /"(https:\/\/lh\d+\.googleusercontent\.com\/[^"]+)"/g,
-    /'(https:\/\/lh\d+\.googleusercontent\.com\/[^']+)'/g
+    /'(https:\/\/lh\d+\.googleusercontent\.com\/[^']+)'/g,
+    // Base64 encoded patterns that might contain URLs
+    /https:\/\/lh\d+\.googleusercontent\.com\/[A-Za-z0-9\-_=]+/g,
+    // JSON-like patterns where URLs might be embedded
+    /\\u003dhttps:\/\/lh\d+\.googleusercontent\.com\/[^"'\\]+/g,
+    // Alternative encoding patterns
+    /lh\d+\.googleusercontent\.com\/[A-Za-z0-9\-_=]+/g
   ];
   
   const foundUrls = new Set<string>();
@@ -15,9 +24,15 @@ export const extractImagesFromHtml = (html: string): string[] => {
   for (const pattern of imageUrlPatterns) {
     const matches = html.match(pattern);
     if (matches) {
+      console.log(`Found ${matches.length} matches with pattern:`, pattern.toString());
       matches.forEach(match => {
-        // Clean up the URL (remove quotes if present)
-        const cleanUrl = match.replace(/['"]/g, '');
+        // Clean up the URL (remove quotes, decode if necessary)
+        let cleanUrl = match.replace(/['"]/g, '').replace(/\\u003d/g, '=');
+        
+        // Ensure proper protocol
+        if (!cleanUrl.startsWith('https://')) {
+          cleanUrl = 'https://' + cleanUrl;
+        }
         
         // Filter out profile photos and small images
         if (isValidAlbumPhoto(cleanUrl, html)) {
@@ -43,15 +58,26 @@ export const extractImagesFromHtml = (html: string): string[] => {
     tryAlternativeExtraction(html, foundUrls);
   }
   
+  // If still no images, try more aggressive extraction
+  if (foundUrls.size === 0) {
+    console.log('Still no images found, trying aggressive extraction...');
+    tryAggressiveExtraction(html, foundUrls);
+  }
+  
   const finalImageUrls = Array.from(foundUrls);
   console.log(`Extracted ${finalImageUrls.length} album photos (excluding profile photos and UI elements)`);
+  
+  // Log a sample of URLs for debugging
+  if (finalImageUrls.length > 0) {
+    console.log('Sample extracted URLs:', finalImageUrls.slice(0, 3));
+  }
   
   return finalImageUrls.slice(0, 50); // Limit to first 50 images for performance
 };
 
 const isValidAlbumPhoto = (url: string, html: string): boolean => {
   // Basic URL validation
-  if (!url.includes('googleusercontent.com') || url.length < 60) {
+  if (!url.includes('googleusercontent.com') || url.length < 40) {
     return false;
   }
   
@@ -116,17 +142,24 @@ const isValidAlbumPhoto = (url: string, html: string): boolean => {
 };
 
 const tryAlternativeExtraction = (html: string, foundUrls: Set<string>): void => {
+  console.log('Trying alternative extraction patterns...');
+  
   const altPatterns = [
     /"(https:\/\/lh\d+\.googleusercontent\.com[^"]*?)"/g,
     /https:\/\/lh\d+\.googleusercontent\.com\/[^\s"'<>\]]+/g,
-    /\bhttps:\/\/lh\d+\.googleusercontent\.com\/[A-Za-z0-9\-_]+/g
+    /\bhttps:\/\/lh\d+\.googleusercontent\.com\/[A-Za-z0-9\-_]+/g,
+    // Look for data attributes that might contain image URLs
+    /data-[^=]*="[^"]*lh\d+\.googleusercontent\.com[^"]*"/g,
+    // Look for src attributes
+    /src="[^"]*lh\d+\.googleusercontent\.com[^"]*"/g
   ];
   
   for (const altPattern of altPatterns) {
     const altMatches = html.match(altPattern);
     if (altMatches) {
+      console.log(`Alternative pattern found ${altMatches.length} matches:`, altPattern.toString());
       altMatches.forEach(match => {
-        const cleanUrl = match.replace(/['"]/g, '');
+        let cleanUrl = match.replace(/['"]/g, '').replace(/^[^h]*https/, 'https');
         
         // Apply same filtering for alternative patterns
         if (isValidAlbumPhoto(cleanUrl, html)) {
@@ -135,5 +168,46 @@ const tryAlternativeExtraction = (html: string, foundUrls: Set<string>): void =>
         }
       });
     }
+  }
+};
+
+const tryAggressiveExtraction = (html: string, foundUrls: Set<string>): void => {
+  console.log('Trying aggressive extraction patterns...');
+  
+  // Look for any mention of lh*.googleusercontent.com domains
+  const aggressivePatterns = [
+    /lh\d+\.googleusercontent\.com\/[A-Za-z0-9\-_]{20,}/g,
+    /googleusercontent\.com\/[A-Za-z0-9\-_\/]{30,}/g
+  ];
+  
+  for (const pattern of aggressivePatterns) {
+    const matches = html.match(pattern);
+    if (matches) {
+      console.log(`Aggressive pattern found ${matches.length} matches:`, pattern.toString());
+      matches.forEach(match => {
+        let cleanUrl = match.startsWith('http') ? match : 'https://' + match;
+        
+        if (isValidAlbumPhoto(cleanUrl, html)) {
+          const baseUrl = cleanUrl.split('=')[0] + '=s0';
+          foundUrls.add(baseUrl);
+        }
+      });
+    }
+  }
+  
+  // Last resort: look for any string that might be an image ID and construct URLs
+  const idPattern = /[A-Za-z0-9\-_]{30,}/g;
+  const potentialIds = html.match(idPattern);
+  
+  if (potentialIds && potentialIds.length > 0) {
+    console.log(`Found ${potentialIds.length} potential image IDs, testing first 10...`);
+    
+    // Test only the first 10 to avoid too many invalid URLs
+    potentialIds.slice(0, 10).forEach(id => {
+      if (id.length > 30 && id.length < 100) {
+        const constructedUrl = `https://lh3.googleusercontent.com/${id}=s0`;
+        foundUrls.add(constructedUrl);
+      }
+    });
   }
 };
