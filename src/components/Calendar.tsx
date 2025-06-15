@@ -17,6 +17,7 @@ const Calendar = () => {
   const [view, setView] = useState<'timeline' | 'week' | 'month'>('month');
   const [weekOffset, setWeekOffset] = useState(0);
   const [selectedCalendarIds, setSelectedCalendarIds] = useState<string[]>([]);
+  const [hasInitialized, setHasInitialized] = useState(false);
   const { defaultView } = useSettings();
   const { getWeatherForDate } = useWeather();
   const { googleEvents, isLoading: googleEventsLoading } = useGoogleCalendarEvents();
@@ -26,36 +27,43 @@ const Calendar = () => {
     setView(defaultView);
   }, [defaultView]);
 
-  // Auto-select all available calendars when they are first loaded
+  // Auto-select all available calendars when they are first loaded, but only once
   useEffect(() => {
-    if (calendars.length > 0 && selectedCalendarIds.length === 0) {
+    if (calendars.length > 0 && !hasInitialized) {
       const allCalendarIds = calendars.map(cal => cal.id);
       setSelectedCalendarIds(allCalendarIds);
-      console.log('Auto-selecting all calendars:', allCalendarIds);
+      setHasInitialized(true);
+      console.log('Auto-selecting all calendars on first load:', allCalendarIds);
     }
-  }, [calendars, selectedCalendarIds.length]);
+  }, [calendars, hasInitialized]);
 
   // Use Google Calendar events if available, otherwise use sample events
   const hasGoogleEvents = googleEvents.length > 0;
   const baseEvents = hasGoogleEvents ? googleEvents : sampleEvents;
 
-  // Filter events by selected calendar IDs only (removed category filtering)
+  // Filter events by selected calendar IDs
   const filteredEvents = baseEvents.filter(event => {
     // For Google Calendar events, filter by selected calendar IDs
-    if (hasGoogleEvents && selectedCalendarIds.length > 0) {
+    if (hasGoogleEvents) {
+      if (selectedCalendarIds.length === 0) {
+        // If no calendars selected, show no events
+        console.log(`Event "${event.title}" - No calendars selected, hiding event`);
+        return false;
+      }
       const eventCalendarId = event.calendarId || 'primary';
       const calendarMatch = selectedCalendarIds.includes(eventCalendarId);
       console.log(`Event "${event.title}" - Calendar ID: ${eventCalendarId}, Selected: ${calendarMatch}`);
       return calendarMatch;
     }
     
-    // For sample events, show all events
+    // For sample events, show all events when no Google events are available
     return true;
   });
 
   console.log(`Filtered events: ${filteredEvents.length} out of ${baseEvents.length} total events`);
   console.log('Selected calendar IDs:', selectedCalendarIds);
   console.log('Has Google events:', hasGoogleEvents);
+  console.log('Has initialized:', hasInitialized);
 
   return (
     <div className="space-y-6">

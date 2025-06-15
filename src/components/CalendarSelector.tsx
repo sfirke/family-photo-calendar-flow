@@ -21,6 +21,7 @@ const CalendarSelector = ({ selectedCalendarIds, onCalendarChange }: CalendarSel
   const { user } = useAuth();
 
   const handleCalendarToggle = (calendarId: string, checked: boolean) => {
+    console.log('Calendar toggle:', calendarId, 'checked:', checked);
     if (checked) {
       const newSelection = [...selectedCalendarIds, calendarId];
       onCalendarChange(newSelection);
@@ -100,22 +101,29 @@ const CalendarSelector = ({ selectedCalendarIds, onCalendarChange }: CalendarSel
           <h3 className="font-medium text-gray-900">Select Calendars</h3>
           
           <div className="space-y-3 max-h-48 overflow-y-auto">
-            {calendars.map((calendar) => (
-              <div key={calendar.id} className="flex items-center space-x-3">
-                <Checkbox
-                  id={calendar.id}
-                  checked={selectedCalendarIds.includes(calendar.id)}
-                  onCheckedChange={(checked) => handleCalendarToggle(calendar.id, checked === true)}
-                />
-                <label
-                  htmlFor={calendar.id}
-                  className="text-sm text-gray-700 cursor-pointer flex-1"
-                >
-                  {calendar.summary}
-                  {calendar.primary && <span className="ml-2 text-xs text-blue-600">(Primary)</span>}
-                </label>
-              </div>
-            ))}
+            {calendars.map((calendar) => {
+              const isChecked = selectedCalendarIds.includes(calendar.id);
+              console.log('Rendering calendar:', calendar.id, 'checked:', isChecked);
+              return (
+                <div key={calendar.id} className="flex items-center space-x-3">
+                  <Checkbox
+                    id={calendar.id}
+                    checked={isChecked}
+                    onCheckedChange={(checked) => {
+                      console.log('Checkbox changed for:', calendar.id, 'new state:', checked);
+                      handleCalendarToggle(calendar.id, checked === true);
+                    }}
+                  />
+                  <label
+                    htmlFor={calendar.id}
+                    className="text-sm text-gray-700 cursor-pointer flex-1"
+                  >
+                    {calendar.summary}
+                    {calendar.primary && <span className="ml-2 text-xs text-blue-600">(Primary)</span>}
+                  </label>
+                </div>
+              );
+            })}
           </div>
 
           <div className="flex gap-2 pt-2 border-t border-gray-200">
