@@ -1,7 +1,6 @@
 
 import React, { useState } from 'react';
 import { Event } from '@/types/calendar';
-import EventCard from './EventCard';
 import DayViewModal from './DayViewModal';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, Sun, Cloud, CloudRain } from 'lucide-react';
@@ -151,40 +150,23 @@ const MonthView = ({ events, getWeatherForDate }: MonthViewProps) => {
               
               {isToday && <div className="w-full h-0.5 bg-yellow-300 mb-2"></div>}
               
-              {/* Event Dots */}
+              {/* Event Dots Only */}
               {dayEvents.length > 0 && (
-                <div className="flex flex-wrap gap-1 mb-2">
-                  {dayEvents.slice(0, 6).map((event, eventIndex) => (
+                <div className="flex flex-wrap gap-1 justify-center items-center min-h-[60px]">
+                  {dayEvents.slice(0, 12).map((event, eventIndex) => (
                     <div
                       key={eventIndex}
-                      className={`w-2 h-2 rounded-full ${event.color} opacity-80`}
+                      className={`w-3 h-3 rounded-full ${event.color} opacity-80 hover:opacity-100 transition-opacity`}
                       title={event.title}
                     />
                   ))}
-                  {dayEvents.length > 6 && (
-                    <div className="text-xs text-white/70 ml-1">
-                      +{dayEvents.length - 6}
+                  {dayEvents.length > 12 && (
+                    <div className="text-xs text-white/70 font-medium bg-white/20 px-2 py-1 rounded-full">
+                      +{dayEvents.length - 12}
                     </div>
                   )}
                 </div>
               )}
-              
-              {/* Sample Events (only show first 2 as before) */}
-              <div className="space-y-1">
-                {dayEvents.slice(0, 2).map((event) => (
-                  <EventCard 
-                    key={event.id} 
-                    event={event}
-                    className="text-xs p-1"
-                    viewMode="month"
-                  />
-                ))}
-                {dayEvents.length > 2 && (
-                  <div className="text-xs text-white/50 text-center">
-                    +{dayEvents.length - 2} more
-                  </div>
-                )}
-              </div>
             </div>
           );
         })}

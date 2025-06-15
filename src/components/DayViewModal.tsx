@@ -40,7 +40,7 @@ const DayViewModal = ({ open, onOpenChange, date, events, getWeatherForDate }: D
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md bg-white/95 backdrop-blur-sm border-white/20">
+      <DialogContent className="w-[75vw] h-[75vh] max-w-none bg-white/95 backdrop-blur-sm border-white/20">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
             <span className={isToday ? 'text-yellow-600' : 'text-gray-900'}>
@@ -58,7 +58,7 @@ const DayViewModal = ({ open, onOpenChange, date, events, getWeatherForDate }: D
           </DialogTitle>
         </DialogHeader>
         
-        <div className="space-y-3 max-h-96 overflow-y-auto">
+        <div className="space-y-3 overflow-y-auto flex-1">
           {events.length > 0 ? (
             events.map((event) => (
               <EventCard 
