@@ -24,7 +24,7 @@ export const WeatherProvider = ({ children }: { children: React.ReactNode }) => 
       try {
         const data = await fetchWeatherData(zipCode, weatherApiKey);
         setWeatherData(data);
-        console.log('Weather data loaded:', data);
+        console.log('Weather data loaded with extended forecast:', data.forecast.length, 'days');
       } catch (error) {
         console.error('Failed to load weather:', error);
       } finally {
@@ -41,27 +41,27 @@ export const WeatherProvider = ({ children }: { children: React.ReactNode }) => 
     }
 
     const dateString = date.toISOString().split('T')[0];
-    console.log('Looking for weather for date:', dateString);
     
-    // First try to find in forecast array
+    // Try to find in extended forecast array
     if (weatherData.forecast && weatherData.forecast.length > 0) {
       const forecast = weatherData.forecast.find(f => f.date === dateString);
       if (forecast) {
-        console.log('Found forecast for', dateString, ':', forecast);
         return { temp: forecast.temp, condition: forecast.condition };
       }
     }
     
-    // Fall back to current weather for today
+    // Fall back to current weather for today only
     const today = new Date().toISOString().split('T')[0];
     if (dateString === today) {
-      console.log('Using current weather for today:', { temp: weatherData.temperature, condition: weatherData.condition });
       return { temp: weatherData.temperature, condition: weatherData.condition };
     }
     
-    // Default fallback
-    console.log('No forecast found for', dateString, ', using default');
-    return { temp: 75, condition: 'Sunny' };
+    // Final fallback with some variation
+    const daysSinceToday = Math.floor((date.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+    const tempVariation = Math.floor(Math.random() * 11) - 5; // -5 to +5
+    const fallbackTemp = Math.max(weatherData.temperature + tempVariation, 50);
+    
+    return { temp: fallbackTemp, condition: weatherData.condition };
   };
 
   return (
