@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import CalendarFilters from './CalendarFilters';
 import TimelineView from './TimelineView';
@@ -9,6 +8,17 @@ import { sampleEvents } from '@/data/sampleEvents';
 import { ViewMode, FilterState } from '@/types/calendar';
 import { useSettings } from '@/contexts/SettingsContext';
 import { useGoogleCalendarEvents } from '@/hooks/useGoogleCalendarEvents';
+
+// Mock weather data - in a real app, this would fetch from a weather API
+const mockWeatherData = {
+  '2025-06-15': { temp: 75, condition: 'sunny' },
+  '2025-06-16': { temp: 68, condition: 'cloudy' },
+  '2025-06-17': { temp: 72, condition: 'rainy' },
+  '2025-06-18': { temp: 80, condition: 'sunny' },
+  '2025-06-19': { temp: 65, condition: 'rainy' },
+  '2025-06-20': { temp: 78, condition: 'sunny' },
+  '2025-06-21': { temp: 73, condition: 'cloudy' },
+};
 
 const Calendar = () => {
   const { defaultView } = useSettings();
@@ -46,6 +56,11 @@ const Calendar = () => {
     console.log('Selected calendar:', calendarId);
   };
 
+  const getWeatherForDate = (date: Date) => {
+    const dateKey = date.toISOString().split('T')[0];
+    return mockWeatherData[dateKey] || { temp: 70, condition: 'sunny' };
+  };
+
   return (
     <div className="space-y-6 h-full">
       {/* Calendar Controls */}
@@ -71,12 +86,6 @@ const Calendar = () => {
           className="bg-white/95 backdrop-blur-sm border border-white/20 rounded-md h-10 dark:bg-gray-800/95 dark:border-gray-700/20"
         >
           <ToggleGroupItem
-            value="month"
-            className="text-gray-900 data-[state=on]:bg-gray-100 data-[state=on]:text-gray-900 hover:bg-gray-50 hover:text-gray-900 h-8 px-3 dark:text-gray-100 dark:data-[state=on]:bg-gray-700 dark:data-[state=on]:text-gray-100 dark:hover:bg-gray-700 dark:hover:text-gray-100"
-          >
-            Month
-          </ToggleGroupItem>
-          <ToggleGroupItem
             value="timeline"
             className="text-gray-900 data-[state=on]:bg-gray-100 data-[state=on]:text-gray-900 hover:bg-gray-50 hover:text-gray-900 h-8 px-3 dark:text-gray-100 dark:data-[state=on]:bg-gray-700 dark:data-[state=on]:text-gray-100 dark:hover:bg-gray-700 dark:hover:text-gray-100"
           >
@@ -87,6 +96,12 @@ const Calendar = () => {
             className="text-gray-900 data-[state=on]:bg-gray-100 data-[state=on]:text-gray-900 hover:bg-gray-50 hover:text-gray-900 h-8 px-3 dark:text-gray-100 dark:data-[state=on]:bg-gray-700 dark:data-[state=on]:text-gray-100 dark:hover:bg-gray-700 dark:hover:text-gray-100"
           >
             Week
+          </ToggleGroupItem>
+          <ToggleGroupItem
+            value="month"
+            className="text-gray-900 data-[state=on]:bg-gray-100 data-[state=on]:text-gray-900 hover:bg-gray-50 hover:text-gray-900 h-8 px-3 dark:text-gray-100 dark:data-[state=on]:bg-gray-700 dark:data-[state=on]:text-gray-100 dark:hover:bg-gray-700 dark:hover:text-gray-100"
+          >
+            Month
           </ToggleGroupItem>
         </ToggleGroup>
 
@@ -110,9 +125,10 @@ const Calendar = () => {
             weekOffset={weekOffset}
             onPreviousWeek={handlePreviousWeek}
             onNextWeek={handleNextWeek}
+            getWeatherForDate={getWeatherForDate}
           />
         ) : (
-          <MonthView events={filteredEvents} />
+          <MonthView events={filteredEvents} getWeatherForDate={getWeatherForDate} />
         )}
       </div>
     </div>

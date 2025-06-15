@@ -2,20 +2,37 @@
 import React, { useState } from 'react';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Sun, Cloud, CloudRain } from 'lucide-react';
 import { Event } from '@/types/calendar';
 
 interface MonthViewProps {
   events: Event[];
+  getWeatherForDate: (date: Date) => { temp: number; condition: string };
 }
 
-const MonthView = ({ events }: MonthViewProps) => {
+const MonthView = ({ events, getWeatherForDate }: MonthViewProps) => {
   const [currentDate, setCurrentDate] = useState(new Date());
 
   const getEventsForDate = (date: Date) => {
     return events.filter(event => 
       event.date.toDateString() === date.toDateString()
     );
+  };
+
+  const getWeatherIcon = (condition: string) => {
+    switch (condition.toLowerCase()) {
+      case 'sunny':
+      case 'clear':
+        return <Sun className="h-3 w-3 text-yellow-400" />;
+      case 'cloudy':
+      case 'partly cloudy':
+        return <Cloud className="h-3 w-3 text-gray-400" />;
+      case 'rain':
+      case 'rainy':
+        return <CloudRain className="h-3 w-3 text-blue-400" />;
+      default:
+        return <Sun className="h-3 w-3 text-yellow-400" />;
+    }
   };
 
   const navigateMonth = (direction: 'prev' | 'next') => {
@@ -70,7 +87,7 @@ const MonthView = ({ events }: MonthViewProps) => {
           <ChevronLeft className="h-4 w-4" />
         </Button>
         
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+        <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
           {monthName}
         </h2>
         
@@ -102,6 +119,7 @@ const MonthView = ({ events }: MonthViewProps) => {
           const dayEvents = getEventsForDate(date);
           const isToday = date.toDateString() === today.toDateString();
           const isPastDay = date < today && !isToday;
+          const weather = getWeatherForDate(date);
           
           return (
             <div
@@ -112,8 +130,16 @@ const MonthView = ({ events }: MonthViewProps) => {
                 ${isPastDay ? 'text-gray-400 dark:text-gray-600' : 'text-gray-900 dark:text-gray-100'}
               `}
             >
-              <div className="text-sm font-medium mb-1">
-                {date.getDate()}
+              <div className="flex justify-between items-start mb-1">
+                <div className="text-sm font-medium">
+                  {date.getDate()}
+                </div>
+                
+                {/* Weather Info */}
+                <div className="flex items-center gap-1">
+                  {getWeatherIcon(weather.condition)}
+                  <span className="text-xs text-gray-600 dark:text-gray-400">{weather.temp}°</span>
+                </div>
               </div>
               
               {/* Event Dots */}

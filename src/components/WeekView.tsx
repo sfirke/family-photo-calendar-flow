@@ -3,7 +3,7 @@ import React from 'react';
 import { Event } from '@/types/calendar';
 import EventCard from './EventCard';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Sun, Cloud, CloudRain } from 'lucide-react';
 import { getWeekDays, getWeekDateRange } from '@/utils/dateUtils';
 
 interface WeekViewProps {
@@ -11,15 +11,32 @@ interface WeekViewProps {
   weekOffset: number;
   onPreviousWeek: () => void;
   onNextWeek: () => void;
+  getWeatherForDate: (date: Date) => { temp: number; condition: string };
 }
 
-const WeekView = ({ events, weekOffset, onPreviousWeek, onNextWeek }: WeekViewProps) => {
+const WeekView = ({ events, weekOffset, onPreviousWeek, onNextWeek, getWeatherForDate }: WeekViewProps) => {
   const weekDays = getWeekDays(weekOffset);
   
   const getEventsForDate = (date: Date) => {
     return events.filter(event => 
       event.date.toDateString() === date.toDateString()
     );
+  };
+
+  const getWeatherIcon = (condition: string) => {
+    switch (condition.toLowerCase()) {
+      case 'sunny':
+      case 'clear':
+        return <Sun className="h-4 w-4 text-yellow-400" />;
+      case 'cloudy':
+      case 'partly cloudy':
+        return <Cloud className="h-4 w-4 text-gray-300" />;
+      case 'rain':
+      case 'rainy':
+        return <CloudRain className="h-4 w-4 text-blue-400" />;
+      default:
+        return <Sun className="h-4 w-4 text-yellow-400" />;
+    }
   };
 
   return (
@@ -36,7 +53,7 @@ const WeekView = ({ events, weekOffset, onPreviousWeek, onNextWeek }: WeekViewPr
           Previous
         </Button>
         
-        <h3 className="text-lg font-medium text-white">
+        <h3 className="text-lg font-bold text-white">
           {getWeekDateRange(weekOffset)}
         </h3>
         
@@ -56,6 +73,7 @@ const WeekView = ({ events, weekOffset, onPreviousWeek, onNextWeek }: WeekViewPr
         {weekDays.map((date, index) => {
           const dayEvents = getEventsForDate(date);
           const isToday = date.toDateString() === new Date().toDateString();
+          const weather = getWeatherForDate(date);
           
           return (
             <div key={index} className="space-y-3">
@@ -67,6 +85,12 @@ const WeekView = ({ events, weekOffset, onPreviousWeek, onNextWeek }: WeekViewPr
                   {date.getDate()}
                 </p>
                 {isToday && <div className="w-2 h-2 bg-yellow-300 rounded-full mx-auto mt-1"></div>}
+                
+                {/* Weather Info */}
+                <div className="flex items-center justify-center gap-1 mt-2">
+                  {getWeatherIcon(weather.condition)}
+                  <span className="text-sm text-white/70">{weather.temp}°</span>
+                </div>
               </div>
               
               <div className="space-y-2">
@@ -75,6 +99,7 @@ const WeekView = ({ events, weekOffset, onPreviousWeek, onNextWeek }: WeekViewPr
                     key={event.id} 
                     event={event}
                     className="animate-fade-in text-xs"
+                    showBoldHeader={true}
                   />
                 ))}
                 {dayEvents.length === 0 && (

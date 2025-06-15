@@ -1,101 +1,37 @@
 
-import React, { useState } from 'react';
-import { Clock, MapPin, Users, ChevronDown, ChevronUp } from 'lucide-react';
-import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
-
-interface Event {
-  id: number;
-  title: string;
-  time: string;
-  location: string;
-  attendees: number;
-  category: string;
-  color: string;
-  description?: string;
-  organizer?: string;
-}
+import React from 'react';
+import { Event } from '@/types/calendar';
+import { Clock, MapPin } from 'lucide-react';
 
 interface EventCardProps {
   event: Event;
   className?: string;
+  showBoldHeader?: boolean;
 }
 
-const EventCard = ({ event, className }: EventCardProps) => {
-  const [isExpanded, setIsExpanded] = useState(false);
-
+const EventCard = ({ event, className = '', showBoldHeader = false }: EventCardProps) => {
   return (
-    <Card 
-      className={cn(
-        "bg-white/80 backdrop-blur-sm border-white/20 p-6 hover:bg-white/90 transition-colors duration-200 cursor-pointer dark:bg-gray-800/80 dark:border-gray-700/20 dark:hover:bg-gray-800/90",
-        className
-      )}
-      onClick={() => setIsExpanded(!isExpanded)}
-    >
-      <div className="flex items-start justify-between">
-        <div className="flex-1">
-          <div className="flex items-center gap-3 mb-2">
-            <h3 className="font-medium text-gray-900 dark:text-gray-100">{event.title}</h3>
-            <Badge 
-              variant="secondary" 
-              className={cn(
-                "text-white text-xs px-2 py-1 font-medium",
-                event.color
-              )}
-            >
-              {event.category}
-            </Badge>
-          </div>
-          
-          <div className="space-y-2 text-sm text-gray-700 dark:text-gray-300">
-            <div className="flex items-center gap-2">
-              <Clock className="h-4 w-4" />
-              <span>{event.time}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <MapPin className="h-4 w-4" />
-              <span>{event.location}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              <span>{event.attendees} attendee{event.attendees !== 1 ? 's' : ''}</span>
-            </div>
-          </div>
-
-          {isExpanded && (
-            <div className="mt-4 pt-4 border-t border-gray-200/50 dark:border-gray-600/50 space-y-3 animate-fade-in">
-              {event.description && (
-                <div>
-                  <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-2">Description</h4>
-                  <p className="text-sm text-gray-700 dark:text-gray-300">{event.description}</p>
-                </div>
-              )}
-              {event.organizer && (
-                <div>
-                  <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-2">Organizer</h4>
-                  <p className="text-sm text-gray-700 dark:text-gray-300">{event.organizer}</p>
-                </div>
-              )}
-              <div>
-                <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-2">Event Details</h4>
-                <div className="text-sm text-gray-700 dark:text-gray-300 space-y-1">
-                  <p>Duration: {event.time}</p>
-                  <p>Category: {event.category}</p>
-                  <p>Location: {event.location}</p>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-        <div className="ml-4">
-          {isExpanded ? 
-            <ChevronUp className="h-5 w-5 text-gray-600 dark:text-gray-400" /> : 
-            <ChevronDown className="h-5 w-5 text-gray-600 dark:text-gray-400" />
-          }
-        </div>
+    <div className={`p-3 rounded-lg bg-white/95 backdrop-blur-sm border border-white/30 ${className}`}>
+      <h4 className={`${showBoldHeader ? 'font-bold' : 'font-medium'} text-gray-900 mb-1 leading-tight`}>
+        {event.title}
+      </h4>
+      
+      <div className="flex items-center gap-2 text-xs text-gray-600 mb-1">
+        <Clock className="h-3 w-3" />
+        <span>{event.time}</span>
       </div>
-    </Card>
+      
+      {event.location && (
+        <div className="flex items-center gap-2 text-xs text-gray-600 mb-2">
+          <MapPin className="h-3 w-3" />
+          <span className="truncate">{event.location}</span>
+        </div>
+      )}
+      
+      <div className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${event.color} text-white`}>
+        {event.category}
+      </div>
+    </div>
   );
 };
 

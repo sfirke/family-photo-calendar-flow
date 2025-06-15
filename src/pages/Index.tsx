@@ -1,9 +1,9 @@
-
 import React, { useState, useEffect } from 'react';
 import Calendar from '@/components/Calendar';
 import WeatherWidget from '@/components/WeatherWidget';
 import SettingsModal from '@/components/SettingsModal';
-import { Settings, LogOut } from 'lucide-react';
+import UserProfileDropdown from '@/components/UserProfileDropdown';
+import { Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { useSettings } from '@/contexts/SettingsContext';
@@ -62,7 +62,7 @@ const Index = () => {
           <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/20 to-transparent pointer-events-none" />
           
           <div className="relative z-10">
-            <h1 className="text-2xl font-light text-white">Family Calendar</h1>
+            <h1 className="text-2xl font-bold text-white">Family Calendar</h1>
             <p className="text-sm text-white/90">
               {new Date().toLocaleDateString('en-US', { 
                 weekday: 'long', 
@@ -78,22 +78,7 @@ const Index = () => {
           
           <div className="flex items-center gap-4 relative z-10">
             <WeatherWidget zipCode={zipCode} />
-            
-            {user && (
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-white/90">
-                  {user.user_metadata?.full_name || user.email}
-                </span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={signOut}
-                  className="text-white hover:bg-white/20"
-                >
-                  <LogOut className="h-4 w-4" />
-                </Button>
-              </div>
-            )}
+            <UserProfileDropdown />
           </div>
         </header>
 
