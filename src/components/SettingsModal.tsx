@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import {
   Dialog,
@@ -7,14 +8,12 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { User, Camera, Monitor, CloudSun, X, LogOut } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/hooks/useAuth';
+import { User, Camera, Monitor, CloudSun, X } from 'lucide-react';
+import AccountTab from './settings/AccountTab';
+import PhotosTab from './settings/PhotosTab';
+import DisplayTab from './settings/DisplayTab';
+import WeatherTab from './settings/WeatherTab';
 
 interface SettingsModalProps {
   open: boolean;
@@ -25,9 +24,6 @@ interface SettingsModalProps {
 
 const SettingsModal = ({ open, onOpenChange, zipCode, onZipCodeChange }: SettingsModalProps) => {
   const [tempZipCode, setTempZipCode] = useState(zipCode);
-  const [isLoading, setIsLoading] = useState(false);
-  const { user, signOut } = useAuth();
-  const { toast } = useToast();
 
   const handleSave = () => {
     onZipCodeChange(tempZipCode);
@@ -37,62 +33,6 @@ const SettingsModal = ({ open, onOpenChange, zipCode, onZipCodeChange }: Setting
   const handleCancel = () => {
     setTempZipCode(zipCode);
     onOpenChange(false);
-  };
-
-  const handleGoogleSignIn = async () => {
-    setIsLoading(true);
-    try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}/`,
-          scopes: 'openid email profile https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/photoslibrary.readonly',
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
-          },
-        }
-      });
-
-      if (error) {
-        console.error('Google Sign In Error:', error);
-        toast({
-          title: "Google Sign In Error",
-          description: error.message,
-          variant: "destructive"
-        });
-      } else {
-        toast({
-          title: "Redirecting to Google",
-          description: "Please complete the sign-in process in the new tab.",
-        });
-      }
-    } catch (error) {
-      console.error('Unexpected error:', error);
-      toast({
-        title: "Error",
-        description: "An unexpected error occurred",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleSignOut = async () => {
-    try {
-      await signOut();
-      toast({
-        title: "Signed out",
-        description: "You have been signed out successfully.",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to sign out",
-        variant: "destructive"
-      });
-    }
   };
 
   return (
@@ -137,130 +77,22 @@ const SettingsModal = ({ open, onOpenChange, zipCode, onZipCodeChange }: Setting
           </TabsList>
 
           <TabsContent value="account" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Google Account Connection</CardTitle>
-                <CardDescription>
-                  Sign in with Google to access your calendar events and enable background slideshows with your personal photos.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {user ? (
-                  <div className="flex flex-col items-center space-y-4 py-4">
-                    <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
-                      {user.user_metadata?.avatar_url ? (
-                        <img 
-                          src={user.user_metadata.avatar_url} 
-                          alt="Profile" 
-                          className="w-16 h-16 rounded-full"
-                        />
-                      ) : (
-                        <User className="h-8 w-8 text-green-600" />
-                      )}
-                    </div>
-                    <div className="text-center">
-                      <h3 className="font-medium">{user.user_metadata?.full_name || user.email}</h3>
-                      <p className="text-sm text-gray-600">{user.email}</p>
-                    </div>
-                    <Button
-                      onClick={handleSignOut}
-                      variant="outline"
-                      className="text-red-600 hover:text-red-700"
-                    >
-                      <LogOut className="h-4 w-4 mr-2" />
-                      Sign Out
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center space-y-4 py-8">
-                    <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
-                      <User className="h-8 w-8 text-blue-600" />
-                    </div>
-                    <h3 className="font-medium">Connect Your Google Account</h3>
-                    <p className="text-sm text-gray-600 text-center max-w-md">
-                      Sign in with Google to access your Photos library and enable background slideshows with your personal photos.
-                    </p>
-                    <Button 
-                      onClick={handleGoogleSignIn}
-                      disabled={isLoading}
-                      className="bg-blue-600 hover:bg-blue-700 text-white"
-                    >
-                      <User className="h-4 w-4 mr-2" />
-                      {isLoading ? 'Opening Google Sign In...' : 'Sign in with Google'}
-                    </Button>
-                    <p className="text-xs text-gray-500 text-center max-w-md">
-                      You will be redirected to Google to complete the sign-in process. By connecting, you agree to share your Google Photos library access with this app.
-                    </p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            <AccountTab />
           </TabsContent>
 
           <TabsContent value="photos" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Background Photos</CardTitle>
-                <CardDescription>
-                  Choose a Google Photos album for rotating background images
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {user ? (
-                  <div className="text-center py-8 text-gray-500">
-                    <Camera className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                    <p>Photo album selection coming soon</p>
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-gray-500">
-                    <Camera className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                    <p>Connect your Google account to access photo albums</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            <PhotosTab />
           </TabsContent>
 
           <TabsContent value="display" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Display Preferences</CardTitle>
-                <CardDescription>
-                  Customize how your calendar appears
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Default View</Label>
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm">Timeline</Button>
-                    <Button variant="outline" size="sm">Week View</Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            <DisplayTab />
           </TabsContent>
 
           <TabsContent value="weather" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Weather Settings</CardTitle>
-                <CardDescription>
-                  Configure weather display for your location
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="zipcode">Zip Code</Label>
-                  <Input
-                    id="zipcode"
-                    placeholder="Enter your zip code"
-                    value={tempZipCode}
-                    onChange={(e) => setTempZipCode(e.target.value)}
-                  />
-                </div>
-              </CardContent>
-            </Card>
+            <WeatherTab 
+              zipCode={tempZipCode}
+              onZipCodeChange={setTempZipCode}
+            />
           </TabsContent>
         </Tabs>
 
