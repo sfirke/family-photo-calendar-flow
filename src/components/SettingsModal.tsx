@@ -42,10 +42,7 @@ const SettingsModal = ({ open, onOpenChange, zipCode, onZipCodeChange }: Setting
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
     try {
-      // Open Google auth in a new window
-      const authWindow = window.open('', 'google-auth', 'width=500,height=600,scrollbars=yes,resizable=yes');
-      
-      const { data, error } = await supabase.auth.signInWithOAuth({
+      const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo: `${window.location.origin}/`,
@@ -57,18 +54,6 @@ const SettingsModal = ({ open, onOpenChange, zipCode, onZipCodeChange }: Setting
         }
       });
 
-      if (data?.url && authWindow) {
-        authWindow.location.href = data.url;
-        
-        // Monitor the auth window
-        const checkClosed = setInterval(() => {
-          if (authWindow.closed) {
-            clearInterval(checkClosed);
-            setIsLoading(false);
-          }
-        }, 1000);
-      }
-
       if (error) {
         console.error('Google Sign In Error:', error);
         toast({
@@ -76,7 +61,11 @@ const SettingsModal = ({ open, onOpenChange, zipCode, onZipCodeChange }: Setting
           description: error.message,
           variant: "destructive"
         });
-        if (authWindow) authWindow.close();
+      } else {
+        toast({
+          title: "Redirecting to Google",
+          description: "Please complete the sign-in process in the new tab.",
+        });
       }
     } catch (error) {
       console.error('Unexpected error:', error);
@@ -85,6 +74,7 @@ const SettingsModal = ({ open, onOpenChange, zipCode, onZipCodeChange }: Setting
         description: "An unexpected error occurred",
         variant: "destructive"
       });
+    } finally {
       setIsLoading(false);
     }
   };
@@ -199,7 +189,7 @@ const SettingsModal = ({ open, onOpenChange, zipCode, onZipCodeChange }: Setting
                       {isLoading ? 'Opening Google Sign In...' : 'Sign in with Google'}
                     </Button>
                     <p className="text-xs text-gray-500 text-center max-w-md">
-                      A new window will open for Google sign-in. By connecting, you agree to share your Google Photos library access with this app.
+                      You will be redirected to Google to complete the sign-in process. By connecting, you agree to share your Google Photos library access with this app.
                     </p>
                   </div>
                 )}
