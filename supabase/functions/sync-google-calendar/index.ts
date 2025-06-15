@@ -19,7 +19,7 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const { userId, action } = await req.json();
+    const { userId, action, calendarId } = await req.json();
     
     if (!userId) {
       throw new Error('User ID is required');
@@ -36,19 +36,94 @@ serve(async (req) => {
       throw new Error('Google access token not found. Please reconnect your Google account.');
     }
 
-    // Check if token is expired and refresh if needed
     let accessToken = profile.google_access_token;
-    const expiresAt = profile.google_token_expires_at ? new Date(profile.google_token_expires_at) : null;
-    
-    if (expiresAt && expiresAt < new Date() && profile.google_refresh_token) {
-      console.log('Refreshing expired Google token');
-      // Token refresh logic would go here in a real implementation
-      // For now, we'll use the existing token and let Google API handle the error
+
+    // Handle webhook setup
+    if (action === 'setup-webhooks') {
+      console.log('Setting up webhooks for user:', userId);
+      
+      // Get list of calendars first
+      const calendarsResponse = await fetch(
+        'https://www.googleapis.com/calendar/v3/users/me/calendarList',
+        {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      if (!calendarsResponse.ok) {
+        throw new Error(`Failed to fetch calendars: ${calendarsResponse.status}`);
+      }
+
+      const calendarsData = await calendarsResponse.json();
+      const webhookResults = [];
+
+      // Set up webhook for each calendar
+      for (const calendar of calendarsData.items || []) {
+        try {
+          const webhookPayload = {
+            id: `${userId}-${calendar.id}-${Date.now()}`,
+            type: 'web_hook',
+            address: `${Deno.env.get('SUPABASE_URL')}/functions/v1/google-calendar-webhook`,
+            token: `${userId}:${calendar.id}`
+          };
+
+          const webhookResponse = await fetch(
+            `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendar.id)}/events/watch`,
+            {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(webhookPayload)
+            }
+          );
+
+          if (webhookResponse.ok) {
+            const webhookData = await webhookResponse.json();
+            webhookResults.push({
+              calendarId: calendar.id,
+              success: true,
+              channelId: webhookData.id,
+              expiration: webhookData.expiration
+            });
+            console.log(`Webhook set up for calendar ${calendar.id}`);
+          } else {
+            console.error(`Failed to set up webhook for calendar ${calendar.id}:`, await webhookResponse.text());
+            webhookResults.push({
+              calendarId: calendar.id,
+              success: false,
+              error: `HTTP ${webhookResponse.status}`
+            });
+          }
+        } catch (error) {
+          console.error(`Error setting up webhook for calendar ${calendar.id}:`, error);
+          webhookResults.push({
+            calendarId: calendar.id,
+            success: false,
+            error: error.message
+          });
+        }
+      }
+
+      return new Response(
+        JSON.stringify({ 
+          success: true,
+          webhookResults,
+          message: 'Webhook setup completed'
+        }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200 
+        }
+      );
     }
 
-    // Handle different actions
+    // Handle list calendars action
     if (action === 'list-calendars') {
-      // Fetch calendar list from Google Calendar API
       const calendarsResponse = await fetch(
         'https://www.googleapis.com/calendar/v3/users/me/calendarList',
         {
@@ -84,10 +159,12 @@ serve(async (req) => {
       );
     }
 
-    // Default action: sync events
-    // Fetch calendar events from Google Calendar API
+    // Default action: sync events (with optional specific calendar)
+    const targetCalendarId = calendarId || 'primary';
+    console.log(`Syncing events for calendar: ${targetCalendarId}`);
+
     const calendarResponse = await fetch(
-      'https://www.googleapis.com/calendar/v3/calendars/primary/events?maxResults=50&orderBy=startTime&singleEvents=true&timeMin=' + 
+      `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(targetCalendarId)}/events?maxResults=50&orderBy=startTime&singleEvents=true&timeMin=` + 
       new Date().toISOString(),
       {
         headers: {
@@ -116,15 +193,16 @@ serve(async (req) => {
       end_time: event.end?.dateTime || event.end?.date,
       location: event.location || null,
       attendees: event.attendees || [],
-      calendar_id: 'primary'
+      calendar_id: targetCalendarId
     }));
 
     if (eventInserts.length > 0) {
-      // Delete existing events for this user to avoid duplicates
+      // Delete existing events for this calendar and user to avoid duplicates
       await supabaseClient
         .from('calendar_events')
         .delete()
-        .eq('user_id', userId);
+        .eq('user_id', userId)
+        .eq('calendar_id', targetCalendarId);
 
       // Insert new events
       const { error: insertError } = await supabaseClient
@@ -137,13 +215,14 @@ serve(async (req) => {
       }
     }
 
-    console.log(`Successfully synced ${events.length} calendar events for user ${userId}`);
+    console.log(`Successfully synced ${events.length} calendar events for user ${userId}, calendar ${targetCalendarId}`);
 
     return new Response(
       JSON.stringify({ 
         success: true, 
         events: eventInserts,
-        count: events.length 
+        count: events.length,
+        calendarId: targetCalendarId
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

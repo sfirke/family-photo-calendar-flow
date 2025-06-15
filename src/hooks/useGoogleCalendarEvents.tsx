@@ -1,18 +1,85 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Event } from '@/types/calendar';
+
+const CACHE_KEY = 'google_calendar_events_cache';
+const CACHE_EXPIRY_KEY = 'google_calendar_events_cache_expiry';
+const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
+
+interface CachedEvents {
+  events: Event[];
+  timestamp: number;
+}
 
 export const useGoogleCalendarEvents = () => {
   const [googleEvents, setGoogleEvents] = useState<Event[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const { user } = useAuth();
 
-  const loadGoogleEvents = async () => {
+  // Load events from cache
+  const loadFromCache = useCallback((): Event[] | null => {
+    try {
+      const cached = localStorage.getItem(CACHE_KEY);
+      const expiry = localStorage.getItem(CACHE_EXPIRY_KEY);
+      
+      if (cached && expiry) {
+        const cacheData: CachedEvents = JSON.parse(cached);
+        const expiryTime = parseInt(expiry);
+        
+        if (Date.now() < expiryTime) {
+          console.log('useGoogleCalendarEvents: Loading events from cache');
+          return cacheData.events;
+        } else {
+          console.log('useGoogleCalendarEvents: Cache expired, clearing');
+          localStorage.removeItem(CACHE_KEY);
+          localStorage.removeItem(CACHE_EXPIRY_KEY);
+        }
+      }
+    } catch (error) {
+      console.error('useGoogleCalendarEvents: Error loading from cache:', error);
+    }
+    return null;
+  }, []);
+
+  // Save events to cache
+  const saveToCache = useCallback((events: Event[]) => {
+    try {
+      const cacheData: CachedEvents = {
+        events,
+        timestamp: Date.now()
+      };
+      const expiry = Date.now() + CACHE_DURATION;
+      
+      localStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
+      localStorage.setItem(CACHE_EXPIRY_KEY, expiry.toString());
+      console.log('useGoogleCalendarEvents: Saved events to cache');
+    } catch (error) {
+      console.error('useGoogleCalendarEvents: Error saving to cache:', error);
+    }
+  }, []);
+
+  // Clear cache
+  const clearCache = useCallback(() => {
+    localStorage.removeItem(CACHE_KEY);
+    localStorage.removeItem(CACHE_EXPIRY_KEY);
+    console.log('useGoogleCalendarEvents: Cache cleared');
+  }, []);
+
+  const loadGoogleEvents = useCallback(async (forceRefresh = false) => {
     if (!user) {
       console.log('useGoogleCalendarEvents: No user found, skipping event load');
       return;
+    }
+
+    // Try to load from cache first unless force refresh is requested
+    if (!forceRefresh) {
+      const cachedEvents = loadFromCache();
+      if (cachedEvents) {
+        setGoogleEvents(cachedEvents);
+        return;
+      }
     }
 
     setIsLoading(true);
@@ -31,23 +98,11 @@ export const useGoogleCalendarEvents = () => {
       }
 
       console.log(`useGoogleCalendarEvents: Found ${data?.length || 0} events in database`);
-      
-      // Group events by calendar for debugging
-      const eventsByCalendar = {};
-      (data || []).forEach(dbEvent => {
-        const calendarId = dbEvent.calendar_id || 'primary';
-        if (!eventsByCalendar[calendarId]) {
-          eventsByCalendar[calendarId] = [];
-        }
-        eventsByCalendar[calendarId].push(dbEvent);
-      });
-
-      console.log('useGoogleCalendarEvents: Events grouped by calendar:', eventsByCalendar);
 
       // Convert database events to Event format
       const convertedEvents: Event[] = (data || []).map((dbEvent, index) => {
         const event = {
-          id: index + 1000, // Use high numbers to avoid conflicts with sample events
+          id: index + 1000,
           title: dbEvent.title,
           time: new Date(dbEvent.start_time).toLocaleTimeString('en-US', { 
             hour: 'numeric', 
@@ -70,26 +125,57 @@ export const useGoogleCalendarEvents = () => {
 
       console.log(`useGoogleCalendarEvents: Successfully converted ${convertedEvents.length} events`);
       setGoogleEvents(convertedEvents);
+      
+      // Save to cache
+      saveToCache(convertedEvents);
     } catch (error) {
       console.error('useGoogleCalendarEvents: Error loading Google Calendar events:', error);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [user, loadFromCache, saveToCache]);
+
+  // Handle real-time updates from push notifications
+  const handleWebhookUpdate = useCallback(async (calendarId: string, eventId?: string) => {
+    if (!user) return;
+
+    console.log('useGoogleCalendarEvents: Handling webhook update for calendar:', calendarId, 'event:', eventId);
+    
+    // Clear cache and reload events
+    clearCache();
+    await loadGoogleEvents(true);
+  }, [user, clearCache, loadGoogleEvents]);
+
+  // Listen for custom webhook events
+  useEffect(() => {
+    const handleCustomWebhook = (event: CustomEvent) => {
+      const { calendarId, eventId } = event.detail;
+      handleWebhookUpdate(calendarId, eventId);
+    };
+
+    window.addEventListener('google-calendar-webhook' as any, handleCustomWebhook);
+
+    return () => {
+      window.removeEventListener('google-calendar-webhook' as any, handleCustomWebhook);
+    };
+  }, [handleWebhookUpdate]);
 
   useEffect(() => {
     if (user) {
       console.log('useGoogleCalendarEvents: User detected, loading events');
       loadGoogleEvents();
     } else {
-      console.log('useGoogleCalendarEvents: No user, clearing events');
+      console.log('useGoogleCalendarEvents: No user, clearing events and cache');
       setGoogleEvents([]);
+      clearCache();
     }
-  }, [user]);
+  }, [user, loadGoogleEvents, clearCache]);
 
   return {
     googleEvents,
     isLoading,
-    refreshEvents: loadGoogleEvents
+    refreshEvents: () => loadGoogleEvents(true),
+    clearCache,
+    handleWebhookUpdate
   };
 };
