@@ -1,18 +1,38 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Sun, Cloud, CloudRain, Snowflake } from 'lucide-react';
+import { fetchWeatherData, WeatherData } from '@/services/weatherService';
 
 interface WeatherWidgetProps {
   zipCode: string;
 }
 
 const WeatherWidget = ({ zipCode }: WeatherWidgetProps) => {
-  // Mock weather data - in a real app, this would fetch from a weather API
-  const weatherData = {
+  const [weatherData, setWeatherData] = useState<WeatherData>({
     temperature: 75,
     condition: 'Sunny',
-    location: 'Detroit, MI'
-  };
+    location: 'Loading...',
+    forecast: []
+  });
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const loadWeather = async () => {
+      if (!zipCode) return;
+      
+      setIsLoading(true);
+      try {
+        const data = await fetchWeatherData(zipCode);
+        setWeatherData(data);
+      } catch (error) {
+        console.error('Failed to load weather:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadWeather();
+  }, [zipCode]);
 
   const getWeatherIcon = (condition: string) => {
     switch (condition.toLowerCase()) {
@@ -32,6 +52,18 @@ const WeatherWidget = ({ zipCode }: WeatherWidgetProps) => {
         return <Sun className="h-6 w-6 text-yellow-400" />;
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center gap-3 text-white">
+        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
+        <div>
+          <div className="text-2xl font-light">--°F</div>
+          <div className="text-sm text-white/70">Loading...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex items-center gap-3 text-white">

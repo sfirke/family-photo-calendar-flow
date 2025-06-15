@@ -1,47 +1,31 @@
 import React, { useState, useEffect } from 'react';
-import CalendarFilters from './CalendarFilters';
-import TimelineView from './TimelineView';
-import WeekView from './WeekView';
+import { Event } from '@/types/calendar';
 import MonthView from './MonthView';
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import WeekView from './WeekView';
+import TimelineView from './TimelineView';
+import CalendarFilters from './CalendarFilters';
+import { Button } from '@/components/ui/button';
+import { Calendar as CalendarIcon, Clock, List } from 'lucide-react';
 import { sampleEvents } from '@/data/sampleEvents';
-import { ViewMode, FilterState } from '@/types/calendar';
 import { useSettings } from '@/contexts/SettingsContext';
-import { useGoogleCalendarEvents } from '@/hooks/useGoogleCalendarEvents';
-
-// Mock weather data - in a real app, this would fetch from a weather API
-const mockWeatherData = {
-  '2025-06-15': { temp: 75, condition: 'sunny' },
-  '2025-06-16': { temp: 68, condition: 'cloudy' },
-  '2025-06-17': { temp: 72, condition: 'rainy' },
-  '2025-06-18': { temp: 80, condition: 'sunny' },
-  '2025-06-19': { temp: 65, condition: 'rainy' },
-  '2025-06-20': { temp: 78, condition: 'sunny' },
-  '2025-06-21': { temp: 73, condition: 'cloudy' },
-};
+import { useWeather } from '@/contexts/WeatherContext';
 
 const Calendar = () => {
-  const { defaultView } = useSettings();
-  const [viewMode, setViewMode] = useState<ViewMode>(defaultView);
-  const [activeFilters, setActiveFilters] = useState<FilterState>({
-    Personal: true,
-    Work: true,
-    Family: true,
-    Kids: true,
-    Holidays: true
-  });
+  const [events] = useState<Event[]>(sampleEvents);
+  const [view, setView] = useState<'timeline' | 'week' | 'month'>('month');
   const [weekOffset, setWeekOffset] = useState(0);
-  const [selectedCalendarId, setSelectedCalendarId] = useState<string>('');
-  const { googleEvents } = useGoogleCalendarEvents();
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const { defaultView } = useSettings();
+  const { getWeatherForDate } = useWeather();
 
-  // Update view mode when default view changes
   useEffect(() => {
-    setViewMode(defaultView);
+    setView(defaultView);
   }, [defaultView]);
 
-  // Combine sample events with Google Calendar events
-  const allEvents = [...sampleEvents, ...googleEvents];
-  const filteredEvents = allEvents.filter(event => activeFilters[event.category]);
+  const filteredEvents = events.filter(event => {
+    if (selectedCategories.length === 0) return true;
+    return selectedCategories.includes(event.category);
+  });
 
   const handlePreviousWeek = () => {
     setWeekOffset(prev => prev - 1);
@@ -51,86 +35,70 @@ const Calendar = () => {
     setWeekOffset(prev => prev + 1);
   };
 
-  const handleCalendarChange = (calendarId: string) => {
-    setSelectedCalendarId(calendarId);
-    console.log('Selected calendar:', calendarId);
-  };
-
-  const getWeatherForDate = (date: Date) => {
-    const dateKey = date.toISOString().split('T')[0];
-    return mockWeatherData[dateKey] || { temp: 70, condition: 'sunny' };
-  };
-
   return (
-    <div className="space-y-6 h-full">
-      {/* Calendar Controls */}
-      <div className="flex items-center gap-4 flex-wrap">
-        <CalendarFilters 
-          activeFilters={activeFilters}
-          onFiltersChange={setActiveFilters}
-          selectedCalendarId={selectedCalendarId}
-          onCalendarChange={handleCalendarChange}
-        />
+    <div className="space-y-6">
+      {/* Calendar Header */}
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold text-white">Calendar</h2>
         
-        <ToggleGroup
-          type="single"
-          value={viewMode}
-          onValueChange={(value) => {
-            if (value) {
-              setViewMode(value as ViewMode);
-              if (value === 'timeline') {
-                setWeekOffset(0);
-              }
-            }
-          }}
-          className="bg-white/95 backdrop-blur-sm border border-white/20 rounded-md h-10 dark:bg-gray-800/95 dark:border-gray-700/20"
-        >
-          <ToggleGroupItem
-            value="timeline"
-            className="text-gray-900 data-[state=on]:bg-gray-100 data-[state=on]:text-gray-900 hover:bg-gray-50 hover:text-gray-900 h-8 px-3 dark:text-gray-100 dark:data-[state=on]:bg-gray-700 dark:data-[state=on]:text-gray-100 dark:hover:bg-gray-700 dark:hover:text-gray-100"
-          >
-            Timeline
-          </ToggleGroupItem>
-          <ToggleGroupItem
-            value="week"
-            className="text-gray-900 data-[state=on]:bg-gray-100 data-[state=on]:text-gray-900 hover:bg-gray-50 hover:text-gray-900 h-8 px-3 dark:text-gray-100 dark:data-[state=on]:bg-gray-700 dark:data-[state=on]:text-gray-100 dark:hover:bg-gray-700 dark:hover:text-gray-100"
-          >
-            Week
-          </ToggleGroupItem>
-          <ToggleGroupItem
-            value="month"
-            className="text-gray-900 data-[state=on]:bg-gray-100 data-[state=on]:text-gray-900 hover:bg-gray-50 hover:text-gray-900 h-8 px-3 dark:text-gray-100 dark:data-[state=on]:bg-gray-700 dark:data-[state=on]:text-gray-100 dark:hover:bg-gray-700 dark:hover:text-gray-100"
-          >
-            Month
-          </ToggleGroupItem>
-        </ToggleGroup>
-
-        <div className="text-sm text-gray-900 ml-auto dark:text-gray-100">
-          Upcoming Events ({filteredEvents.length})
-          {googleEvents.length > 0 && (
-            <span className="ml-2 text-xs text-green-700 dark:text-green-300">
-              • {googleEvents.length} from Google Calendar
-            </span>
-          )}
+        <div className="flex items-center gap-4">
+          <CalendarFilters 
+            selectedCategories={selectedCategories}
+            onCategoryChange={setSelectedCategories}
+          />
+          
+          {/* View Switcher */}
+          <div className="flex bg-white/20 backdrop-blur-sm rounded-lg p-1">
+            <Button
+              variant={view === 'timeline' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setView('timeline')}
+              className={view === 'timeline' ? '' : 'text-white hover:bg-white/20'}
+            >
+              <List className="h-4 w-4 mr-1" />
+              Timeline
+            </Button>
+            <Button
+              variant={view === 'week' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setView('week')}
+              className={view === 'week' ? '' : 'text-white hover:bg-white/20'}
+            >
+              <Clock className="h-4 w-4 mr-1" />
+              Week
+            </Button>
+            <Button
+              variant={view === 'month' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setView('month')}
+              className={view === 'month' ? '' : 'text-white hover:bg-white/20'}
+            >
+              <CalendarIcon className="h-4 w-4 mr-1" />
+              Month
+            </Button>
+          </div>
         </div>
       </div>
 
-      {/* Events Display */}
-      <div className="animate-fade-in flex-1">
-        {viewMode === 'timeline' ? (
-          <TimelineView events={filteredEvents} />
-        ) : viewMode === 'week' ? (
-          <WeekView 
-            events={filteredEvents}
-            weekOffset={weekOffset}
-            onPreviousWeek={handlePreviousWeek}
-            onNextWeek={handleNextWeek}
-            getWeatherForDate={getWeatherForDate}
-          />
-        ) : (
-          <MonthView events={filteredEvents} getWeatherForDate={getWeatherForDate} />
-        )}
-      </div>
+      {/* Calendar Content */}
+      {view === 'timeline' && (
+        <TimelineView events={filteredEvents} />
+      )}
+      {view === 'week' && (
+        <WeekView 
+          events={filteredEvents}
+          weekOffset={weekOffset}
+          onPreviousWeek={() => setWeekOffset(prev => prev - 1)}
+          onNextWeek={() => setWeekOffset(prev => prev + 1)}
+          getWeatherForDate={getWeatherForDate}
+        />
+      )}
+      {view === 'month' && (
+        <MonthView 
+          events={filteredEvents}
+          getWeatherForDate={getWeatherForDate}
+        />
+      )}
     </div>
   );
 };
