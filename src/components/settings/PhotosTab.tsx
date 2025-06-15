@@ -4,126 +4,78 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Camera, RefreshCw, AlertCircle, CheckCircle } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Camera, RefreshCw, AlertCircle, CheckCircle, ExternalLink } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useSettings } from '@/contexts/SettingsContext';
-import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-
-interface PhotoAlbum {
-  id: string;
-  title: string;
-  cover_photo_url?: string;
-  media_items_count: number;
-}
 
 const PhotosTab = () => {
   const { user } = useAuth();
-  const { backgroundDuration, setBackgroundDuration, selectedAlbum, setSelectedAlbum } = useSettings();
+  const { backgroundDuration, setBackgroundDuration, publicAlbumUrl, setPublicAlbumUrl } = useSettings();
   const { toast } = useToast();
   
-  const [albums, setAlbums] = useState<PhotoAlbum[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [lastSync, setLastSync] = useState<Date | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [albumUrl, setAlbumUrl] = useState(publicAlbumUrl || '');
+  const [isValidating, setIsValidating] = useState(false);
+  const [validationStatus, setValidationStatus] = useState<'idle' | 'valid' | 'invalid'>('idle');
 
   const formatDuration = (minutes: number) => {
     if (minutes === 1) return '1 minute';
     return `${minutes} minutes`;
   };
 
-  const syncPhotos = async () => {
-    if (!user) return;
+  const validateAlbumUrl = async (url: string) => {
+    if (!url.trim()) {
+      setValidationStatus('idle');
+      return;
+    }
 
-    setIsLoading(true);
-    setError(null);
+    setIsValidating(true);
+    setValidationStatus('idle');
     
     try {
-      console.log('Starting Google Photos sync...');
+      // Basic validation for Google Photos album URL format
+      const googlePhotosPattern = /^https:\/\/photos\.google\.com\/share\/.+/;
+      const googlePhotosAppPattern = /^https:\/\/photos\.app\.goo\.gl\/.+/;
       
-      const { data, error: functionError } = await supabase.functions.invoke('sync-google-photos', {
-        body: { userId: user.id }
+      if (!googlePhotosPattern.test(url) && !googlePhotosAppPattern.test(url)) {
+        throw new Error('Please enter a valid Google Photos album share URL');
+      }
+
+      // For now, we'll just validate the URL format
+      // In a real implementation, you might want to make a test request
+      setValidationStatus('valid');
+      toast({
+        title: "Album URL validated",
+        description: "The Google Photos album URL appears to be valid.",
       });
-
-      console.log('Function response:', data, functionError);
-
-      if (functionError) {
-        console.error('Supabase function error:', functionError);
-        throw new Error(functionError.message || 'Function call failed');
-      }
-
-      // Check if the response indicates an error even with 200 status
-      if (data && !data.success) {
-        throw new Error(data.error || 'Sync failed');
-      }
-
-      if (data && data.success) {
-        setAlbums(data.albums || []);
-        setLastSync(new Date());
-        toast({
-          title: "Photos synced!",
-          description: `Found ${data.count || 0} albums from your Google Photos.`,
-        });
-      } else {
-        throw new Error('Unexpected response format');
-      }
     } catch (error: any) {
-      console.error('Error syncing photos:', error);
-      let errorMessage = error.message || 'Unable to sync your Google Photos. Please try again.';
-      
-      // Handle specific error cases
-      if (errorMessage.includes('Google access token not found')) {
-        errorMessage = 'Please reconnect your Google account with Photos permission from the Account tab.';
-      } else if (errorMessage.includes('Insufficient permissions')) {
-        errorMessage = 'Please reconnect your Google account and grant Photos access from the Account tab.';
-      } else if (errorMessage.includes('Network error')) {
-        errorMessage = 'Network connection issue. Please check your internet and try again.';
-      }
-      
-      setError(errorMessage);
+      console.error('Error validating album URL:', error);
+      setValidationStatus('invalid');
       
       toast({
-        title: "Sync failed",
-        description: errorMessage,
+        title: "Invalid URL",
+        description: error.message || 'Please check your Google Photos album URL.',
         variant: "destructive"
       });
     } finally {
-      setIsLoading(false);
+      setIsValidating(false);
     }
   };
 
-  const loadStoredAlbums = async () => {
-    if (!user) return;
-
-    try {
-      const { data, error } = await supabase
-        .from('photo_albums')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error('Error loading albums:', error);
-        return;
-      }
-      
-      setAlbums(data || []);
-      
-      // Check if we have albums and set last sync time
-      if (data && data.length > 0) {
-        setLastSync(new Date(data[0].created_at));
-      }
-    } catch (error) {
-      console.error('Error loading albums:', error);
+  const saveAlbumUrl = () => {
+    if (validationStatus === 'valid' || albumUrl.trim() === '') {
+      setPublicAlbumUrl(albumUrl.trim());
+      toast({
+        title: "Album URL saved",
+        description: albumUrl.trim() ? "Background photos will be loaded from this album." : "Reverted to default background images.",
+      });
     }
   };
 
   useEffect(() => {
-    if (user) {
-      loadStoredAlbums();
-    }
-  }, [user]);
+    setAlbumUrl(publicAlbumUrl || '');
+  }, [publicAlbumUrl]);
 
   return (
     <div className="space-y-6">
@@ -134,90 +86,93 @@ const PhotosTab = () => {
             Background Photos
           </CardTitle>
           <CardDescription>
-            Sync and select a Google Photos album for rotating background images
+            Use photos from a public Google Photos album for rotating background images
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {user ? (
-            <>
-              <div className="flex items-center justify-between">
-                <div className="text-sm text-gray-600">
-                  {lastSync ? `Last synced: ${lastSync.toLocaleString()}` : 'Not synced yet'}
-                </div>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="album-url">Google Photos Album Share URL</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="album-url"
+                  placeholder="https://photos.google.com/share/..."
+                  value={albumUrl}
+                  onChange={(e) => setAlbumUrl(e.target.value)}
+                  className="flex-1"
+                />
                 <Button
-                  onClick={syncPhotos}
-                  disabled={isLoading}
+                  onClick={() => validateAlbumUrl(albumUrl)}
+                  disabled={isValidating || !albumUrl.trim()}
                   size="sm"
                   variant="outline"
                 >
-                  <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-                  Sync Photos
+                  <RefreshCw className={`h-4 w-4 mr-2 ${isValidating ? 'animate-spin' : ''}`} />
+                  Validate
                 </Button>
               </div>
-
-              {error && (
-                <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-md">
-                  <AlertCircle className="h-4 w-4 text-red-600 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <p className="text-sm text-red-800 font-medium">Sync Error</p>
-                    <p className="text-sm text-red-700">{error}</p>
-                    {error.includes('reconnect') && (
-                      <p className="text-xs text-red-600 mt-1">
-                        Go to Settings → Account tab to reconnect your Google account.
-                      </p>
-                    )}
-                  </div>
+              
+              {validationStatus === 'valid' && (
+                <div className="flex items-center gap-2 text-green-600 text-sm">
+                  <CheckCircle className="h-4 w-4" />
+                  <span>Valid Google Photos album URL</span>
                 </div>
               )}
-
-              {albums.length > 0 && (
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-green-600" />
-                    <h4 className="font-medium">Select Album for Background</h4>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="album-select">Choose an album:</Label>
-                    <Select value={selectedAlbum || ""} onValueChange={setSelectedAlbum}>
-                      <SelectTrigger id="album-select">
-                        <SelectValue placeholder="Select an album for background photos" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="">No album selected</SelectItem>
-                        {albums.map((album) => (
-                          <SelectItem key={album.id} value={album.id}>
-                            {album.title} ({album.media_items_count} items)
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto">
-                    {albums.slice(0, 4).map((album) => (
-                      <div key={album.id} className="p-2 bg-gray-50 rounded text-sm">
-                        <div className="font-medium truncate">{album.title}</div>
-                        <div className="text-gray-600">
-                          {album.media_items_count} items
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  {albums.length > 4 && (
-                    <p className="text-xs text-gray-500">
-                      Showing 4 of {albums.length} albums
-                    </p>
-                  )}
+              
+              {validationStatus === 'invalid' && (
+                <div className="flex items-center gap-2 text-red-600 text-sm">
+                  <AlertCircle className="h-4 w-4" />
+                  <span>Invalid or inaccessible album URL</span>
                 </div>
               )}
-            </>
-          ) : (
-            <div className="text-center py-8 text-gray-500">
-              <Camera className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-              <p>Connect your Google account to access photo albums</p>
             </div>
-          )}
+
+            <div className="flex gap-2">
+              <Button
+                onClick={saveAlbumUrl}
+                disabled={albumUrl === publicAlbumUrl || (albumUrl.trim() && validationStatus !== 'valid')}
+                size="sm"
+              >
+                Save Album URL
+              </Button>
+              {albumUrl.trim() && (
+                <Button
+                  onClick={() => {
+                    setAlbumUrl('');
+                    setPublicAlbumUrl('');
+                    setValidationStatus('idle');
+                  }}
+                  size="sm"
+                  variant="outline"
+                >
+                  Clear
+                </Button>
+              )}
+            </div>
+
+            <div className="p-4 bg-blue-50 border border-blue-200 rounded-md">
+              <div className="flex items-start gap-2">
+                <ExternalLink className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                <div className="text-sm">
+                  <p className="font-medium text-blue-800">How to get a shareable Google Photos album URL:</p>
+                  <ol className="mt-2 text-blue-700 list-decimal list-inside space-y-1">
+                    <li>Go to Google Photos and create or select an album</li>
+                    <li>Click the share button and select "Create link"</li>
+                    <li>Copy the generated share URL and paste it above</li>
+                    <li>Make sure the album is set to "Anyone with the link"</li>
+                  </ol>
+                </div>
+              </div>
+            </div>
+
+            {!publicAlbumUrl && (
+              <div className="text-center py-8 text-gray-500">
+                <Camera className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                <p>Add a Google Photos album URL to use custom background images</p>
+                <p className="text-sm mt-1">Default landscape images will be used until then</p>
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
 

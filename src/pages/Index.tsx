@@ -8,28 +8,45 @@ import { Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { useSettings } from '@/contexts/SettingsContext';
-
-const backgroundImages = [
-  'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=1920&h=1080&fit=crop',
-  'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1920&h=1080&fit=crop',
-  'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=1920&h=1080&fit=crop',
-  'https://images.unsplash.com/photo-1501436513145-30f24e19fcc4?w=1920&h=1080&fit=crop',
-  'https://images.unsplash.com/photo-1418065460487-3d7dd550c25a?w=1920&h=1080&fit=crop'
-];
+import { getImagesFromAlbum, getDefaultBackgroundImages } from '@/utils/googlePhotosUtils';
 
 const Index = () => {
   const [currentBg, setCurrentBg] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
+  const [backgroundImages, setBackgroundImages] = useState<string[]>(getDefaultBackgroundImages());
   const { user, loading } = useAuth();
-  const { backgroundDuration } = useSettings();
+  const { backgroundDuration, publicAlbumUrl } = useSettings();
 
+  // Load images from album URL or use defaults
+  useEffect(() => {
+    const loadBackgroundImages = async () => {
+      if (publicAlbumUrl) {
+        try {
+          console.log('Loading images from Google Photos album:', publicAlbumUrl);
+          const albumImages = await getImagesFromAlbum(publicAlbumUrl);
+          setBackgroundImages(albumImages);
+          setCurrentBg(0); // Reset to first image when album changes
+        } catch (error) {
+          console.error('Failed to load album images:', error);
+          // Fall back to default images
+          setBackgroundImages(getDefaultBackgroundImages());
+        }
+      } else {
+        setBackgroundImages(getDefaultBackgroundImages());
+      }
+    };
+
+    loadBackgroundImages();
+  }, [publicAlbumUrl]);
+
+  // Background rotation effect
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentBg((prev) => (prev + 1) % backgroundImages.length);
     }, backgroundDuration * 60 * 1000);
 
     return () => clearInterval(interval);
-  }, [backgroundDuration]);
+  }, [backgroundDuration, backgroundImages.length]);
 
   if (loading) {
     return (

@@ -14,6 +14,8 @@ interface SettingsContextType {
   setSelectedAlbum: (albumId: string | null) => void;
   weatherApiKey: string;
   setWeatherApiKey: (apiKey: string) => void;
+  publicAlbumUrl: string;
+  setPublicAlbumUrl: (url: string) => void;
 }
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
@@ -25,6 +27,7 @@ export const SettingsProvider = ({ children }: { children: React.ReactNode }) =>
   const [backgroundDuration, setBackgroundDuration] = useState(30); // Default 30 minutes
   const [selectedAlbum, setSelectedAlbum] = useState<string | null>(null);
   const [weatherApiKey, setWeatherApiKey] = useState('');
+  const [publicAlbumUrl, setPublicAlbumUrl] = useState('');
 
   // Load settings from localStorage on mount
   useEffect(() => {
@@ -34,6 +37,7 @@ export const SettingsProvider = ({ children }: { children: React.ReactNode }) =>
     const savedDuration = localStorage.getItem('backgroundDuration');
     const savedAlbum = localStorage.getItem('selectedAlbum');
     const savedApiKey = localStorage.getItem('weatherApiKey');
+    const savedPublicAlbumUrl = localStorage.getItem('publicAlbumUrl');
 
     if (savedTheme) setTheme(savedTheme);
     if (savedView) setDefaultView(savedView);
@@ -41,6 +45,7 @@ export const SettingsProvider = ({ children }: { children: React.ReactNode }) =>
     if (savedDuration) setBackgroundDuration(parseInt(savedDuration));
     if (savedAlbum) setSelectedAlbum(savedAlbum);
     if (savedApiKey) setWeatherApiKey(savedApiKey);
+    if (savedPublicAlbumUrl) setPublicAlbumUrl(savedPublicAlbumUrl);
   }, []);
 
   // Save settings to localStorage when they change
@@ -72,6 +77,10 @@ export const SettingsProvider = ({ children }: { children: React.ReactNode }) =>
     localStorage.setItem('weatherApiKey', weatherApiKey);
   }, [weatherApiKey]);
 
+  useEffect(() => {
+    localStorage.setItem('publicAlbumUrl', publicAlbumUrl);
+  }, [publicAlbumUrl]);
+
   return (
     <SettingsContext.Provider
       value={{
@@ -87,6 +96,8 @@ export const SettingsProvider = ({ children }: { children: React.ReactNode }) =>
         setSelectedAlbum,
         weatherApiKey,
         setWeatherApiKey,
+        publicAlbumUrl,
+        setPublicAlbumUrl,
       }}
     >
       {children}
