@@ -7,12 +7,12 @@ import CalendarList from './CalendarList';
 
 const CalendarsTab = () => {
   const [lastSync, setLastSync] = useState<Date | null>(null);
-  const { selectedCalendarIds, calendarsWithEvents } = useCalendarSelection();
+  const { selectedCalendarIds, calendarsFromEvents } = useCalendarSelection();
 
-  const totalEvents = calendarsWithEvents.reduce((sum, cal) => sum + cal.eventCount, 0);
-  const calendarsWithEventsCount = calendarsWithEvents.filter(cal => cal.hasEvents).length;
+  const totalEvents = calendarsFromEvents.reduce((sum, cal) => sum + cal.eventCount, 0);
+  const calendarsWithEventsCount = calendarsFromEvents.filter(cal => cal.hasEvents).length;
 
-  console.log('CalendarsTab: Rendering with calendars:', calendarsWithEvents.length);
+  console.log('CalendarsTab: Rendering with calendars:', calendarsFromEvents.length);
   console.log('CalendarsTab: Selected calendars:', selectedCalendarIds.length);
   console.log('CalendarsTab: Total events across all calendars:', totalEvents);
 

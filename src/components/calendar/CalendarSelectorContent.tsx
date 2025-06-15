@@ -5,7 +5,7 @@ import { Calendar as CalendarIcon } from 'lucide-react';
 import QuickActions from './QuickActions';
 import CalendarItem from './CalendarItem';
 
-interface CalendarWithEvents {
+interface CalendarFromEvents {
   id: string;
   summary: string;
   primary?: boolean;
@@ -14,7 +14,7 @@ interface CalendarWithEvents {
 }
 
 interface CalendarSelectorContentProps {
-  calendarsWithEvents: CalendarWithEvents[];
+  calendarsFromEvents: CalendarFromEvents[];
   selectedCalendarIds: string[];
   onCalendarToggle: (calendarId: string, checked: boolean) => void;
   onSelectAll: () => void;
@@ -23,16 +23,16 @@ interface CalendarSelectorContentProps {
 }
 
 const CalendarSelectorContent = ({
-  calendarsWithEvents,
+  calendarsFromEvents,
   selectedCalendarIds,
   onCalendarToggle,
   onSelectAll,
   onSelectWithEvents,
   onClearAll
 }: CalendarSelectorContentProps) => {
-  const calendarsWithEventsCount = calendarsWithEvents.filter(cal => cal.hasEvents).length;
+  const calendarsWithEventsCount = calendarsFromEvents.filter(cal => cal.hasEvents).length;
 
-  const sortedCalendars = calendarsWithEvents.sort((a, b) => {
+  const sortedCalendars = calendarsFromEvents.sort((a, b) => {
     // Sort by: primary first, then by event count (descending), then by name
     if (a.primary && !b.primary) return -1;
     if (!a.primary && b.primary) return 1;
@@ -54,7 +54,7 @@ const CalendarSelectorContent = ({
         </h3>
         
         <QuickActions
-          totalCalendars={calendarsWithEvents.length}
+          totalCalendars={calendarsFromEvents.length}
           calendarsWithEventsCount={calendarsWithEventsCount}
           onSelectAll={onSelectAll}
           onSelectWithEvents={onSelectWithEvents}

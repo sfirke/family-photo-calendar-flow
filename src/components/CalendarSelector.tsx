@@ -12,7 +12,7 @@ interface CalendarSelectorProps {
 }
 
 const CalendarSelector = ({ selectedCalendarIds, onCalendarChange }: CalendarSelectorProps) => {
-  const { calendarsWithEvents, isLoading, toggleCalendar, selectAllCalendars, selectCalendarsWithEvents, clearAllCalendars } = useCalendarSelection();
+  const { calendarsFromEvents, isLoading, toggleCalendar, selectAllCalendars, selectCalendarsWithEvents, clearAllCalendars } = useCalendarSelection();
   const { user } = useAuth();
 
   const handleCalendarToggle = (calendarId: string, checked: boolean) => {
@@ -29,12 +29,12 @@ const CalendarSelector = ({ selectedCalendarIds, onCalendarChange }: CalendarSel
 
   const handleSelectAll = () => {
     selectAllCalendars();
-    onCalendarChange(calendarsWithEvents.map(cal => cal.id));
+    onCalendarChange(calendarsFromEvents.map(cal => cal.id));
   };
 
   const handleSelectWithEvents = () => {
     selectCalendarsWithEvents();
-    const withEventsIds = calendarsWithEvents.filter(cal => cal.hasEvents).map(cal => cal.id);
+    const withEventsIds = calendarsFromEvents.filter(cal => cal.hasEvents).map(cal => cal.id);
     onCalendarChange(withEventsIds);
   };
 
@@ -65,7 +65,7 @@ const CalendarSelector = ({ selectedCalendarIds, onCalendarChange }: CalendarSel
     );
   }
 
-  if (calendarsWithEvents.length === 0) {
+  if (calendarsFromEvents.length === 0) {
     console.log('CalendarSelector: No calendars available');
     return (
       <CalendarSelectorButton
@@ -76,7 +76,7 @@ const CalendarSelector = ({ selectedCalendarIds, onCalendarChange }: CalendarSel
     );
   }
 
-  console.log('CalendarSelector: Rendering selector with calendars:', calendarsWithEvents.map(cal => ({ 
+  console.log('CalendarSelector: Rendering selector with calendars:', calendarsFromEvents.map(cal => ({ 
     id: cal.id, 
     name: cal.summary, 
     eventCount: cal.eventCount,
@@ -87,10 +87,10 @@ const CalendarSelector = ({ selectedCalendarIds, onCalendarChange }: CalendarSel
     <Popover>
       <CalendarSelectorButton
         selectedCount={selectedCalendarIds.length}
-        totalCount={calendarsWithEvents.length}
+        totalCount={calendarsFromEvents.length}
       />
       <CalendarSelectorContent
-        calendarsWithEvents={calendarsWithEvents}
+        calendarsFromEvents={calendarsFromEvents}
         selectedCalendarIds={selectedCalendarIds}
         onCalendarToggle={handleCalendarToggle}
         onSelectAll={handleSelectAll}

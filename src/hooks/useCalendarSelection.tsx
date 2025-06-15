@@ -1,11 +1,10 @@
 
 import { useState, useEffect } from 'react';
-import { useGoogleCalendars } from '@/hooks/useGoogleCalendars';
 import { useGoogleCalendarEvents } from '@/hooks/useGoogleCalendarEvents';
 
 const SELECTED_CALENDARS_KEY = 'selectedCalendarIds';
 
-interface CalendarWithEvents {
+interface CalendarFromEvents {
   id: string;
   summary: string;
   primary?: boolean;
@@ -15,8 +14,7 @@ interface CalendarWithEvents {
 
 export const useCalendarSelection = () => {
   const [selectedCalendarIds, setSelectedCalendarIds] = useState<string[]>([]);
-  const { calendars, isLoading: calendarsLoading } = useGoogleCalendars();
-  const { googleEvents } = useGoogleCalendarEvents();
+  const { googleEvents, isLoading } = useGoogleCalendarEvents();
 
   // Load selected calendar IDs from localStorage
   useEffect(() => {
@@ -32,33 +30,41 @@ export const useCalendarSelection = () => {
     }
   }, []);
 
+  // Group events by calendar to create calendar list (same logic as CalendarList.tsx)
+  const calendarsFromEvents: CalendarFromEvents[] = React.useMemo(() => {
+    const calendarMap = new Map();
+    
+    googleEvents.forEach(event => {
+      const calendarId = event.calendarId || 'primary';
+      const calendarName = event.calendarName || 'Primary Calendar';
+      
+      if (!calendarMap.has(calendarId)) {
+        calendarMap.set(calendarId, {
+          id: calendarId,
+          summary: calendarName,
+          primary: calendarId === 'primary',
+          eventCount: 0,
+          hasEvents: false
+        });
+      }
+      
+      const calendar = calendarMap.get(calendarId);
+      calendar.eventCount += 1;
+      calendar.hasEvents = true;
+    });
+
+    return Array.from(calendarMap.values());
+  }, [googleEvents]);
+
   // Auto-select all calendars when they are first loaded and no selection exists
   useEffect(() => {
-    if (calendars.length > 0 && selectedCalendarIds.length === 0) {
-      const allCalendarIds = calendars.map(cal => cal.id);
+    if (calendarsFromEvents.length > 0 && selectedCalendarIds.length === 0) {
+      const allCalendarIds = calendarsFromEvents.map(cal => cal.id);
       setSelectedCalendarIds(allCalendarIds);
       localStorage.setItem(SELECTED_CALENDARS_KEY, JSON.stringify(allCalendarIds));
       console.log('useCalendarSelection: Auto-selecting all calendars on first load:', allCalendarIds);
     }
-  }, [calendars, selectedCalendarIds.length]);
-
-  // Group events by calendar and create enhanced calendar objects
-  const calendarsWithEvents: CalendarWithEvents[] = calendars.map(calendar => {
-    const calendarEvents = googleEvents.filter(event => 
-      (event.calendarId || 'primary') === calendar.id
-    );
-    
-    const calendarWithEvents = {
-      id: calendar.id,
-      summary: calendar.summary,
-      primary: calendar.primary,
-      eventCount: calendarEvents.length,
-      hasEvents: calendarEvents.length > 0
-    };
-
-    console.log(`useCalendarSelection: Calendar "${calendar.summary}" (${calendar.id}) has ${calendarEvents.length} events`);
-    return calendarWithEvents;
-  });
+  }, [calendarsFromEvents, selectedCalendarIds.length]);
 
   // Update selected calendars and persist to localStorage
   const updateSelectedCalendars = (newSelectedIds: string[]) => {
@@ -73,12 +79,12 @@ export const useCalendarSelection = () => {
   };
 
   const selectAllCalendars = () => {
-    const allIds = calendars.map(cal => cal.id);
+    const allIds = calendarsFromEvents.map(cal => cal.id);
     updateSelectedCalendars(allIds);
   };
 
   const selectCalendarsWithEvents = () => {
-    const calendarsWithEventsIds = calendarsWithEvents
+    const calendarsWithEventsIds = calendarsFromEvents
       .filter(cal => cal.hasEvents)
       .map(cal => cal.id);
     updateSelectedCalendars(calendarsWithEventsIds);
@@ -90,7 +96,7 @@ export const useCalendarSelection = () => {
   };
 
   const toggleCalendar = (calendarId: string, checked: boolean) => {
-    const calendarName = calendars.find(cal => cal.id === calendarId)?.summary || calendarId;
+    const calendarName = calendarsFromEvents.find(cal => cal.id === calendarId)?.summary || calendarId;
     console.log('useCalendarSelection: Calendar toggle requested:', { calendarId, calendarName, checked });
     
     let newSelection: string[];
@@ -139,8 +145,8 @@ export const useCalendarSelection = () => {
 
   return {
     selectedCalendarIds,
-    calendarsWithEvents,
-    isLoading: calendarsLoading,
+    calendarsFromEvents,
+    isLoading,
     toggleCalendar,
     selectAllCalendars,
     selectCalendarsWithEvents,
