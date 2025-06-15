@@ -3,10 +3,12 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Calendar, RefreshCw, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useGoogleCalendarEvents } from '@/hooks/useGoogleCalendarEvents';
+import { useGoogleCalendars } from '@/hooks/useGoogleCalendars';
 
 const CalendarsTab = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -14,6 +16,7 @@ const CalendarsTab = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const { refreshEvents } = useGoogleCalendarEvents();
+  const { calendars, isLoading: calendarsLoading, refetch: refetchCalendars } = useGoogleCalendars();
 
   const syncCalendar = async () => {
     if (!user) return;
@@ -35,8 +38,9 @@ const CalendarsTab = () => {
         description: `Found ${data.events?.length || 0} events from your Google Calendar.`,
       });
 
-      // Refresh events
+      // Refresh events and calendars
       await refreshEvents();
+      await refetchCalendars();
     } catch (error) {
       console.error('Error syncing calendar:', error);
       toast({
@@ -101,6 +105,63 @@ const CalendarsTab = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Available Calendars */}
+      {calendars.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Calendar className="h-5 w-5" />
+              Available Calendars
+            </CardTitle>
+            <CardDescription>
+              Select which calendars to display in your calendar view
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {calendarsLoading ? (
+              <div className="flex items-center gap-2 text-gray-600">
+                <RefreshCw className="h-4 w-4 animate-spin" />
+                <span className="text-sm">Loading calendars...</span>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {calendars.map((calendar) => (
+                  <div key={calendar.id} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                    <Checkbox
+                      id={`calendar-${calendar.id}`}
+                      defaultChecked={true}
+                      className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                    />
+                    <div className="flex-1">
+                      <label
+                        htmlFor={`calendar-${calendar.id}`}
+                        className="text-sm font-medium text-gray-900 cursor-pointer"
+                      >
+                        {calendar.summary}
+                        {calendar.primary && (
+                          <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                            Primary
+                          </span>
+                        )}
+                      </label>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Calendar ID: {calendar.id}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+                
+                <div className="pt-3 border-t border-gray-200">
+                  <p className="text-xs text-gray-500">
+                    Note: Calendar selections are automatically applied to the calendar view and dropdown filter.
+                  </p>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };
