@@ -6,6 +6,9 @@ import { Calendar, RefreshCw, AlertCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { Database } from '@/integrations/supabase/types';
+
+type DatabaseEvent = Database['public']['Tables']['calendar_events']['Row'];
 
 interface CalendarEvent {
   id: string;
@@ -66,7 +69,19 @@ const GoogleCalendarSync = () => {
         .order('start_time', { ascending: true });
 
       if (error) throw error;
-      setEvents(data || []);
+      
+      // Convert database events to CalendarEvent format
+      const convertedEvents: CalendarEvent[] = (data || []).map((dbEvent: DatabaseEvent) => ({
+        id: dbEvent.id,
+        title: dbEvent.title,
+        description: dbEvent.description || undefined,
+        start_time: dbEvent.start_time,
+        end_time: dbEvent.end_time,
+        location: dbEvent.location || undefined,
+        attendees: Array.isArray(dbEvent.attendees) ? dbEvent.attendees : []
+      }));
+      
+      setEvents(convertedEvents);
     } catch (error) {
       console.error('Error loading events:', error);
     }
