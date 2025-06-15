@@ -67,15 +67,14 @@ const Calendar = () => {
   const filteredEvents = baseEvents.filter(event => {
     // For Google Calendar events, filter by selected calendar IDs
     if (hasGoogleEvents) {
-      // If no calendars are selected yet (initial load), show all events
       if (selectedCalendarIds.length === 0) {
-        console.log(`Event "${event.title}" - No calendar selection yet, showing all Google events`);
-        return true;
+        // If no calendars selected, show no events
+        console.log(`Event "${event.title}" - No calendars selected, hiding event`);
+        return false;
       }
-      
       const eventCalendarId = event.calendarId || 'primary';
       const calendarMatch = selectedCalendarIds.includes(eventCalendarId);
-      console.log(`Event "${event.title}" - Calendar ID: ${eventCalendarId}, Selected calendars: [${selectedCalendarIds.join(', ')}], Match: ${calendarMatch}`);
+      console.log(`Event "${event.title}" - Calendar ID: ${eventCalendarId}, Selected: ${calendarMatch}`);
       return calendarMatch;
     }
     
@@ -88,7 +87,6 @@ const Calendar = () => {
   console.log(`Filtered events: ${filteredEvents.length} out of ${baseEvents.length} total events`);
   console.log('Selected calendar IDs:', selectedCalendarIds);
   console.log('Has Google events:', hasGoogleEvents);
-  console.log('Available calendars:', calendars.map(cal => ({ id: cal.id, name: cal.summary })));
 
   return (
     <div className="space-y-6">
