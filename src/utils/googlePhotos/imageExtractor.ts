@@ -20,7 +20,7 @@ export const extractImagesFromHtml = (html: string): string[] => {
         const cleanUrl = match.replace(/['"]/g, '');
         
         // Filter out profile photos and small images
-        if (isValidImageUrl(cleanUrl)) {
+        if (isValidAlbumPhoto(cleanUrl, html)) {
           // Get the base URL without size parameters
           let baseUrl = cleanUrl.split('=')[0];
           
@@ -44,25 +44,94 @@ export const extractImagesFromHtml = (html: string): string[] => {
   }
   
   const finalImageUrls = Array.from(foundUrls);
-  console.log(`Extracted ${finalImageUrls.length} high-quality images (excluding profile photos)`);
+  console.log(`Extracted ${finalImageUrls.length} album photos (excluding profile photos and UI elements)`);
   
   return finalImageUrls.slice(0, 50); // Limit to first 50 images for performance
 };
 
-const isValidImageUrl = (url: string): boolean => {
-  return url.includes('googleusercontent.com') && 
-         !url.includes('=s40') && 
-         !url.includes('=s32') &&
-         !url.includes('=s64') &&
-         !url.includes('=s96') &&
-         !url.includes('=s128') &&
-         !url.includes('/avatar/') &&
-         !url.includes('-rp-') && // Profile photo identifier
-         !url.includes('_rp.') && // Another profile photo pattern
-         !url.includes('profile') &&
-         !url.includes('face') &&
-         !url.includes('contact') &&
-         url.length > 60; // Longer URLs are typically actual photos
+const isValidAlbumPhoto = (url: string, html: string): boolean => {
+  // Basic URL validation
+  if (!url.includes('googleusercontent.com') || url.length < 60) {
+    return false;
+  }
+  
+  // Filter out common profile photo and UI element patterns
+  const profilePhotoPatterns = [
+    /=s40/, /=s32/, /=s64/, /=s96/, /=s128/, /=s160/, /=s200/, // Small sizes typically used for profile photos
+    /\/avatar\//, /-rp-/, /_rp\./, /profile/, /face/, /contact/,
+    /=c-/, // Cropped images (often profile photos)
+    /=p-/, // Profile photo indicator
+    /\/photo\.jpg/, // Generic photo names often used for profiles
+    /user_/, /account_/, /member_/ // User-related identifiers
+  ];
+  
+  for (const pattern of profilePhotoPatterns) {
+    if (pattern.test(url)) {
+      return false;
+    }
+  }
+  
+  // Check the HTML context where this URL appears
+  const urlIndex = html.indexOf(url);
+  if (urlIndex !== -1) {
+    // Get surrounding HTML context (500 chars before and after)
+    const start = Math.max(0, urlIndex - 500);
+    const end = Math.min(html.length, urlIndex + url.length + 500);
+    const context = html.substring(start, end).toLowerCase();
+    
+    // Check for profile-related HTML context
+    const profileContextPatterns = [
+      'data-profile', 'profile-photo', 'user-avatar', 'owner-photo',
+      'header-avatar', 'account-photo', 'member-photo', 'contributor',
+      'aria-label="profile"', 'class="profile', 'id="profile',
+      'data-testid="profile', 'role="img".*profile', 'alt="profile'
+    ];
+    
+    for (const contextPattern of profileContextPatterns) {
+      if (context.includes(contextPattern)) {
+        return false;
+      }
+    }
+    
+    // Additional check: if URL appears in header section or navigation
+    const headerSectionPatterns = [
+      '<header', '</header>', 'class="header', 'id="header',
+      'class="nav', 'id="nav', 'class="toolbar', 'class="topbar'
+    ];
+    
+    for (const headerPattern of headerSectionPatterns) {
+      const headerIndex = context.indexOf(headerPattern);
+      if (headerIndex !== -1 && Math.abs(headerIndex - 250) < 200) { // Within 200 chars of our URL position in context
+        return false;
+      }
+    }
+  }
+  
+  // Additional size-based filtering - very small images are likely UI elements
+  const sizeMatch = url.match(/=s(\d+)/);
+  if (sizeMatch) {
+    const size = parseInt(sizeMatch[1]);
+    if (size < 200) { // Images smaller than 200px are likely profile photos or UI elements
+      return false;
+    }
+  }
+  
+  // Check for metadata or thumbnail indicators in the URL
+  const metadataPatterns = [
+    /\/metadata\//, /\/thumb\//, /\/thumbnail\//, /\/preview\//,
+    /=w\d+-h\d+-/, // Specific width-height combinations often used for thumbnails
+    /=pp-/, // Thumbnail indicator
+    /=mv-/, // Movie/video thumbnail
+    /=no-/, // No-crop indicator (sometimes used for profile photos)
+  ];
+  
+  for (const pattern of metadataPatterns) {
+    if (pattern.test(url)) {
+      return false;
+    }
+  }
+  
+  return true;
 };
 
 const tryAlternativeExtraction = (html: string, foundUrls: Set<string>): void => {
@@ -78,16 +147,8 @@ const tryAlternativeExtraction = (html: string, foundUrls: Set<string>): void =>
       altMatches.forEach(match => {
         const cleanUrl = match.replace(/['"]/g, '');
         
-        // Apply same filtering for alternative patterns
-        if (cleanUrl.includes('googleusercontent.com') && 
-            cleanUrl.length > 60 &&
-            !cleanUrl.includes('/avatar/') &&
-            !cleanUrl.includes('-rp-') &&
-            !cleanUrl.includes('_rp.') &&
-            !cleanUrl.includes('profile') &&
-            !cleanUrl.includes('face') &&
-            !cleanUrl.includes('contact')) {
-          
+        // Apply same validation for alternative patterns
+        if (isValidAlbumPhoto(cleanUrl, html)) {
           const baseUrl = cleanUrl.split('=')[0] + '=s0';
           foundUrls.add(baseUrl);
         }
