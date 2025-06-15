@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import {
   Dialog,
   DialogContent,
@@ -10,6 +10,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { User, Camera, Monitor, CloudSun, X } from 'lucide-react';
+import { useSettings } from '@/contexts/SettingsContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import AccountTab from './settings/AccountTab';
 import PhotosTab from './settings/PhotosTab';
 import DisplayTab from './settings/DisplayTab';
@@ -18,21 +20,15 @@ import WeatherTab from './settings/WeatherTab';
 interface SettingsModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  zipCode: string;
-  onZipCodeChange: (zipCode: string) => void;
 }
 
-const SettingsModal = ({ open, onOpenChange, zipCode, onZipCodeChange }: SettingsModalProps) => {
-  const [tempZipCode, setTempZipCode] = useState(zipCode);
+const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
+  const { theme, setTheme, defaultView, setDefaultView, zipCode, setZipCode } = useSettings();
+  const { setTheme: setActualTheme } = useTheme();
 
-  const handleSave = () => {
-    onZipCodeChange(tempZipCode);
-    onOpenChange(false);
-  };
-
-  const handleCancel = () => {
-    setTempZipCode(zipCode);
-    onOpenChange(false);
+  const handleThemeChange = (newTheme: 'light' | 'dark' | 'system') => {
+    setTheme(newTheme);
+    setActualTheme(newTheme);
   };
 
   return (
@@ -85,23 +81,25 @@ const SettingsModal = ({ open, onOpenChange, zipCode, onZipCodeChange }: Setting
           </TabsContent>
 
           <TabsContent value="display" className="space-y-4">
-            <DisplayTab />
+            <DisplayTab 
+              theme={theme}
+              onThemeChange={handleThemeChange}
+              defaultView={defaultView}
+              onDefaultViewChange={setDefaultView}
+            />
           </TabsContent>
 
           <TabsContent value="weather" className="space-y-4">
             <WeatherTab 
-              zipCode={tempZipCode}
-              onZipCodeChange={setTempZipCode}
+              zipCode={zipCode}
+              onZipCodeChange={setZipCode}
             />
           </TabsContent>
         </Tabs>
 
         <div className="flex justify-end gap-2 pt-4">
-          <Button variant="outline" onClick={handleCancel}>
-            Cancel
-          </Button>
-          <Button onClick={handleSave}>
-            Save Settings
+          <Button onClick={() => onOpenChange(false)}>
+            Close
           </Button>
         </div>
       </DialogContent>

@@ -8,6 +8,7 @@ import GooglePhotosSync from '@/components/GooglePhotosSync';
 import { Settings, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
+import { useSettings } from '@/contexts/SettingsContext';
 
 const backgroundImages = [
   'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=1920&h=1080&fit=crop',
@@ -20,8 +21,8 @@ const backgroundImages = [
 const Index = () => {
   const [currentBg, setCurrentBg] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
-  const [zipCode, setZipCode] = useState('48226'); // Detroit, MI default
   const { user, loading, signOut } = useAuth();
+  const { zipCode } = useSettings();
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -33,10 +34,10 @@ const Index = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading...</p>
         </div>
       </div>
     );
@@ -53,7 +54,7 @@ const Index = () => {
       />
       
       {/* Glass overlay */}
-      <div className="absolute inset-0 bg-white/10 backdrop-blur-sm" />
+      <div className="absolute inset-0 bg-white/10 backdrop-blur-sm dark:bg-black/20" />
       
       {/* Content */}
       <div className="relative z-10 min-h-screen">
@@ -120,8 +121,6 @@ const Index = () => {
       <SettingsModal 
         open={showSettings} 
         onOpenChange={setShowSettings}
-        zipCode={zipCode}
-        onZipCodeChange={setZipCode}
       />
     </div>
   );
