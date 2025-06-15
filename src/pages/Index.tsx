@@ -1,9 +1,14 @@
+
 import React, { useState, useEffect } from 'react';
 import Calendar from '@/components/Calendar';
 import WeatherWidget from '@/components/WeatherWidget';
 import SettingsModal from '@/components/SettingsModal';
-import { Settings, Sun } from 'lucide-react';
+import AuthModal from '@/components/AuthModal';
+import GoogleCalendarSync from '@/components/GoogleCalendarSync';
+import GooglePhotosSync from '@/components/GooglePhotosSync';
+import { Settings, Sun, LogOut, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useAuth } from '@/hooks/useAuth';
 
 const backgroundImages = [
   'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=1920&h=1080&fit=crop',
@@ -16,7 +21,9 @@ const backgroundImages = [
 const Index = () => {
   const [currentBg, setCurrentBg] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
+  const [showAuth, setShowAuth] = useState(false);
   const [zipCode, setZipCode] = useState('48226'); // Detroit, MI default
+  const { user, loading, signOut } = useAuth();
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -25,6 +32,17 @@ const Index = () => {
 
     return () => clearInterval(interval);
   }, []);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen relative overflow-hidden">
@@ -60,6 +78,33 @@ const Index = () => {
           
           <div className="flex items-center gap-4">
             <WeatherWidget zipCode={zipCode} />
+            
+            {user ? (
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-white/80">
+                  {user.user_metadata?.full_name || user.email}
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={signOut}
+                  className="text-white hover:bg-white/20"
+                >
+                  <LogOut className="h-4 w-4" />
+                </Button>
+              </div>
+            ) : (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowAuth(true)}
+                className="text-white hover:bg-white/20"
+              >
+                <User className="h-4 w-4 mr-2" />
+                Sign In
+              </Button>
+            )}
+            
             <Button
               variant="ghost"
               size="sm"
@@ -73,6 +118,12 @@ const Index = () => {
 
         {/* Main Content */}
         <main className="px-6 pb-6">
+          {user && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+              <GoogleCalendarSync />
+              <GooglePhotosSync />
+            </div>
+          )}
           <Calendar />
         </main>
       </div>
@@ -82,6 +133,11 @@ const Index = () => {
         onOpenChange={setShowSettings}
         zipCode={zipCode}
         onZipCodeChange={setZipCode}
+      />
+
+      <AuthModal
+        open={showAuth}
+        onOpenChange={setShowAuth}
       />
     </div>
   );

@@ -1,1 +1,8 @@
+
 project_id = "qceffcmjupykcwktdfti"
+
+[functions.sync-google-calendar]
+verify_jwt = false
+
+[functions.sync-google-photos]
+verify_jwt = false
