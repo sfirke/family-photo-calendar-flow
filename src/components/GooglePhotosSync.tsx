@@ -31,28 +31,45 @@ const GooglePhotosSync = () => {
     try {
       console.log('Starting Google Photos sync...');
       
-      const { data, error } = await supabase.functions.invoke('sync-google-photos', {
+      const { data, error: functionError } = await supabase.functions.invoke('sync-google-photos', {
         body: { userId: user.id }
       });
 
-      if (error) {
-        console.error('Supabase function error:', error);
-        throw error;
+      console.log('Function response:', data, functionError);
+
+      if (functionError) {
+        console.error('Supabase function error:', functionError);
+        throw new Error(functionError.message || 'Function call failed');
       }
 
-      if (!data.success) {
+      // Check if the response indicates an error even with 200 status
+      if (data && !data.success) {
         throw new Error(data.error || 'Sync failed');
       }
 
-      setAlbums(data.albums || []);
-      setLastSync(new Date());
-      toast({
-        title: "Photos synced!",
-        description: `Found ${data.albums?.length || 0} albums from your Google Photos.`,
-      });
+      if (data && data.success) {
+        setAlbums(data.albums || []);
+        setLastSync(new Date());
+        toast({
+          title: "Photos synced!",
+          description: `Found ${data.count || 0} albums from your Google Photos.`,
+        });
+      } else {
+        throw new Error('Unexpected response format');
+      }
     } catch (error: any) {
       console.error('Error syncing photos:', error);
-      const errorMessage = error.message || 'Unable to sync your Google Photos. Please try again.';
+      let errorMessage = error.message || 'Unable to sync your Google Photos. Please try again.';
+      
+      // Handle specific error cases
+      if (errorMessage.includes('Google access token not found')) {
+        errorMessage = 'Please reconnect your Google account with Photos permission from the Account tab.';
+      } else if (errorMessage.includes('Insufficient permissions')) {
+        errorMessage = 'Please reconnect your Google account and grant Photos access from the Account tab.';
+      } else if (errorMessage.includes('Network error')) {
+        errorMessage = 'Network connection issue. Please check your internet and try again.';
+      }
+      
       setError(errorMessage);
       
       toast({
@@ -75,7 +92,11 @@ const GooglePhotosSync = () => {
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error loading albums:', error);
+        return;
+      }
+      
       setAlbums(data || []);
       
       // Check if we have albums and set last sync time
@@ -148,9 +169,9 @@ const GooglePhotosSync = () => {
             <div>
               <p className="text-sm text-red-800 font-medium">Sync Error</p>
               <p className="text-sm text-red-700">{error}</p>
-              {error.includes('permissions') && (
+              {error.includes('reconnect') && (
                 <p className="text-xs text-red-600 mt-1">
-                  Try reconnecting your Google account from the Account tab.
+                  Go to Settings → Account tab to reconnect your Google account.
                 </p>
               )}
             </div>

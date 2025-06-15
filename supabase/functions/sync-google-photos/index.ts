@@ -19,7 +19,15 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const { userId } = await req.json();
+    let body;
+    try {
+      body = await req.json();
+    } catch (e) {
+      console.error('Failed to parse request body:', e);
+      throw new Error('Invalid request body');
+    }
+
+    const { userId } = body;
     
     if (!userId) {
       throw new Error('User ID is required');
@@ -34,8 +42,13 @@ serve(async (req) => {
       .eq('id', userId)
       .single();
 
-    if (profileError || !profile?.google_access_token) {
+    if (profileError) {
       console.error('Profile error:', profileError);
+      throw new Error('Failed to fetch user profile');
+    }
+
+    if (!profile?.google_access_token) {
+      console.error('No Google access token found for user:', userId);
       throw new Error('Google access token not found. Please reconnect your Google account with Photos permission.');
     }
 
@@ -46,35 +59,45 @@ serve(async (req) => {
     if (expiresAt && expiresAt < new Date() && profile.google_refresh_token) {
       console.log('Token expired, attempting to refresh');
       
-      const refreshResponse = await fetch('https://oauth2.googleapis.com/token', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams({
-          client_id: Deno.env.get('GOOGLE_CLIENT_ID') ?? '',
-          client_secret: Deno.env.get('GOOGLE_CLIENT_SECRET') ?? '',
-          refresh_token: profile.google_refresh_token,
-          grant_type: 'refresh_token',
-        }),
-      });
+      try {
+        const refreshResponse = await fetch('https://oauth2.googleapis.com/token', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: new URLSearchParams({
+            client_id: Deno.env.get('GOOGLE_CLIENT_ID') ?? '',
+            client_secret: Deno.env.get('GOOGLE_CLIENT_SECRET') ?? '',
+            refresh_token: profile.google_refresh_token,
+            grant_type: 'refresh_token',
+          }),
+        });
 
-      if (refreshResponse.ok) {
-        const refreshData = await refreshResponse.json();
-        accessToken = refreshData.access_token;
-        
-        // Update the profile with new token
-        await supabaseClient
-          .from('profiles')
-          .update({
-            google_access_token: accessToken,
-            google_token_expires_at: new Date(Date.now() + (refreshData.expires_in * 1000)).toISOString()
-          })
-          .eq('id', userId);
-        
-        console.log('Token refreshed successfully');
-      } else {
-        console.error('Failed to refresh token');
+        if (refreshResponse.ok) {
+          const refreshData = await refreshResponse.json();
+          accessToken = refreshData.access_token;
+          
+          // Update the profile with new token
+          const { error: updateError } = await supabaseClient
+            .from('profiles')
+            .update({
+              google_access_token: accessToken,
+              google_token_expires_at: new Date(Date.now() + (refreshData.expires_in * 1000)).toISOString()
+            })
+            .eq('id', userId);
+          
+          if (updateError) {
+            console.error('Failed to update refreshed token:', updateError);
+          } else {
+            console.log('Token refreshed successfully');
+          }
+        } else {
+          const errorText = await refreshResponse.text();
+          console.error('Failed to refresh token:', errorText);
+          throw new Error('Failed to refresh Google access token. Please reconnect your Google account.');
+        }
+      } catch (refreshError) {
+        console.error('Token refresh error:', refreshError);
         throw new Error('Failed to refresh Google access token. Please reconnect your Google account.');
       }
     }
@@ -82,30 +105,46 @@ serve(async (req) => {
     console.log('Fetching albums from Google Photos API');
 
     // Fetch albums from Google Photos API
-    const photosResponse = await fetch(
-      'https://photoslibrary.googleapis.com/v1/albums?pageSize=50',
-      {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        },
-      }
-    );
+    let photosResponse;
+    try {
+      photosResponse = await fetch(
+        'https://photoslibrary.googleapis.com/v1/albums?pageSize=50',
+        {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+    } catch (fetchError) {
+      console.error('Network error fetching albums:', fetchError);
+      throw new Error('Network error connecting to Google Photos API');
+    }
 
     if (!photosResponse.ok) {
       const errorData = await photosResponse.text();
-      console.error('Google Photos API error:', errorData);
+      console.error('Google Photos API error:', photosResponse.status, errorData);
       
-      if (photosResponse.status === 403) {
+      if (photosResponse.status === 401) {
+        throw new Error('Google access token is invalid or expired. Please reconnect your Google account.');
+      } else if (photosResponse.status === 403) {
         throw new Error('Insufficient permissions to access Google Photos. Please reconnect your Google account and grant Photos access.');
+      } else if (photosResponse.status >= 500) {
+        throw new Error('Google Photos service is temporarily unavailable. Please try again later.');
       }
       
-      throw new Error(`Google Photos API error: ${photosResponse.status} - ${errorData}`);
+      throw new Error(`Google Photos API error: ${photosResponse.status}`);
     }
 
-    const photosData = await photosResponse.json();
-    const albums = photosData.albums || [];
+    let photosData;
+    try {
+      photosData = await photosResponse.json();
+    } catch (parseError) {
+      console.error('Failed to parse Google Photos response:', parseError);
+      throw new Error('Invalid response from Google Photos API');
+    }
 
+    const albums = photosData.albums || [];
     console.log(`Found ${albums.length} albums`);
 
     // Store albums in our database
@@ -126,6 +165,7 @@ serve(async (req) => {
 
       if (deleteError) {
         console.error('Error deleting existing albums:', deleteError);
+        // Don't throw here, continue with insert
       }
 
       // Insert new albums
@@ -135,7 +175,7 @@ serve(async (req) => {
 
       if (insertError) {
         console.error('Error inserting albums:', insertError);
-        throw insertError;
+        throw new Error('Failed to save albums to database');
       }
     }
 
@@ -155,6 +195,9 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('Error in sync-google-photos:', error);
+    
+    // Return a proper error response with 200 status but success: false
+    // This prevents the "non-2xx status code" error on the frontend
     return new Response(
       JSON.stringify({ 
         error: error.message || 'Internal server error',
@@ -162,7 +205,7 @@ serve(async (req) => {
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500 
+        status: 200  // Changed from 500 to 200 to avoid "non-2xx" error
       }
     );
   }
