@@ -42,20 +42,32 @@ const SettingsModal = ({ open, onOpenChange, zipCode, onZipCodeChange }: Setting
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
+      // Open Google auth in a new window
+      const authWindow = window.open('', 'google-auth', 'width=500,height=600,scrollbars=yes,resizable=yes');
+      
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo: `${window.location.origin}/`,
           scopes: 'openid email profile https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/photoslibrary.readonly',
-          // Ensure full browser redirect - never use popup or iframe
-          skipBrowserRedirect: false,
-          // Additional options to force redirect behavior
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',
           },
         }
       });
+
+      if (data?.url && authWindow) {
+        authWindow.location.href = data.url;
+        
+        // Monitor the auth window
+        const checkClosed = setInterval(() => {
+          if (authWindow.closed) {
+            clearInterval(checkClosed);
+            setIsLoading(false);
+          }
+        }, 1000);
+      }
 
       if (error) {
         console.error('Google Sign In Error:', error);
@@ -64,6 +76,7 @@ const SettingsModal = ({ open, onOpenChange, zipCode, onZipCodeChange }: Setting
           description: error.message,
           variant: "destructive"
         });
+        if (authWindow) authWindow.close();
       }
     } catch (error) {
       console.error('Unexpected error:', error);
@@ -72,7 +85,6 @@ const SettingsModal = ({ open, onOpenChange, zipCode, onZipCodeChange }: Setting
         description: "An unexpected error occurred",
         variant: "destructive"
       });
-    } finally {
       setIsLoading(false);
     }
   };
@@ -184,10 +196,10 @@ const SettingsModal = ({ open, onOpenChange, zipCode, onZipCodeChange }: Setting
                       className="bg-blue-600 hover:bg-blue-700 text-white"
                     >
                       <User className="h-4 w-4 mr-2" />
-                      {isLoading ? 'Redirecting to Google...' : 'Sign in with Google'}
+                      {isLoading ? 'Opening Google Sign In...' : 'Sign in with Google'}
                     </Button>
                     <p className="text-xs text-gray-500 text-center max-w-md">
-                      You'll be redirected to Google to complete the sign-in process. By connecting, you agree to share your Google Photos library access with this app.
+                      A new window will open for Google sign-in. By connecting, you agree to share your Google Photos library access with this app.
                     </p>
                   </div>
                 )}
