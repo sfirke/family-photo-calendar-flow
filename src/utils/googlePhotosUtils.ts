@@ -1,4 +1,5 @@
 
+
 // Utility functions for handling Google Photos albums
 
 export const extractAlbumIdFromUrl = (url: string): string | null => {
@@ -23,6 +24,14 @@ export const extractAlbumIdFromUrl = (url: string): string | null => {
   }
 };
 
+// List of CORS proxy services to try
+const CORS_PROXIES = [
+  'https://api.codetabs.com/v1/proxy?quest=',
+  'https://cors-anywhere.herokuapp.com/',
+  'https://api.allorigins.win/get?url=',
+  'https://thingproxy.freeboard.io/fetch/'
+];
+
 // Fetch images from Google Photos public album
 export const getImagesFromAlbum = async (albumUrl: string): Promise<string[]> => {
   const albumId = extractAlbumIdFromUrl(albumUrl);
@@ -31,106 +40,155 @@ export const getImagesFromAlbum = async (albumUrl: string): Promise<string[]> =>
     throw new Error('Invalid Google Photos album URL format');
   }
   
+  console.log('Attempting to fetch Google Photos album:', albumId);
+  
+  // First try direct access (might work in some cases)
   try {
-    console.log('Attempting to fetch Google Photos album:', albumId);
-    
-    // Use CORS proxy to bypass CORS restrictions
-    const proxyUrl = 'https://api.allorigins.win/get?url=';
-    const encodedUrl = encodeURIComponent(albumUrl);
-    const proxiedUrl = proxyUrl + encodedUrl;
-    
-    // Try to fetch the album page through the proxy
-    const response = await fetch(proxiedUrl, {
+    const directResponse = await fetch(albumUrl, {
       method: 'GET',
+      mode: 'cors',
       headers: {
-        'Accept': 'application/json',
+        'User-Agent': 'Mozilla/5.0 (compatible; GooglePhotosClient/1.0)'
       }
     });
     
-    if (!response.ok) {
-      throw new Error(`Failed to access album (${response.status}). Please ensure the album is publicly accessible.`);
+    if (directResponse.ok) {
+      const html = await directResponse.text();
+      const images = extractImagesFromHtml(html);
+      if (images.length > 0) {
+        console.log(`Found ${images.length} images via direct access`);
+        return images;
+      }
     }
+  } catch (error) {
+    console.log('Direct access failed, trying proxy services...');
+  }
+  
+  // Try each proxy service
+  for (let i = 0; i < CORS_PROXIES.length; i++) {
+    const proxyUrl = CORS_PROXIES[i];
+    console.log(`Trying proxy ${i + 1}/${CORS_PROXIES.length}: ${proxyUrl}`);
     
-    const data = await response.json();
-    const html = data.contents;
-    
-    console.log('Fetched album HTML through proxy, length:', html.length);
-    
-    if (html.length < 1000) {
-      throw new Error('Album appears to be empty or inaccessible. Please check sharing settings.');
+    try {
+      let fetchUrl: string;
+      let fetchOptions: RequestInit = {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json, text/html, */*',
+        }
+      };
+      
+      // Configure based on proxy type
+      if (proxyUrl.includes('allorigins.win')) {
+        fetchUrl = proxyUrl + encodeURIComponent(albumUrl);
+        fetchOptions.headers = { 'Accept': 'application/json' };
+      } else if (proxyUrl.includes('codetabs.com')) {
+        fetchUrl = proxyUrl + encodeURIComponent(albumUrl);
+      } else {
+        fetchUrl = proxyUrl + albumUrl;
+      }
+      
+      const response = await fetch(fetchUrl, fetchOptions);
+      
+      if (!response.ok) {
+        console.log(`Proxy ${i + 1} failed with status ${response.status}`);
+        continue;
+      }
+      
+      let html: string;
+      
+      if (proxyUrl.includes('allorigins.win')) {
+        const data = await response.json();
+        html = data.contents;
+      } else {
+        html = await response.text();
+      }
+      
+      console.log(`Fetched album HTML via proxy ${i + 1}, length:`, html.length);
+      
+      if (html.length < 1000) {
+        console.log(`Proxy ${i + 1} returned insufficient content`);
+        continue;
+      }
+      
+      const images = extractImagesFromHtml(html);
+      
+      if (images.length > 0) {
+        console.log(`Found ${images.length} images via proxy ${i + 1}`);
+        return images;
+      }
+      
+      console.log(`Proxy ${i + 1} returned no images, trying next...`);
+      
+    } catch (error) {
+      console.log(`Proxy ${i + 1} failed:`, error);
+      continue;
     }
-    
-    // Extract image URLs from the HTML
-    // Google Photos uses specific patterns for image URLs
-    const imageUrlPatterns = [
-      /https:\/\/lh\d+\.googleusercontent\.com\/[^"'\s\]]+/g,
-      /"(https:\/\/lh\d+\.googleusercontent\.com\/[^"]+)"/g
+  }
+  
+  // If all proxies failed, throw a comprehensive error
+  throw new Error('Unable to access the Google Photos album. This could be due to:\n• The album is private or sharing is disabled\n• CORS restrictions from all proxy services\n• Network connectivity issues\n\nPlease ensure the album is publicly accessible and try again later.');
+};
+
+// Extract images from HTML content
+const extractImagesFromHtml = (html: string): string[] => {
+  // Extract image URLs from the HTML
+  // Google Photos uses specific patterns for image URLs
+  const imageUrlPatterns = [
+    /https:\/\/lh\d+\.googleusercontent\.com\/[^"'\s\]]+/g,
+    /"(https:\/\/lh\d+\.googleusercontent\.com\/[^"]+)"/g,
+    /'(https:\/\/lh\d+\.googleusercontent\.com\/[^']+)'/g
+  ];
+  
+  const foundUrls = new Set<string>();
+  
+  for (const pattern of imageUrlPatterns) {
+    const matches = html.match(pattern);
+    if (matches) {
+      matches.forEach(match => {
+        // Clean up the URL (remove quotes if present)
+        const cleanUrl = match.replace(/['"]/g, '');
+        // Only add high-quality image URLs
+        if (cleanUrl.includes('googleusercontent.com') && 
+            !cleanUrl.includes('=s40') && 
+            !cleanUrl.includes('=s32') &&
+            !cleanUrl.includes('/avatar/') &&
+            cleanUrl.length > 50) {
+          // Modify URL for high quality (1920x1080)
+          let highQualityUrl = cleanUrl.split('=')[0];
+          if (!highQualityUrl.includes('=')) {
+            highQualityUrl += '=w1920-h1080-c';
+          }
+          foundUrls.add(highQualityUrl);
+        }
+      });
+    }
+  }
+  
+  // Try alternative extraction methods if no images found
+  if (foundUrls.size === 0) {
+    const altPatterns = [
+      /"(https:\/\/lh\d+\.googleusercontent\.com[^"]*?)"/g,
+      /https:\/\/lh\d+\.googleusercontent\.com\/[^\s"'<>\]]+/g,
+      /\bhttps:\/\/lh\d+\.googleusercontent\.com\/[A-Za-z0-9\-_]+/g
     ];
     
-    const foundUrls = new Set<string>();
-    
-    for (const pattern of imageUrlPatterns) {
-      const matches = html.match(pattern);
-      if (matches) {
-        matches.forEach(match => {
-          // Clean up the URL (remove quotes if present)
-          const cleanUrl = match.replace(/"/g, '');
-          // Only add high-quality image URLs
-          if (cleanUrl.includes('googleusercontent.com') && 
-              !cleanUrl.includes('=s40') && 
-              !cleanUrl.includes('=s32') &&
-              !cleanUrl.includes('/avatar/')) {
-            // Modify URL for high quality (1920x1080)
-            let highQualityUrl = cleanUrl.split('=')[0];
-            if (!highQualityUrl.includes('=')) {
-              highQualityUrl += '=w1920-h1080-c';
-            }
-            foundUrls.add(highQualityUrl);
+    for (const altPattern of altPatterns) {
+      const altMatches = html.match(altPattern);
+      if (altMatches) {
+        altMatches.forEach(match => {
+          const cleanUrl = match.replace(/['"]/g, '');
+          if (cleanUrl.includes('googleusercontent.com') && cleanUrl.length > 50) {
+            const baseUrl = cleanUrl.split('=')[0];
+            foundUrls.add(baseUrl + '=w1920-h1080-c');
           }
         });
       }
     }
-    
-    const imageUrls = Array.from(foundUrls);
-    console.log(`Found ${imageUrls.length} images from Google Photos album`);
-    
-    if (imageUrls.length === 0) {
-      // Try alternative extraction method for different Google Photos formats
-      const altPatterns = [
-        /"(https:\/\/lh\d+\.googleusercontent\.com[^"]*?)"/g,
-        /https:\/\/lh\d+\.googleusercontent\.com\/[^\s"'<>]+/g
-      ];
-      
-      for (const altPattern of altPatterns) {
-        const altMatches = html.match(altPattern);
-        if (altMatches) {
-          altMatches.forEach(match => {
-            const cleanUrl = match.replace(/"/g, '');
-            if (cleanUrl.includes('googleusercontent.com') && cleanUrl.length > 50) {
-              const baseUrl = cleanUrl.split('=')[0];
-              foundUrls.add(baseUrl + '=w1920-h1080-c');
-            }
-          });
-        }
-      }
-    }
-    
-    const finalImageUrls = Array.from(foundUrls);
-    
-    if (finalImageUrls.length === 0) {
-      throw new Error('No photos found in the album. The album might be empty, private, or the URL format is not supported.');
-    }
-    
-    return finalImageUrls.slice(0, 50); // Limit to first 50 images for performance
-  } catch (error: any) {
-    console.error('Error fetching Google Photos album:', error);
-    
-    if (error.message.includes('Failed to fetch')) {
-      throw new Error('Unable to access the album. Please check your internet connection and ensure the album URL is correct.');
-    }
-    
-    throw error;
   }
+  
+  const finalImageUrls = Array.from(foundUrls);
+  return finalImageUrls.slice(0, 50); // Limit to first 50 images for performance
 };
 
 export const getDefaultBackgroundImages = (): string[] => {
@@ -145,3 +203,4 @@ export const getDefaultBackgroundImages = (): string[] => {
     'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=1920&h=1080&fit=crop&q=80'
   ];
 };
+
