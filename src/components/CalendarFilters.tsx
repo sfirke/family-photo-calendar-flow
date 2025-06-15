@@ -10,19 +10,9 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { ChevronDown } from 'lucide-react';
 import CalendarSelector from './CalendarSelector';
 
-interface FilterState {
-  Personal: boolean;
-  Work: boolean;
-  Family: boolean;
-  Kids: boolean;
-  Holidays: boolean;
-}
-
 interface CalendarFiltersProps {
-  activeFilters: FilterState;
-  onFiltersChange: (filters: FilterState) => void;
-  selectedCalendarId?: string;
-  onCalendarChange: (calendarId: string) => void;
+  selectedCategories: string[];
+  onCategoryChange: (categories: string[]) => void;
 }
 
 const calendarTypes = [
@@ -34,45 +24,32 @@ const calendarTypes = [
 ] as const;
 
 const CalendarFilters = ({ 
-  activeFilters, 
-  onFiltersChange, 
-  selectedCalendarId, 
-  onCalendarChange 
+  selectedCategories, 
+  onCategoryChange 
 }: CalendarFiltersProps) => {
-  const handleFilterChange = (filterName: keyof FilterState, checked: boolean) => {
-    onFiltersChange({
-      ...activeFilters,
-      [filterName]: checked
-    });
+  const handleFilterChange = (categoryName: string, checked: boolean) => {
+    if (checked) {
+      onCategoryChange([...selectedCategories, categoryName]);
+    } else {
+      onCategoryChange(selectedCategories.filter(cat => cat !== categoryName));
+    }
   };
 
   const showAll = () => {
-    onFiltersChange({
-      Personal: true,
-      Work: true,
-      Family: true,
-      Kids: true,
-      Holidays: true
-    });
+    onCategoryChange(['Personal', 'Work', 'Family', 'Kids', 'Holidays']);
   };
 
   const hideAll = () => {
-    onFiltersChange({
-      Personal: false,
-      Work: false,
-      Family: false,
-      Kids: false,
-      Holidays: false
-    });
+    onCategoryChange([]);
   };
 
-  const activeCount = Object.values(activeFilters).filter(Boolean).length;
+  const activeCount = selectedCategories.length;
 
   return (
     <div className="flex items-center gap-4">
       <CalendarSelector 
-        selectedCalendarId={selectedCalendarId}
-        onCalendarChange={onCalendarChange}
+        selectedCalendarId=""
+        onCalendarChange={() => {}}
       />
       
       <Popover>
@@ -100,7 +77,7 @@ const CalendarFilters = ({
                   <div className={`w-3 h-3 rounded-full ${type.color}`} />
                   <Checkbox
                     id={type.name}
-                    checked={activeFilters[type.name]}
+                    checked={selectedCategories.includes(type.name)}
                     onCheckedChange={(checked) => handleFilterChange(type.name, !!checked)}
                   />
                   <label
