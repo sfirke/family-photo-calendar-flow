@@ -11,6 +11,8 @@ import { ChevronDown } from 'lucide-react';
 import { useGoogleCalendars } from '@/hooks/useGoogleCalendars';
 import { useAuth } from '@/hooks/useAuth';
 
+const SELECTED_CALENDARS_KEY = 'selectedCalendarIds';
+
 interface CalendarSelectorProps {
   selectedCalendarIds: string[];
   onCalendarChange: (calendarIds: string[]) => void;
@@ -21,27 +23,31 @@ const CalendarSelector = ({ selectedCalendarIds, onCalendarChange }: CalendarSel
   const { user } = useAuth();
 
   const handleCalendarToggle = (calendarId: string, checked: boolean) => {
-    console.log('Calendar toggle:', calendarId, 'checked:', checked);
+    console.log('CalendarSelector: Calendar toggle:', calendarId, 'checked:', checked);
+    let newSelection: string[];
+    
     if (checked) {
-      const newSelection = [...selectedCalendarIds, calendarId];
-      onCalendarChange(newSelection);
-      console.log('Added calendar:', calendarId, 'New selection:', newSelection);
+      newSelection = [...selectedCalendarIds, calendarId];
     } else {
-      const newSelection = selectedCalendarIds.filter(id => id !== calendarId);
-      onCalendarChange(newSelection);
-      console.log('Removed calendar:', calendarId, 'New selection:', newSelection);
+      newSelection = selectedCalendarIds.filter(id => id !== calendarId);
     }
+    
+    onCalendarChange(newSelection);
+    localStorage.setItem(SELECTED_CALENDARS_KEY, JSON.stringify(newSelection));
+    console.log('CalendarSelector: Updated selection:', newSelection);
   };
 
   const selectAll = () => {
     const allIds = calendars.map(cal => cal.id);
     onCalendarChange(allIds);
-    console.log('Selected all calendars:', allIds);
+    localStorage.setItem(SELECTED_CALENDARS_KEY, JSON.stringify(allIds));
+    console.log('CalendarSelector: Selected all calendars:', allIds);
   };
 
   const clearAll = () => {
     onCalendarChange([]);
-    console.log('Cleared all calendar selections');
+    localStorage.setItem(SELECTED_CALENDARS_KEY, JSON.stringify([]));
+    console.log('CalendarSelector: Cleared all calendar selections');
   };
 
   if (!user) {
@@ -103,14 +109,14 @@ const CalendarSelector = ({ selectedCalendarIds, onCalendarChange }: CalendarSel
           <div className="space-y-3 max-h-48 overflow-y-auto">
             {calendars.map((calendar) => {
               const isChecked = selectedCalendarIds.includes(calendar.id);
-              console.log('Rendering calendar:', calendar.id, 'checked:', isChecked);
+              console.log('CalendarSelector: Rendering calendar:', calendar.id, 'checked:', isChecked);
               return (
                 <div key={calendar.id} className="flex items-center space-x-3">
                   <Checkbox
                     id={calendar.id}
                     checked={isChecked}
                     onCheckedChange={(checked) => {
-                      console.log('Checkbox changed for:', calendar.id, 'new state:', checked);
+                      console.log('CalendarSelector: Checkbox changed for:', calendar.id, 'new state:', checked);
                       handleCalendarToggle(calendar.id, checked === true);
                     }}
                   />

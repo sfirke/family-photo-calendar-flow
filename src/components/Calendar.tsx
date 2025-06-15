@@ -13,11 +13,12 @@ import { useWeather } from '@/contexts/WeatherContext';
 import { useGoogleCalendarEvents } from '@/hooks/useGoogleCalendarEvents';
 import { useGoogleCalendars } from '@/hooks/useGoogleCalendars';
 
+const SELECTED_CALENDARS_KEY = 'selectedCalendarIds';
+
 const Calendar = () => {
   const [view, setView] = useState<'timeline' | 'week' | 'month'>('month');
   const [weekOffset, setWeekOffset] = useState(0);
   const [selectedCalendarIds, setSelectedCalendarIds] = useState<string[]>([]);
-  const [hasInitialized, setHasInitialized] = useState(false);
   const { defaultView } = useSettings();
   const { getWeatherForDate } = useWeather();
   const { googleEvents, isLoading: googleEventsLoading } = useGoogleCalendarEvents();
@@ -27,15 +28,36 @@ const Calendar = () => {
     setView(defaultView);
   }, [defaultView]);
 
-  // Auto-select all available calendars when they are first loaded, but only once
+  // Load selected calendar IDs from localStorage
   useEffect(() => {
-    if (calendars.length > 0 && !hasInitialized) {
+    const stored = localStorage.getItem(SELECTED_CALENDARS_KEY);
+    if (stored) {
+      try {
+        const parsedIds = JSON.parse(stored);
+        setSelectedCalendarIds(parsedIds);
+        console.log('Calendar: Loaded selected calendar IDs from localStorage:', parsedIds);
+      } catch (error) {
+        console.error('Calendar: Error parsing stored calendar IDs:', error);
+      }
+    }
+  }, []);
+
+  // Auto-select all available calendars when they are first loaded and no selection exists
+  useEffect(() => {
+    if (calendars.length > 0 && selectedCalendarIds.length === 0) {
       const allCalendarIds = calendars.map(cal => cal.id);
       setSelectedCalendarIds(allCalendarIds);
-      setHasInitialized(true);
-      console.log('Auto-selecting all calendars on first load:', allCalendarIds);
+      localStorage.setItem(SELECTED_CALENDARS_KEY, JSON.stringify(allCalendarIds));
+      console.log('Calendar: Auto-selecting all calendars on first load:', allCalendarIds);
     }
-  }, [calendars, hasInitialized]);
+  }, [calendars, selectedCalendarIds.length]);
+
+  // Update selected calendars and persist to localStorage
+  const handleCalendarChange = (newSelectedIds: string[]) => {
+    setSelectedCalendarIds(newSelectedIds);
+    localStorage.setItem(SELECTED_CALENDARS_KEY, JSON.stringify(newSelectedIds));
+    console.log('Calendar: Updated selected calendar IDs:', newSelectedIds);
+  };
 
   // Use Google Calendar events if available, otherwise use sample events
   const hasGoogleEvents = googleEvents.length > 0;
@@ -63,7 +85,6 @@ const Calendar = () => {
   console.log(`Filtered events: ${filteredEvents.length} out of ${baseEvents.length} total events`);
   console.log('Selected calendar IDs:', selectedCalendarIds);
   console.log('Has Google events:', hasGoogleEvents);
-  console.log('Has initialized:', hasInitialized);
 
   return (
     <div className="space-y-6">
@@ -75,7 +96,7 @@ const Calendar = () => {
           {hasGoogleEvents && (
             <CalendarSelector 
               selectedCalendarIds={selectedCalendarIds}
-              onCalendarChange={setSelectedCalendarIds}
+              onCalendarChange={handleCalendarChange}
             />
           )}
           
