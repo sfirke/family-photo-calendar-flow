@@ -15,7 +15,7 @@ const EventCard = ({ event, className = '', showBoldHeader = false, viewMode = '
   const [isExpanded, setIsExpanded] = useState(false);
 
   const handleClick = () => {
-    if (viewMode === 'timeline') {
+    if (viewMode === 'timeline' || viewMode === 'week') {
       setIsExpanded(!isExpanded);
     }
   };
@@ -44,7 +44,7 @@ const EventCard = ({ event, className = '', showBoldHeader = false, viewMode = '
   return (
     <div 
       className={`p-3 rounded-lg bg-white/95 backdrop-blur-sm border border-white/30 ${
-        viewMode === 'timeline' ? 'cursor-pointer hover:bg-white/100 transition-colors' : ''
+        (viewMode === 'timeline' || viewMode === 'week') ? 'cursor-pointer hover:bg-white/100 transition-colors' : ''
       } ${className}`}
       onClick={handleClick}
     >
@@ -68,18 +68,32 @@ const EventCard = ({ event, className = '', showBoldHeader = false, viewMode = '
             </div>
           )}
           
-          {/* Show location only if provided and in expanded state for timeline, or always for other views */}
-          {event.location && (viewMode !== 'timeline' || isExpanded) && (
+          {/* Show location only if provided and in expanded state for timeline/week, or always for other views */}
+          {event.location && ((viewMode !== 'timeline' && viewMode !== 'week') || isExpanded) && (
             <div className="flex items-center gap-2 text-xs text-gray-600 mb-2">
               <MapPin className="h-3 w-3 flex-shrink-0" />
               <span className="truncate">{event.location}</span>
             </div>
           )}
 
-          {/* Show description only in expanded timeline view */}
-          {viewMode === 'timeline' && isExpanded && event.description && (
+          {/* Show description only in expanded timeline/week view */}
+          {(viewMode === 'timeline' || viewMode === 'week') && isExpanded && event.description && (
             <div className="text-xs text-gray-600 mb-2 line-clamp-3">
               {event.description}
+            </div>
+          )}
+
+          {/* Show organizer only in expanded timeline/week view */}
+          {(viewMode === 'timeline' || viewMode === 'week') && isExpanded && event.organizer && (
+            <div className="text-xs text-gray-600 mb-2">
+              <span className="font-medium">Organizer:</span> {event.organizer}
+            </div>
+          )}
+
+          {/* Show attendees only in expanded timeline/week view */}
+          {(viewMode === 'timeline' || viewMode === 'week') && isExpanded && event.attendees > 0 && (
+            <div className="text-xs text-gray-600 mb-2">
+              <span className="font-medium">Attendees:</span> {event.attendees}
             </div>
           )}
 
@@ -91,8 +105,8 @@ const EventCard = ({ event, className = '', showBoldHeader = false, viewMode = '
           )}
         </div>
 
-        {/* Expand/collapse icon for timeline view */}
-        {viewMode === 'timeline' && (
+        {/* Expand/collapse icon for timeline and week view */}
+        {(viewMode === 'timeline' || viewMode === 'week') && (
           <div className="ml-2 flex-shrink-0">
             {isExpanded ? (
               <ChevronUp className="h-4 w-4 text-gray-400" />
