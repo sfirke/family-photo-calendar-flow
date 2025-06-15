@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import Calendar from '@/components/Calendar';
 import WeatherWidget from '@/components/WeatherWidget';
@@ -61,22 +60,6 @@ const Index = () => {
           
           <div className="flex items-center gap-4">
             <WeatherWidget zipCode={zipCode} />
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                className="bg-white/20 border-white/30 text-white hover:bg-white/30"
-              >
-                Timeline
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="bg-white/20 border-white/30 text-white hover:bg-white/30"
-              >
-                Week
-              </Button>
-            </div>
             <Button
               variant="ghost"
               size="sm"
