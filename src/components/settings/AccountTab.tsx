@@ -35,55 +35,9 @@ const AccountTab = () => {
           variant: "destructive"
         });
         setIsLoading(false);
-      } else if (data?.url) {
-        // Open Google auth in a popup
-        const popup = window.open(
-          data.url, 
-          'google-auth', 
-          'width=500,height=600,scrollbars=yes,resizable=yes,left=' + 
-          (window.screen.width / 2 - 250) + ',top=' + (window.screen.height / 2 - 300)
-        );
-        
-        // Listen for the popup to complete authentication
-        const messageListener = (event: MessageEvent) => {
-          if (event.origin !== window.location.origin) return;
-          
-          if (event.data?.type === 'SUPABASE_AUTH_COMPLETE') {
-            console.log('Auth completed via popup');
-            setIsLoading(false);
-            window.removeEventListener('message', messageListener);
-            
-            // Small delay to let auth state update
-            setTimeout(() => {
-              toast({
-                title: "Successfully signed in!",
-                description: "Welcome to your family calendar.",
-              });
-            }, 500);
-          }
-        };
-        
-        window.addEventListener('message', messageListener);
-        
-        // Fallback: check if popup was closed manually
-        const checkClosed = setInterval(() => {
-          if (popup && popup.closed) {
-            clearInterval(checkClosed);
-            window.removeEventListener('message', messageListener);
-            setIsLoading(false);
-          }
-        }, 1000);
-
-        // Cleanup after 5 minutes
-        setTimeout(() => {
-          clearInterval(checkClosed);
-          window.removeEventListener('message', messageListener);
-          if (popup && !popup.closed) {
-            popup.close();
-          }
-          setIsLoading(false);
-        }, 300000);
       }
+      // If successful, the browser will redirect to Google's auth page
+      // No need to handle the redirect here as it happens automatically
     } catch (error) {
       console.error('Unexpected error:', error);
       toast({
@@ -161,10 +115,10 @@ const AccountTab = () => {
               className="bg-blue-600 hover:bg-blue-700 text-white"
             >
               <User className="h-4 w-4 mr-2" />
-              {isLoading ? 'Opening Google Sign In...' : 'Sign in with Google'}
+              {isLoading ? 'Redirecting to Google...' : 'Sign in with Google'}
             </Button>
             <p className="text-xs text-gray-500 text-center max-w-md">
-              A popup window will open to complete the Google sign-in process.
+              You will be redirected to Google to complete the sign-in process.
             </p>
           </div>
         )}
