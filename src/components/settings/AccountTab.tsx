@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { User, LogOut } from 'lucide-react';
+import { User, LogOut, AlertCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
@@ -15,6 +15,7 @@ const AccountTab = () => {
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
     try {
+      console.log('Starting Google sign in process');
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
@@ -29,15 +30,26 @@ const AccountTab = () => {
 
       if (error) {
         console.error('Google Sign In Error:', error);
-        toast({
-          title: "Google Sign In Error",
-          description: error.message,
-          variant: "destructive"
-        });
+        
+        // Check for specific errors
+        if (error.message.includes('Signups not allowed')) {
+          toast({
+            title: "Account Creation Disabled",
+            description: "New account creation is currently disabled. Please contact the administrator.",
+            variant: "destructive"
+          });
+        } else {
+          toast({
+            title: "Google Sign In Error",
+            description: error.message,
+            variant: "destructive"
+          });
+        }
         setIsLoading(false);
+      } else {
+        console.log('Google OAuth URL generated, redirecting...');
+        // The redirect will happen automatically, no need to set loading to false here
       }
-      // If successful, the browser will redirect to Google's auth page
-      // No need to handle the redirect here as it happens automatically
     } catch (error) {
       console.error('Unexpected error:', error);
       toast({
@@ -109,6 +121,18 @@ const AccountTab = () => {
             <p className="text-sm text-gray-600 text-center max-w-md">
               Sign in with Google to access your calendar events and photo albums for background slideshows.
             </p>
+            
+            {/* Warning about signups */}
+            <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-md max-w-md">
+              <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="text-sm text-amber-800 font-medium">Note</p>
+                <p className="text-sm text-amber-700">
+                  If you see an error during sign-in, new account creation may be disabled. Contact the administrator if needed.
+                </p>
+              </div>
+            </div>
+            
             <Button 
               onClick={handleGoogleSignIn}
               disabled={isLoading}
