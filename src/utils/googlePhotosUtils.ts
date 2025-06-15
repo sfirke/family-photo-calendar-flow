@@ -1,4 +1,3 @@
-
 // Utility functions for handling Google Photos albums
 
 export const extractAlbumIdFromUrl = (url: string): string | null => {
@@ -28,25 +27,35 @@ export const getImagesFromAlbum = async (albumUrl: string): Promise<string[]> =>
   const albumId = extractAlbumIdFromUrl(albumUrl);
   
   if (!albumId) {
-    throw new Error('Invalid Google Photos album URL');
+    throw new Error('Invalid Google Photos album URL format');
   }
   
   try {
     console.log('Attempting to fetch Google Photos album:', albumId);
     
     // Try to fetch the album page and extract image URLs
-    const response = await fetch(albumUrl);
+    const response = await fetch(albumUrl, {
+      method: 'GET',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+      }
+    });
+    
     if (!response.ok) {
-      throw new Error(`Failed to fetch album: ${response.status}`);
+      throw new Error(`Failed to access album (${response.status}). Please ensure the album is publicly accessible.`);
     }
     
     const html = await response.text();
     console.log('Fetched album HTML, length:', html.length);
     
+    if (html.length < 1000) {
+      throw new Error('Album appears to be empty or inaccessible. Please check sharing settings.');
+    }
+    
     // Extract image URLs from the HTML
     // Google Photos uses specific patterns for image URLs
     const imageUrlPatterns = [
-      /https:\/\/lh\d+\.googleusercontent\.com\/[^"'\s]+/g,
+      /https:\/\/lh\d+\.googleusercontent\.com\/[^"'\s\]]+/g,
       /"(https:\/\/lh\d+\.googleusercontent\.com\/[^"]+)"/g
     ];
     
@@ -59,9 +68,15 @@ export const getImagesFromAlbum = async (albumUrl: string): Promise<string[]> =>
           // Clean up the URL (remove quotes if present)
           const cleanUrl = match.replace(/"/g, '');
           // Only add high-quality image URLs
-          if (cleanUrl.includes('googleusercontent.com') && !cleanUrl.includes('=s40')) {
+          if (cleanUrl.includes('googleusercontent.com') && 
+              !cleanUrl.includes('=s40') && 
+              !cleanUrl.includes('=s32') &&
+              !cleanUrl.includes('/avatar/')) {
             // Modify URL for high quality (1920x1080)
-            const highQualityUrl = cleanUrl.split('=')[0] + '=w1920-h1080-c';
+            let highQualityUrl = cleanUrl.split('=')[0];
+            if (!highQualityUrl.includes('=')) {
+              highQualityUrl += '=w1920-h1080-c';
+            }
             foundUrls.add(highQualityUrl);
           }
         });
@@ -72,15 +87,18 @@ export const getImagesFromAlbum = async (albumUrl: string): Promise<string[]> =>
     console.log(`Found ${imageUrls.length} images from Google Photos album`);
     
     if (imageUrls.length === 0) {
-      console.log('No images found in album, falling back to default images');
-      return getDefaultBackgroundImages();
+      throw new Error('No photos found in the album. The album might be empty or private.');
     }
     
-    return imageUrls.slice(0, 20); // Limit to first 20 images
-  } catch (error) {
+    return imageUrls.slice(0, 50); // Limit to first 50 images for performance
+  } catch (error: any) {
     console.error('Error fetching Google Photos album:', error);
-    console.log('Falling back to default background images');
-    return getDefaultBackgroundImages();
+    
+    if (error.message.includes('Failed to fetch')) {
+      throw new Error('Unable to access the album due to CORS restrictions. Please ensure the album is publicly accessible.');
+    }
+    
+    throw error;
   }
 };
 
