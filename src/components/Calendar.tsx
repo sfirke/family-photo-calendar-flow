@@ -1,7 +1,9 @@
+
 import React, { useState } from 'react';
 import EventCard from './EventCard';
 import CalendarFilters from './CalendarFilters';
 import { Button } from '@/components/ui/button';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 const sampleEvents = [
@@ -282,33 +284,32 @@ const Calendar = () => {
           onFiltersChange={setActiveFilters}
         />
         
-        <div className="flex gap-2">
-          <Button
-            variant={viewMode === 'timeline' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => {
-              setViewMode('timeline');
-              setWeekOffset(0); // Reset week offset when switching to timeline
-            }}
-            className={viewMode === 'timeline' 
-              ? "bg-white/30 border-white/30 text-white hover:bg-white/40" 
-              : "bg-white/20 border-white/30 text-white hover:bg-white/30"
+        <ToggleGroup
+          type="single"
+          value={viewMode}
+          onValueChange={(value) => {
+            if (value) {
+              setViewMode(value as 'timeline' | 'week');
+              if (value === 'timeline') {
+                setWeekOffset(0); // Reset week offset when switching to timeline
+              }
             }
+          }}
+          className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg p-1"
+        >
+          <ToggleGroupItem
+            value="timeline"
+            className="text-white data-[state=on]:bg-white/30 data-[state=on]:text-white hover:bg-white/20 hover:text-white"
           >
             Timeline
-          </Button>
-          <Button
-            variant={viewMode === 'week' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setViewMode('week')}
-            className={viewMode === 'week' 
-              ? "bg-white/30 border-white/30 text-white hover:bg-white/40" 
-              : "bg-white/20 border-white/30 text-white hover:bg-white/30"
-            }
+          </ToggleGroupItem>
+          <ToggleGroupItem
+            value="week"
+            className="text-white data-[state=on]:bg-white/30 data-[state=on]:text-white hover:bg-white/20 hover:text-white"
           >
             Week
-          </Button>
-        </div>
+          </ToggleGroupItem>
+        </ToggleGroup>
 
         <div className="text-sm text-white/70 ml-auto">
           Upcoming Events ({filteredEvents.length})
