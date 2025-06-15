@@ -20,6 +20,7 @@ const Calendar = () => {
     Holidays: true
   });
   const [weekOffset, setWeekOffset] = useState(0);
+  const [selectedCalendarId, setSelectedCalendarId] = useState<string>('');
   const { googleEvents } = useGoogleCalendarEvents();
 
   // Update view mode when default view changes
@@ -39,6 +40,12 @@ const Calendar = () => {
     setWeekOffset(prev => prev + 1);
   };
 
+  const handleCalendarChange = (calendarId: string) => {
+    setSelectedCalendarId(calendarId);
+    // Here you could filter events by calendar if needed
+    console.log('Selected calendar:', calendarId);
+  };
+
   return (
     <div className="space-y-6">
       {/* Calendar Controls */}
@@ -46,6 +53,8 @@ const Calendar = () => {
         <CalendarFilters 
           activeFilters={activeFilters}
           onFiltersChange={setActiveFilters}
+          selectedCalendarId={selectedCalendarId}
+          onCalendarChange={handleCalendarChange}
         />
         
         <ToggleGroup
