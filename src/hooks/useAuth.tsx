@@ -9,28 +9,34 @@ export const useAuth = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Get initial session
+    const getInitialSession = async () => {
+      const { data: { session }, error } = await supabase.auth.getSession();
+      if (!error && session) {
+        setSession(session);
+        setUser(session.user);
+      }
+      setLoading(false);
+    };
+
+    getInitialSession();
+
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      async (event, session) => {
+        console.log('Auth state change:', event, session?.user?.email);
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
         
-        // Store Google tokens if available
-        if (session?.provider_token && session?.user) {
+        // Store Google tokens if available and user just signed in
+        if (event === 'SIGNED_IN' && session?.provider_token && session?.user) {
           setTimeout(() => {
             updateUserProfile(session);
           }, 0);
         }
       }
     );
-
-    // Check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
 
     return () => subscription.unsubscribe();
   }, []);
@@ -56,7 +62,10 @@ export const useAuth = () => {
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      console.error('Error signing out:', error);
+    }
   };
 
   return {

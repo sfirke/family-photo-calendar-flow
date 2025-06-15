@@ -12,23 +12,6 @@ const AccountTab = () => {
   const { user, signOut } = useAuth();
   const { toast } = useToast();
 
-  useEffect(() => {
-    // Listen for auth changes after popup closes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_IN' && session) {
-        toast({
-          title: "Successfully signed in!",
-          description: "Welcome to your family calendar.",
-        });
-        setIsLoading(false);
-      } else if (event === 'SIGNED_OUT') {
-        setIsLoading(false);
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, [toast]);
-
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
     try {
@@ -53,25 +36,53 @@ const AccountTab = () => {
         });
         setIsLoading(false);
       } else if (data?.url) {
-        // Open Google auth in a new tab
-        const popup = window.open(data.url, 'google-auth', 'width=500,height=600,scrollbars=yes,resizable=yes');
+        // Open Google auth in a popup
+        const popup = window.open(
+          data.url, 
+          'google-auth', 
+          'width=500,height=600,scrollbars=yes,resizable=yes,left=' + 
+          (window.screen.width / 2 - 250) + ',top=' + (window.screen.height / 2 - 300)
+        );
         
-        // Poll for popup closure
+        // Listen for the popup to complete authentication
+        const messageListener = (event: MessageEvent) => {
+          if (event.origin !== window.location.origin) return;
+          
+          if (event.data?.type === 'SUPABASE_AUTH_COMPLETE') {
+            console.log('Auth completed via popup');
+            setIsLoading(false);
+            window.removeEventListener('message', messageListener);
+            
+            // Small delay to let auth state update
+            setTimeout(() => {
+              toast({
+                title: "Successfully signed in!",
+                description: "Welcome to your family calendar.",
+              });
+            }, 500);
+          }
+        };
+        
+        window.addEventListener('message', messageListener);
+        
+        // Fallback: check if popup was closed manually
         const checkClosed = setInterval(() => {
           if (popup && popup.closed) {
             clearInterval(checkClosed);
-            // Auth state change will be handled by the listener above
+            window.removeEventListener('message', messageListener);
+            setIsLoading(false);
           }
         }, 1000);
 
-        // Fallback timeout
+        // Cleanup after 5 minutes
         setTimeout(() => {
           clearInterval(checkClosed);
+          window.removeEventListener('message', messageListener);
           if (popup && !popup.closed) {
             popup.close();
           }
           setIsLoading(false);
-        }, 300000); // 5 minutes timeout
+        }, 300000);
       }
     } catch (error) {
       console.error('Unexpected error:', error);
@@ -153,7 +164,7 @@ const AccountTab = () => {
               {isLoading ? 'Opening Google Sign In...' : 'Sign in with Google'}
             </Button>
             <p className="text-xs text-gray-500 text-center max-w-md">
-              A new tab will open to complete the Google sign-in process. You can close it once signed in.
+              A popup window will open to complete the Google sign-in process.
             </p>
           </div>
         )}
