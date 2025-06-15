@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Calendar, RefreshCw, AlertCircle } from 'lucide-react';
@@ -31,6 +32,8 @@ const CalendarsTab = () => {
       } catch (error) {
         console.error('CalendarsTab: Error parsing stored calendar IDs:', error);
       }
+    } else {
+      console.log('CalendarsTab: No stored calendar selection found');
     }
   }, []);
 
@@ -41,6 +44,7 @@ const CalendarsTab = () => {
       setSelectedCalendarIds(allCalendarIds);
       localStorage.setItem(SELECTED_CALENDARS_KEY, JSON.stringify(allCalendarIds));
       console.log('CalendarsTab: Auto-selecting all calendars on first load:', allCalendarIds);
+      console.log('CalendarsTab: Available calendars:', calendars.map(cal => ({ id: cal.id, name: cal.summary })));
       
       // Dispatch custom event to notify other components
       window.dispatchEvent(new CustomEvent('localStorageChange', {
@@ -54,6 +58,10 @@ const CalendarsTab = () => {
     setSelectedCalendarIds(newSelectedIds);
     localStorage.setItem(SELECTED_CALENDARS_KEY, JSON.stringify(newSelectedIds));
     console.log('CalendarsTab: Updated selected calendar IDs:', newSelectedIds);
+    console.log('CalendarsTab: Selected calendar names:', newSelectedIds.map(id => {
+      const cal = calendars.find(c => c.id === id);
+      return `"${cal?.summary || id}" (${id})`;
+    }));
     
     // Dispatch custom event to notify other components
     window.dispatchEvent(new CustomEvent('localStorageChange', {
@@ -62,13 +70,17 @@ const CalendarsTab = () => {
   };
 
   const handleCalendarToggle = (calendarId: string, checked: boolean) => {
-    console.log('CalendarsTab: Calendar toggle:', calendarId, 'checked:', checked);
+    const calendarName = calendars.find(cal => cal.id === calendarId)?.summary || calendarId;
+    console.log('CalendarsTab: Calendar toggle requested:', { calendarId, calendarName, checked });
+    
     let newSelection: string[];
     
     if (checked) {
       newSelection = [...selectedCalendarIds, calendarId];
+      console.log(`CalendarsTab: Adding "${calendarName}" to selection`);
     } else {
       newSelection = selectedCalendarIds.filter(id => id !== calendarId);
+      console.log(`CalendarsTab: Removing "${calendarName}" from selection`);
     }
     
     updateSelectedCalendars(newSelection);
@@ -76,29 +88,35 @@ const CalendarsTab = () => {
 
   const selectAllCalendars = () => {
     const allIds = calendars.map(cal => cal.id);
+    console.log('CalendarsTab: Selecting all calendars:', allIds.map(id => {
+      const cal = calendars.find(c => c.id === id);
+      return `"${cal?.summary || id}" (${id})`;
+    }));
     updateSelectedCalendars(allIds);
-    console.log('CalendarsTab: Selected all calendars:', allIds);
   };
 
   const clearAllCalendars = () => {
+    console.log('CalendarsTab: Clearing all calendar selections');
     updateSelectedCalendars([]);
-    console.log('CalendarsTab: Cleared all calendar selections');
   };
 
   const syncCalendar = async () => {
     if (!user) return;
 
     setIsLoading(true);
+    console.log('CalendarsTab: Starting Google Calendar sync for user:', user.id);
+    
     try {
-      console.log('Starting Google Calendar sync...');
       const { data, error } = await supabase.functions.invoke('sync-google-calendar', {
         body: { userId: user.id }
       });
 
       if (error) {
+        console.error('CalendarsTab: Sync error:', error);
         throw error;
       }
 
+      console.log('CalendarsTab: Sync successful, events synced:', data.events?.length || 0);
       setLastSync(new Date());
       toast({
         title: "Calendar synced!",
@@ -106,10 +124,12 @@ const CalendarsTab = () => {
       });
 
       // Refresh events and calendars
+      console.log('CalendarsTab: Refreshing events and calendars...');
       await refreshEvents();
       await refetchCalendars();
+      console.log('CalendarsTab: Refresh complete');
     } catch (error) {
-      console.error('Error syncing calendar:', error);
+      console.error('CalendarsTab: Error syncing calendar:', error);
       toast({
         title: "Sync failed",
         description: "Unable to sync your Google Calendar. Please try again.",
@@ -121,6 +141,7 @@ const CalendarsTab = () => {
   };
 
   if (!user) {
+    console.log('CalendarsTab: No user authenticated');
     return (
       <Card>
         <CardHeader>
@@ -141,6 +162,9 @@ const CalendarsTab = () => {
       </Card>
     );
   }
+
+  console.log('CalendarsTab: Rendering with calendars:', calendars.length);
+  console.log('CalendarsTab: Selected calendars:', selectedCalendarIds.length);
 
   return (
     <div className="space-y-6">

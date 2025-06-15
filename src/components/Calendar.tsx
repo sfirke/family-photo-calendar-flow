@@ -39,6 +39,8 @@ const Calendar = () => {
       } catch (error) {
         console.error('Calendar: Error parsing stored calendar IDs:', error);
       }
+    } else {
+      console.log('Calendar: No stored calendar IDs found in localStorage');
     }
   }, []);
 
@@ -49,6 +51,7 @@ const Calendar = () => {
       setSelectedCalendarIds(allCalendarIds);
       localStorage.setItem(SELECTED_CALENDARS_KEY, JSON.stringify(allCalendarIds));
       console.log('Calendar: Auto-selecting all calendars on first load:', allCalendarIds);
+      console.log('Calendar: Available calendars:', calendars.map(cal => ({ id: cal.id, name: cal.summary })));
     }
   }, [calendars, selectedCalendarIds.length]);
 
@@ -66,9 +69,6 @@ const Calendar = () => {
       }
     };
 
-    // Listen for storage events from other tabs/components
-    window.addEventListener('storage', handleStorageChange);
-
     // Also listen for custom events within the same tab
     const handleCustomStorageChange = (e: CustomEvent) => {
       if (e.detail.key === SELECTED_CALENDARS_KEY) {
@@ -82,6 +82,7 @@ const Calendar = () => {
       }
     };
 
+    window.addEventListener('storage', handleStorageChange);
     window.addEventListener('localStorageChange' as any, handleCustomStorageChange);
 
     return () => {
@@ -106,30 +107,48 @@ const Calendar = () => {
   const hasGoogleEvents = googleEvents.length > 0;
   const baseEvents = hasGoogleEvents ? googleEvents : sampleEvents;
 
+  console.log('Calendar: Event filtering summary:');
+  console.log(`- Total Google events: ${googleEvents.length}`);
+  console.log(`- Using Google events: ${hasGoogleEvents}`);
+  console.log(`- Total base events: ${baseEvents.length}`);
+  console.log(`- Selected calendar IDs: [${selectedCalendarIds.join(', ')}]`);
+
+  // Group events by calendar for debugging
+  if (hasGoogleEvents) {
+    const eventsByCalendar = {};
+    googleEvents.forEach(event => {
+      const calendarId = event.calendarId || 'primary';
+      if (!eventsByCalendar[calendarId]) {
+        eventsByCalendar[calendarId] = [];
+      }
+      eventsByCalendar[calendarId].push(event.title);
+    });
+    console.log('Calendar: Google events grouped by calendar:', eventsByCalendar);
+  }
+
   // Filter events by selected calendar IDs
   const filteredEvents = baseEvents.filter(event => {
     // For Google Calendar events, filter by selected calendar IDs
     if (hasGoogleEvents) {
       if (selectedCalendarIds.length === 0) {
-        // If no calendars selected, show no events
-        console.log(`Event "${event.title}" - No calendars selected, hiding event`);
+        console.log(`Calendar: Event "${event.title}" - No calendars selected, hiding event`);
         return false;
       }
       const eventCalendarId = event.calendarId || 'primary';
       const calendarMatch = selectedCalendarIds.includes(eventCalendarId);
-      console.log(`Event "${event.title}" - Calendar ID: ${eventCalendarId}, Selected: ${calendarMatch}`);
+      const calendarName = calendars.find(cal => cal.id === eventCalendarId)?.summary || eventCalendarId;
+      
+      console.log(`Calendar: Event "${event.title}" - Calendar: "${calendarName}" (${eventCalendarId}), Selected: ${calendarMatch}`);
       return calendarMatch;
     }
     
     // For sample events, show all events when no Google events are available
-    // This ensures sample events are always visible when not using Google Calendar
-    console.log(`Sample event "${event.title}" - Showing (no Google events available)`);
+    console.log(`Calendar: Sample event "${event.title}" - Showing (no Google events available)`);
     return true;
   });
 
-  console.log(`Filtered events: ${filteredEvents.length} out of ${baseEvents.length} total events`);
-  console.log('Selected calendar IDs:', selectedCalendarIds);
-  console.log('Has Google events:', hasGoogleEvents);
+  console.log(`Calendar: Final filtered events: ${filteredEvents.length} out of ${baseEvents.length} total events`);
+  console.log('Calendar: Filtered event titles:', filteredEvents.map(e => e.title));
 
   return (
     <div className="space-y-6">
