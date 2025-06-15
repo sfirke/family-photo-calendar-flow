@@ -48,7 +48,7 @@ const Index = () => {
       <div 
         className="absolute inset-0 bg-cover bg-center bg-no-repeat transition-all duration-1000 ease-in-out"
         style={{ 
-          backgroundImage: `linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.3)), url(${backgroundImages[currentBg]})` 
+          backgroundImage: `url(${backgroundImages[currentBg]})` 
         }}
       />
       
@@ -57,11 +57,14 @@ const Index = () => {
       
       {/* Content */}
       <div className="relative z-10 min-h-screen flex flex-col">
-        {/* Header */}
-        <header className="flex items-center justify-between p-6 text-gray-900 dark:text-gray-100">
-          <div>
-            <h1 className="text-2xl font-light text-gray-900 dark:text-gray-100">Family Calendar</h1>
-            <p className="text-sm text-gray-700 dark:text-gray-300">
+        {/* Header with gradient overlay */}
+        <header className="relative flex items-center justify-between p-6">
+          {/* Header gradient overlay */}
+          <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/20 to-transparent pointer-events-none" />
+          
+          <div className="relative z-10">
+            <h1 className="text-2xl font-light text-white">Family Calendar</h1>
+            <p className="text-sm text-white/90">
               {new Date().toLocaleDateString('en-US', { 
                 weekday: 'long', 
                 year: 'numeric', 
@@ -74,19 +77,19 @@ const Index = () => {
             </p>
           </div>
           
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 relative z-10">
             <WeatherWidget zipCode={zipCode} />
             
             {user && (
               <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-700 dark:text-gray-300">
+                <span className="text-sm text-white/90">
                   {user.user_metadata?.full_name || user.email}
                 </span>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={signOut}
-                  className="text-gray-900 hover:bg-white/20 dark:text-gray-100 dark:hover:bg-black/20"
+                  className="text-white hover:bg-white/20"
                 >
                   <LogOut className="h-4 w-4" />
                 </Button>
@@ -113,7 +116,7 @@ const Index = () => {
         variant="ghost"
         size="sm"
         onClick={() => setShowSettings(true)}
-        className="fixed bottom-6 left-6 z-20 text-gray-900 hover:bg-white/20 bg-black/20 backdrop-blur-sm border border-white/20 dark:text-gray-100 dark:hover:bg-black/30"
+        className="fixed bottom-6 left-6 z-20 text-white hover:bg-white/20 bg-black/20 backdrop-blur-sm border border-white/20"
       >
         <Settings className="h-4 w-4" />
       </Button>
