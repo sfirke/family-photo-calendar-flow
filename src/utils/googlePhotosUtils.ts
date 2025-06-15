@@ -1,3 +1,4 @@
+
 // Utility functions for handling Google Photos albums
 
 export const extractAlbumIdFromUrl = (url: string): string | null => {
@@ -33,11 +34,16 @@ export const getImagesFromAlbum = async (albumUrl: string): Promise<string[]> =>
   try {
     console.log('Attempting to fetch Google Photos album:', albumId);
     
-    // Try to fetch the album page and extract image URLs
-    const response = await fetch(albumUrl, {
+    // Use CORS proxy to bypass CORS restrictions
+    const proxyUrl = 'https://api.allorigins.win/get?url=';
+    const encodedUrl = encodeURIComponent(albumUrl);
+    const proxiedUrl = proxyUrl + encodedUrl;
+    
+    // Try to fetch the album page through the proxy
+    const response = await fetch(proxiedUrl, {
       method: 'GET',
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        'Accept': 'application/json',
       }
     });
     
@@ -45,8 +51,10 @@ export const getImagesFromAlbum = async (albumUrl: string): Promise<string[]> =>
       throw new Error(`Failed to access album (${response.status}). Please ensure the album is publicly accessible.`);
     }
     
-    const html = await response.text();
-    console.log('Fetched album HTML, length:', html.length);
+    const data = await response.json();
+    const html = data.contents;
+    
+    console.log('Fetched album HTML through proxy, length:', html.length);
     
     if (html.length < 1000) {
       throw new Error('Album appears to be empty or inaccessible. Please check sharing settings.');
@@ -87,15 +95,38 @@ export const getImagesFromAlbum = async (albumUrl: string): Promise<string[]> =>
     console.log(`Found ${imageUrls.length} images from Google Photos album`);
     
     if (imageUrls.length === 0) {
-      throw new Error('No photos found in the album. The album might be empty or private.');
+      // Try alternative extraction method for different Google Photos formats
+      const altPatterns = [
+        /"(https:\/\/lh\d+\.googleusercontent\.com[^"]*?)"/g,
+        /https:\/\/lh\d+\.googleusercontent\.com\/[^\s"'<>]+/g
+      ];
+      
+      for (const altPattern of altPatterns) {
+        const altMatches = html.match(altPattern);
+        if (altMatches) {
+          altMatches.forEach(match => {
+            const cleanUrl = match.replace(/"/g, '');
+            if (cleanUrl.includes('googleusercontent.com') && cleanUrl.length > 50) {
+              const baseUrl = cleanUrl.split('=')[0];
+              foundUrls.add(baseUrl + '=w1920-h1080-c');
+            }
+          });
+        }
+      }
     }
     
-    return imageUrls.slice(0, 50); // Limit to first 50 images for performance
+    const finalImageUrls = Array.from(foundUrls);
+    
+    if (finalImageUrls.length === 0) {
+      throw new Error('No photos found in the album. The album might be empty, private, or the URL format is not supported.');
+    }
+    
+    return finalImageUrls.slice(0, 50); // Limit to first 50 images for performance
   } catch (error: any) {
     console.error('Error fetching Google Photos album:', error);
     
     if (error.message.includes('Failed to fetch')) {
-      throw new Error('Unable to access the album due to CORS restrictions. Please ensure the album is publicly accessible.');
+      throw new Error('Unable to access the album. Please check your internet connection and ensure the album URL is correct.');
     }
     
     throw error;
