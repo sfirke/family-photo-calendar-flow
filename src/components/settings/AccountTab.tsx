@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { User, LogOut, AlertCircle } from 'lucide-react';
+import { User, LogOut, AlertCircle, RefreshCw } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 
 const AccountTab = () => {
   const [isLoading, setIsLoading] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const { user, signOut } = useAuth();
   const { toast } = useToast();
 
@@ -58,6 +59,48 @@ const AccountTab = () => {
     }
   };
 
+  const handleRefreshToken = async () => {
+    setIsRefreshing(true);
+    try {
+      console.log('Refreshing Google access token...');
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+          scopes: 'openid email profile https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/photoslibrary.readonly',
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
+        }
+      });
+
+      if (error) {
+        console.error('Token refresh error:', error);
+        toast({
+          title: "Token Refresh Error",
+          description: error.message,
+          variant: "destructive"
+        });
+        setIsRefreshing(false);
+      } else {
+        console.log('Token refresh initiated, redirecting...');
+        toast({
+          title: "Refreshing tokens",
+          description: "You will be redirected to Google to refresh your access tokens.",
+        });
+      }
+    } catch (error) {
+      console.error('Unexpected error refreshing token:', error);
+      toast({
+        title: "Error",
+        description: "Failed to refresh tokens",
+        variant: "destructive"
+      });
+      setIsRefreshing(false);
+    }
+  };
+
   const handleSignOut = async () => {
     try {
       await signOut();
@@ -100,14 +143,27 @@ const AccountTab = () => {
               <h3 className="font-medium">{user.user_metadata?.full_name || user.email}</h3>
               <p className="text-sm text-gray-600">{user.email}</p>
             </div>
-            <Button
-              onClick={handleSignOut}
-              variant="outline"
-              className="text-red-600 hover:text-red-700"
-            >
-              <LogOut className="h-4 w-4 mr-2" />
-              Sign Out
-            </Button>
+            
+            <div className="flex flex-col gap-2 w-full max-w-xs">
+              <Button
+                onClick={handleRefreshToken}
+                disabled={isRefreshing}
+                variant="outline"
+                className="text-blue-600 hover:text-blue-700"
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+                {isRefreshing ? 'Refreshing...' : 'Refresh Access Token'}
+              </Button>
+              
+              <Button
+                onClick={handleSignOut}
+                variant="outline"
+                className="text-red-600 hover:text-red-700"
+              >
+                <LogOut className="h-4 w-4 mr-2" />
+                Sign Out
+              </Button>
+            </div>
           </div>
         ) : (
           <div className="flex flex-col items-center space-y-4 py-8">
