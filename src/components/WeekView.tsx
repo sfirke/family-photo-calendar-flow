@@ -100,6 +100,7 @@ const WeekView = ({ events, weekOffset, onPreviousWeek, onNextWeek, getWeatherFo
                     event={event}
                     className="animate-fade-in text-xs"
                     showBoldHeader={true}
+                    viewMode="week"
                   />
                 ))}
                 {dayEvents.length === 0 && (

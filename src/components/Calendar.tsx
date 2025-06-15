@@ -16,29 +16,31 @@ const Calendar = () => {
   const [view, setView] = useState<'timeline' | 'week' | 'month'>('month');
   const [weekOffset, setWeekOffset] = useState(0);
   const [selectedCategories, setSelectedCategories] = useState<string[]>(['Personal', 'Work', 'Family', 'Kids', 'Holidays']);
+  const [selectedCalendarIds, setSelectedCalendarIds] = useState<string[]>([]);
   const { defaultView } = useSettings();
   const { getWeatherForDate } = useWeather();
-  const { googleEvents } = useGoogleCalendarEvents();
+  const { googleEvents, isLoading: googleEventsLoading } = useGoogleCalendarEvents();
 
   useEffect(() => {
     setView(defaultView);
   }, [defaultView]);
 
-  // Combine sample events with Google Calendar events
-  const allEvents = [...sampleEvents, ...googleEvents];
+  // Use Google Calendar events if available, otherwise use sample events
+  const hasGoogleEvents = googleEvents.length > 0;
+  const baseEvents = hasGoogleEvents ? googleEvents : sampleEvents;
 
-  const filteredEvents = allEvents.filter(event => {
-    if (selectedCategories.length === 0) return true;
-    return selectedCategories.includes(event.category);
+  // Filter events by selected categories and calendar IDs
+  const filteredEvents = baseEvents.filter(event => {
+    const categoryMatch = selectedCategories.length === 0 || selectedCategories.includes(event.category);
+    
+    // For Google Calendar events, also filter by selected calendar IDs
+    if (hasGoogleEvents && selectedCalendarIds.length > 0) {
+      const calendarMatch = selectedCalendarIds.includes(event.calendarId || 'primary');
+      return categoryMatch && calendarMatch;
+    }
+    
+    return categoryMatch;
   });
-
-  const handlePreviousWeek = () => {
-    setWeekOffset(prev => prev - 1);
-  };
-
-  const handleNextWeek = () => {
-    setWeekOffset(prev => prev + 1);
-  };
 
   return (
     <div className="space-y-6">
@@ -50,6 +52,9 @@ const Calendar = () => {
           <CalendarFilters 
             selectedCategories={selectedCategories}
             onCategoryChange={setSelectedCategories}
+            selectedCalendarIds={selectedCalendarIds}
+            onCalendarChange={setSelectedCalendarIds}
+            showGoogleCalendars={hasGoogleEvents}
           />
           
           {/* View Switcher */}

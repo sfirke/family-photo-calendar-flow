@@ -30,13 +30,15 @@ export const useGoogleCalendarEvents = () => {
           hour: 'numeric', 
           minute: '2-digit' 
         }),
-        location: dbEvent.location || 'No location',
+        location: dbEvent.location || undefined,
         attendees: Array.isArray(dbEvent.attendees) ? dbEvent.attendees.length : 0,
         category: 'Personal' as const,
         color: 'bg-blue-500',
         description: dbEvent.description || '',
         organizer: 'Google Calendar',
-        date: new Date(dbEvent.start_time)
+        date: new Date(dbEvent.start_time),
+        calendarId: dbEvent.calendar_id || 'primary',
+        calendarName: dbEvent.calendar_id || 'Primary Calendar'
       }));
 
       setGoogleEvents(convertedEvents);

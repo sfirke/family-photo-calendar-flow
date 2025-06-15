@@ -43,6 +43,7 @@ const TimelineView = ({ events }: TimelineViewProps) => {
                     key={event.id} 
                     event={event}
                     className="animate-fade-in"
+                    viewMode="timeline"
                   />
                 ))}
               </div>

@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Event } from '@/types/calendar';
 import EventCard from './EventCard';
@@ -145,6 +146,7 @@ const MonthView = ({ events, getWeatherForDate }: MonthViewProps) => {
                     key={event.id} 
                     event={event}
                     className="text-xs p-1"
+                    viewMode="month"
                   />
                 ))}
                 {dayEvents.length > 2 && (

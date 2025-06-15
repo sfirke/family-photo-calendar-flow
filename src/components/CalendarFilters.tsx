@@ -13,6 +13,9 @@ import CalendarSelector from './CalendarSelector';
 interface CalendarFiltersProps {
   selectedCategories: string[];
   onCategoryChange: (categories: string[]) => void;
+  selectedCalendarIds: string[];
+  onCalendarChange: (calendarIds: string[]) => void;
+  showGoogleCalendars: boolean;
 }
 
 const calendarTypes = [
@@ -25,7 +28,10 @@ const calendarTypes = [
 
 const CalendarFilters = ({ 
   selectedCategories, 
-  onCategoryChange 
+  onCategoryChange,
+  selectedCalendarIds,
+  onCalendarChange,
+  showGoogleCalendars
 }: CalendarFiltersProps) => {
   const handleFilterChange = (categoryName: string, checked: boolean) => {
     if (checked) {
@@ -47,10 +53,12 @@ const CalendarFilters = ({
 
   return (
     <div className="flex items-center gap-4">
-      <CalendarSelector 
-        selectedCalendarId=""
-        onCalendarChange={() => {}}
-      />
+      {showGoogleCalendars && (
+        <CalendarSelector 
+          selectedCalendarIds={selectedCalendarIds}
+          onCalendarChange={onCalendarChange}
+        />
+      )}
       
       <Popover>
         <PopoverTrigger asChild>
@@ -58,7 +66,7 @@ const CalendarFilters = ({
             variant="outline"
             className="bg-white/95 backdrop-blur-sm border-white/20 text-gray-900 hover:bg-white/100 justify-between min-w-[200px]"
           >
-            <span>Calendars ({activeCount})</span>
+            <span>Categories ({activeCount})</span>
             <ChevronDown className="h-4 w-4 opacity-50" />
           </Button>
         </PopoverTrigger>
@@ -69,7 +77,7 @@ const CalendarFilters = ({
           sideOffset={4}
         >
           <div className="space-y-4">
-            <h3 className="font-medium text-gray-900">Toggle Calendars</h3>
+            <h3 className="font-medium text-gray-900">Toggle Categories</h3>
             
             <div className="space-y-3">
               {calendarTypes.map((type) => (
@@ -104,8 +112,6 @@ const CalendarFilters = ({
                 size="sm"
                 onClick={hideAll}
                 className="text-xs flex-1"
-              >
-                Hide All
               </Button>
             </div>
           </div>
