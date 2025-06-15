@@ -26,7 +26,7 @@ const Index = () => {
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentBg((prev) => (prev + 1) % backgroundImages.length);
-    }, backgroundDuration * 60 * 1000); // Convert minutes to milliseconds
+    }, backgroundDuration * 60 * 1000);
 
     return () => clearInterval(interval);
   }, [backgroundDuration]);
@@ -43,7 +43,7 @@ const Index = () => {
   }
 
   return (
-    <div className="min-h-screen relative overflow-hidden">
+    <div className="min-h-screen relative overflow-hidden flex flex-col">
       {/* Background Image */}
       <div 
         className="absolute inset-0 bg-cover bg-center bg-no-repeat transition-all duration-1000 ease-in-out"
@@ -56,12 +56,12 @@ const Index = () => {
       <div className="absolute inset-0 bg-white/10 backdrop-blur-sm dark:bg-black/20" />
       
       {/* Content */}
-      <div className="relative z-10 min-h-screen">
+      <div className="relative z-10 min-h-screen flex flex-col">
         {/* Header */}
-        <header className="flex items-center justify-between p-6 text-white">
+        <header className="flex items-center justify-between p-6 text-gray-900 dark:text-gray-100">
           <div>
-            <h1 className="text-2xl font-light text-white/90">Family Calendar</h1>
-            <p className="text-sm text-white/70">
+            <h1 className="text-2xl font-light text-gray-900 dark:text-gray-100">Family Calendar</h1>
+            <p className="text-sm text-gray-700 dark:text-gray-300">
               {new Date().toLocaleDateString('en-US', { 
                 weekday: 'long', 
                 year: 'numeric', 
@@ -79,14 +79,14 @@ const Index = () => {
             
             {user && (
               <div className="flex items-center gap-2">
-                <span className="text-sm text-white/80">
+                <span className="text-sm text-gray-700 dark:text-gray-300">
                   {user.user_metadata?.full_name || user.email}
                 </span>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={signOut}
-                  className="text-white hover:bg-white/20"
+                  className="text-gray-900 hover:bg-white/20 dark:text-gray-100 dark:hover:bg-black/20"
                 >
                   <LogOut className="h-4 w-4" />
                 </Button>
@@ -96,13 +96,15 @@ const Index = () => {
         </header>
 
         {/* Main Content */}
-        <main className="px-6 pb-6">
+        <main className="px-6 pb-6 flex-1 flex flex-col">
           {user && (
             <div className="grid grid-cols-1 lg:grid-cols-1 gap-6 mb-6">
               <GooglePhotosSync />
             </div>
           )}
-          <Calendar />
+          <div className="flex-1">
+            <Calendar />
+          </div>
         </main>
       </div>
 
@@ -111,7 +113,7 @@ const Index = () => {
         variant="ghost"
         size="sm"
         onClick={() => setShowSettings(true)}
-        className="fixed bottom-6 left-6 z-20 text-white hover:bg-white/20 bg-black/20 backdrop-blur-sm border border-white/20"
+        className="fixed bottom-6 left-6 z-20 text-gray-900 hover:bg-white/20 bg-black/20 backdrop-blur-sm border border-white/20 dark:text-gray-100 dark:hover:bg-black/30"
       >
         <Settings className="h-4 w-4" />
       </Button>

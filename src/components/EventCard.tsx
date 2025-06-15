@@ -28,7 +28,7 @@ const EventCard = ({ event, className }: EventCardProps) => {
   return (
     <Card 
       className={cn(
-        "bg-white/80 backdrop-blur-sm border-white/20 p-6 hover:bg-white/90 transition-all duration-200 hover:scale-[1.02] hover:shadow-lg cursor-pointer",
+        "bg-white/80 backdrop-blur-sm border-white/20 p-6 hover:bg-white/90 transition-colors duration-200 cursor-pointer dark:bg-gray-800/80 dark:border-gray-700/20 dark:hover:bg-gray-800/90",
         className
       )}
       onClick={() => setIsExpanded(!isExpanded)}
@@ -36,11 +36,11 @@ const EventCard = ({ event, className }: EventCardProps) => {
       <div className="flex items-start justify-between">
         <div className="flex-1">
           <div className="flex items-center gap-3 mb-2">
-            <h3 className="font-medium text-white">{event.title}</h3>
+            <h3 className="font-medium text-gray-900 dark:text-gray-100">{event.title}</h3>
             <Badge 
               variant="secondary" 
               className={cn(
-                "text-white text-xs px-2 py-1",
+                "text-white text-xs px-2 py-1 font-medium",
                 event.color
               )}
             >
@@ -48,7 +48,7 @@ const EventCard = ({ event, className }: EventCardProps) => {
             </Badge>
           </div>
           
-          <div className="space-y-2 text-sm text-white/80">
+          <div className="space-y-2 text-sm text-gray-700 dark:text-gray-300">
             <div className="flex items-center gap-2">
               <Clock className="h-4 w-4" />
               <span>{event.time}</span>
@@ -64,22 +64,22 @@ const EventCard = ({ event, className }: EventCardProps) => {
           </div>
 
           {isExpanded && (
-            <div className="mt-4 pt-4 border-t border-white/20 space-y-3 animate-fade-in">
+            <div className="mt-4 pt-4 border-t border-gray-200/50 dark:border-gray-600/50 space-y-3 animate-fade-in">
               {event.description && (
                 <div>
-                  <h4 className="font-medium text-white mb-2">Description</h4>
-                  <p className="text-sm text-white/80">{event.description}</p>
+                  <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-2">Description</h4>
+                  <p className="text-sm text-gray-700 dark:text-gray-300">{event.description}</p>
                 </div>
               )}
               {event.organizer && (
                 <div>
-                  <h4 className="font-medium text-white mb-2">Organizer</h4>
-                  <p className="text-sm text-white/80">{event.organizer}</p>
+                  <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-2">Organizer</h4>
+                  <p className="text-sm text-gray-700 dark:text-gray-300">{event.organizer}</p>
                 </div>
               )}
               <div>
-                <h4 className="font-medium text-white mb-2">Event Details</h4>
-                <div className="text-sm text-white/80 space-y-1">
+                <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-2">Event Details</h4>
+                <div className="text-sm text-gray-700 dark:text-gray-300 space-y-1">
                   <p>Duration: {event.time}</p>
                   <p>Category: {event.category}</p>
                   <p>Location: {event.location}</p>
@@ -90,8 +90,8 @@ const EventCard = ({ event, className }: EventCardProps) => {
         </div>
         <div className="ml-4">
           {isExpanded ? 
-            <ChevronUp className="h-5 w-5 text-white/60" /> : 
-            <ChevronDown className="h-5 w-5 text-white/60" />
+            <ChevronUp className="h-5 w-5 text-gray-600 dark:text-gray-400" /> : 
+            <ChevronDown className="h-5 w-5 text-gray-600 dark:text-gray-400" />
           }
         </div>
       </div>

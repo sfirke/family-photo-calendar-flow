@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import CalendarFilters from './CalendarFilters';
 import TimelineView from './TimelineView';
 import WeekView from './WeekView';
-import { Calendar as CalendarComponent } from '@/components/ui/calendar';
+import MonthView from './MonthView';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { sampleEvents } from '@/data/sampleEvents';
 import { ViewMode, FilterState } from '@/types/calendar';
@@ -43,12 +43,11 @@ const Calendar = () => {
 
   const handleCalendarChange = (calendarId: string) => {
     setSelectedCalendarId(calendarId);
-    // Here you could filter events by calendar if needed
     console.log('Selected calendar:', calendarId);
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 h-full">
       {/* Calendar Controls */}
       <div className="flex items-center gap-4 flex-wrap">
         <CalendarFilters 
@@ -65,7 +64,7 @@ const Calendar = () => {
             if (value) {
               setViewMode(value as ViewMode);
               if (value === 'timeline') {
-                setWeekOffset(0); // Reset week offset when switching to timeline
+                setWeekOffset(0);
               }
             }
           }}
@@ -91,10 +90,10 @@ const Calendar = () => {
           </ToggleGroupItem>
         </ToggleGroup>
 
-        <div className="text-sm text-white/70 ml-auto dark:text-gray-300/70">
+        <div className="text-sm text-gray-900 ml-auto dark:text-gray-100">
           Upcoming Events ({filteredEvents.length})
           {googleEvents.length > 0 && (
-            <span className="ml-2 text-xs text-green-300">
+            <span className="ml-2 text-xs text-green-700 dark:text-green-300">
               • {googleEvents.length} from Google Calendar
             </span>
           )}
@@ -102,7 +101,7 @@ const Calendar = () => {
       </div>
 
       {/* Events Display */}
-      <div className="animate-fade-in">
+      <div className="animate-fade-in flex-1">
         {viewMode === 'timeline' ? (
           <TimelineView events={filteredEvents} />
         ) : viewMode === 'week' ? (
@@ -113,12 +112,7 @@ const Calendar = () => {
             onNextWeek={handleNextWeek}
           />
         ) : (
-          <div className="bg-white/95 backdrop-blur-sm border border-white/20 rounded-lg p-4 dark:bg-gray-800/95 dark:border-gray-700/20">
-            <CalendarComponent 
-              mode="single"
-              className="w-full"
-            />
-          </div>
+          <MonthView events={filteredEvents} />
         )}
       </div>
     </div>
