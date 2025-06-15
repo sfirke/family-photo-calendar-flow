@@ -48,17 +48,17 @@ const Calendar = () => {
               }
             }
           }}
-          className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg p-1"
+          className="bg-white/95 backdrop-blur-sm border border-white/20 rounded-md h-10"
         >
           <ToggleGroupItem
             value="timeline"
-            className="text-white data-[state=on]:bg-white/30 data-[state=on]:text-white hover:bg-white/20 hover:text-white"
+            className="text-gray-900 data-[state=on]:bg-gray-100 data-[state=on]:text-gray-900 hover:bg-gray-50 hover:text-gray-900 h-8 px-3"
           >
             Timeline
           </ToggleGroupItem>
           <ToggleGroupItem
             value="week"
-            className="text-white data-[state=on]:bg-white/30 data-[state=on]:text-white hover:bg-white/20 hover:text-white"
+            className="text-gray-900 data-[state=on]:bg-gray-100 data-[state=on]:text-gray-900 hover:bg-gray-50 hover:text-gray-900 h-8 px-3"
           >
             Week
           </ToggleGroupItem>
