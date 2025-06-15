@@ -1,9 +1,7 @@
-
 import React, { useState, useEffect } from 'react';
 import Calendar from '@/components/Calendar';
 import WeatherWidget from '@/components/WeatherWidget';
 import SettingsModal from '@/components/SettingsModal';
-import GooglePhotosSync from '@/components/GooglePhotosSync';
 import { Settings, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
@@ -21,15 +19,15 @@ const Index = () => {
   const [currentBg, setCurrentBg] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
   const { user, loading, signOut } = useAuth();
-  const { zipCode } = useSettings();
+  const { zipCode, backgroundDuration } = useSettings();
 
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentBg((prev) => (prev + 1) % backgroundImages.length);
-    }, 30000); // Change background every 30 seconds
+    }, backgroundDuration * 60 * 1000); // Convert minutes to milliseconds
 
     return () => clearInterval(interval);
-  }, []);
+  }, [backgroundDuration]);
 
   if (loading) {
     return (

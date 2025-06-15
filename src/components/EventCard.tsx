@@ -28,7 +28,7 @@ const EventCard = ({ event, className }: EventCardProps) => {
   return (
     <Card 
       className={cn(
-        "bg-white/20 backdrop-blur-sm border-white/20 p-6 hover:bg-white/30 transition-all duration-200 hover:scale-[1.02] hover:shadow-lg cursor-pointer",
+        "bg-white/80 backdrop-blur-sm border-white/20 p-6 hover:bg-white/90 transition-all duration-200 hover:scale-[1.02] hover:shadow-lg cursor-pointer",
         className
       )}
       onClick={() => setIsExpanded(!isExpanded)}
