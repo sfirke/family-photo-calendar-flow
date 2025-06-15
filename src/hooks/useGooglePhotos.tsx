@@ -8,6 +8,16 @@ interface PhotosCache {
   albumUrl: string;
 }
 
+// Fisher-Yates shuffle algorithm for proper randomization
+const shuffleArray = <T,>(array: T[]): T[] => {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+};
+
 export const useGooglePhotos = (albumUrl: string) => {
   const [images, setImages] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -59,8 +69,9 @@ export const useGooglePhotos = (albumUrl: string) => {
       const cache = getCache(url);
       
       if (!forceRefresh && cache && !shouldUpdateCache(cache)) {
-        console.log('Using cached Google Photos images');
-        setImages(cache.images);
+        console.log('Using cached Google Photos images - randomizing order');
+        const shuffledImages = shuffleArray(cache.images);
+        setImages(shuffledImages);
         setIsLoading(false);
         return;
       }
@@ -68,17 +79,23 @@ export const useGooglePhotos = (albumUrl: string) => {
       console.log('Fetching fresh Google Photos images');
       const fetchedImages = await getImagesFromAlbum(url);
       
-      setImages(fetchedImages);
+      // Randomize the order of freshly fetched images
+      const shuffledImages = shuffleArray(fetchedImages);
+      console.log(`Fetched and randomized ${shuffledImages.length} images from album`);
+      
+      setImages(shuffledImages);
+      // Cache the original (non-shuffled) order to allow for different randomizations
       setCache(url, fetchedImages);
       
     } catch (err: any) {
       console.error('Error fetching Google Photos:', err);
       setError(err.message || 'Failed to fetch photos from album');
       
-      // Try to use cached images as fallback
+      // Try to use cached images as fallback, but still randomize them
       const cache = getCache(url);
       if (cache) {
-        setImages(cache.images);
+        const shuffledImages = shuffleArray(cache.images);
+        setImages(shuffledImages);
       } else {
         setImages([]);
       }
@@ -111,7 +128,7 @@ export const useGooglePhotos = (albumUrl: string) => {
       const timeUntilRefresh = next12pm.getTime() - now.getTime();
       
       return setTimeout(() => {
-        console.log('Automatic daily refresh of Google Photos at 12pm');
+        console.log('Automatic daily refresh of Google Photos at 12pm - randomizing order');
         refreshPhotos();
         // Schedule next refresh
         scheduleNextRefresh();
