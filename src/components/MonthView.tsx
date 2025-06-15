@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { Event } from '@/types/calendar';
 import EventCard from './EventCard';
+import DayViewModal from './DayViewModal';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, Sun, Cloud, CloudRain } from 'lucide-react';
 
@@ -12,6 +13,8 @@ interface MonthViewProps {
 
 const MonthView = ({ events, getWeatherForDate }: MonthViewProps) => {
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [showDayModal, setShowDayModal] = useState(false);
 
   const getMonthDays = () => {
     const startDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
@@ -48,6 +51,13 @@ const MonthView = ({ events, getWeatherForDate }: MonthViewProps) => {
     return events.filter(event => 
       event.date.toDateString() === date.toDateString()
     );
+  };
+
+  const handleDayClick = (date: Date, dayEvents: Event[]) => {
+    if (dayEvents.length > 0) {
+      setSelectedDate(date);
+      setShowDayModal(true);
+    }
   };
 
   const goToPreviousMonth = () => {
@@ -118,13 +128,15 @@ const MonthView = ({ events, getWeatherForDate }: MonthViewProps) => {
           const isToday = date.toDateString() === new Date().toDateString();
           const isCurrentMonth = date.getMonth() === currentDate.getMonth();
           const weather = getWeatherForDate(date);
+          const hasEvents = dayEvents.length > 0;
           
           return (
             <div
               key={index}
               className={`min-h-[120px] p-2 bg-white/10 backdrop-blur-sm rounded-lg border border-white/20 ${
                 isCurrentMonth ? '' : 'opacity-50'
-              }`}
+              } ${hasEvents ? 'cursor-pointer hover:bg-white/20 transition-colors' : ''}`}
+              onClick={() => handleDayClick(date, dayEvents)}
             >
               {/* Date and Weather */}
               <div className="flex items-center justify-between mb-2">
@@ -139,7 +151,25 @@ const MonthView = ({ events, getWeatherForDate }: MonthViewProps) => {
               
               {isToday && <div className="w-full h-0.5 bg-yellow-300 mb-2"></div>}
               
-              {/* Events */}
+              {/* Event Dots */}
+              {dayEvents.length > 0 && (
+                <div className="flex flex-wrap gap-1 mb-2">
+                  {dayEvents.slice(0, 6).map((event, eventIndex) => (
+                    <div
+                      key={eventIndex}
+                      className={`w-2 h-2 rounded-full ${event.color} opacity-80`}
+                      title={event.title}
+                    />
+                  ))}
+                  {dayEvents.length > 6 && (
+                    <div className="text-xs text-white/70 ml-1">
+                      +{dayEvents.length - 6}
+                    </div>
+                  )}
+                </div>
+              )}
+              
+              {/* Sample Events (only show first 2 as before) */}
               <div className="space-y-1">
                 {dayEvents.slice(0, 2).map((event) => (
                   <EventCard 
@@ -159,6 +189,17 @@ const MonthView = ({ events, getWeatherForDate }: MonthViewProps) => {
           );
         })}
       </div>
+
+      {/* Day View Modal */}
+      {selectedDate && (
+        <DayViewModal
+          open={showDayModal}
+          onOpenChange={setShowDayModal}
+          date={selectedDate}
+          events={getEventsForDate(selectedDate)}
+          getWeatherForDate={getWeatherForDate}
+        />
+      )}
     </div>
   );
 };
