@@ -3,7 +3,6 @@ import React, { useState, useEffect } from 'react';
 import Calendar from '@/components/Calendar';
 import WeatherWidget from '@/components/WeatherWidget';
 import SettingsModal from '@/components/SettingsModal';
-import GooglePhotosSync from '@/components/GooglePhotosSync';
 import { Settings, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
@@ -100,11 +99,6 @@ const Index = () => {
 
         {/* Main Content */}
         <main className="px-6 pb-6 flex-1 flex flex-col">
-          {user && (
-            <div className="grid grid-cols-1 lg:grid-cols-1 gap-6 mb-6">
-              <GooglePhotosSync />
-            </div>
-          )}
           <div className="flex-1">
             <Calendar />
           </div>

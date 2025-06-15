@@ -10,6 +10,8 @@ interface SettingsContextType {
   setZipCode: (zipCode: string) => void;
   backgroundDuration: number;
   setBackgroundDuration: (duration: number) => void;
+  selectedAlbum: string | null;
+  setSelectedAlbum: (albumId: string | null) => void;
 }
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
@@ -19,6 +21,7 @@ export const SettingsProvider = ({ children }: { children: React.ReactNode }) =>
   const [defaultView, setDefaultView] = useState<'month' | 'week' | 'timeline'>('month');
   const [zipCode, setZipCode] = useState('90210');
   const [backgroundDuration, setBackgroundDuration] = useState(30); // Default 30 minutes
+  const [selectedAlbum, setSelectedAlbum] = useState<string | null>(null);
 
   // Load settings from localStorage on mount
   useEffect(() => {
@@ -26,11 +29,13 @@ export const SettingsProvider = ({ children }: { children: React.ReactNode }) =>
     const savedView = localStorage.getItem('defaultView') as 'month' | 'week' | 'timeline' | null;
     const savedZipCode = localStorage.getItem('zipCode');
     const savedDuration = localStorage.getItem('backgroundDuration');
+    const savedAlbum = localStorage.getItem('selectedAlbum');
 
     if (savedTheme) setTheme(savedTheme);
     if (savedView) setDefaultView(savedView);
     if (savedZipCode) setZipCode(savedZipCode);
     if (savedDuration) setBackgroundDuration(parseInt(savedDuration));
+    if (savedAlbum) setSelectedAlbum(savedAlbum);
   }, []);
 
   // Save settings to localStorage when they change
@@ -50,6 +55,14 @@ export const SettingsProvider = ({ children }: { children: React.ReactNode }) =>
     localStorage.setItem('backgroundDuration', backgroundDuration.toString());
   }, [backgroundDuration]);
 
+  useEffect(() => {
+    if (selectedAlbum) {
+      localStorage.setItem('selectedAlbum', selectedAlbum);
+    } else {
+      localStorage.removeItem('selectedAlbum');
+    }
+  }, [selectedAlbum]);
+
   return (
     <SettingsContext.Provider
       value={{
@@ -61,6 +74,8 @@ export const SettingsProvider = ({ children }: { children: React.ReactNode }) =>
         setZipCode,
         backgroundDuration,
         setBackgroundDuration,
+        selectedAlbum,
+        setSelectedAlbum,
       }}
     >
       {children}
