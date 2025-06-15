@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -15,7 +14,7 @@ const AccountTab = () => {
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
     try {
-      console.log('Starting Google sign in process');
+      console.log('Starting Google sign in process with expanded scopes');
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
@@ -31,7 +30,6 @@ const AccountTab = () => {
       if (error) {
         console.error('Google Sign In Error:', error);
         
-        // Check for specific errors
         if (error.message.includes('Signups not allowed')) {
           toast({
             title: "Account Creation Disabled",
@@ -48,7 +46,6 @@ const AccountTab = () => {
         setIsLoading(false);
       } else {
         console.log('Google OAuth URL generated, redirecting...');
-        // The redirect will happen automatically, no need to set loading to false here
       }
     } catch (error) {
       console.error('Unexpected error:', error);
@@ -122,13 +119,12 @@ const AccountTab = () => {
               Sign in with Google to access your calendar events and photo albums for background slideshows.
             </p>
             
-            {/* Warning about signups */}
             <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-md max-w-md">
               <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
               <div>
                 <p className="text-sm text-amber-800 font-medium">Note</p>
                 <p className="text-sm text-amber-700">
-                  If you see an error during sign-in, new account creation may be disabled. Contact the administrator if needed.
+                  You may need to reconnect if you see permission errors. This will ensure proper access to both Calendar and Photos.
                 </p>
               </div>
             </div>

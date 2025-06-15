@@ -7,6 +7,7 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { sampleEvents } from '@/data/sampleEvents';
 import { ViewMode, FilterState } from '@/types/calendar';
 import { useSettings } from '@/contexts/SettingsContext';
+import { useGoogleCalendarEvents } from '@/hooks/useGoogleCalendarEvents';
 
 const Calendar = () => {
   const { defaultView } = useSettings();
@@ -19,13 +20,16 @@ const Calendar = () => {
     Holidays: true
   });
   const [weekOffset, setWeekOffset] = useState(0);
+  const { googleEvents } = useGoogleCalendarEvents();
 
   // Update view mode when default view changes
   useEffect(() => {
     setViewMode(defaultView);
   }, [defaultView]);
 
-  const filteredEvents = sampleEvents.filter(event => activeFilters[event.category]);
+  // Combine sample events with Google Calendar events
+  const allEvents = [...sampleEvents, ...googleEvents];
+  const filteredEvents = allEvents.filter(event => activeFilters[event.category]);
 
   const handlePreviousWeek = () => {
     setWeekOffset(prev => prev - 1);
@@ -73,6 +77,11 @@ const Calendar = () => {
 
         <div className="text-sm text-white/70 ml-auto dark:text-gray-300/70">
           Upcoming Events ({filteredEvents.length})
+          {googleEvents.length > 0 && (
+            <span className="ml-2 text-xs text-green-300">
+              • {googleEvents.length} from Google Calendar
+            </span>
+          )}
         </div>
       </div>
 

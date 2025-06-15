@@ -9,6 +9,7 @@ import { Settings, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { useSettings } from '@/contexts/SettingsContext';
+import { useGoogleCalendarEvents } from '@/hooks/useGoogleCalendarEvents';
 
 const backgroundImages = [
   'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=1920&h=1080&fit=crop',
@@ -23,6 +24,7 @@ const Index = () => {
   const [showSettings, setShowSettings] = useState(false);
   const { user, loading, signOut } = useAuth();
   const { zipCode } = useSettings();
+  const { refreshEvents } = useGoogleCalendarEvents();
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -100,7 +102,7 @@ const Index = () => {
         <main className="px-6 pb-6">
           {user && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-              <GoogleCalendarSync />
+              <GoogleCalendarSync onEventsUpdated={refreshEvents} />
               <GooglePhotosSync />
             </div>
           )}

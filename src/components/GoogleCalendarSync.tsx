@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -20,7 +19,11 @@ interface CalendarEvent {
   attendees: any[];
 }
 
-const GoogleCalendarSync = () => {
+interface GoogleCalendarSyncProps {
+  onEventsUpdated?: () => void;
+}
+
+const GoogleCalendarSync = ({ onEventsUpdated }: GoogleCalendarSyncProps = {}) => {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [lastSync, setLastSync] = useState<Date | null>(null);
@@ -32,6 +35,7 @@ const GoogleCalendarSync = () => {
 
     setIsLoading(true);
     try {
+      console.log('Starting Google Calendar sync...');
       const { data, error } = await supabase.functions.invoke('sync-google-calendar', {
         body: { userId: user.id }
       });
@@ -46,6 +50,11 @@ const GoogleCalendarSync = () => {
         title: "Calendar synced!",
         description: `Found ${data.events?.length || 0} events from your Google Calendar.`,
       });
+
+      // Notify parent component to refresh events
+      if (onEventsUpdated) {
+        onEventsUpdated();
+      }
     } catch (error) {
       console.error('Error syncing calendar:', error);
       toast({
