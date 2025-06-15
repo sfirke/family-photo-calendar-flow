@@ -8,13 +8,14 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { User, Camera, Monitor, CloudSun } from 'lucide-react';
+import { User, Camera, Monitor, CloudSun, Calendar } from 'lucide-react';
 import { useSettings } from '@/contexts/SettingsContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import AccountTab from './settings/AccountTab';
 import PhotosTab from './settings/PhotosTab';
 import DisplayTab from './settings/DisplayTab';
 import WeatherTab from './settings/WeatherTab';
+import CalendarsTab from './settings/CalendarsTab';
 
 interface SettingsModalProps {
   open: boolean;
@@ -41,10 +42,14 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
         </DialogHeader>
 
         <Tabs defaultValue="account" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="account" className="flex items-center gap-2">
               <User className="h-4 w-4" />
               Account
+            </TabsTrigger>
+            <TabsTrigger value="calendars" className="flex items-center gap-2">
+              <Calendar className="h-4 w-4" />
+              Calendars
             </TabsTrigger>
             <TabsTrigger value="photos" className="flex items-center gap-2">
               <Camera className="h-4 w-4" />
@@ -62,6 +67,10 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
 
           <TabsContent value="account" className="space-y-4">
             <AccountTab />
+          </TabsContent>
+
+          <TabsContent value="calendars" className="space-y-4">
+            <CalendarsTab />
           </TabsContent>
 
           <TabsContent value="photos" className="space-y-4">

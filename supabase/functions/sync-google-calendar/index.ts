@@ -19,7 +19,7 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const { userId } = await req.json();
+    const { userId, action } = await req.json();
     
     if (!userId) {
       throw new Error('User ID is required');
@@ -46,6 +46,45 @@ serve(async (req) => {
       // For now, we'll use the existing token and let Google API handle the error
     }
 
+    // Handle different actions
+    if (action === 'list-calendars') {
+      // Fetch calendar list from Google Calendar API
+      const calendarsResponse = await fetch(
+        'https://www.googleapis.com/calendar/v3/users/me/calendarList',
+        {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      if (!calendarsResponse.ok) {
+        const errorData = await calendarsResponse.text();
+        console.error('Google Calendar API error:', errorData);
+        throw new Error(`Google Calendar API error: ${calendarsResponse.status}`);
+      }
+
+      const calendarsData = await calendarsResponse.json();
+      const calendars = calendarsData.items || [];
+
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          calendars: calendars.map((cal: any) => ({
+            id: cal.id,
+            summary: cal.summary,
+            primary: cal.primary || false
+          }))
+        }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200 
+        }
+      );
+    }
+
+    // Default action: sync events
     // Fetch calendar events from Google Calendar API
     const calendarResponse = await fetch(
       'https://www.googleapis.com/calendar/v3/calendars/primary/events?maxResults=50&orderBy=startTime&singleEvents=true&timeMin=' + 
