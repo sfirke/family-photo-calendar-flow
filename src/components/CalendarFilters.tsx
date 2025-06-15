@@ -112,6 +112,8 @@ const CalendarFilters = ({
                 size="sm"
                 onClick={hideAll}
                 className="text-xs flex-1"
+              >
+                Hide All
               </Button>
             </div>
           </div>
