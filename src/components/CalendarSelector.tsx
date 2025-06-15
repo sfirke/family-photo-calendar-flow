@@ -22,18 +22,25 @@ const CalendarSelector = ({ selectedCalendarIds, onCalendarChange }: CalendarSel
 
   const handleCalendarToggle = (calendarId: string, checked: boolean) => {
     if (checked) {
-      onCalendarChange([...selectedCalendarIds, calendarId]);
+      const newSelection = [...selectedCalendarIds, calendarId];
+      onCalendarChange(newSelection);
+      console.log('Added calendar:', calendarId, 'New selection:', newSelection);
     } else {
-      onCalendarChange(selectedCalendarIds.filter(id => id !== calendarId));
+      const newSelection = selectedCalendarIds.filter(id => id !== calendarId);
+      onCalendarChange(newSelection);
+      console.log('Removed calendar:', calendarId, 'New selection:', newSelection);
     }
   };
 
   const selectAll = () => {
-    onCalendarChange(calendars.map(cal => cal.id));
+    const allIds = calendars.map(cal => cal.id);
+    onCalendarChange(allIds);
+    console.log('Selected all calendars:', allIds);
   };
 
   const clearAll = () => {
     onCalendarChange([]);
+    console.log('Cleared all calendar selections');
   };
 
   if (!user) {
@@ -79,7 +86,7 @@ const CalendarSelector = ({ selectedCalendarIds, onCalendarChange }: CalendarSel
           variant="outline"
           className="bg-white/95 backdrop-blur-sm border-white/20 text-gray-900 hover:bg-white/100 justify-between min-w-[200px]"
         >
-          <span>Calendars ({selectedCalendarIds.length})</span>
+          <span>Calendars ({selectedCalendarIds.length}/{calendars.length})</span>
           <ChevronDown className="h-4 w-4 opacity-50" />
         </Button>
       </PopoverTrigger>
@@ -92,7 +99,7 @@ const CalendarSelector = ({ selectedCalendarIds, onCalendarChange }: CalendarSel
         <div className="space-y-4">
           <h3 className="font-medium text-gray-900">Select Calendars</h3>
           
-          <div className="space-y-3">
+          <div className="space-y-3 max-h-48 overflow-y-auto">
             {calendars.map((calendar) => (
               <div key={calendar.id} className="flex items-center space-x-3">
                 <Checkbox

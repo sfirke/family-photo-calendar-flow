@@ -11,6 +11,7 @@ import { sampleEvents } from '@/data/sampleEvents';
 import { useSettings } from '@/contexts/SettingsContext';
 import { useWeather } from '@/contexts/WeatherContext';
 import { useGoogleCalendarEvents } from '@/hooks/useGoogleCalendarEvents';
+import { useGoogleCalendars } from '@/hooks/useGoogleCalendars';
 
 const Calendar = () => {
   const [view, setView] = useState<'timeline' | 'week' | 'month'>('month');
@@ -20,10 +21,20 @@ const Calendar = () => {
   const { defaultView } = useSettings();
   const { getWeatherForDate } = useWeather();
   const { googleEvents, isLoading: googleEventsLoading } = useGoogleCalendarEvents();
+  const { calendars, isLoading: calendarsLoading } = useGoogleCalendars();
 
   useEffect(() => {
     setView(defaultView);
   }, [defaultView]);
+
+  // Auto-select all available calendars when they are first loaded
+  useEffect(() => {
+    if (calendars.length > 0 && selectedCalendarIds.length === 0) {
+      const allCalendarIds = calendars.map(cal => cal.id);
+      setSelectedCalendarIds(allCalendarIds);
+      console.log('Auto-selecting all calendars:', allCalendarIds);
+    }
+  }, [calendars, selectedCalendarIds.length]);
 
   // Use Google Calendar events if available, otherwise use sample events
   const hasGoogleEvents = googleEvents.length > 0;
@@ -35,12 +46,18 @@ const Calendar = () => {
     
     // For Google Calendar events, also filter by selected calendar IDs
     if (hasGoogleEvents && selectedCalendarIds.length > 0) {
-      const calendarMatch = selectedCalendarIds.includes(event.calendarId || 'primary');
+      const eventCalendarId = event.calendarId || 'primary';
+      const calendarMatch = selectedCalendarIds.includes(eventCalendarId);
+      console.log(`Event "${event.title}" - Calendar ID: ${eventCalendarId}, Selected: ${calendarMatch}`);
       return categoryMatch && calendarMatch;
     }
     
     return categoryMatch;
   });
+
+  console.log(`Filtered events: ${filteredEvents.length} out of ${baseEvents.length} total events`);
+  console.log('Selected calendar IDs:', selectedCalendarIds);
+  console.log('Has Google events:', hasGoogleEvents);
 
   return (
     <div className="space-y-6">
