@@ -4,9 +4,17 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 
+interface FilterState {
+  Personal: boolean;
+  Work: boolean;
+  Family: boolean;
+  Kids: boolean;
+  Holidays: boolean;
+}
+
 interface CalendarFiltersProps {
-  activeFilters: Record<string, boolean>;
-  onFiltersChange: (filters: Record<string, boolean>) => void;
+  activeFilters: FilterState;
+  onFiltersChange: (filters: FilterState) => void;
 }
 
 const calendarTypes = [
@@ -15,10 +23,10 @@ const calendarTypes = [
   { name: 'Family', color: 'bg-green-500' },
   { name: 'Kids', color: 'bg-orange-500' },
   { name: 'Holidays', color: 'bg-red-500' }
-];
+] as const;
 
 const CalendarFilters = ({ activeFilters, onFiltersChange }: CalendarFiltersProps) => {
-  const handleFilterChange = (filterName: string, checked: boolean) => {
+  const handleFilterChange = (filterName: keyof FilterState, checked: boolean) => {
     onFiltersChange({
       ...activeFilters,
       [filterName]: checked
@@ -26,19 +34,23 @@ const CalendarFilters = ({ activeFilters, onFiltersChange }: CalendarFiltersProp
   };
 
   const showAll = () => {
-    const allTrue = calendarTypes.reduce((acc, type) => ({
-      ...acc,
-      [type.name]: true
-    }), {});
-    onFiltersChange(allTrue);
+    onFiltersChange({
+      Personal: true,
+      Work: true,
+      Family: true,
+      Kids: true,
+      Holidays: true
+    });
   };
 
   const hideAll = () => {
-    const allFalse = calendarTypes.reduce((acc, type) => ({
-      ...acc,
-      [type.name]: false
-    }), {});
-    onFiltersChange(allFalse);
+    onFiltersChange({
+      Personal: false,
+      Work: false,
+      Family: false,
+      Kids: false,
+      Holidays: false
+    });
   };
 
   return (
