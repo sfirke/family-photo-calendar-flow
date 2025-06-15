@@ -1,0 +1,39 @@
+
+import React from 'react';
+import CalendarSelector from '../CalendarSelector';
+import ViewSwitcher from './ViewSwitcher';
+
+interface CalendarHeaderProps {
+  hasGoogleEvents: boolean;
+  selectedCalendarIds: string[];
+  onCalendarChange: (calendarIds: string[]) => void;
+  view: 'timeline' | 'week' | 'month';
+  onViewChange: (view: 'timeline' | 'week' | 'month') => void;
+}
+
+const CalendarHeader = ({ 
+  hasGoogleEvents, 
+  selectedCalendarIds, 
+  onCalendarChange, 
+  view, 
+  onViewChange 
+}: CalendarHeaderProps) => {
+  return (
+    <div className="flex items-center justify-between">
+      <h2 className="text-2xl font-bold text-white">Calendar</h2>
+      
+      <div className="flex items-center gap-4">
+        {hasGoogleEvents && (
+          <CalendarSelector 
+            selectedCalendarIds={selectedCalendarIds}
+            onCalendarChange={onCalendarChange}
+          />
+        )}
+        
+        <ViewSwitcher view={view} onViewChange={onViewChange} />
+      </div>
+    </div>
+  );
+};
+
+export default CalendarHeader;
