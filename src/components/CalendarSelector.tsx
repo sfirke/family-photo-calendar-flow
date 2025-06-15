@@ -105,7 +105,7 @@ const CalendarSelector = ({ selectedCalendarIds, onCalendarChange }: CalendarSel
                 <Checkbox
                   id={calendar.id}
                   checked={selectedCalendarIds.includes(calendar.id)}
-                  onCheckedChange={(checked) => handleCalendarToggle(calendar.id, !!checked)}
+                  onCheckedChange={(checked) => handleCalendarToggle(calendar.id, checked === true)}
                 />
                 <label
                   htmlFor={calendar.id}
