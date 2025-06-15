@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { User, LogOut } from 'lucide-react';
@@ -12,13 +12,30 @@ const AccountTab = () => {
   const { user, signOut } = useAuth();
   const { toast } = useToast();
 
+  useEffect(() => {
+    // Listen for auth changes after popup closes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' && session) {
+        toast({
+          title: "Successfully signed in!",
+          description: "Welcome to your family calendar.",
+        });
+        setIsLoading(false);
+      } else if (event === 'SIGNED_OUT') {
+        setIsLoading(false);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [toast]);
+
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/`,
+          redirectTo: `${window.location.origin}/auth/callback`,
           scopes: 'openid email profile https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/photoslibrary.readonly',
           queryParams: {
             access_type: 'offline',
@@ -34,11 +51,27 @@ const AccountTab = () => {
           description: error.message,
           variant: "destructive"
         });
-      } else {
-        toast({
-          title: "Redirecting to Google",
-          description: "Please complete the sign-in process in the new tab.",
-        });
+        setIsLoading(false);
+      } else if (data?.url) {
+        // Open Google auth in a new tab
+        const popup = window.open(data.url, 'google-auth', 'width=500,height=600,scrollbars=yes,resizable=yes');
+        
+        // Poll for popup closure
+        const checkClosed = setInterval(() => {
+          if (popup && popup.closed) {
+            clearInterval(checkClosed);
+            // Auth state change will be handled by the listener above
+          }
+        }, 1000);
+
+        // Fallback timeout
+        setTimeout(() => {
+          clearInterval(checkClosed);
+          if (popup && !popup.closed) {
+            popup.close();
+          }
+          setIsLoading(false);
+        }, 300000); // 5 minutes timeout
       }
     } catch (error) {
       console.error('Unexpected error:', error);
@@ -47,7 +80,6 @@ const AccountTab = () => {
         description: "An unexpected error occurred",
         variant: "destructive"
       });
-    } finally {
       setIsLoading(false);
     }
   };
@@ -121,7 +153,7 @@ const AccountTab = () => {
               {isLoading ? 'Opening Google Sign In...' : 'Sign in with Google'}
             </Button>
             <p className="text-xs text-gray-500 text-center max-w-md">
-              You will be redirected to Google to complete the sign-in process. By connecting, you agree to share your Google Photos library access with this app.
+              A new tab will open to complete the Google sign-in process. You can close it once signed in.
             </p>
           </div>
         )}
