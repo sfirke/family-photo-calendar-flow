@@ -79,6 +79,8 @@ const Calendar = () => {
     }
     
     // For sample events, show all events when no Google events are available
+    // This ensures sample events are always visible when not using Google Calendar
+    console.log(`Sample event "${event.title}" - Showing (no Google events available)`);
     return true;
   });
 
