@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useGoogleCalendarEvents } from '@/hooks/useGoogleCalendarEvents';
 
 const SELECTED_CALENDARS_KEY = 'selectedCalendarIds';
