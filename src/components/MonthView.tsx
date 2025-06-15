@@ -76,8 +76,8 @@ const MonthView = ({ events, getWeatherForDate }: MonthViewProps) => {
       case 'cloudy':
       case 'partly cloudy':
         return <Cloud className="h-3 w-3 text-gray-300" />;
-      case 'rain':
       case 'rainy':
+      case 'rain':
         return <CloudRain className="h-3 w-3 text-blue-400" />;
       default:
         return <Sun className="h-3 w-3 text-yellow-400" />;
@@ -138,7 +138,7 @@ const MonthView = ({ events, getWeatherForDate }: MonthViewProps) => {
               } ${hasEvents ? 'cursor-pointer hover:bg-white/20 transition-colors' : ''}`}
               onClick={() => handleDayClick(date, dayEvents)}
             >
-              {/* Date and Weather */}
+              {/* Date and Weather with forecast data */}
               <div className="flex items-center justify-between mb-2">
                 <span className={`text-sm font-medium ${isToday ? 'text-yellow-300' : 'text-white'}`}>
                   {date.getDate()}

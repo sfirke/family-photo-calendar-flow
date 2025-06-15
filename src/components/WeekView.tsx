@@ -31,8 +31,8 @@ const WeekView = ({ events, weekOffset, onPreviousWeek, onNextWeek, getWeatherFo
       case 'cloudy':
       case 'partly cloudy':
         return <Cloud className="h-4 w-4 text-gray-300" />;
-      case 'rain':
       case 'rainy':
+      case 'rain':
         return <CloudRain className="h-4 w-4 text-blue-400" />;
       default:
         return <Sun className="h-4 w-4 text-yellow-400" />;
@@ -85,7 +85,7 @@ const WeekView = ({ events, weekOffset, onPreviousWeek, onNextWeek, getWeatherFo
                   {date.getDate()}
                 </p>
                 
-                {/* Weather Info */}
+                {/* Weather Info with forecast data */}
                 <div className="flex items-center justify-center gap-1 mt-2">
                   {getWeatherIcon(weather.condition)}
                   <span className="text-sm text-white/70">{weather.temp}°</span>

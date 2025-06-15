@@ -24,6 +24,7 @@ export const WeatherProvider = ({ children }: { children: React.ReactNode }) => 
       try {
         const data = await fetchWeatherData(zipCode, weatherApiKey);
         setWeatherData(data);
+        console.log('Weather data loaded:', data);
       } catch (error) {
         console.error('Failed to load weather:', error);
       } finally {
@@ -35,16 +36,32 @@ export const WeatherProvider = ({ children }: { children: React.ReactNode }) => 
   }, [zipCode, weatherApiKey]);
 
   const getWeatherForDate = (date: Date) => {
-    if (!weatherData?.forecast) {
+    if (!weatherData) {
       return { temp: 75, condition: 'Sunny' };
     }
 
     const dateString = date.toISOString().split('T')[0];
-    const forecast = weatherData.forecast.find(f => f.date === dateString);
+    console.log('Looking for weather for date:', dateString);
     
-    return forecast 
-      ? { temp: forecast.temp, condition: forecast.condition }
-      : { temp: weatherData.temperature, condition: weatherData.condition };
+    // First try to find in forecast array
+    if (weatherData.forecast && weatherData.forecast.length > 0) {
+      const forecast = weatherData.forecast.find(f => f.date === dateString);
+      if (forecast) {
+        console.log('Found forecast for', dateString, ':', forecast);
+        return { temp: forecast.temp, condition: forecast.condition };
+      }
+    }
+    
+    // Fall back to current weather for today
+    const today = new Date().toISOString().split('T')[0];
+    if (dateString === today) {
+      console.log('Using current weather for today:', { temp: weatherData.temperature, condition: weatherData.condition });
+      return { temp: weatherData.temperature, condition: weatherData.condition };
+    }
+    
+    // Default fallback
+    console.log('No forecast found for', dateString, ', using default');
+    return { temp: 75, condition: 'Sunny' };
   };
 
   return (
