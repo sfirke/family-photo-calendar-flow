@@ -7,9 +7,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { User, Camera, Monitor, CloudSun, X } from 'lucide-react';
+import { User, Camera, Monitor, CloudSun } from 'lucide-react';
 import { useSettings } from '@/contexts/SettingsContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import AccountTab from './settings/AccountTab';
@@ -35,21 +34,10 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <DialogTitle>App Settings</DialogTitle>
-              <DialogDescription>
-                Configure your family calendar app preferences and connect your Google account
-              </DialogDescription>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => onOpenChange(false)}
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
+          <DialogTitle>App Settings</DialogTitle>
+          <DialogDescription>
+            Configure your family calendar app preferences and connect your Google account
+          </DialogDescription>
         </DialogHeader>
 
         <Tabs defaultValue="account" className="w-full">
@@ -96,12 +84,6 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
             />
           </TabsContent>
         </Tabs>
-
-        <div className="flex justify-end gap-2 pt-4">
-          <Button onClick={() => onOpenChange(false)}>
-            Close
-          </Button>
-        </div>
       </DialogContent>
     </Dialog>
   );
