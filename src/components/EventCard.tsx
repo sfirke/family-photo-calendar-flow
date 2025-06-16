@@ -76,13 +76,23 @@ const EventCard = ({
     return 'w-[35%]'; // 35% width for regular events
   };
 
+  // Get background opacity based on event type
+  const getBackgroundOpacity = () => {
+    return isAllDay ? 'bg-white/80' : 'bg-white/90';
+  };
+
+  // Get hover background opacity based on event type
+  const getHoverBackgroundOpacity = () => {
+    return isAllDay ? 'hover:bg-white/85' : 'hover:bg-white/95';
+  };
+
   const isInteractive = (viewMode === 'timeline' || viewMode === 'week') && hasAdditionalData() && !isMultiDayDisplay;
 
   // For multi-day events, show compact format with inline time
   if (isMultiDayDisplay) {
     return (
       <article 
-        className={`p-2 rounded-lg bg-white/95 backdrop-blur-sm border border-white/30 ${getTimelineStyles()} ${className}`}
+        className={`p-2 rounded-lg ${getBackgroundOpacity()} backdrop-blur-sm border border-white/30 ${getTimelineStyles()} ${className}`}
         role="article"
         aria-label={`Multi-day event: ${event.title}`}
       >
@@ -113,8 +123,8 @@ const EventCard = ({
 
   return (
     <article 
-      className={`p-3 rounded-lg bg-white/95 backdrop-blur-sm border border-white/30 ${
-        isInteractive ? 'cursor-pointer hover:bg-white/100 transition-colors' : ''
+      className={`p-3 rounded-lg ${getBackgroundOpacity()} backdrop-blur-sm border border-white/30 ${
+        isInteractive ? `cursor-pointer ${getHoverBackgroundOpacity()} transition-colors` : ''
       } ${getTimelineStyles()} ${className}`}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
