@@ -1,5 +1,6 @@
 
 
+
 const BASE_URL = 'https://api.openweathermap.org/data/2.5';
 
 export interface WeatherData {
@@ -109,11 +110,11 @@ const extendForecastData = (apiForecast: Array<{date: string; temp: number; high
   const lastDate = new Date(lastForecast.date);
   
   // Calculate average temperatures from available data - ensure we're working with numbers
-  const validHighs = apiForecast.map(f => f.high).filter((high): high is number => typeof high === 'number');
-  const validLows = apiForecast.map(f => f.low).filter((low): low is number => typeof low === 'number');
+  const validHighs: number[] = apiForecast.map(f => f.high).filter((high): high is number => typeof high === 'number');
+  const validLows: number[] = apiForecast.map(f => f.low).filter((low): low is number => typeof low === 'number');
   
-  const avgHigh: number = validHighs.length > 0 ? Math.round(validHighs.reduce((sum: number, high: number) => sum + high, 0) / validHighs.length) : 75;
-  const avgLow: number = validLows.length > 0 ? Math.round(validLows.reduce((sum: number, low: number) => sum + low, 0) / validLows.length) : 60;
+  const avgHigh: number = validHighs.length > 0 ? Math.round(validHighs.reduce((sum: number, high: number): number => sum + high, 0) / validHighs.length) : 75;
+  const avgLow: number = validLows.length > 0 ? Math.round(validLows.reduce((sum: number, low: number): number => sum + low, 0) / validLows.length) : 60;
   
   // Get most common condition
   const conditionCounts = apiForecast.reduce((acc, f) => {
@@ -183,4 +184,5 @@ const getWeatherCondition = (main: string): string => {
       return 'Sunny';
   }
 };
+
 
