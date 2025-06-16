@@ -194,6 +194,26 @@ const EventCard = ({
     };
   };
 
+  // Get font size classes based on view mode - larger fonts for timeline view
+  const getFontSizeClasses = () => {
+    if (viewMode === 'timeline') {
+      return {
+        title: 'text-base', // Increased from default
+        time: 'text-sm', // Increased from text-xs
+        location: 'text-sm', // Increased from text-xs
+        description: 'text-sm', // Increased from text-xs
+        category: 'text-sm' // Increased from text-xs
+      };
+    }
+    return {
+      title: 'text-sm', // Default size for other views
+      time: 'text-xs',
+      location: 'text-xs',
+      description: 'text-xs',
+      category: 'text-xs'
+    };
+  };
+
   // Get padding class based on event type
   const getPaddingClass = () => {
     return isAllDay ? 'pl-3' : 'p-3';
@@ -201,6 +221,7 @@ const EventCard = ({
 
   const isInteractive = (viewMode === 'timeline' || viewMode === 'week') && hasAdditionalData() && !isMultiDayDisplay;
   const textColors = getTextColorClasses();
+  const fontSizes = getFontSizeClasses();
 
   // For multi-day events, show compact format with inline time
   if (isMultiDayDisplay) {
@@ -222,10 +243,10 @@ const EventCard = ({
 
           {/* Event Details Column - Inline format */}
           <div className="flex-1 min-w-0 flex items-center gap-2">
-            <h3 className={`${textColors.title} truncate`}>
+            <h3 className={`${textColors.title} ${fontSizes.title} truncate`}>
               {event.title}
             </h3>
-            <span className={`text-xs ${textColors.time} flex items-center gap-1 flex-shrink-0`}>
+            <span className={`${fontSizes.time} ${textColors.time} flex items-center gap-1 flex-shrink-0`}>
               <Clock className="h-3 w-3" aria-hidden="true" />
               All Day
             </span>
@@ -261,12 +282,12 @@ const EventCard = ({
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between">
             <div className="flex-1 min-w-0">
-              <h3 className={`${textColors.title} mb-1 leading-tight truncate`}>
+              <h3 className={`${textColors.title} ${fontSizes.title} mb-1 leading-tight truncate`}>
                 {event.title}
               </h3>
               
               {/* Time display - show "All day" for all-day events in timeline view */}
-              <div className={`flex items-center gap-2 text-xs ${textColors.time} mb-2`}>
+              <div className={`flex items-center gap-2 ${fontSizes.time} ${textColors.time} mb-2`}>
                 <Clock className="h-3 w-3 flex-shrink-0" aria-hidden="true" />
                 <time dateTime={isAllDay ? event.date.toISOString().split('T')[0] : undefined}>
                   {isAllDay && viewMode === 'timeline' ? 'All Day' : event.time}
@@ -275,7 +296,7 @@ const EventCard = ({
               
               {/* Show location only if provided and in expanded state for timeline/week, or always for other views */}
               {event.location && ((viewMode !== 'timeline' && viewMode !== 'week') || isExpanded) && (
-                <div className={`flex items-center gap-2 text-xs ${textColors.location} mb-2`}>
+                <div className={`flex items-center gap-2 ${fontSizes.location} ${textColors.location} mb-2`}>
                   <MapPin className="h-3 w-3 flex-shrink-0" aria-hidden="true" />
                   <address className="truncate not-italic">{event.location}</address>
                 </div>
@@ -283,14 +304,14 @@ const EventCard = ({
 
               {/* Show description only in expanded timeline/week view */}
               {(viewMode === 'timeline' || viewMode === 'week') && isExpanded && event.description && (
-                <div className={`text-xs ${textColors.description} mb-2 line-clamp-3`}>
+                <div className={`${fontSizes.description} ${textColors.description} mb-2 line-clamp-3`}>
                   {event.description}
                 </div>
               )}
 
               {/* Category text for month view */}
               {viewMode === 'month' && (
-                <div className={`text-xs ${textColors.category}`}>
+                <div className={`${fontSizes.category} ${textColors.category}`}>
                   {event.category}
                 </div>
               )}
