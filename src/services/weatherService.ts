@@ -76,11 +76,14 @@ const processDailyForecasts = (forecastList: any[]) => {
     dailyData[date].push(item);
   });
   
-  // Calculate daily highs, lows, and most common condition
+  // Calculate daily highs, lows, and most common condition using temp_max and temp_min
   return Object.entries(dailyData).map(([date, items]) => {
-    const temps = items.map(item => item.main.temp);
-    const high = Math.round(Math.max(...temps));
-    const low = Math.round(Math.min(...temps));
+    // Use temp_max and temp_min from the API response
+    const maxTemps = items.map(item => item.main.temp_max);
+    const minTemps = items.map(item => item.main.temp_min);
+    
+    const high = Math.round(Math.max(...maxTemps));
+    const low = Math.round(Math.min(...minTemps));
     
     // Get most common weather condition for the day
     const conditions = items.map(item => item.weather[0].main);
@@ -113,8 +116,8 @@ const extendForecastData = (apiForecast: Array<{date: string; temp: number; high
   const validHighs: number[] = apiForecast.map(f => f.high).filter((high): high is number => typeof high === 'number');
   const validLows: number[] = apiForecast.map(f => f.low).filter((low): low is number => typeof low === 'number');
   
-  const avgHigh: number = validHighs.length > 0 ? Math.round(validHighs.reduce((sum: number, high: number): number => sum + high, 0) / validHighs.length) : 75;
-  const avgLow: number = validLows.length > 0 ? Math.round(validLows.reduce((sum: number, low: number): number => sum + low, 0) / validLows.length) : 60;
+  const avgHigh: number = validHighs.length > 0 ? Math.round(validHighs.reduce((sum, high) => sum + high, 0) / validHighs.length) : 75;
+  const avgLow: number = validLows.length > 0 ? Math.round(validLows.reduce((sum, low) => sum + low, 0) / validLows.length) : 60;
   
   // Get most common condition
   const conditionCounts = apiForecast.reduce((acc, f) => {
@@ -184,5 +187,3 @@ const getWeatherCondition = (main: string): string => {
       return 'Sunny';
   }
 };
-
-
