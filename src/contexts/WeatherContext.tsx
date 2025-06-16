@@ -1,7 +1,7 @@
-
-import React, { createContext, useContext, useState, useEffect, useRef, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { fetchWeatherData, WeatherData } from '@/services/weatherService';
 import { useSettings } from './SettingsContext';
+import { IntervalManager } from '@/utils/performanceUtils';
 
 interface WeatherContextType {
   weatherData: WeatherData | null;
@@ -16,44 +16,48 @@ export const WeatherProvider = ({ children }: { children: React.ReactNode }) => 
   const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { zipCode, weatherApiKey } = useSettings();
-  const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const lastFetchRef = useRef<number>(0);
 
-  const loadWeather = async () => {
+  // Optimized load function with caching and error recovery
+  const loadWeather = useCallback(async (forceRefresh = false) => {
     if (!zipCode) return;
     
+    const now = Date.now();
+    const timeSinceLastFetch = now - lastFetchRef.current;
+    
+    // Prevent excessive API calls (minimum 5 minutes between calls)
+    if (!forceRefresh && timeSinceLastFetch < 5 * 60 * 1000) {
+      return;
+    }
+    
     setIsLoading(true);
+    lastFetchRef.current = now;
+    
     try {
       const data = await fetchWeatherData(zipCode, weatherApiKey);
       setWeatherData(data);
     } catch (error) {
-      console.error('Failed to load weather:', error);
+      console.warn('Weather fetch failed, using cached data if available:', error);
+      // Keep existing data on error for 24/7 reliability
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [zipCode, weatherApiKey]);
 
   useEffect(() => {
-    // Load weather data initially
+    // Initial load
     loadWeather();
 
-    // Set up 30-minute refresh interval
-    const THIRTY_MINUTES = 30 * 60 * 1000; // 30 minutes in milliseconds
-    
-    if (refreshIntervalRef.current) {
-      clearInterval(refreshIntervalRef.current);
-    }
-    
-    refreshIntervalRef.current = setInterval(() => {
+    // Set up optimized refresh interval using IntervalManager
+    IntervalManager.setInterval('weather-refresh', () => {
       loadWeather();
-    }, THIRTY_MINUTES);
+    }, 30 * 60 * 1000); // 30 minutes
 
-    // Cleanup interval on unmount or when dependencies change
+    // Cleanup on unmount
     return () => {
-      if (refreshIntervalRef.current) {
-        clearInterval(refreshIntervalRef.current);
-      }
+      IntervalManager.clearInterval('weather-refresh');
     };
-  }, [zipCode, weatherApiKey]);
+  }, [loadWeather]);
 
   const getCurrentWeather = useMemo(() => {
     return () => {
@@ -81,7 +85,6 @@ export const WeatherProvider = ({ children }: { children: React.ReactNode }) => 
       if (weatherData.forecast && weatherData.forecast.length > 0) {
         const forecast = weatherData.forecast.find(f => f.date === dateString);
         if (forecast) {
-          // Return the high temperature for the day
           return { temp: forecast.high || forecast.temp, condition: forecast.condition };
         }
       }
@@ -101,13 +104,15 @@ export const WeatherProvider = ({ children }: { children: React.ReactNode }) => 
     };
   }, [weatherData]);
 
+  const contextValue = useMemo(() => ({
+    weatherData,
+    isLoading,
+    getWeatherForDate,
+    getCurrentWeather
+  }), [weatherData, isLoading, getWeatherForDate, getCurrentWeather]);
+
   return (
-    <WeatherContext.Provider value={{
-      weatherData,
-      isLoading,
-      getWeatherForDate,
-      getCurrentWeather
-    }}>
+    <WeatherContext.Provider value={contextValue}>
       {children}
     </WeatherContext.Provider>
   );

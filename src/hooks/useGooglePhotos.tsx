@@ -1,6 +1,7 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { getImagesFromAlbum } from '@/utils/googlePhotosUtils';
+import { IntervalManager } from '@/utils/performanceUtils';
 
 interface PhotosCache {
   images: string[];
@@ -22,28 +23,34 @@ export const useGooglePhotos = (albumUrl: string) => {
   const [images, setImages] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const lastFetchRef = useRef<number>(0);
+  const retryCountRef = useRef<number>(0);
 
   const getCacheKey = (url: string) => `google-photos-cache-${btoa(url).replace(/[^a-zA-Z0-9]/g, '')}`;
 
-  const getCache = (url: string): PhotosCache | null => {
+  const getCache = useCallback((url: string): PhotosCache | null => {
     try {
       const cached = localStorage.getItem(getCacheKey(url));
       return cached ? JSON.parse(cached) : null;
     } catch {
       return null;
     }
-  };
+  }, []);
 
-  const setCache = (url: string, images: string[]) => {
+  const setCache = useCallback((url: string, images: string[]) => {
     const cache: PhotosCache = {
       images,
       lastUpdated: Date.now(),
       albumUrl: url
     };
-    localStorage.setItem(getCacheKey(url), JSON.stringify(cache));
-  };
+    try {
+      localStorage.setItem(getCacheKey(url), JSON.stringify(cache));
+    } catch (error) {
+      console.warn('Failed to cache photos:', error);
+    }
+  }, []);
 
-  const shouldUpdateCache = (cache: PhotosCache | null): boolean => {
+  const shouldUpdateCache = useCallback((cache: PhotosCache | null): boolean => {
     if (!cache) return true;
     
     const now = new Date();
@@ -53,68 +60,84 @@ export const useGooglePhotos = (albumUrl: string) => {
     const today12pm = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 12, 0, 0);
     
     return now >= today12pm && lastUpdate < today12pm;
-  };
+  }, []);
 
-  const fetchPhotos = async (url: string, forceRefresh = false) => {
+  const fetchPhotos = useCallback(async (url: string, forceRefresh = false) => {
     if (!url.trim()) {
       setImages([]);
       setError(null);
       return;
     }
 
+    // Prevent excessive API calls (minimum 10 minutes between calls for 24/7 operation)
+    const now = Date.now();
+    const timeSinceLastFetch = now - lastFetchRef.current;
+    if (!forceRefresh && timeSinceLastFetch < 10 * 60 * 1000) {
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
+    lastFetchRef.current = now;
 
     try {
       const cache = getCache(url);
       
       if (!forceRefresh && cache && !shouldUpdateCache(cache)) {
-        console.log('Using cached Google Photos images - randomizing order');
         const shuffledImages = shuffleArray(cache.images);
         setImages(shuffledImages);
         setIsLoading(false);
+        retryCountRef.current = 0; // Reset retry count on success
         return;
       }
 
-      console.log('Fetching fresh Google Photos images');
       const fetchedImages = await getImagesFromAlbum(url);
-      
-      // Randomize the order of freshly fetched images
       const shuffledImages = shuffleArray(fetchedImages);
-      console.log(`Fetched and randomized ${shuffledImages.length} images from album`);
       
       setImages(shuffledImages);
-      // Cache the original (non-shuffled) order to allow for different randomizations
       setCache(url, fetchedImages);
+      retryCountRef.current = 0; // Reset retry count on success
       
     } catch (err: any) {
-      console.error('Error fetching Google Photos:', err);
+      console.warn('Error fetching Google Photos:', err);
       setError(err.message || 'Failed to fetch photos from album');
       
-      // Try to use cached images as fallback, but still randomize them
+      // For 24/7 operation, always try to use cached images as fallback
       const cache = getCache(url);
-      if (cache) {
+      if (cache && cache.images.length > 0) {
         const shuffledImages = shuffleArray(cache.images);
         setImages(shuffledImages);
+        setError(null); // Clear error if we have cached fallback
       } else {
         setImages([]);
+      }
+
+      // Implement exponential backoff for retries
+      retryCountRef.current += 1;
+      if (retryCountRef.current < 3) {
+        const retryDelay = Math.min(1000 * Math.pow(2, retryCountRef.current), 30000);
+        setTimeout(() => {
+          if (albumUrl === url) { // Only retry if URL hasn't changed
+            fetchPhotos(url, true);
+          }
+        }, retryDelay);
       }
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [getCache, setCache, shouldUpdateCache]);
 
-  const refreshPhotos = () => {
+  const refreshPhotos = useCallback(() => {
     if (albumUrl) {
       fetchPhotos(albumUrl, true);
     }
-  };
+  }, [albumUrl, fetchPhotos]);
 
   useEffect(() => {
     fetchPhotos(albumUrl);
-  }, [albumUrl]);
+  }, [albumUrl, fetchPhotos]);
 
-  // Set up daily refresh at 12pm
+  // Optimized daily refresh for 24/7 operation
   useEffect(() => {
     const scheduleNextRefresh = () => {
       const now = new Date();
@@ -127,18 +150,25 @@ export const useGooglePhotos = (albumUrl: string) => {
       
       const timeUntilRefresh = next12pm.getTime() - now.getTime();
       
-      return setTimeout(() => {
-        console.log('Automatic daily refresh of Google Photos at 12pm - randomizing order');
+      // Use IntervalManager for better cleanup
+      IntervalManager.setInterval('photos-daily-refresh', () => {
         refreshPhotos();
-        // Schedule next refresh
-        scheduleNextRefresh();
+      }, 24 * 60 * 60 * 1000); // Daily
+
+      // Initial timeout to first refresh
+      setTimeout(() => {
+        refreshPhotos();
       }, timeUntilRefresh);
     };
 
-    const timeoutId = scheduleNextRefresh();
+    if (albumUrl) {
+      scheduleNextRefresh();
+    }
     
-    return () => clearTimeout(timeoutId);
-  }, [albumUrl]);
+    return () => {
+      IntervalManager.clearInterval('photos-daily-refresh');
+    };
+  }, [albumUrl, refreshPhotos]);
 
   return {
     images,

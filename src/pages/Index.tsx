@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import Calendar from '@/components/Calendar';
 import WeatherWidget from '@/components/WeatherWidget';
 import SettingsModal from '@/components/SettingsModal';
@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { useSettings } from '@/contexts/SettingsContext';
 import { getImagesFromAlbum, getDefaultBackgroundImages } from '@/utils/googlePhotosUtils';
+import { PerformanceMonitor, IntervalManager, displayOptimizations } from '@/utils/performanceUtils';
 
 const Index = () => {
   const [currentBg, setCurrentBg] = useState(0);
@@ -18,62 +19,122 @@ const Index = () => {
   const { user, loading } = useAuth();
   const { backgroundDuration, publicAlbumUrl } = useSettings();
 
-  // Real-time clock update
+  // Optimized clock update - only update minutes, not seconds
   useEffect(() => {
-    const clockInterval = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 1000); // Update every second
-
-    return () => clearInterval(clockInterval);
-  }, []);
-
-  // Load images from album URL or use defaults
-  useEffect(() => {
-    const loadBackgroundImages = async () => {
-      if (publicAlbumUrl) {
-        try {
-          const albumImages = await getImagesFromAlbum(publicAlbumUrl);
-          if (albumImages.length > 0) {
-            setBackgroundImages(albumImages);
-            setCurrentBg(0); // Reset to first image when album changes
-          } else {
-            setBackgroundImages(getDefaultBackgroundImages());
-          }
-        } catch (error) {
-          console.error('Failed to load album images:', error);
-          // Fall back to default images
-          setBackgroundImages(getDefaultBackgroundImages());
+    const updateClock = () => {
+      const now = new Date();
+      setCurrentTime(prev => {
+        // Only update if minute has changed to reduce renders
+        if (prev.getMinutes() !== now.getMinutes() || prev.getHours() !== now.getHours()) {
+          return now;
         }
-      } else {
-        setBackgroundImages(getDefaultBackgroundImages());
-      }
+        return prev;
+      });
     };
 
-    loadBackgroundImages();
+    // Update immediately, then every minute at the start of the minute
+    updateClock();
+    
+    const now = new Date();
+    const msUntilNextMinute = (60 - now.getSeconds()) * 1000 - now.getMilliseconds();
+    
+    const timeoutId = setTimeout(() => {
+      updateClock();
+      IntervalManager.setInterval('clock-update', updateClock, 60000); // Every minute
+    }, msUntilNextMinute);
+
+    return () => {
+      clearTimeout(timeoutId);
+      IntervalManager.clearInterval('clock-update');
+    };
+  }, []);
+
+  // 24/7 display optimizations
+  useEffect(() => {
+    // Start performance monitoring
+    PerformanceMonitor.startMonitoring();
+    
+    // Enable burn-in prevention
+    const burnInInterval = displayOptimizations.enableBurnInPrevention();
+    
+    // Enable OLED optimization
+    displayOptimizations.enableOLEDOptimization();
+    
+    // Adjust for time of day
+    const timeAdjustmentInterval = setInterval(() => {
+      displayOptimizations.adjustForTimeOfDay();
+    }, 60 * 60 * 1000); // Check every hour
+
+    // Initial time adjustment
+    displayOptimizations.adjustForTimeOfDay();
+
+    return () => {
+      PerformanceMonitor.stopMonitoring();
+      clearInterval(burnInInterval);
+      clearInterval(timeAdjustmentInterval);
+      IntervalManager.clearAllIntervals();
+    };
+  }, []);
+
+  // Optimized background image loading with error recovery
+  const loadBackgroundImages = useCallback(async () => {
+    if (publicAlbumUrl) {
+      try {
+        const albumImages = await getImagesFromAlbum(publicAlbumUrl);
+        if (albumImages.length > 0) {
+          setBackgroundImages(albumImages);
+          setCurrentBg(0);
+        } else {
+          setBackgroundImages(getDefaultBackgroundImages());
+        }
+      } catch (error) {
+        console.warn('Failed to load album images, using defaults:', error);
+        setBackgroundImages(getDefaultBackgroundImages());
+      }
+    } else {
+      setBackgroundImages(getDefaultBackgroundImages());
+    }
   }, [publicAlbumUrl]);
 
-  // Background rotation effect
   useEffect(() => {
-    if (backgroundImages.length === 0) return;
+    loadBackgroundImages();
+  }, [loadBackgroundImages]);
 
-    const intervalTime = backgroundDuration * 60 * 1000; // Convert minutes to milliseconds
+  // Optimized background rotation with proper cleanup
+  useEffect(() => {
+    if (backgroundImages.length <= 1) return;
+
+    const intervalTime = backgroundDuration * 60 * 1000;
     
-    const interval = setInterval(() => {
-      setCurrentBg((prev) => (prev + 1) % backgroundImages.length);
+    IntervalManager.setInterval('background-rotation', () => {
+      setCurrentBg(prev => (prev + 1) % backgroundImages.length);
     }, intervalTime);
 
-    return () => clearInterval(interval);
+    return () => {
+      IntervalManager.clearInterval('background-rotation');
+    };
   }, [backgroundDuration, backgroundImages.length]);
 
-  // Memoize background style to prevent unnecessary re-renders
-  const backgroundStyle = useMemo(() => ({
-    backgroundImage: `url(${backgroundImages[currentBg]})`,
-    backgroundSize: 'cover',
-    backgroundPosition: 'center',
-    backgroundRepeat: 'no-repeat'
-  }), [backgroundImages, currentBg]);
+  // Memoized background style with preloading
+  const backgroundStyle = useMemo(() => {
+    const currentImage = backgroundImages[currentBg];
+    
+    // Preload next image for smooth transitions
+    if (backgroundImages.length > 1) {
+      const nextIndex = (currentBg + 1) % backgroundImages.length;
+      const nextImage = new Image();
+      nextImage.src = backgroundImages[nextIndex];
+    }
+    
+    return {
+      backgroundImage: `url(${currentImage})`,
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+      backgroundRepeat: 'no-repeat'
+    };
+  }, [backgroundImages, currentBg]);
 
-  // Memoize formatted date and time to reduce calculations
+  // Optimized date/time formatting - only update when time changes
   const formattedDateTime = useMemo(() => {
     const dateString = currentTime.toLocaleDateString('en-US', { 
       weekday: 'long', 
@@ -101,7 +162,7 @@ const Index = () => {
 
   return (
     <div className="min-h-screen relative overflow-hidden flex flex-col">
-      {/* Background Image */}
+      {/* Background Image with optimized transitions */}
       <div 
         className="absolute inset-0 transition-opacity duration-1000 ease-in-out"
         style={backgroundStyle}
