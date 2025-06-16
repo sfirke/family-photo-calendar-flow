@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import Calendar from '@/components/Calendar';
 import WeatherWidget from '@/components/WeatherWidget';
@@ -14,8 +13,18 @@ const Index = () => {
   const [currentBg, setCurrentBg] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
   const [backgroundImages, setBackgroundImages] = useState<string[]>(getDefaultBackgroundImages());
+  const [currentTime, setCurrentTime] = useState(new Date());
   const { user, loading } = useAuth();
   const { backgroundDuration, publicAlbumUrl } = useSettings();
+
+  // Real-time clock update
+  useEffect(() => {
+    const clockInterval = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000); // Update every second
+
+    return () => clearInterval(clockInterval);
+  }, []);
 
   // Load images from album URL or use defaults
   useEffect(() => {
@@ -101,14 +110,15 @@ const Index = () => {
           <div className="relative z-10">
             <h1 className="text-2xl font-bold text-white">Family Calendar</h1>
             <p className="text-sm text-white/90">
-              {new Date().toLocaleDateString('en-US', { 
+              {currentTime.toLocaleDateString('en-US', { 
                 weekday: 'long', 
                 year: 'numeric', 
                 month: 'long', 
                 day: 'numeric'
-              })} at {new Date().toLocaleTimeString('en-US', { 
+              })} at {currentTime.toLocaleTimeString('en-US', { 
                 hour: 'numeric', 
-                minute: '2-digit'
+                minute: '2-digit',
+                second: '2-digit'
               })}
             </p>
           </div>
