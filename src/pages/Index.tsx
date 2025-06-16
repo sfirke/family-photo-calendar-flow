@@ -89,7 +89,7 @@ const Index = () => {
       />
       
       {/* Glass overlay */}
-      <div className="absolute inset-0 bg-white/10 backdrop-blur-sm dark:bg-black/20" />
+      <div className="absolute inset-0 bg-white/10 backdrop-blur-[1px] dark:bg-black/20" />
       
       {/* Content */}
       <div className="relative z-10 min-h-screen flex flex-col">
