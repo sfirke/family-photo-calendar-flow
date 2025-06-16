@@ -7,6 +7,7 @@ interface WeatherContextType {
   weatherData: WeatherData | null;
   isLoading: boolean;
   getWeatherForDate: (date: Date) => { temp: number; condition: string };
+  getCurrentWeather: () => { temp: number; condition: string; location: string };
 }
 
 const WeatherContext = createContext<WeatherContextType | undefined>(undefined);
@@ -35,6 +36,18 @@ export const WeatherProvider = ({ children }: { children: React.ReactNode }) => 
     loadWeather();
   }, [zipCode, weatherApiKey]);
 
+  const getCurrentWeather = () => {
+    if (!weatherData) {
+      return { temp: 75, condition: 'Sunny', location: 'Location not found' };
+    }
+    
+    return {
+      temp: weatherData.temperature,
+      condition: weatherData.condition,
+      location: weatherData.location
+    };
+  };
+
   const getWeatherForDate = (date: Date) => {
     if (!weatherData) {
       return { temp: 75, condition: 'Sunny' };
@@ -46,7 +59,8 @@ export const WeatherProvider = ({ children }: { children: React.ReactNode }) => 
     if (weatherData.forecast && weatherData.forecast.length > 0) {
       const forecast = weatherData.forecast.find(f => f.date === dateString);
       if (forecast) {
-        return { temp: forecast.temp, condition: forecast.condition };
+        // Return the high temperature for the day
+        return { temp: forecast.high || forecast.temp, condition: forecast.condition };
       }
     }
     
@@ -68,7 +82,8 @@ export const WeatherProvider = ({ children }: { children: React.ReactNode }) => 
     <WeatherContext.Provider value={{
       weatherData,
       isLoading,
-      getWeatherForDate
+      getWeatherForDate,
+      getCurrentWeather
     }}>
       {children}
     </WeatherContext.Provider>

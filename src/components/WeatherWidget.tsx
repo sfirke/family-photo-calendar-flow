@@ -3,34 +3,10 @@ import React, { useState, useEffect } from 'react';
 import { Sun, Cloud, CloudRain, Snowflake } from 'lucide-react';
 import { fetchWeatherData, WeatherData } from '@/services/weatherService';
 import { useSettings } from '@/contexts/SettingsContext';
+import { useWeather } from '@/contexts/WeatherContext';
 
 const WeatherWidget = () => {
-  const [weatherData, setWeatherData] = useState<WeatherData>({
-    temperature: 75,
-    condition: 'Sunny',
-    location: 'Loading...',
-    forecast: []
-  });
-  const [isLoading, setIsLoading] = useState(true);
-  const { zipCode, weatherApiKey } = useSettings();
-
-  useEffect(() => {
-    const loadWeather = async () => {
-      if (!zipCode) return;
-      
-      setIsLoading(true);
-      try {
-        const data = await fetchWeatherData(zipCode, weatherApiKey);
-        setWeatherData(data);
-      } catch (error) {
-        console.error('Failed to load weather:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadWeather();
-  }, [zipCode, weatherApiKey]);
+  const { getCurrentWeather, isLoading } = useWeather();
 
   const getWeatherIcon = (condition: string) => {
     switch (condition.toLowerCase()) {
@@ -63,13 +39,15 @@ const WeatherWidget = () => {
     );
   }
 
+  const currentWeather = getCurrentWeather();
+
   return (
     <div className="flex items-center gap-3 text-white">
-      {getWeatherIcon(weatherData.condition)}
+      {getWeatherIcon(currentWeather.condition)}
       <div>
-        <div className="text-2xl font-light">{weatherData.temperature}°F</div>
+        <div className="text-2xl font-light">{currentWeather.temp}°F</div>
         <div className="text-sm text-white/70">
-          {weatherData.condition} • {weatherData.location}
+          {currentWeather.condition} • {currentWeather.location}
         </div>
       </div>
     </div>
