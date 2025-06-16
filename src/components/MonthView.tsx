@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Event } from '@/types/calendar';
 import DayViewModal from './DayViewModal';
@@ -47,9 +46,19 @@ const MonthView = ({ events, getWeatherForDate }: MonthViewProps) => {
   };
 
   const getEventsForDate = (date: Date) => {
-    return events.filter(event => 
+    const dayEvents = events.filter(event => 
       event.date.toDateString() === date.toDateString()
     );
+    
+    // Sort events: all-day events first, then regular events
+    return dayEvents.sort((a, b) => {
+      const aIsAllDay = a.time.toLowerCase().includes('all day') || a.time === '00:00 - 23:59';
+      const bIsAllDay = b.time.toLowerCase().includes('all day') || b.time === '00:00 - 23:59';
+      
+      if (aIsAllDay && !bIsAllDay) return -1;
+      if (!aIsAllDay && bIsAllDay) return 1;
+      return 0;
+    });
   };
 
   const handleDayClick = (date: Date, dayEvents: Event[]) => {
