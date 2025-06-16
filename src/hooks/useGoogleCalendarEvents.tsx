@@ -104,11 +104,31 @@ export const useGoogleCalendarEvents = () => {
         // Check if this is an all-day event
         const isAllDay = dbEvent.is_all_day || false;
         
+        // Check if this is a multi-day event
+        const startDate = new Date(dbEvent.start_time);
+        const endDate = new Date(dbEvent.end_time);
+        const daysDiff = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+        const isMultiDay = daysDiff > 1;
+        
         let timeDisplay;
         if (isAllDay) {
-          timeDisplay = 'All Day';
+          if (isMultiDay) {
+            timeDisplay = `All Day (${daysDiff} days)`;
+          } else {
+            timeDisplay = 'All Day';
+          }
+        } else if (isMultiDay) {
+          const startTime = startDate.toLocaleTimeString('en-US', { 
+            hour: 'numeric', 
+            minute: '2-digit' 
+          });
+          const endTime = endDate.toLocaleTimeString('en-US', { 
+            hour: 'numeric', 
+            minute: '2-digit' 
+          });
+          timeDisplay = `${startTime} - ${endTime} (${daysDiff} days)`;
         } else {
-          timeDisplay = new Date(dbEvent.start_time).toLocaleTimeString('en-US', { 
+          timeDisplay = startDate.toLocaleTimeString('en-US', { 
             hour: 'numeric', 
             minute: '2-digit' 
           });
@@ -119,7 +139,7 @@ export const useGoogleCalendarEvents = () => {
           title: dbEvent.title,
           time: timeDisplay,
           location: dbEvent.location || undefined,
-          attendees: Array.isArray(dbEvent.attendees) ? dbEvent.attendees.length : 0,
+          attendees: 0, // Removed attendees display as requested
           category: 'Personal' as const,
           color: 'bg-blue-500',
           description: dbEvent.description || '',
@@ -129,7 +149,16 @@ export const useGoogleCalendarEvents = () => {
           calendarName: dbEvent.calendar_id || 'Primary Calendar'
         };
         
-        console.log(`useGoogleCalendarEvents: Converted event "${event.title}" ${isAllDay ? '(All Day)' : `at ${event.time}`} from calendar "${event.calendarId}"`);
+        if (isAllDay && isMultiDay) {
+          console.log(`useGoogleCalendarEvents: Converted multi-day all-day event "${event.title}" spanning ${daysDiff} days from calendar "${event.calendarId}"`);
+        } else if (isAllDay) {
+          console.log(`useGoogleCalendarEvents: Converted all-day event "${event.title}" from calendar "${event.calendarId}"`);
+        } else if (isMultiDay) {
+          console.log(`useGoogleCalendarEvents: Converted multi-day timed event "${event.title}" spanning ${daysDiff} days from calendar "${event.calendarId}"`);
+        } else {
+          console.log(`useGoogleCalendarEvents: Converted event "${event.title}" at ${event.time} from calendar "${event.calendarId}"`);
+        }
+        
         return event;
       });
 

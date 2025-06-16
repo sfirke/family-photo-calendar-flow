@@ -183,7 +183,7 @@ serve(async (req) => {
     const calendarData = await calendarResponse.json();
     const events = calendarData.items || [];
 
-    // Store events in our database with proper all-day event handling
+    // Store events in our database with proper all-day and multi-day event handling
     const eventInserts = events.map((event: any) => {
       // Check if this is an all-day event
       const isAllDay = event.start?.date && !event.start?.dateTime;
@@ -200,13 +200,28 @@ serve(async (req) => {
         // Set end time to end of day (or beginning of next day as provided by Google)
         endTime = new Date(endDate).toISOString();
         
-        console.log(`Processing all-day event: ${event.summary} from ${event.start.date} to ${event.end.date}`);
+        // Check if this is a multi-day event
+        const daysDiff = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+        if (daysDiff > 1) {
+          console.log(`Processing multi-day all-day event: ${event.summary} spanning ${daysDiff} days from ${event.start.date} to ${event.end.date}`);
+        } else {
+          console.log(`Processing single all-day event: ${event.summary} on ${event.start.date}`);
+        }
       } else {
         // For regular events with specific times
         startTime = event.start?.dateTime || event.start?.date;
         endTime = event.end?.dateTime || event.end?.date;
         
-        console.log(`Processing timed event: ${event.summary} from ${startTime} to ${endTime}`);
+        // Check if this is a multi-day timed event
+        const startDateTime = new Date(startTime);
+        const endDateTime = new Date(endTime);
+        const daysDiff = Math.ceil((endDateTime.getTime() - startDateTime.getTime()) / (1000 * 60 * 60 * 24));
+        
+        if (daysDiff > 1) {
+          console.log(`Processing multi-day timed event: ${event.summary} spanning ${daysDiff} days from ${startTime} to ${endTime}`);
+        } else {
+          console.log(`Processing single-day timed event: ${event.summary} from ${startTime} to ${endTime}`);
+        }
       }
 
       return {
@@ -245,8 +260,16 @@ serve(async (req) => {
     const allDayCount = eventInserts.filter(event => event.is_all_day).length;
     const timedCount = eventInserts.length - allDayCount;
     
+    // Count multi-day events
+    const multiDayCount = eventInserts.filter(event => {
+      const startDate = new Date(event.start_time);
+      const endDate = new Date(event.end_time);
+      const daysDiff = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+      return daysDiff > 1;
+    }).length;
+    
     console.log(`Successfully synced ${events.length} calendar events for user ${userId}, calendar ${targetCalendarId}`);
-    console.log(`Breakdown: ${allDayCount} all-day events, ${timedCount} timed events`);
+    console.log(`Breakdown: ${allDayCount} all-day events, ${timedCount} timed events, ${multiDayCount} multi-day events`);
 
     return new Response(
       JSON.stringify({ 
@@ -255,6 +278,7 @@ serve(async (req) => {
         count: events.length,
         allDayCount,
         timedCount,
+        multiDayCount,
         calendarId: targetCalendarId
       }),
       { 
