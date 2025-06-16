@@ -127,12 +127,12 @@ const Index = () => {
         </main>
       </div>
 
-      {/* Settings Button - Fixed in lower left corner */}
+      {/* Settings Button - Fixed in lower right corner */}
       <Button
         variant="ghost"
         size="sm"
         onClick={() => setShowSettings(true)}
-        className="fixed bottom-6 left-6 z-20 text-white hover:bg-white/20 bg-black/20 backdrop-blur-sm border border-white/20"
+        className="fixed bottom-6 right-6 z-20 text-white hover:bg-white/20 bg-black/20 backdrop-blur-sm border border-white/20"
       >
         <Settings className="h-4 w-4" />
       </Button>
