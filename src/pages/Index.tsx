@@ -88,13 +88,13 @@ const Index = () => {
         }}
       />
       
-      {/* Glass overlay - reduced blur effect */}
-      <div className="absolute inset-0 bg-white/5 backdrop-blur-[2px] dark:bg-black/10" />
+      {/* Glass overlay */}
+      <div className="absolute inset-0 bg-white/10 backdrop-blur-sm dark:bg-black/20" />
       
       {/* Content */}
-      <div className="relative z-10 min-h-screen flex flex-col overflow-hidden">
+      <div className="relative z-10 min-h-screen flex flex-col">
         {/* Header with gradient overlay */}
-        <header className="relative flex items-center justify-between p-6 flex-shrink-0">
+        <header className="relative flex items-center justify-between p-6">
           {/* Header gradient overlay */}
           <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/20 to-transparent pointer-events-none" />
           
@@ -119,9 +119,9 @@ const Index = () => {
           </div>
         </header>
 
-        {/* Main Content with scroll container */}
-        <main className="px-6 pb-6 flex-1 flex flex-col min-h-0">
-          <div className="flex-1 min-h-0">
+        {/* Main Content */}
+        <main className="px-6 pb-6 flex-1 flex flex-col">
+          <div className="flex-1">
             <Calendar />
           </div>
         </main>

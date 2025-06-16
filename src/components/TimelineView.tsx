@@ -1,9 +1,9 @@
+
 import React from 'react';
 import { Event } from '@/types/calendar';
 import EventCard from './EventCard';
 import { getNext3Days, formatDate } from '@/utils/dateUtils';
 import { Sun, Cloud, CloudRain } from 'lucide-react';
-import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface TimelineViewProps {
   events: Event[];
@@ -76,59 +76,57 @@ const TimelineView = ({ events, getWeatherForDate }: TimelineViewProps) => {
   };
 
   return (
-    <ScrollArea className="h-full">
-      <div className="space-y-6 pr-4">
-        {next3Days.map((date, index) => {
-          const dayEvents = getEventsForDate(date);
-          const isToday = date.toDateString() === new Date().toDateString();
-          const weather = getWeatherForDate ? getWeatherForDate(date) : null;
-          
-          return (
-            <div key={index} className="space-y-4">
-              <div className="flex items-center gap-3">
-                <h3 className={`text-lg font-medium ${isToday ? 'text-yellow-300' : 'text-white'}`}>
-                  {formatDate(date, 'long')}
-                  {isToday && <span className="ml-2 text-sm text-yellow-300">(Today)</span>}
-                </h3>
-                <div className="flex-1 h-px bg-white/20"></div>
-                <div className="flex items-center gap-4 text-sm text-white/60">
-                  <span>
-                    {dayEvents.length} event{dayEvents.length !== 1 ? 's' : ''}
-                  </span>
-                  {weather && (
-                    <div className="flex items-center gap-2">
-                      {getWeatherIcon(weather.condition)}
-                      <span className="text-white/70">{weather.temp}°F</span>
-                    </div>
-                  )}
-                </div>
+    <div className="space-y-6">
+      {next3Days.map((date, index) => {
+        const dayEvents = getEventsForDate(date);
+        const isToday = date.toDateString() === new Date().toDateString();
+        const weather = getWeatherForDate ? getWeatherForDate(date) : null;
+        
+        return (
+          <div key={index} className="space-y-4">
+            <div className="flex items-center gap-3">
+              <h3 className={`text-lg font-medium ${isToday ? 'text-yellow-300' : 'text-white'}`}>
+                {formatDate(date, 'long')}
+                {isToday && <span className="ml-2 text-sm text-yellow-300">(Today)</span>}
+              </h3>
+              <div className="flex-1 h-px bg-white/20"></div>
+              <div className="flex items-center gap-4 text-sm text-white/60">
+                <span>
+                  {dayEvents.length} event{dayEvents.length !== 1 ? 's' : ''}
+                </span>
+                {weather && (
+                  <div className="flex items-center gap-2">
+                    {getWeatherIcon(weather.condition)}
+                    <span className="text-white/70">{weather.temp}°F</span>
+                  </div>
+                )}
               </div>
-              
-              {dayEvents.length > 0 ? (
-                <div className="space-y-3 ml-4">
-                  {dayEvents.map((event) => {
-                    const isMultiDay = event.time.includes('days');
-                    return (
-                      <EventCard 
-                        key={`${event.id}-${date.toDateString()}`} 
-                        event={event}
-                        className="animate-fade-in"
-                        viewMode="timeline"
-                        isMultiDayDisplay={isMultiDay}
-                      />
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="ml-4 text-white/50 text-sm italic">
-                  No events scheduled
-                </div>
-              )}
             </div>
-          );
-        })}
-      </div>
-    </ScrollArea>
+            
+            {dayEvents.length > 0 ? (
+              <div className="space-y-3 ml-4">
+                {dayEvents.map((event) => {
+                  const isMultiDay = event.time.includes('days');
+                  return (
+                    <EventCard 
+                      key={`${event.id}-${date.toDateString()}`} 
+                      event={event}
+                      className="animate-fade-in"
+                      viewMode="timeline"
+                      isMultiDayDisplay={isMultiDay}
+                    />
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="ml-4 text-white/50 text-sm italic">
+                No events scheduled
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
   );
 };
 
