@@ -85,7 +85,6 @@ const MonthView = ({ events, getWeatherForDate }: MonthViewProps) => {
 
   return (
     <div className="space-y-4">
-      {/* Month Navigation */}
       <div className="flex items-center justify-between">
         <Button
           variant="ghost"
@@ -112,16 +111,13 @@ const MonthView = ({ events, getWeatherForDate }: MonthViewProps) => {
         </Button>
       </div>
 
-      {/* Calendar Grid */}
       <div className="grid grid-cols-7 gap-2">
-        {/* Day Headers */}
         {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
           <div key={day} className="text-center text-white/70 font-medium py-2 text-sm">
             {day}
           </div>
         ))}
         
-        {/* Calendar Days */}
         {getMonthDays().map((date, index) => {
           const dayEvents = getEventsForDate(date);
           const isToday = date.toDateString() === new Date().toDateString();
@@ -137,7 +133,6 @@ const MonthView = ({ events, getWeatherForDate }: MonthViewProps) => {
               } ${hasEvents ? 'cursor-pointer hover:bg-white/20 transition-colors' : ''}`}
               onClick={() => handleDayClick(date, dayEvents)}
             >
-              {/* Date and Weather with forecast data */}
               <div className="flex items-center justify-between mb-2">
                 <span className={`text-sm font-medium ${isToday ? 'text-yellow-300' : 'text-white'}`}>
                   {date.getDate()}
@@ -150,9 +145,8 @@ const MonthView = ({ events, getWeatherForDate }: MonthViewProps) => {
               
               {isToday && <div className="w-full h-0.5 bg-yellow-300 mb-2"></div>}
               
-              {/* Event Dots Only */}
               {dayEvents.length > 0 && (
-                <div className="flex flex-wrap gap-1 justify-center items-center min-h-[60px]">
+                <div className="flex flex-wrap gap-1 justify-start items-start min-h-[60px]">
                   {dayEvents.slice(0, 12).map((event, eventIndex) => (
                     <div
                       key={eventIndex}
@@ -172,7 +166,6 @@ const MonthView = ({ events, getWeatherForDate }: MonthViewProps) => {
         })}
       </div>
 
-      {/* Day View Modal */}
       {selectedDate && (
         <DayViewModal
           open={showDayModal}
