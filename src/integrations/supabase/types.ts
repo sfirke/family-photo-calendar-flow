@@ -18,6 +18,7 @@ export type Database = {
           end_time: string
           google_event_id: string | null
           id: string
+          is_all_day: boolean | null
           location: string | null
           start_time: string
           title: string
@@ -32,6 +33,7 @@ export type Database = {
           end_time: string
           google_event_id?: string | null
           id?: string
+          is_all_day?: boolean | null
           location?: string | null
           start_time: string
           title: string
@@ -46,6 +48,7 @@ export type Database = {
           end_time?: string
           google_event_id?: string | null
           id?: string
+          is_all_day?: boolean | null
           location?: string | null
           start_time?: string
           title?: string
