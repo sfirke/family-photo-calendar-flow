@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Event } from '@/types/calendar';
 import { Clock, MapPin, ChevronDown, ChevronUp } from 'lucide-react';
@@ -154,11 +155,11 @@ const EventCard = ({
     return 'w-[35%]'; // 35% width for regular events
   };
 
-  // Get background opacity based on event status
+  // Get background opacity based on event status - decreased by 30%
   const getBackgroundOpacity = () => {
     const isPast = hasEventPassed();
     if (isPast && (viewMode === 'timeline' || viewMode === 'week')) {
-      return 'bg-white/60'; // 60% transparency for past events (increased from 50%)
+      return 'bg-white/30'; // 30% transparency for past events (decreased by 30% from 60%)
     }
     return 'bg-white/75'; // Default 75% transparency
   };
@@ -167,9 +168,30 @@ const EventCard = ({
   const getHoverBackgroundOpacity = () => {
     const isPast = hasEventPassed();
     if (isPast && (viewMode === 'timeline' || viewMode === 'week')) {
-      return 'hover:bg-white/70'; // Slightly higher opacity on hover for past events (increased from 60%)
+      return 'hover:bg-white/40'; // Slightly higher opacity on hover for past events (decreased by 30%)
     }
     return 'hover:bg-white/85'; // Default hover opacity
+  };
+
+  // Get text color classes based on event status - lightened by 20%
+  const getTextColorClasses = () => {
+    const isPast = hasEventPassed();
+    if (isPast && (viewMode === 'timeline' || viewMode === 'week')) {
+      return {
+        title: showBoldHeader ? 'font-bold text-gray-600' : 'font-medium text-gray-600', // Lightened by 20% from gray-900
+        time: 'text-gray-500', // Lightened by 20% from gray-600
+        location: 'text-gray-500', // Lightened by 20% from gray-600
+        description: 'text-gray-500', // Lightened by 20% from gray-600
+        category: 'text-gray-500 font-medium' // Lightened by 20% from gray-600
+      };
+    }
+    return {
+      title: showBoldHeader ? 'font-bold text-gray-900' : 'font-medium text-gray-900',
+      time: 'text-gray-600',
+      location: 'text-gray-600',
+      description: 'text-gray-600',
+      category: 'text-gray-600 font-medium'
+    };
   };
 
   // Get padding class based on event type
@@ -178,6 +200,7 @@ const EventCard = ({
   };
 
   const isInteractive = (viewMode === 'timeline' || viewMode === 'week') && hasAdditionalData() && !isMultiDayDisplay;
+  const textColors = getTextColorClasses();
 
   // For multi-day events, show compact format with inline time
   if (isMultiDayDisplay) {
@@ -199,10 +222,10 @@ const EventCard = ({
 
           {/* Event Details Column - Inline format */}
           <div className="flex-1 min-w-0 flex items-center gap-2">
-            <h3 className="font-medium text-gray-900 truncate">
+            <h3 className={`${textColors.title} truncate`}>
               {event.title}
             </h3>
-            <span className="text-xs text-gray-600 flex items-center gap-1 flex-shrink-0">
+            <span className={`text-xs ${textColors.time} flex items-center gap-1 flex-shrink-0`}>
               <Clock className="h-3 w-3" aria-hidden="true" />
               All Day
             </span>
@@ -238,12 +261,12 @@ const EventCard = ({
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between">
             <div className="flex-1 min-w-0">
-              <h3 className={`${showBoldHeader ? 'font-bold' : 'font-medium'} text-gray-900 mb-1 leading-tight truncate`}>
+              <h3 className={`${textColors.title} mb-1 leading-tight truncate`}>
                 {event.title}
               </h3>
               
               {/* Time display - show "All day" for all-day events in timeline view */}
-              <div className="flex items-center gap-2 text-xs text-gray-600 mb-2">
+              <div className={`flex items-center gap-2 text-xs ${textColors.time} mb-2`}>
                 <Clock className="h-3 w-3 flex-shrink-0" aria-hidden="true" />
                 <time dateTime={isAllDay ? event.date.toISOString().split('T')[0] : undefined}>
                   {isAllDay && viewMode === 'timeline' ? 'All Day' : event.time}
@@ -252,7 +275,7 @@ const EventCard = ({
               
               {/* Show location only if provided and in expanded state for timeline/week, or always for other views */}
               {event.location && ((viewMode !== 'timeline' && viewMode !== 'week') || isExpanded) && (
-                <div className="flex items-center gap-2 text-xs text-gray-600 mb-2">
+                <div className={`flex items-center gap-2 text-xs ${textColors.location} mb-2`}>
                   <MapPin className="h-3 w-3 flex-shrink-0" aria-hidden="true" />
                   <address className="truncate not-italic">{event.location}</address>
                 </div>
@@ -260,14 +283,14 @@ const EventCard = ({
 
               {/* Show description only in expanded timeline/week view */}
               {(viewMode === 'timeline' || viewMode === 'week') && isExpanded && event.description && (
-                <div className="text-xs text-gray-600 mb-2 line-clamp-3">
+                <div className={`text-xs ${textColors.description} mb-2 line-clamp-3`}>
                   {event.description}
                 </div>
               )}
 
               {/* Category text for month view */}
               {viewMode === 'month' && (
-                <div className="text-xs text-gray-600 font-medium">
+                <div className={`text-xs ${textColors.category}`}>
                   {event.category}
                 </div>
               )}
