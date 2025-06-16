@@ -1,3 +1,4 @@
+
 const BASE_URL = 'https://api.openweathermap.org/data/2.5';
 
 export interface WeatherData {
@@ -99,16 +100,19 @@ const processDailyForecasts = (forecastList: any[]) => {
   }).slice(0, 5); // API provides 5 days max
 };
 
-const extendForecastData = (apiForecast: Array<{date: string; temp: number; high: number; low: number; condition: string}>) => {
+const extendForecastData = (apiForecast: Array<{date: string; temp: number; high?: number; low?: number; condition: string}>) => {
   if (apiForecast.length === 0) return [];
   
   const extended = [...apiForecast];
   const lastForecast = apiForecast[apiForecast.length - 1];
   const lastDate = new Date(lastForecast.date);
   
-  // Calculate average temperatures from available data
-  const avgHigh = Math.round(apiForecast.reduce((sum, f) => sum + f.high, 0) / apiForecast.length);
-  const avgLow = Math.round(apiForecast.reduce((sum, f) => sum + f.low, 0) / apiForecast.length);
+  // Calculate average temperatures from available data - ensure we're working with numbers
+  const validHighs = apiForecast.map(f => f.high).filter((high): high is number => typeof high === 'number');
+  const validLows = apiForecast.map(f => f.low).filter((low): low is number => typeof low === 'number');
+  
+  const avgHigh = validHighs.length > 0 ? Math.round(validHighs.reduce((sum, high) => sum + high, 0) / validHighs.length) : 75;
+  const avgLow = validLows.length > 0 ? Math.round(validLows.reduce((sum, low) => sum + low, 0) / validLows.length) : 60;
   
   // Get most common condition
   const conditionCounts = apiForecast.reduce((acc, f) => {
