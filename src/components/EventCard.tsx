@@ -27,6 +27,13 @@ const EventCard = ({ event, className = '', showBoldHeader = false, viewMode = '
     }
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if ((e.key === 'Enter' || e.key === ' ') && (viewMode === 'timeline' || viewMode === 'week') && hasAdditionalData()) {
+      e.preventDefault();
+      setIsExpanded(!isExpanded);
+    }
+  };
+
   const getCalendarDotColor = () => {
     if (event.calendarName) {
       // Different colors for different calendars
@@ -58,38 +65,51 @@ const EventCard = ({ event, className = '', showBoldHeader = false, viewMode = '
     return 'w-[35%]'; // 35% width for regular events
   };
 
+  const isInteractive = (viewMode === 'timeline' || viewMode === 'week') && hasAdditionalData();
+
   return (
-    <div 
+    <article 
       className={`p-3 rounded-lg bg-white/95 backdrop-blur-sm border border-white/30 ${
-        (viewMode === 'timeline' || viewMode === 'week') && hasAdditionalData() ? 'cursor-pointer hover:bg-white/100 transition-colors' : ''
+        isInteractive ? 'cursor-pointer hover:bg-white/100 transition-colors' : ''
       } ${getTimelineStyles()} ${className}`}
       onClick={handleClick}
+      onKeyDown={handleKeyDown}
+      tabIndex={isInteractive ? 0 : undefined}
+      role={isInteractive ? 'button' : undefined}
+      aria-expanded={isInteractive ? isExpanded : undefined}
+      aria-label={isInteractive ? `${isExpanded ? 'Collapse' : 'Expand'} event details for ${event.title}` : undefined}
     >
       <div className="flex items-start gap-3">
         {/* Badge Column - Colored Dot */}
-        <div className="flex-shrink-0 pt-1">
-          <div className={`w-3 h-3 rounded-full ${getCalendarDotColor()}`}></div>
+        <div className="flex-shrink-0 pt-1" role="presentation">
+          <div 
+            className={`w-3 h-3 rounded-full ${getCalendarDotColor()}`}
+            aria-label={`Calendar: ${event.calendarName || event.category}`}
+            role="img"
+          />
         </div>
 
         {/* Event Details Column */}
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between">
             <div className="flex-1 min-w-0">
-              <h4 className={`${showBoldHeader ? 'font-bold' : 'font-medium'} text-gray-900 mb-1 leading-tight truncate`}>
+              <h3 className={`${showBoldHeader ? 'font-bold' : 'font-medium'} text-gray-900 mb-1 leading-tight truncate`}>
                 {event.title}
-              </h4>
+              </h3>
               
               {/* Time display - show "All day" for all-day events in timeline view */}
               <div className="flex items-center gap-2 text-xs text-gray-600 mb-2">
-                <Clock className="h-3 w-3 flex-shrink-0" />
-                <span>{isAllDay && viewMode === 'timeline' ? 'All Day' : event.time}</span>
+                <Clock className="h-3 w-3 flex-shrink-0" aria-hidden="true" />
+                <time dateTime={isAllDay ? event.date.toISOString().split('T')[0] : undefined}>
+                  {isAllDay && viewMode === 'timeline' ? 'All Day' : event.time}
+                </time>
               </div>
               
               {/* Show location only if provided and in expanded state for timeline/week, or always for other views */}
               {event.location && ((viewMode !== 'timeline' && viewMode !== 'week') || isExpanded) && (
                 <div className="flex items-center gap-2 text-xs text-gray-600 mb-2">
-                  <MapPin className="h-3 w-3 flex-shrink-0" />
-                  <span className="truncate">{event.location}</span>
+                  <MapPin className="h-3 w-3 flex-shrink-0" aria-hidden="true" />
+                  <address className="truncate not-italic">{event.location}</address>
                 </div>
               )}
 
@@ -109,19 +129,19 @@ const EventCard = ({ event, className = '', showBoldHeader = false, viewMode = '
             </div>
 
             {/* Expand/collapse icon for timeline and week view - only show if has additional data */}
-            {(viewMode === 'timeline' || viewMode === 'week') && hasAdditionalData() && (
+            {isInteractive && (
               <div className="ml-2 flex-shrink-0">
                 {isExpanded ? (
-                  <ChevronUp className="h-4 w-4 text-gray-400" />
+                  <ChevronUp className="h-4 w-4 text-gray-400" aria-hidden="true" />
                 ) : (
-                  <ChevronDown className="h-4 w-4 text-gray-400" />
+                  <ChevronDown className="h-4 w-4 text-gray-400" aria-hidden="true" />
                 )}
               </div>
             )}
           </div>
         </div>
       </div>
-    </div>
+    </article>
   );
 };
 
