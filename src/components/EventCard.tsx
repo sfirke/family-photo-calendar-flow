@@ -28,6 +28,84 @@ const EventCard = ({
   // Check if event is all-day (assuming all-day events have time as "All day" or similar)
   const isAllDay = event.time.toLowerCase().includes('all day') || event.time === '00:00 - 23:59';
 
+  // Check if event has passed (for timeline and week views)
+  const hasEventPassed = () => {
+    if (viewMode === 'month') return false; // Don't apply transparency in month view
+    
+    const now = new Date();
+    const eventDate = new Date(event.date);
+    
+    // If event is on a different day than today, check if it's in the past
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    eventDate.setHours(0, 0, 0, 0);
+    
+    if (eventDate < today) {
+      return true; // Past day
+    } else if (eventDate > today) {
+      return false; // Future day
+    }
+    
+    // Event is today, check the time
+    if (isAllDay) {
+      return false; // All-day events don't get transparency
+    }
+    
+    // Parse time string to get start and end times
+    const timeString = event.time.toLowerCase();
+    
+    // Handle multi-day events
+    if (timeString.includes('days')) {
+      return false; // Multi-day events don't get transparency
+    }
+    
+    // Parse time range (e.g., "2:00 PM - 4:00 PM" or "14:00 - 16:00")
+    const timeMatch = timeString.match(/(\d{1,2}):?(\d{0,2})\s*(am|pm)?\s*-\s*(\d{1,2}):?(\d{0,2})\s*(am|pm)?/);
+    
+    if (timeMatch) {
+      // Extract end time
+      let endHour = parseInt(timeMatch[4]);
+      const endMinute = parseInt(timeMatch[5]) || 0;
+      const endPeriod = timeMatch[6];
+      
+      // Convert to 24-hour format
+      if (endPeriod === 'pm' && endHour !== 12) {
+        endHour += 12;
+      } else if (endPeriod === 'am' && endHour === 12) {
+        endHour = 0;
+      }
+      
+      const endTime = new Date(event.date);
+      endTime.setHours(endHour, endMinute, 0, 0);
+      
+      return now > endTime;
+    } else {
+      // Try to parse single time (e.g., "2:00 PM" or "14:00")
+      const singleTimeMatch = timeString.match(/(\d{1,2}):?(\d{0,2})\s*(am|pm)?/);
+      
+      if (singleTimeMatch) {
+        let startHour = parseInt(singleTimeMatch[1]);
+        const startMinute = parseInt(singleTimeMatch[2]) || 0;
+        const startPeriod = singleTimeMatch[3];
+        
+        // Convert to 24-hour format
+        if (startPeriod === 'pm' && startHour !== 12) {
+          startHour += 12;
+        } else if (startPeriod === 'am' && startHour === 12) {
+          startHour = 0;
+        }
+        
+        // Add 20 minutes to start time as the default end time
+        const endTime = new Date(event.date);
+        endTime.setHours(startHour, startMinute + 20, 0, 0);
+        
+        return now > endTime;
+      }
+    }
+    
+    return false; // Default to not passed if we can't parse the time
+  };
+
   const handleClick = () => {
     if ((viewMode === 'timeline' || viewMode === 'week') && hasAdditionalData() && !isMultiDayDisplay) {
       setIsExpanded(!isExpanded);
@@ -76,14 +154,22 @@ const EventCard = ({
     return 'w-[35%]'; // 35% width for regular events
   };
 
-  // Get background opacity - changed to 75%
+  // Get background opacity based on event status
   const getBackgroundOpacity = () => {
-    return 'bg-white/75';
+    const isPast = hasEventPassed();
+    if (isPast && (viewMode === 'timeline' || viewMode === 'week')) {
+      return 'bg-white/50'; // 50% transparency for past events
+    }
+    return 'bg-white/75'; // Default 75% transparency
   };
 
   // Get hover background opacity - slightly higher for hover state
   const getHoverBackgroundOpacity = () => {
-    return 'hover:bg-white/85';
+    const isPast = hasEventPassed();
+    if (isPast && (viewMode === 'timeline' || viewMode === 'week')) {
+      return 'hover:bg-white/60'; // Slightly higher opacity on hover for past events
+    }
+    return 'hover:bg-white/85'; // Default hover opacity
   };
 
   // Get padding class based on event type
