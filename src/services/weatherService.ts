@@ -1,4 +1,5 @@
 
+
 const BASE_URL = 'https://api.openweathermap.org/data/2.5';
 
 export interface WeatherData {
@@ -111,8 +112,8 @@ const extendForecastData = (apiForecast: Array<{date: string; temp: number; high
   const validHighs = apiForecast.map(f => f.high).filter((high): high is number => typeof high === 'number');
   const validLows = apiForecast.map(f => f.low).filter((low): low is number => typeof low === 'number');
   
-  const avgHigh = validHighs.length > 0 ? Math.round(validHighs.reduce((sum, high) => sum + high, 0) / validHighs.length) : 75;
-  const avgLow = validLows.length > 0 ? Math.round(validLows.reduce((sum, low) => sum + low, 0) / validLows.length) : 60;
+  const avgHigh: number = validHighs.length > 0 ? Math.round(validHighs.reduce((sum, high) => sum + high, 0) / validHighs.length) : 75;
+  const avgLow: number = validLows.length > 0 ? Math.round(validLows.reduce((sum, low) => sum + low, 0) / validLows.length) : 60;
   
   // Get most common condition
   const conditionCounts = apiForecast.reduce((acc, f) => {
@@ -128,11 +129,11 @@ const extendForecastData = (apiForecast: Array<{date: string; temp: number; high
     const extendedDate = new Date(lastDate);
     extendedDate.setDate(lastDate.getDate() + i);
     
-    // Add some temperature variation (±5 degrees)
-    const highVariation = Math.floor(Math.random() * 11) - 5; // -5 to +5
-    const lowVariation = Math.floor(Math.random() * 11) - 5;
-    const extendedHigh = Math.max(avgHigh + highVariation, 55); // Minimum 55°F
-    const extendedLow = Math.max(avgLow + lowVariation, 45); // Minimum 45°F
+    // Add some temperature variation (±5 degrees) - ensure all values are numbers
+    const highVariation: number = Math.floor(Math.random() * 11) - 5; // -5 to +5
+    const lowVariation: number = Math.floor(Math.random() * 11) - 5;
+    const extendedHigh: number = Math.max(avgHigh + highVariation, 55); // Minimum 55°F
+    const extendedLow: number = Math.max(avgLow + lowVariation, 45); // Minimum 45°F
     
     extended.push({
       date: extendedDate.toISOString().split('T')[0],
@@ -182,3 +183,4 @@ const getWeatherCondition = (main: string): string => {
       return 'Sunny';
   }
 };
+
