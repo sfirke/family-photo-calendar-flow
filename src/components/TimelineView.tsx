@@ -104,7 +104,7 @@ const TimelineView = ({ events, getWeatherForDate }: TimelineViewProps) => {
             </div>
             
             {dayEvents.length > 0 ? (
-              <div className="space-y-3 ml-4">
+              <div className="space-y-3">
                 {dayEvents.map((event) => {
                   const isMultiDay = event.time.includes('days');
                   return (
@@ -119,7 +119,7 @@ const TimelineView = ({ events, getWeatherForDate }: TimelineViewProps) => {
                 })}
               </div>
             ) : (
-              <div className="ml-4 text-white/50 text-sm italic">
+              <div className="text-white/50 text-sm italic">
                 No events scheduled
               </div>
             )}
