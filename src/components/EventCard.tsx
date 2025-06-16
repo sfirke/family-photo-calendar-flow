@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Event } from '@/types/calendar';
 import { Clock, MapPin, ChevronDown, ChevronUp } from 'lucide-react';
@@ -32,6 +31,11 @@ const EventCard = ({
   const hasEventPassed = () => {
     if (viewMode === 'month') return false; // Don't apply transparency in month view
     
+    // Exclude all-day events from transparency changes
+    if (isAllDay) {
+      return false;
+    }
+    
     const now = new Date();
     const eventDate = new Date(event.date);
     
@@ -47,10 +51,6 @@ const EventCard = ({
     }
     
     // Event is today, check the time
-    if (isAllDay) {
-      return false; // All-day events don't get transparency
-    }
-    
     // Parse time string to get start and end times
     const timeString = event.time.toLowerCase();
     
@@ -158,7 +158,7 @@ const EventCard = ({
   const getBackgroundOpacity = () => {
     const isPast = hasEventPassed();
     if (isPast && (viewMode === 'timeline' || viewMode === 'week')) {
-      return 'bg-white/50'; // 50% transparency for past events
+      return 'bg-white/60'; // 60% transparency for past events (increased from 50%)
     }
     return 'bg-white/75'; // Default 75% transparency
   };
@@ -167,7 +167,7 @@ const EventCard = ({
   const getHoverBackgroundOpacity = () => {
     const isPast = hasEventPassed();
     if (isPast && (viewMode === 'timeline' || viewMode === 'week')) {
-      return 'hover:bg-white/60'; // Slightly higher opacity on hover for past events
+      return 'hover:bg-white/70'; // Slightly higher opacity on hover for past events (increased from 60%)
     }
     return 'hover:bg-white/85'; // Default hover opacity
   };
