@@ -86,13 +86,18 @@ const EventCard = ({
     return 'hover:bg-white/85';
   };
 
+  // Get padding class based on event type
+  const getPaddingClass = () => {
+    return isAllDay ? 'pl-3' : 'p-3';
+  };
+
   const isInteractive = (viewMode === 'timeline' || viewMode === 'week') && hasAdditionalData() && !isMultiDayDisplay;
 
   // For multi-day events, show compact format with inline time
   if (isMultiDayDisplay) {
     return (
       <article 
-        className={`p-2 rounded-lg ${getBackgroundOpacity()} backdrop-blur-sm border border-white/30 ${getTimelineStyles()} ${className}`}
+        className={`${getPaddingClass()} pr-2 pt-2 pb-2 rounded-lg ${getBackgroundOpacity()} backdrop-blur-sm border border-white/30 ${getTimelineStyles()} ${className}`}
         role="article"
         aria-label={`Multi-day event: ${event.title}`}
       >
@@ -123,7 +128,7 @@ const EventCard = ({
 
   return (
     <article 
-      className={`p-3 rounded-lg ${getBackgroundOpacity()} backdrop-blur-sm border border-white/30 ${
+      className={`${getPaddingClass()} ${isAllDay ? 'pr-3 pt-3 pb-3' : ''} rounded-lg ${getBackgroundOpacity()} backdrop-blur-sm border border-white/30 ${
         isInteractive ? `cursor-pointer ${getHoverBackgroundOpacity()} transition-colors` : ''
       } ${getTimelineStyles()} ${className}`}
       onClick={handleClick}
