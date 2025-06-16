@@ -76,14 +76,14 @@ const EventCard = ({
     return 'w-[35%]'; // 35% width for regular events
   };
 
-  // Get background opacity based on event type
+  // Get background opacity - now uniform 85% for all events
   const getBackgroundOpacity = () => {
-    return isAllDay ? 'bg-white/80' : 'bg-white/90';
+    return 'bg-white/85';
   };
 
-  // Get hover background opacity based on event type
+  // Get hover background opacity - slightly higher for hover state
   const getHoverBackgroundOpacity = () => {
-    return isAllDay ? 'hover:bg-white/85' : 'hover:bg-white/95';
+    return 'hover:bg-white/90';
   };
 
   const isInteractive = (viewMode === 'timeline' || viewMode === 'week') && hasAdditionalData() && !isMultiDayDisplay;
