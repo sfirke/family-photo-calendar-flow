@@ -15,7 +15,7 @@ const EventCard = ({ event, className = '', showBoldHeader = false, viewMode = '
 
   // Check if event has additional data that would make it expandable
   const hasAdditionalData = () => {
-    return !!(event.location || event.description || (event.attendees > 0));
+    return !!(event.location || event.description);
   };
 
   // Check if event is all-day (assuming all-day events have time as "All day" or similar)
@@ -97,13 +97,6 @@ const EventCard = ({ event, className = '', showBoldHeader = false, viewMode = '
               {(viewMode === 'timeline' || viewMode === 'week') && isExpanded && event.description && (
                 <div className="text-xs text-gray-600 mb-2 line-clamp-3">
                   {event.description}
-                </div>
-              )}
-
-              {/* Show attendees only in expanded timeline/week view */}
-              {(viewMode === 'timeline' || viewMode === 'week') && isExpanded && event.attendees > 0 && (
-                <div className="text-xs text-gray-600 mb-2">
-                  <span className="font-medium">Attendees:</span> {event.attendees}
                 </div>
               )}
 
