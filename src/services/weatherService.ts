@@ -112,8 +112,8 @@ const extendForecastData = (apiForecast: Array<{date: string; temp: number; high
   const validHighs = apiForecast.map(f => f.high).filter((high): high is number => typeof high === 'number');
   const validLows = apiForecast.map(f => f.low).filter((low): low is number => typeof low === 'number');
   
-  const avgHigh: number = validHighs.length > 0 ? Math.round(validHighs.reduce((sum, high) => sum + high, 0) / validHighs.length) : 75;
-  const avgLow: number = validLows.length > 0 ? Math.round(validLows.reduce((sum, low) => sum + low, 0) / validLows.length) : 60;
+  const avgHigh: number = validHighs.length > 0 ? Math.round(validHighs.reduce((sum: number, high: number) => sum + high, 0) / validHighs.length) : 75;
+  const avgLow: number = validLows.length > 0 ? Math.round(validLows.reduce((sum: number, low: number) => sum + low, 0) / validLows.length) : 60;
   
   // Get most common condition
   const conditionCounts = apiForecast.reduce((acc, f) => {
