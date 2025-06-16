@@ -183,18 +183,45 @@ serve(async (req) => {
     const calendarData = await calendarResponse.json();
     const events = calendarData.items || [];
 
-    // Store events in our database
-    const eventInserts = events.map((event: any) => ({
-      user_id: userId,
-      google_event_id: event.id,
-      title: event.summary || 'Untitled Event',
-      description: event.description || null,
-      start_time: event.start?.dateTime || event.start?.date,
-      end_time: event.end?.dateTime || event.end?.date,
-      location: event.location || null,
-      attendees: event.attendees || [],
-      calendar_id: targetCalendarId
-    }));
+    // Store events in our database with proper all-day event handling
+    const eventInserts = events.map((event: any) => {
+      // Check if this is an all-day event
+      const isAllDay = event.start?.date && !event.start?.dateTime;
+      
+      let startTime, endTime;
+      
+      if (isAllDay) {
+        // For all-day events, use the date and set time to indicate all-day
+        const startDate = new Date(event.start.date);
+        const endDate = new Date(event.end.date);
+        
+        // Set start time to beginning of day
+        startTime = new Date(startDate).toISOString();
+        // Set end time to end of day (or beginning of next day as provided by Google)
+        endTime = new Date(endDate).toISOString();
+        
+        console.log(`Processing all-day event: ${event.summary} from ${event.start.date} to ${event.end.date}`);
+      } else {
+        // For regular events with specific times
+        startTime = event.start?.dateTime || event.start?.date;
+        endTime = event.end?.dateTime || event.end?.date;
+        
+        console.log(`Processing timed event: ${event.summary} from ${startTime} to ${endTime}`);
+      }
+
+      return {
+        user_id: userId,
+        google_event_id: event.id,
+        title: event.summary || 'Untitled Event',
+        description: event.description || null,
+        start_time: startTime,
+        end_time: endTime,
+        location: event.location || null,
+        attendees: event.attendees || [],
+        calendar_id: targetCalendarId,
+        is_all_day: isAllDay
+      };
+    });
 
     if (eventInserts.length > 0) {
       // Delete existing events for this calendar and user to avoid duplicates
@@ -215,13 +242,19 @@ serve(async (req) => {
       }
     }
 
+    const allDayCount = eventInserts.filter(event => event.is_all_day).length;
+    const timedCount = eventInserts.length - allDayCount;
+    
     console.log(`Successfully synced ${events.length} calendar events for user ${userId}, calendar ${targetCalendarId}`);
+    console.log(`Breakdown: ${allDayCount} all-day events, ${timedCount} timed events`);
 
     return new Response(
       JSON.stringify({ 
         success: true, 
         events: eventInserts,
         count: events.length,
+        allDayCount,
+        timedCount,
         calendarId: targetCalendarId
       }),
       { 

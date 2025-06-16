@@ -101,13 +101,23 @@ export const useGoogleCalendarEvents = () => {
 
       // Convert database events to Event format
       const convertedEvents: Event[] = (data || []).map((dbEvent, index) => {
+        // Check if this is an all-day event
+        const isAllDay = dbEvent.is_all_day || false;
+        
+        let timeDisplay;
+        if (isAllDay) {
+          timeDisplay = 'All Day';
+        } else {
+          timeDisplay = new Date(dbEvent.start_time).toLocaleTimeString('en-US', { 
+            hour: 'numeric', 
+            minute: '2-digit' 
+          });
+        }
+
         const event = {
           id: index + 1000,
           title: dbEvent.title,
-          time: new Date(dbEvent.start_time).toLocaleTimeString('en-US', { 
-            hour: 'numeric', 
-            minute: '2-digit' 
-          }),
+          time: timeDisplay,
           location: dbEvent.location || undefined,
           attendees: Array.isArray(dbEvent.attendees) ? dbEvent.attendees.length : 0,
           category: 'Personal' as const,
@@ -119,7 +129,7 @@ export const useGoogleCalendarEvents = () => {
           calendarName: dbEvent.calendar_id || 'Primary Calendar'
         };
         
-        console.log(`useGoogleCalendarEvents: Converted event "${event.title}" from calendar "${event.calendarId}"`);
+        console.log(`useGoogleCalendarEvents: Converted event "${event.title}" ${isAllDay ? '(All Day)' : `at ${event.time}`} from calendar "${event.calendarId}"`);
         return event;
       });
 
