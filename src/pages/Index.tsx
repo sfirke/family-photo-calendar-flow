@@ -117,8 +117,7 @@ const Index = () => {
                 day: 'numeric'
               })} at {currentTime.toLocaleTimeString('en-US', { 
                 hour: 'numeric', 
-                minute: '2-digit',
-                second: '2-digit'
+                minute: '2-digit'
               })}
             </p>
           </div>
