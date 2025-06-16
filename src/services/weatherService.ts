@@ -1,4 +1,3 @@
-
 const BASE_URL = 'https://api.openweathermap.org/data/2.5';
 
 export interface WeatherData {
@@ -16,7 +15,6 @@ export interface WeatherData {
 
 export const fetchWeatherData = async (zipCode: string, apiKey: string): Promise<WeatherData> => {
   if (!apiKey) {
-    console.warn('No weather API key provided, using mock data');
     return getMockWeatherData();
   }
 
@@ -57,7 +55,6 @@ export const fetchWeatherData = async (zipCode: string, apiKey: string): Promise
     };
   } catch (error) {
     console.error('Error fetching weather data:', error);
-    // Return mock data as fallback
     return getMockWeatherData();
   }
 };

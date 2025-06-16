@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState, useEffect, useMemo } from 'react';
 import Calendar from '@/components/Calendar';
 import WeatherWidget from '@/components/WeatherWidget';
 import SettingsModal from '@/components/SettingsModal';
@@ -31,14 +32,11 @@ const Index = () => {
     const loadBackgroundImages = async () => {
       if (publicAlbumUrl) {
         try {
-          console.log('Loading images from Google Photos album:', publicAlbumUrl);
           const albumImages = await getImagesFromAlbum(publicAlbumUrl);
           if (albumImages.length > 0) {
             setBackgroundImages(albumImages);
             setCurrentBg(0); // Reset to first image when album changes
-            console.log(`Loaded ${albumImages.length} images from album`);
           } else {
-            console.log('No images found in album, using defaults');
             setBackgroundImages(getDefaultBackgroundImages());
           }
         } catch (error) {
@@ -47,7 +45,6 @@ const Index = () => {
           setBackgroundImages(getDefaultBackgroundImages());
         }
       } else {
-        console.log('No album URL provided, using default images');
         setBackgroundImages(getDefaultBackgroundImages());
       }
     };
@@ -60,18 +57,36 @@ const Index = () => {
     if (backgroundImages.length === 0) return;
 
     const intervalTime = backgroundDuration * 60 * 1000; // Convert minutes to milliseconds
-    console.log(`Setting background rotation interval to ${backgroundDuration} minutes (${intervalTime}ms)`);
     
     const interval = setInterval(() => {
-      setCurrentBg((prev) => {
-        const next = (prev + 1) % backgroundImages.length;
-        console.log(`Switching background from image ${prev} to image ${next}`);
-        return next;
-      });
+      setCurrentBg((prev) => (prev + 1) % backgroundImages.length);
     }, intervalTime);
 
     return () => clearInterval(interval);
   }, [backgroundDuration, backgroundImages.length]);
+
+  // Memoize background style to prevent unnecessary re-renders
+  const backgroundStyle = useMemo(() => ({
+    backgroundImage: `url(${backgroundImages[currentBg]})`,
+    backgroundSize: 'cover',
+    backgroundPosition: 'center',
+    backgroundRepeat: 'no-repeat'
+  }), [backgroundImages, currentBg]);
+
+  // Memoize formatted date and time to reduce calculations
+  const formattedDateTime = useMemo(() => {
+    const dateString = currentTime.toLocaleDateString('en-US', { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric'
+    });
+    const timeString = currentTime.toLocaleTimeString('en-US', { 
+      hour: 'numeric', 
+      minute: '2-digit'
+    });
+    return `${dateString} at ${timeString}`;
+  }, [currentTime]);
 
   if (loading) {
     return (
@@ -89,12 +104,7 @@ const Index = () => {
       {/* Background Image */}
       <div 
         className="absolute inset-0 transition-opacity duration-1000 ease-in-out"
-        style={{ 
-          backgroundImage: `url(${backgroundImages[currentBg]})`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat'
-        }}
+        style={backgroundStyle}
       />
       
       {/* Glass overlay */}
@@ -109,17 +119,7 @@ const Index = () => {
           
           <div className="relative z-10">
             <h1 className="text-2xl font-bold text-white">Family Calendar</h1>
-            <p className="text-sm text-white/90">
-              {currentTime.toLocaleDateString('en-US', { 
-                weekday: 'long', 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric'
-              })} at {currentTime.toLocaleTimeString('en-US', { 
-                hour: 'numeric', 
-                minute: '2-digit'
-              })}
-            </p>
+            <p className="text-sm text-white/90">{formattedDateTime}</p>
           </div>
           
           <div className="flex items-center gap-4 relative z-10">

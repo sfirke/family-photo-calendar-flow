@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Event } from '@/types/calendar';
@@ -29,16 +29,14 @@ export const useGoogleCalendarEvents = () => {
         const expiryTime = parseInt(expiry);
         
         if (Date.now() < expiryTime) {
-          console.log('useGoogleCalendarEvents: Loading events from cache');
           return cacheData.events;
         } else {
-          console.log('useGoogleCalendarEvents: Cache expired, clearing');
           localStorage.removeItem(CACHE_KEY);
           localStorage.removeItem(CACHE_EXPIRY_KEY);
         }
       }
     } catch (error) {
-      console.error('useGoogleCalendarEvents: Error loading from cache:', error);
+      console.error('Error loading from cache:', error);
     }
     return null;
   }, []);
@@ -54,9 +52,8 @@ export const useGoogleCalendarEvents = () => {
       
       localStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
       localStorage.setItem(CACHE_EXPIRY_KEY, expiry.toString());
-      console.log('useGoogleCalendarEvents: Saved events to cache');
     } catch (error) {
-      console.error('useGoogleCalendarEvents: Error saving to cache:', error);
+      console.error('Error saving to cache:', error);
     }
   }, []);
 
@@ -64,12 +61,10 @@ export const useGoogleCalendarEvents = () => {
   const clearCache = useCallback(() => {
     localStorage.removeItem(CACHE_KEY);
     localStorage.removeItem(CACHE_EXPIRY_KEY);
-    console.log('useGoogleCalendarEvents: Cache cleared');
   }, []);
 
   const loadGoogleEvents = useCallback(async (forceRefresh = false) => {
     if (!user) {
-      console.log('useGoogleCalendarEvents: No user found, skipping event load');
       return;
     }
 
@@ -83,7 +78,6 @@ export const useGoogleCalendarEvents = () => {
     }
 
     setIsLoading(true);
-    console.log('useGoogleCalendarEvents: Starting to load Google Calendar events for user:', user.id);
     
     try {
       const { data, error } = await supabase
@@ -93,11 +87,9 @@ export const useGoogleCalendarEvents = () => {
         .order('start_time', { ascending: true });
 
       if (error) {
-        console.error('useGoogleCalendarEvents: Database error:', error);
+        console.error('Database error:', error);
         throw error;
       }
-
-      console.log(`useGoogleCalendarEvents: Found ${data?.length || 0} events in database`);
 
       // Convert database events to Event format
       const convertedEvents: Event[] = (data || []).map((dbEvent, index) => {
@@ -134,12 +126,12 @@ export const useGoogleCalendarEvents = () => {
           });
         }
 
-        const event = {
+        return {
           id: index + 1000,
           title: dbEvent.title,
           time: timeDisplay,
           location: dbEvent.location || undefined,
-          attendees: 0, // Removed attendees display as requested
+          attendees: 0,
           category: 'Personal' as const,
           color: 'bg-blue-500',
           description: dbEvent.description || '',
@@ -148,27 +140,14 @@ export const useGoogleCalendarEvents = () => {
           calendarId: dbEvent.calendar_id || 'primary',
           calendarName: dbEvent.calendar_id || 'Primary Calendar'
         };
-        
-        if (isAllDay && isMultiDay) {
-          console.log(`useGoogleCalendarEvents: Converted multi-day all-day event "${event.title}" spanning ${daysDiff} days from calendar "${event.calendarId}"`);
-        } else if (isAllDay) {
-          console.log(`useGoogleCalendarEvents: Converted all-day event "${event.title}" from calendar "${event.calendarId}"`);
-        } else if (isMultiDay) {
-          console.log(`useGoogleCalendarEvents: Converted multi-day timed event "${event.title}" spanning ${daysDiff} days from calendar "${event.calendarId}"`);
-        } else {
-          console.log(`useGoogleCalendarEvents: Converted event "${event.title}" at ${event.time} from calendar "${event.calendarId}"`);
-        }
-        
-        return event;
       });
 
-      console.log(`useGoogleCalendarEvents: Successfully converted ${convertedEvents.length} events`);
       setGoogleEvents(convertedEvents);
       
       // Save to cache
       saveToCache(convertedEvents);
     } catch (error) {
-      console.error('useGoogleCalendarEvents: Error loading Google Calendar events:', error);
+      console.error('Error loading Google Calendar events:', error);
     } finally {
       setIsLoading(false);
     }
@@ -177,8 +156,6 @@ export const useGoogleCalendarEvents = () => {
   // Handle real-time updates from push notifications
   const handleWebhookUpdate = useCallback(async (calendarId: string, eventId?: string) => {
     if (!user) return;
-
-    console.log('useGoogleCalendarEvents: Handling webhook update for calendar:', calendarId, 'event:', eventId);
     
     // Clear cache and reload events
     clearCache();
@@ -201,20 +178,21 @@ export const useGoogleCalendarEvents = () => {
 
   useEffect(() => {
     if (user) {
-      console.log('useGoogleCalendarEvents: User detected, loading events');
       loadGoogleEvents();
     } else {
-      console.log('useGoogleCalendarEvents: No user, clearing events and cache');
       setGoogleEvents([]);
       clearCache();
     }
   }, [user, loadGoogleEvents, clearCache]);
 
-  return {
+  // Memoize return value to prevent unnecessary re-renders
+  const memoizedValue = useMemo(() => ({
     googleEvents,
     isLoading,
     refreshEvents: () => loadGoogleEvents(true),
     clearCache,
     handleWebhookUpdate
-  };
+  }), [googleEvents, isLoading, loadGoogleEvents, clearCache, handleWebhookUpdate]);
+
+  return memoizedValue;
 };
