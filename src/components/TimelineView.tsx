@@ -14,20 +14,49 @@ const TimelineView = ({ events, getWeatherForDate }: TimelineViewProps) => {
   const next3Days = getNext3Days();
   
   const getEventsForDate = (date: Date) => {
-    const dayEvents = events.filter(event => 
-      event.date.toDateString() === date.toDateString()
+    const allEvents = events.filter(event => {
+      // Check if event falls on this date
+      const eventStart = new Date(event.date);
+      const eventEnd = new Date(event.date);
+      
+      // For multi-day events, we need to check if this date falls within the event span
+      const isMultiDay = event.time.includes('days');
+      if (isMultiDay) {
+        // Extract the number of days from the time string
+        const daysMatch = event.time.match(/\((\d+) days\)/);
+        if (daysMatch) {
+          const numDays = parseInt(daysMatch[1]);
+          eventEnd.setDate(eventStart.getDate() + numDays - 1);
+        }
+      }
+      
+      // Check if the current date falls within the event range
+      const currentDate = new Date(date);
+      currentDate.setHours(0, 0, 0, 0);
+      eventStart.setHours(0, 0, 0, 0);
+      eventEnd.setHours(23, 59, 59, 999);
+      
+      return currentDate >= eventStart && currentDate <= eventEnd;
+    });
+    
+    // Separate multi-day and single-day events
+    const multiDayEvents = allEvents.filter(event => 
+      event.time.includes('days')
+    );
+    const singleDayEvents = allEvents.filter(event => 
+      !event.time.includes('days')
     );
     
-    // Separate all-day and regular events
-    const allDayEvents = dayEvents.filter(event => 
-      event.time.toLowerCase().includes('all day') || event.time === '00:00 - 23:59'
+    // Separate all-day and regular single-day events
+    const allDayEvents = singleDayEvents.filter(event => 
+      event.time.toLowerCase().includes('all day')
     );
-    const regularEvents = dayEvents.filter(event => 
-      !event.time.toLowerCase().includes('all day') && event.time !== '00:00 - 23:59'
+    const regularEvents = singleDayEvents.filter(event => 
+      !event.time.toLowerCase().includes('all day')
     );
     
-    // Return all-day events first, then regular events
-    return [...allDayEvents, ...regularEvents];
+    // Return multi-day events first, then all-day events, then regular events
+    return [...multiDayEvents, ...allDayEvents, ...regularEvents];
   };
 
   const getWeatherIcon = (condition: string) => {
@@ -76,14 +105,18 @@ const TimelineView = ({ events, getWeatherForDate }: TimelineViewProps) => {
             
             {dayEvents.length > 0 ? (
               <div className="space-y-3 ml-4">
-                {dayEvents.map((event) => (
-                  <EventCard 
-                    key={event.id} 
-                    event={event}
-                    className="animate-fade-in"
-                    viewMode="timeline"
-                  />
-                ))}
+                {dayEvents.map((event) => {
+                  const isMultiDay = event.time.includes('days');
+                  return (
+                    <EventCard 
+                      key={`${event.id}-${date.toDateString()}`} 
+                      event={event}
+                      className="animate-fade-in"
+                      viewMode="timeline"
+                      isMultiDayDisplay={isMultiDay}
+                    />
+                  );
+                })}
               </div>
             ) : (
               <div className="ml-4 text-white/50 text-sm italic">

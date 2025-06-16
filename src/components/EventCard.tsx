@@ -8,9 +8,16 @@ interface EventCardProps {
   className?: string;
   showBoldHeader?: boolean;
   viewMode?: 'week' | 'timeline' | 'month';
+  isMultiDayDisplay?: boolean;
 }
 
-const EventCard = ({ event, className = '', showBoldHeader = false, viewMode = 'month' }: EventCardProps) => {
+const EventCard = ({ 
+  event, 
+  className = '', 
+  showBoldHeader = false, 
+  viewMode = 'month',
+  isMultiDayDisplay = false 
+}: EventCardProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
   // Check if event has additional data that would make it expandable
@@ -22,13 +29,13 @@ const EventCard = ({ event, className = '', showBoldHeader = false, viewMode = '
   const isAllDay = event.time.toLowerCase().includes('all day') || event.time === '00:00 - 23:59';
 
   const handleClick = () => {
-    if ((viewMode === 'timeline' || viewMode === 'week') && hasAdditionalData()) {
+    if ((viewMode === 'timeline' || viewMode === 'week') && hasAdditionalData() && !isMultiDayDisplay) {
       setIsExpanded(!isExpanded);
     }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if ((e.key === 'Enter' || e.key === ' ') && (viewMode === 'timeline' || viewMode === 'week') && hasAdditionalData()) {
+    if ((e.key === 'Enter' || e.key === ' ') && (viewMode === 'timeline' || viewMode === 'week') && hasAdditionalData() && !isMultiDayDisplay) {
       e.preventDefault();
       setIsExpanded(!isExpanded);
     }
@@ -59,13 +66,50 @@ const EventCard = ({ event, className = '', showBoldHeader = false, viewMode = '
   const getTimelineStyles = () => {
     if (viewMode !== 'timeline') return '';
     
+    if (isMultiDayDisplay) {
+      return 'w-full'; // Full width for multi-day events
+    }
+    
     if (isAllDay) {
       return 'w-full'; // Full width for all-day events
     }
     return 'w-[35%]'; // 35% width for regular events
   };
 
-  const isInteractive = (viewMode === 'timeline' || viewMode === 'week') && hasAdditionalData();
+  const isInteractive = (viewMode === 'timeline' || viewMode === 'week') && hasAdditionalData() && !isMultiDayDisplay;
+
+  // For multi-day events, show compact format with inline time
+  if (isMultiDayDisplay) {
+    return (
+      <article 
+        className={`p-2 rounded-lg bg-white/95 backdrop-blur-sm border border-white/30 ${getTimelineStyles()} ${className}`}
+        role="article"
+        aria-label={`Multi-day event: ${event.title}`}
+      >
+        <div className="flex items-center gap-3">
+          {/* Badge Column - Colored Dot */}
+          <div className="flex-shrink-0" role="presentation">
+            <div 
+              className={`w-3 h-3 rounded-full ${getCalendarDotColor()}`}
+              aria-label={`Calendar: ${event.calendarName || event.category}`}
+              role="img"
+            />
+          </div>
+
+          {/* Event Details Column - Inline format */}
+          <div className="flex-1 min-w-0 flex items-center gap-2">
+            <h3 className="font-medium text-gray-900 truncate">
+              {event.title}
+            </h3>
+            <span className="text-xs text-gray-600 flex items-center gap-1 flex-shrink-0">
+              <Clock className="h-3 w-3" aria-hidden="true" />
+              All Day
+            </span>
+          </div>
+        </div>
+      </article>
+    );
+  }
 
   return (
     <article 
@@ -75,9 +119,9 @@ const EventCard = ({ event, className = '', showBoldHeader = false, viewMode = '
       onClick={handleClick}
       onKeyDown={handleKeyDown}
       tabIndex={isInteractive ? 0 : undefined}
-      role={isInteractive ? 'button' : undefined}
+      role={isInteractive ? 'button' : 'article'}
       aria-expanded={isInteractive ? isExpanded : undefined}
-      aria-label={isInteractive ? `${isExpanded ? 'Collapse' : 'Expand'} event details for ${event.title}` : undefined}
+      aria-label={isInteractive ? `${isExpanded ? 'Collapse' : 'Expand'} event details for ${event.title}` : `Event: ${event.title}`}
     >
       <div className="flex items-start gap-3">
         {/* Badge Column - Colored Dot */}
