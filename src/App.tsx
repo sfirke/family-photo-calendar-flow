@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { SettingsProvider } from "@/contexts/SettingsContext";
 import { WeatherProvider } from "@/contexts/WeatherContext";
+import InstallPrompt from "@/components/InstallPrompt";
 import Index from "./pages/Index";
 import AuthCallback from "./pages/AuthCallback";
 import NotFound from "./pages/NotFound";
@@ -21,6 +22,7 @@ const App = () => (
           <TooltipProvider>
             <Toaster />
             <Sonner />
+            <InstallPrompt />
             <BrowserRouter>
               <Routes>
                 <Route path="/" element={<Index />} />
