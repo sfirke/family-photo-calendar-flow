@@ -91,7 +91,7 @@ const processDailyForecasts = (forecastList: any[]) => {
     }, {} as Record<string, number>);
     
     const mostCommonCondition = Object.entries(conditionCounts)
-      .sort(([,a], [,b]) => b - a)[0][0];
+      .sort(([,a], [,b]) => (b as number) - (a as number))[0][0];
     
     return {
       date,
@@ -124,7 +124,7 @@ const extendForecastData = (apiForecast: Array<{date: string; temp: number; high
   }, {} as Record<string, number>);
   
   const mostCommonCondition = Object.entries(conditionCounts)
-    .sort(([,a], [,b]) => b - a)[0][0];
+    .sort(([,a], [,b]) => (b as number) - (a as number))[0][0];
   
   // Extend forecast for up to 14 days total
   for (let i = 1; i <= 9; i++) { // 5 + 9 = 14 days

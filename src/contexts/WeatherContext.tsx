@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { fetchWeatherData, WeatherData } from '@/services/weatherService';
 import { useSettings } from './SettingsContext';
 
@@ -16,24 +16,45 @@ export const WeatherProvider = ({ children }: { children: React.ReactNode }) => 
   const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { zipCode, weatherApiKey } = useSettings();
+  const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  const loadWeather = async () => {
+    if (!zipCode) return;
+    
+    setIsLoading(true);
+    try {
+      const data = await fetchWeatherData(zipCode, weatherApiKey);
+      setWeatherData(data);
+      console.log('Weather data loaded/refreshed with extended forecast:', data.forecast.length, 'days');
+    } catch (error) {
+      console.error('Failed to load weather:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const loadWeather = async () => {
-      if (!zipCode) return;
-      
-      setIsLoading(true);
-      try {
-        const data = await fetchWeatherData(zipCode, weatherApiKey);
-        setWeatherData(data);
-        console.log('Weather data loaded with extended forecast:', data.forecast.length, 'days');
-      } catch (error) {
-        console.error('Failed to load weather:', error);
-      } finally {
-        setIsLoading(false);
+    // Load weather data initially
+    loadWeather();
+
+    // Set up 30-minute refresh interval
+    const THIRTY_MINUTES = 30 * 60 * 1000; // 30 minutes in milliseconds
+    
+    if (refreshIntervalRef.current) {
+      clearInterval(refreshIntervalRef.current);
+    }
+    
+    refreshIntervalRef.current = setInterval(() => {
+      console.log('Refreshing weather data (30-minute interval)');
+      loadWeather();
+    }, THIRTY_MINUTES);
+
+    // Cleanup interval on unmount or when dependencies change
+    return () => {
+      if (refreshIntervalRef.current) {
+        clearInterval(refreshIntervalRef.current);
       }
     };
-
-    loadWeather();
   }, [zipCode, weatherApiKey]);
 
   const getCurrentWeather = () => {
