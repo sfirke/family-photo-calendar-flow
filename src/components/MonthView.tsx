@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Event } from '@/types/calendar';
 import DayViewModal from './DayViewModal';
@@ -83,6 +82,22 @@ const MonthView = ({ events, getWeatherForDate }: MonthViewProps) => {
     }
   };
 
+  const adjustColorSaturation = (colorClass: string, saturationShift: number) => {
+    // Map Tailwind color classes to HSL values and adjust saturation
+    const colorMap: { [key: string]: string } = {
+      'bg-blue-500': `hsl(217, ${Math.max(0, Math.min(100, 91 + saturationShift))}%, 60%)`,
+      'bg-green-500': `hsl(142, ${Math.max(0, Math.min(100, 76 + saturationShift))}%, 45%)`,
+      'bg-red-500': `hsl(0, ${Math.max(0, Math.min(100, 84 + saturationShift))}%, 60%)`,
+      'bg-yellow-500': `hsl(45, ${Math.max(0, Math.min(100, 93 + saturationShift))}%, 47%)`,
+      'bg-purple-500': `hsl(271, ${Math.max(0, Math.min(100, 81 + saturationShift))}%, 56%)`,
+      'bg-pink-500': `hsl(330, ${Math.max(0, Math.min(100, 81 + saturationShift))}%, 60%)`,
+      'bg-indigo-500': `hsl(239, ${Math.max(0, Math.min(100, 84 + saturationShift))}%, 67%)`,
+      'bg-orange-500': `hsl(25, ${Math.max(0, Math.min(100, 95 + saturationShift))}%, 53%)`,
+    };
+    
+    return colorMap[colorClass] || colorMap['bg-blue-500'];
+  };
+
   return (
     <div className="space-y-4">
       {/* Month Navigation */}
@@ -150,21 +165,28 @@ const MonthView = ({ events, getWeatherForDate }: MonthViewProps) => {
               
               {isToday && <div className="w-full h-0.5 bg-yellow-300 mb-2"></div>}
               
-              {/* Event Dots Only */}
+              {/* Event Dots - Left-aligned with overlap and saturation shift */}
               {dayEvents.length > 0 && (
-                <div className="flex flex-wrap gap-1 justify-center items-center min-h-[60px]">
-                  {dayEvents.slice(0, 12).map((event, eventIndex) => (
-                    <div
-                      key={eventIndex}
-                      className={`w-3 h-3 rounded-full ${event.color} opacity-80 hover:opacity-100 transition-opacity`}
-                      title={event.title}
-                    />
-                  ))}
-                  {dayEvents.length > 12 && (
-                    <div className="text-xs text-white/70 font-medium bg-white/20 px-2 py-1 rounded-full">
-                      +{dayEvents.length - 12}
-                    </div>
-                  )}
+                <div className="flex items-start min-h-[60px] relative">
+                  <div className="flex flex-col gap-1">
+                    {dayEvents.slice(0, 12).map((event, eventIndex) => (
+                      <div
+                        key={eventIndex}
+                        className="w-3 h-3 rounded-full opacity-80 hover:opacity-100 transition-opacity relative"
+                        style={{
+                          backgroundColor: adjustColorSaturation(event.color, eventIndex * 10),
+                          marginLeft: eventIndex > 0 ? '-2px' : '0px', // 5% overlap (roughly 2px for 12px dot)
+                          zIndex: 12 - eventIndex, // Stack dots with first on top
+                        }}
+                        title={event.title}
+                      />
+                    ))}
+                    {dayEvents.length > 12 && (
+                      <div className="text-xs text-white/70 font-medium bg-white/20 px-2 py-1 rounded-full mt-1">
+                        +{dayEvents.length - 12}
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
