@@ -3,7 +3,7 @@ import React from 'react';
 import { Event } from '@/types/calendar';
 import EventCard from './EventCard';
 import { getNext3Days, formatDate } from '@/utils/dateUtils';
-import { Sun, Cloud, CloudRain } from 'lucide-react';
+import { Sun, Cloud, CloudRain, CloudSnow, Zap } from 'lucide-react';
 
 interface TimelineViewProps {
   events: Event[];
@@ -63,16 +63,38 @@ const TimelineView = ({ events, getWeatherForDate }: TimelineViewProps) => {
     switch (condition.toLowerCase()) {
       case 'sunny':
       case 'clear':
-        return <Sun className="h-4 w-4 text-yellow-500 dark:text-yellow-400" />;
+        return <Sun className="h-4 w-4 text-yellow-400" />;
       case 'cloudy':
       case 'partly cloudy':
-        return <Cloud className="h-4 w-4 text-gray-500 dark:text-gray-400" />;
+        return <Cloud className="h-4 w-4 text-gray-300" />;
       case 'rainy':
       case 'rain':
-        return <CloudRain className="h-4 w-4 text-blue-500 dark:text-blue-400" />;
+        return <CloudRain className="h-4 w-4 text-blue-400" />;
+      case 'snowy':
+      case 'snow':
+        return <CloudSnow className="h-4 w-4 text-white" />;
+      case 'thunderstorm':
+        return <Zap className="h-4 w-4 text-yellow-300" />;
       default:
-        return <Sun className="h-4 w-4 text-yellow-500 dark:text-yellow-400" />;
+        return <Sun className="h-4 w-4 text-yellow-400" />;
     }
+  };
+
+  const getDetailedWeather = (date: Date) => {
+    if (!getWeatherForDate) return null;
+    
+    const weather = getWeatherForDate(date);
+    // Generate some mock detailed data for demonstration
+    const high = weather.temp;
+    const low = Math.max(high - 15, 30); // 15 degrees lower, minimum 30°F
+    const chanceOfRain = Math.floor(Math.random() * 100); // Mock chance of rain
+    
+    return {
+      high,
+      low,
+      condition: weather.condition,
+      chanceOfRain
+    };
   };
 
   return (
@@ -80,7 +102,7 @@ const TimelineView = ({ events, getWeatherForDate }: TimelineViewProps) => {
       {next3Days.map((date, index) => {
         const dayEvents = getEventsForDate(date);
         const isToday = date.toDateString() === new Date().toDateString();
-        const weather = getWeatherForDate ? getWeatherForDate(date) : null;
+        const detailedWeather = getDetailedWeather(date);
         
         return (
           <div key={index} className="space-y-4">
@@ -94,27 +116,40 @@ const TimelineView = ({ events, getWeatherForDate }: TimelineViewProps) => {
                 <span>
                   {dayEvents.length} event{dayEvents.length !== 1 ? 's' : ''}
                 </span>
-                {weather && (
-                  <div className="flex items-center gap-2">
-                    {getWeatherIcon(weather.condition)}
-                    <span className="text-white">{weather.temp}°F</span>
-                  </div>
-                )}
               </div>
+              {detailedWeather && (
+                <div className="flex flex-col items-end gap-1 text-white min-w-[80px]">
+                  <div className="flex items-center gap-2">
+                    {getWeatherIcon(detailedWeather.condition)}
+                    <span className="text-sm font-medium">{detailedWeather.high}°</span>
+                  </div>
+                  <div className="text-xs text-gray-300">
+                    Low: {detailedWeather.low}°
+                  </div>
+                  <div className="text-xs text-blue-300">
+                    Rain: {detailedWeather.chanceOfRain}%
+                  </div>
+                </div>
+              )}
             </div>
             
             {dayEvents.length > 0 ? (
               <div className="space-y-3">
                 {dayEvents.map((event) => {
                   const isMultiDay = event.time.includes('days');
+                  const isAllDay = event.time.toLowerCase().includes('all day');
                   return (
-                    <EventCard 
-                      key={`${event.id}-${date.toDateString()}`} 
-                      event={event}
-                      className="animate-fade-in"
-                      viewMode="timeline"
-                      isMultiDayDisplay={isMultiDay}
-                    />
+                    <div 
+                      key={`${event.id}-${date.toDateString()}`}
+                      className={isAllDay ? 'w-[65%]' : ''}
+                    >
+                      <EventCard 
+                        event={event}
+                        className="animate-fade-in"
+                        viewMode="timeline"
+                        isMultiDayDisplay={isMultiDay}
+                      />
+                    </div>
                   );
                 })}
               </div>
