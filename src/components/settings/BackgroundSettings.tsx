@@ -14,16 +14,16 @@ const BackgroundSettings = () => {
   };
 
   return (
-    <Card>
+    <Card className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
       <CardHeader>
-        <CardTitle>Background Settings</CardTitle>
-        <CardDescription>
+        <CardTitle className="text-gray-900 dark:text-gray-100">Background Settings</CardTitle>
+        <CardDescription className="text-gray-600 dark:text-gray-400">
           Configure how background images are displayed
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-3">
-          <Label htmlFor="duration-slider">
+          <Label htmlFor="duration-slider" className="text-gray-700 dark:text-gray-300">
             Background Duration: {formatDuration(backgroundDuration)}
           </Label>
           <Slider
@@ -35,7 +35,7 @@ const BackgroundSettings = () => {
             onValueChange={(value) => setBackgroundDuration(value[0])}
             className="w-full"
           />
-          <div className="flex justify-between text-sm text-gray-500">
+          <div className="flex justify-between text-sm text-gray-500 dark:text-gray-400">
             <span>1 minute</span>
             <span>30 minutes</span>
           </div>

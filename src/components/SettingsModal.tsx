@@ -42,51 +42,51 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700">
         <DialogHeader>
-          <DialogTitle>App Settings</DialogTitle>
-          <DialogDescription>
+          <DialogTitle className="text-gray-900 dark:text-gray-100">App Settings</DialogTitle>
+          <DialogDescription className="text-gray-600 dark:text-gray-400">
             Configure your family calendar app preferences and connect your Google account
           </DialogDescription>
         </DialogHeader>
 
         <Tabs defaultValue="account" className="w-full">
-          <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="account" className="flex items-center gap-2">
+          <TabsList className="grid w-full grid-cols-5 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+            <TabsTrigger value="account" className="flex items-center gap-2 text-gray-700 dark:text-gray-300 data-[state=active]:bg-white data-[state=active]:text-gray-900 dark:data-[state=active]:bg-gray-700 dark:data-[state=active]:text-gray-100">
               <User className="h-4 w-4" />
               Account
             </TabsTrigger>
-            <TabsTrigger value="calendars" className="flex items-center gap-2">
+            <TabsTrigger value="calendars" className="flex items-center gap-2 text-gray-700 dark:text-gray-300 data-[state=active]:bg-white data-[state=active]:text-gray-900 dark:data-[state=active]:bg-gray-700 dark:data-[state=active]:text-gray-100">
               <Calendar className="h-4 w-4" />
               Calendars
             </TabsTrigger>
-            <TabsTrigger value="photos" className="flex items-center gap-2">
+            <TabsTrigger value="photos" className="flex items-center gap-2 text-gray-700 dark:text-gray-300 data-[state=active]:bg-white data-[state=active]:text-gray-900 dark:data-[state=active]:bg-gray-700 dark:data-[state=active]:text-gray-100">
               <Camera className="h-4 w-4" />
               Photos
             </TabsTrigger>
-            <TabsTrigger value="display" className="flex items-center gap-2">
+            <TabsTrigger value="display" className="flex items-center gap-2 text-gray-700 dark:text-gray-300 data-[state=active]:bg-white data-[state=active]:text-gray-900 dark:data-[state=active]:bg-gray-700 dark:data-[state=active]:text-gray-100">
               <Monitor className="h-4 w-4" />
               Display
             </TabsTrigger>
-            <TabsTrigger value="weather" className="flex items-center gap-2">
+            <TabsTrigger value="weather" className="flex items-center gap-2 text-gray-700 dark:text-gray-300 data-[state=active]:bg-white data-[state=active]:text-gray-900 dark:data-[state=active]:bg-gray-700 dark:data-[state=active]:text-gray-100">
               <CloudSun className="h-4 w-4" />
               Weather
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="account" className="space-y-4">
+          <TabsContent value="account" className="space-y-4 mt-6">
             <AccountTab />
           </TabsContent>
 
-          <TabsContent value="calendars" className="space-y-4">
+          <TabsContent value="calendars" className="space-y-4 mt-6">
             <CalendarsTab />
           </TabsContent>
 
-          <TabsContent value="photos" className="space-y-4">
+          <TabsContent value="photos" className="space-y-4 mt-6">
             <PhotosTab />
           </TabsContent>
 
-          <TabsContent value="display" className="space-y-4">
+          <TabsContent value="display" className="space-y-4 mt-6">
             <DisplayTab 
               theme={theme}
               onThemeChange={handleThemeChange}
@@ -95,7 +95,7 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
             />
           </TabsContent>
 
-          <TabsContent value="weather" className="space-y-4">
+          <TabsContent value="weather" className="space-y-4 mt-6">
             <WeatherTab 
               zipCode={zipCode}
               onZipCodeChange={setZipCode}

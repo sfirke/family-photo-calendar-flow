@@ -16,33 +16,33 @@ interface DisplayTabProps {
 const DisplayTab = ({ theme, onThemeChange, defaultView, onDefaultViewChange }: DisplayTabProps) => {
   return (
     <div className="space-y-6">
-      <Card>
+      <Card className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
         <CardHeader>
-          <CardTitle>Theme</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-gray-900 dark:text-gray-100">Theme</CardTitle>
+          <CardDescription className="text-gray-600 dark:text-gray-400">
             Choose your preferred theme for the application
           </CardDescription>
         </CardHeader>
         <CardContent>
           <RadioGroup value={theme} onValueChange={onThemeChange}>
             <div className="flex items-center space-x-2">
-              <RadioGroupItem value="light" id="light" />
-              <Label htmlFor="light" className="flex items-center gap-2 cursor-pointer">
-                <Sun className="h-4 w-4" />
+              <RadioGroupItem value="light" id="light" className="border-gray-400 dark:border-gray-500 text-blue-600 dark:text-blue-400" />
+              <Label htmlFor="light" className="flex items-center gap-2 cursor-pointer text-gray-700 dark:text-gray-300">
+                <Sun className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
                 Light
               </Label>
             </div>
             <div className="flex items-center space-x-2">
-              <RadioGroupItem value="dark" id="dark" />
-              <Label htmlFor="dark" className="flex items-center gap-2 cursor-pointer">
-                <Moon className="h-4 w-4" />
+              <RadioGroupItem value="dark" id="dark" className="border-gray-400 dark:border-gray-500 text-blue-600 dark:text-blue-400" />
+              <Label htmlFor="dark" className="flex items-center gap-2 cursor-pointer text-gray-700 dark:text-gray-300">
+                <Moon className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                 Dark
               </Label>
             </div>
             <div className="flex items-center space-x-2">
-              <RadioGroupItem value="system" id="system" />
-              <Label htmlFor="system" className="flex items-center gap-2 cursor-pointer">
-                <Monitor className="h-4 w-4" />
+              <RadioGroupItem value="system" id="system" className="border-gray-400 dark:border-gray-500 text-blue-600 dark:text-blue-400" />
+              <Label htmlFor="system" className="flex items-center gap-2 cursor-pointer text-gray-700 dark:text-gray-300">
+                <Monitor className="h-4 w-4 text-gray-600 dark:text-gray-400" />
                 System
               </Label>
             </div>
@@ -50,30 +50,30 @@ const DisplayTab = ({ theme, onThemeChange, defaultView, onDefaultViewChange }: 
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
         <CardHeader>
-          <CardTitle>Default Calendar View</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-gray-900 dark:text-gray-100">Default Calendar View</CardTitle>
+          <CardDescription className="text-gray-600 dark:text-gray-400">
             Choose your preferred default view for the calendar
           </CardDescription>
         </CardHeader>
         <CardContent>
           <RadioGroup value={defaultView} onValueChange={onDefaultViewChange}>
             <div className="flex items-center space-x-2">
-              <RadioGroupItem value="month" id="month" />
-              <Label htmlFor="month" className="cursor-pointer">
+              <RadioGroupItem value="month" id="month" className="border-gray-400 dark:border-gray-500 text-blue-600 dark:text-blue-400" />
+              <Label htmlFor="month" className="cursor-pointer text-gray-700 dark:text-gray-300">
                 Month View
               </Label>
             </div>
             <div className="flex items-center space-x-2">
-              <RadioGroupItem value="timeline" id="timeline" />
-              <Label htmlFor="timeline" className="cursor-pointer">
+              <RadioGroupItem value="timeline" id="timeline" className="border-gray-400 dark:border-gray-500 text-blue-600 dark:text-blue-400" />
+              <Label htmlFor="timeline" className="cursor-pointer text-gray-700 dark:text-gray-300">
                 Timeline View
               </Label>
             </div>
             <div className="flex items-center space-x-2">
-              <RadioGroupItem value="week" id="week" />
-              <Label htmlFor="week" className="cursor-pointer">
+              <RadioGroupItem value="week" id="week" className="border-gray-400 dark:border-gray-500 text-blue-600 dark:text-blue-400" />
+              <Label htmlFor="week" className="cursor-pointer text-gray-700 dark:text-gray-300">
                 Week View
               </Label>
             </div>
