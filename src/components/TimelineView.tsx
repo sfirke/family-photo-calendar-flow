@@ -66,7 +66,7 @@ const TimelineView = ({ events, getWeatherForDate }: TimelineViewProps) => {
         return <Sun className="h-4 w-4 text-yellow-400" />;
       case 'cloudy':
       case 'partly cloudy':
-        return <Cloud className="h-4 w-4 text-gray-300" />;
+        return <Cloud className="h-4 w-4 text-gray-300 dark:text-gray-400" />;
       case 'rainy':
       case 'rain':
         return <CloudRain className="h-4 w-4 text-blue-400" />;
@@ -85,19 +85,19 @@ const TimelineView = ({ events, getWeatherForDate }: TimelineViewProps) => {
         return (
           <div key={index} className="space-y-4">
             <div className="flex items-center gap-3">
-              <h3 className={`text-lg font-medium ${isToday ? 'text-yellow-300' : 'text-white'}`}>
+              <h3 className={`text-lg font-medium ${isToday ? 'text-yellow-300' : 'text-white dark:text-gray-100'}`}>
                 {formatDate(date, 'long')}
                 {isToday && <span className="ml-2 text-sm text-yellow-300">(Today)</span>}
               </h3>
-              <div className="flex-1 h-px bg-white/20"></div>
-              <div className="flex items-center gap-4 text-sm text-white/60">
+              <div className="flex-1 h-px bg-white/20 dark:bg-gray-600/20"></div>
+              <div className="flex items-center gap-4 text-sm text-white/60 dark:text-gray-400/60">
                 <span>
                   {dayEvents.length} event{dayEvents.length !== 1 ? 's' : ''}
                 </span>
                 {weather && (
                   <div className="flex items-center gap-2">
                     {getWeatherIcon(weather.condition)}
-                    <span className="text-white/70">{weather.temp}°F</span>
+                    <span className="text-white/70 dark:text-gray-300/70">{weather.temp}°F</span>
                   </div>
                 )}
               </div>
@@ -119,7 +119,7 @@ const TimelineView = ({ events, getWeatherForDate }: TimelineViewProps) => {
                 })}
               </div>
             ) : (
-              <div className="text-white/50 text-sm italic">
+              <div className="text-white/50 dark:text-gray-400/50 text-sm italic">
                 No events scheduled
               </div>
             )}

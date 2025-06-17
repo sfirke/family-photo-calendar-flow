@@ -159,18 +159,18 @@ const EventCard = ({
   const getBackgroundOpacity = () => {
     const isPast = hasEventPassed();
     if (isPast && (viewMode === 'timeline' || viewMode === 'week')) {
-      return 'bg-white/30'; // 30% transparency for past events (decreased by 30% from 60%)
+      return 'bg-white/30 dark:bg-gray-800/30'; // Updated for dark mode
     }
-    return 'bg-white/75'; // Default 75% transparency
+    return 'bg-white/75 dark:bg-gray-800/75'; // Default with dark mode support
   };
 
   // Get hover background opacity - slightly higher for hover state
   const getHoverBackgroundOpacity = () => {
     const isPast = hasEventPassed();
     if (isPast && (viewMode === 'timeline' || viewMode === 'week')) {
-      return 'hover:bg-white/40'; // Slightly higher opacity on hover for past events (decreased by 30%)
+      return 'hover:bg-white/40 dark:hover:bg-gray-800/40'; // Updated for dark mode
     }
-    return 'hover:bg-white/85'; // Default hover opacity
+    return 'hover:bg-white/85 dark:hover:bg-gray-800/85'; // Default hover with dark mode
   };
 
   // Get text color classes based on event status - lightened by 20%
@@ -178,31 +178,31 @@ const EventCard = ({
     const isPast = hasEventPassed();
     if (isPast && (viewMode === 'timeline' || viewMode === 'week')) {
       return {
-        title: showBoldHeader ? 'font-bold text-gray-600' : 'font-medium text-gray-600', // Lightened by 20% from gray-900
-        time: 'text-gray-500', // Lightened by 20% from gray-600
-        location: 'text-gray-500', // Lightened by 20% from gray-600
-        description: 'text-gray-500', // Lightened by 20% from gray-600
-        category: 'text-gray-500 font-medium' // Lightened by 20% from gray-600
+        title: showBoldHeader ? 'font-bold text-gray-600 dark:text-gray-400' : 'font-medium text-gray-600 dark:text-gray-400',
+        time: 'text-gray-500 dark:text-gray-500',
+        location: 'text-gray-500 dark:text-gray-500',
+        description: 'text-gray-500 dark:text-gray-500',
+        category: 'text-gray-500 dark:text-gray-500 font-medium'
       };
     }
     return {
-      title: showBoldHeader ? 'font-bold text-gray-900' : 'font-medium text-gray-900',
-      time: 'text-gray-600',
-      location: 'text-gray-600',
-      description: 'text-gray-600',
-      category: 'text-gray-600 font-medium'
+      title: showBoldHeader ? 'font-bold text-gray-900 dark:text-gray-100' : 'font-medium text-gray-900 dark:text-gray-100',
+      time: 'text-gray-600 dark:text-gray-300',
+      location: 'text-gray-600 dark:text-gray-300',
+      description: 'text-gray-600 dark:text-gray-300',
+      category: 'text-gray-600 dark:text-gray-300 font-medium'
     };
   };
 
-  // Get font size classes based on view mode - larger fonts for timeline view
+  // Get font size classes based on view mode - significantly larger fonts for timeline view
   const getFontSizeClasses = () => {
     if (viewMode === 'timeline') {
       return {
-        title: 'text-base', // Increased from default
-        time: 'text-sm', // Increased from text-xs
-        location: 'text-sm', // Increased from text-xs
-        description: 'text-sm', // Increased from text-xs
-        category: 'text-sm' // Increased from text-xs
+        title: 'text-lg', // Increased from text-base
+        time: 'text-base', // Increased from text-sm
+        location: 'text-base', // Increased from text-sm
+        description: 'text-base', // Increased from text-sm
+        category: 'text-base' // Increased from text-sm
       };
     }
     return {
@@ -227,7 +227,7 @@ const EventCard = ({
   if (isMultiDayDisplay) {
     return (
       <article 
-        className={`${getPaddingClass()} pr-2 pt-2 pb-2 rounded-lg ${getBackgroundOpacity()} backdrop-blur-sm border border-white/30 ${getTimelineStyles()} ${className}`}
+        className={`${getPaddingClass()} pr-2 pt-2 pb-2 rounded-lg ${getBackgroundOpacity()} backdrop-blur-sm border border-white/30 dark:border-gray-700/30 ${getTimelineStyles()} ${className}`}
         role="article"
         aria-label={`Multi-day event: ${event.title}`}
       >
@@ -247,7 +247,7 @@ const EventCard = ({
               {event.title}
             </h3>
             <span className={`${fontSizes.time} ${textColors.time} flex items-center gap-1 flex-shrink-0`}>
-              <Clock className="h-3 w-3" aria-hidden="true" />
+              <Clock className="h-4 w-4" aria-hidden="true" />
               All Day
             </span>
           </div>
@@ -258,7 +258,7 @@ const EventCard = ({
 
   return (
     <article 
-      className={`${getPaddingClass()} ${isAllDay ? 'pr-3 pt-3 pb-3' : ''} rounded-lg ${getBackgroundOpacity()} backdrop-blur-sm border border-white/30 ${
+      className={`${getPaddingClass()} ${isAllDay ? 'pr-3 pt-3 pb-3' : ''} rounded-lg ${getBackgroundOpacity()} backdrop-blur-sm border border-white/30 dark:border-gray-700/30 ${
         isInteractive ? `cursor-pointer ${getHoverBackgroundOpacity()} transition-colors` : ''
       } ${getTimelineStyles()} ${className}`}
       onClick={handleClick}
@@ -288,7 +288,7 @@ const EventCard = ({
               
               {/* Time display - show "All day" for all-day events in timeline view */}
               <div className={`flex items-center gap-2 ${fontSizes.time} ${textColors.time} mb-2`}>
-                <Clock className="h-3 w-3 flex-shrink-0" aria-hidden="true" />
+                <Clock className="h-4 w-4 flex-shrink-0" aria-hidden="true" />
                 <time dateTime={isAllDay ? event.date.toISOString().split('T')[0] : undefined}>
                   {isAllDay && viewMode === 'timeline' ? 'All Day' : event.time}
                 </time>
@@ -297,7 +297,7 @@ const EventCard = ({
               {/* Show location only if provided and in expanded state for timeline/week, or always for other views */}
               {event.location && ((viewMode !== 'timeline' && viewMode !== 'week') || isExpanded) && (
                 <div className={`flex items-center gap-2 ${fontSizes.location} ${textColors.location} mb-2`}>
-                  <MapPin className="h-3 w-3 flex-shrink-0" aria-hidden="true" />
+                  <MapPin className="h-4 w-4 flex-shrink-0" aria-hidden="true" />
                   <address className="truncate not-italic">{event.location}</address>
                 </div>
               )}
@@ -321,9 +321,9 @@ const EventCard = ({
             {isInteractive && (
               <div className="ml-2 flex-shrink-0">
                 {isExpanded ? (
-                  <ChevronUp className="h-4 w-4 text-gray-400" aria-hidden="true" />
+                  <ChevronUp className="h-4 w-4 text-gray-400 dark:text-gray-500" aria-hidden="true" />
                 ) : (
-                  <ChevronDown className="h-4 w-4 text-gray-400" aria-hidden="true" />
+                  <ChevronDown className="h-4 w-4 text-gray-400 dark:text-gray-500" aria-hidden="true" />
                 )}
               </div>
             )}
