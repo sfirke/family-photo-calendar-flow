@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -7,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { CloudSun, Info, Key, CheckCircle, XCircle, Loader2, Eye } from 'lucide-react';
 import { fetchWeatherData } from '@/services/weatherService';
+import { useWeather } from '@/contexts/WeatherContext';
 
 interface WeatherTabProps {
   zipCode: string;
@@ -23,6 +23,7 @@ const WeatherTab = ({ zipCode, onZipCodeChange, weatherApiKey, onWeatherApiKeyCh
     data?: any;
   } | null>(null);
   const [showPreview, setShowPreview] = useState(false);
+  const { refreshWeather } = useWeather();
 
   const handleTestConnection = async () => {
     if (!weatherApiKey.trim()) {
@@ -59,6 +60,9 @@ const WeatherTab = ({ zipCode, onZipCodeChange, weatherApiKey, onWeatherApiKeyCh
           message: `Successfully connected! Location: ${weatherData.location}`,
           data: weatherData
         });
+        
+        // Refresh weather data in the main app after successful test
+        refreshWeather();
       }
     } catch (error) {
       setTestResult({

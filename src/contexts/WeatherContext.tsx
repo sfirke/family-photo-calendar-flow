@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { fetchWeatherData, WeatherData } from '@/services/weatherService';
 import { useSettings } from './SettingsContext';
@@ -8,6 +9,7 @@ interface WeatherContextType {
   isLoading: boolean;
   getWeatherForDate: (date: Date) => { temp: number; condition: string };
   getCurrentWeather: () => { temp: number; condition: string; location: string };
+  refreshWeather: () => Promise<void>;
 }
 
 const WeatherContext = createContext<WeatherContextType | undefined>(undefined);
@@ -43,6 +45,11 @@ export const WeatherProvider = ({ children }: { children: React.ReactNode }) => 
       setIsLoading(false);
     }
   }, [zipCode, weatherApiKey]);
+
+  // Exposed refresh function for manual weather updates
+  const refreshWeather = useCallback(async () => {
+    await loadWeather(true);
+  }, [loadWeather]);
 
   useEffect(() => {
     // Initial load
@@ -108,8 +115,9 @@ export const WeatherProvider = ({ children }: { children: React.ReactNode }) => 
     weatherData,
     isLoading,
     getWeatherForDate,
-    getCurrentWeather
-  }), [weatherData, isLoading, getWeatherForDate, getCurrentWeather]);
+    getCurrentWeather,
+    refreshWeather
+  }), [weatherData, isLoading, getWeatherForDate, getCurrentWeather, refreshWeather]);
 
   return (
     <WeatherContext.Provider value={contextValue}>
