@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Event } from '@/types/calendar';
 import EventCard from './EventCard';
@@ -84,19 +85,19 @@ const TimelineView = ({ events, getWeatherForDate }: TimelineViewProps) => {
         return (
           <div key={index} className="space-y-4">
             <div className="flex items-center gap-3">
-              <h3 className={`text-lg font-medium ${isToday ? 'text-yellow-600 dark:text-yellow-300' : 'text-gray-800 dark:text-gray-100'}`}>
+              <h3 className={`text-lg font-medium ${isToday ? 'text-yellow-600 dark:text-yellow-300' : 'text-white'}`}>
                 {formatDate(date, 'long')}
                 {isToday && <span className="ml-2 text-sm text-yellow-600 dark:text-yellow-300">(Today)</span>}
               </h3>
-              <div className="flex-1 h-px bg-gray-300/60 dark:bg-gray-600/20"></div>
-              <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
+              <div className="flex-1 h-px bg-white/30"></div>
+              <div className="flex items-center gap-4 text-sm text-white">
                 <span>
                   {dayEvents.length} event{dayEvents.length !== 1 ? 's' : ''}
                 </span>
                 {weather && (
                   <div className="flex items-center gap-2">
                     {getWeatherIcon(weather.condition)}
-                    <span className="text-gray-700 dark:text-gray-300">{weather.temp}°F</span>
+                    <span className="text-white">{weather.temp}°F</span>
                   </div>
                 )}
               </div>

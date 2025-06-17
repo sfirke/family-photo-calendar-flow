@@ -15,19 +15,19 @@ interface PhotosPreviewProps {
 const PhotosPreview = ({ images, isLoading, error, onRefresh, albumUrl }: PhotosPreviewProps) => {
   if (!albumUrl) {
     return (
-      <Card>
+      <Card className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-gray-100">
             <Images className="h-5 w-5" />
             Album Preview
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="text-gray-600 dark:text-gray-400">
             Photos from your album will appear here once you add a valid URL
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="text-center py-8 text-gray-500">
-            <Camera className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+          <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+            <Camera className="h-12 w-12 mx-auto mb-4 text-gray-400 dark:text-gray-500" />
             <p>No album URL provided</p>
           </div>
         </CardContent>
@@ -36,9 +36,9 @@ const PhotosPreview = ({ images, isLoading, error, onRefresh, albumUrl }: Photos
   }
 
   return (
-    <Card>
+    <Card className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
+        <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-gray-100">
           <Images className="h-5 w-5" />
           Album Preview
           <Button
@@ -46,13 +46,13 @@ const PhotosPreview = ({ images, isLoading, error, onRefresh, albumUrl }: Photos
             disabled={isLoading}
             size="sm"
             variant="outline"
-            className="ml-auto"
+            className="ml-auto border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
           >
             <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
         </CardTitle>
-        <CardDescription>
+        <CardDescription className="text-gray-600 dark:text-gray-400">
           {images.length > 0 
             ? `${images.length} photos found in album`
             : 'Loading photos from your Google Photos album...'
@@ -61,12 +61,12 @@ const PhotosPreview = ({ images, isLoading, error, onRefresh, albumUrl }: Photos
       </CardHeader>
       <CardContent>
         {error && (
-          <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-md">
+          <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-md">
             <div className="flex items-start gap-2">
-              <AlertCircle className="h-4 w-4 text-red-600 mt-0.5 flex-shrink-0" />
+              <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
               <div className="text-sm">
-                <p className="font-medium text-red-800">Error loading photos</p>
-                <p className="text-red-700 mt-1">{error}</p>
+                <p className="font-medium text-red-800 dark:text-red-200">Error loading photos</p>
+                <p className="text-red-700 dark:text-red-300 mt-1">{error}</p>
               </div>
             </div>
           </div>
@@ -74,12 +74,12 @@ const PhotosPreview = ({ images, isLoading, error, onRefresh, albumUrl }: Photos
 
         {isLoading ? (
           <div className="text-center py-8">
-            <RefreshCw className="h-8 w-8 mx-auto mb-4 text-gray-400 animate-spin" />
-            <p className="text-gray-500">Loading photos from album...</p>
+            <RefreshCw className="h-8 w-8 mx-auto mb-4 text-gray-400 dark:text-gray-500 animate-spin" />
+            <p className="text-gray-500 dark:text-gray-400">Loading photos from album...</p>
           </div>
         ) : images.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">
-            <Camera className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+          <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+            <Camera className="h-12 w-12 mx-auto mb-4 text-gray-400 dark:text-gray-500" />
             <p>No photos found in the album</p>
             {error && <p className="text-sm mt-1">Please check the album URL and try again</p>}
           </div>
@@ -100,7 +100,7 @@ const PhotosPreview = ({ images, isLoading, error, onRefresh, albumUrl }: Photos
               </div>
             ))}
             {images.length > 12 && (
-              <div className="aspect-square bg-gray-100 rounded-md flex items-center justify-center text-sm text-gray-600">
+              <div className="aspect-square bg-gray-100 dark:bg-gray-700 rounded-md flex items-center justify-center text-sm text-gray-600 dark:text-gray-400">
                 +{images.length - 12} more
               </div>
             )}
