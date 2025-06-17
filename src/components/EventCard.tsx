@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Event } from '@/types/calendar';
 import { Clock, MapPin, ChevronDown, ChevronUp } from 'lucide-react';
@@ -155,38 +154,38 @@ const EventCard = ({
     return 'w-[35%]'; // 35% width for regular events
   };
 
-  // Get background opacity based on event status - decreased by 30%
+  // Get background opacity based on event status - improved for light mode
   const getBackgroundOpacity = () => {
     const isPast = hasEventPassed();
     if (isPast && (viewMode === 'timeline' || viewMode === 'week')) {
-      return 'bg-white/30 dark:bg-gray-800/30'; // Updated for dark mode
+      return 'bg-white/40 dark:bg-gray-800/30';
     }
-    return 'bg-white/75 dark:bg-gray-800/75'; // Default with dark mode support
+    return 'bg-white/90 dark:bg-gray-800/75';
   };
 
-  // Get hover background opacity - slightly higher for hover state
+  // Get hover background opacity - improved for light mode
   const getHoverBackgroundOpacity = () => {
     const isPast = hasEventPassed();
     if (isPast && (viewMode === 'timeline' || viewMode === 'week')) {
-      return 'hover:bg-white/40 dark:hover:bg-gray-800/40'; // Updated for dark mode
+      return 'hover:bg-white/50 dark:hover:bg-gray-800/40';
     }
-    return 'hover:bg-white/85 dark:hover:bg-gray-800/85'; // Default hover with dark mode
+    return 'hover:bg-white/95 dark:hover:bg-gray-800/85';
   };
 
-  // Get text color classes based on event status - lightened by 20%
+  // Get text color classes based on event status - improved contrast for light mode
   const getTextColorClasses = () => {
     const isPast = hasEventPassed();
     if (isPast && (viewMode === 'timeline' || viewMode === 'week')) {
       return {
-        title: showBoldHeader ? 'font-bold text-gray-600 dark:text-gray-400' : 'font-medium text-gray-600 dark:text-gray-400',
-        time: 'text-gray-500 dark:text-gray-500',
-        location: 'text-gray-500 dark:text-gray-500',
-        description: 'text-gray-500 dark:text-gray-500',
-        category: 'text-gray-500 dark:text-gray-500 font-medium'
+        title: showBoldHeader ? 'font-bold text-gray-500 dark:text-gray-400' : 'font-medium text-gray-500 dark:text-gray-400',
+        time: 'text-gray-400 dark:text-gray-500',
+        location: 'text-gray-400 dark:text-gray-500',
+        description: 'text-gray-400 dark:text-gray-500',
+        category: 'text-gray-400 dark:text-gray-500 font-medium'
       };
     }
     return {
-      title: showBoldHeader ? 'font-bold text-gray-900 dark:text-gray-100' : 'font-medium text-gray-900 dark:text-gray-100',
+      title: showBoldHeader ? 'font-bold text-gray-800 dark:text-gray-100' : 'font-medium text-gray-800 dark:text-gray-100',
       time: 'text-gray-600 dark:text-gray-300',
       location: 'text-gray-600 dark:text-gray-300',
       description: 'text-gray-600 dark:text-gray-300',
@@ -227,7 +226,7 @@ const EventCard = ({
   if (isMultiDayDisplay) {
     return (
       <article 
-        className={`${getPaddingClass()} pr-2 pt-2 pb-2 rounded-lg ${getBackgroundOpacity()} backdrop-blur-sm border border-white/30 dark:border-gray-700/30 ${getTimelineStyles()} ${className}`}
+        className={`${getPaddingClass()} pr-2 pt-2 pb-2 rounded-lg ${getBackgroundOpacity()} backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/30 ${getTimelineStyles()} ${className}`}
         role="article"
         aria-label={`Multi-day event: ${event.title}`}
       >
@@ -258,7 +257,7 @@ const EventCard = ({
 
   return (
     <article 
-      className={`${getPaddingClass()} ${isAllDay ? 'pr-3 pt-3 pb-3' : ''} rounded-lg ${getBackgroundOpacity()} backdrop-blur-sm border border-white/30 dark:border-gray-700/30 ${
+      className={`${getPaddingClass()} ${isAllDay ? 'pr-3 pt-3 pb-3' : ''} rounded-lg ${getBackgroundOpacity()} backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/30 ${
         isInteractive ? `cursor-pointer ${getHoverBackgroundOpacity()} transition-colors` : ''
       } ${getTimelineStyles()} ${className}`}
       onClick={handleClick}
