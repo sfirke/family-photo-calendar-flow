@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -118,17 +119,17 @@ const AccountTab = () => {
   };
 
   return (
-    <Card>
+    <Card className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
       <CardHeader>
-        <CardTitle>Google Account Connection</CardTitle>
-        <CardDescription>
+        <CardTitle className="text-gray-900 dark:text-gray-100">Google Account Connection</CardTitle>
+        <CardDescription className="text-gray-600 dark:text-gray-400">
           Sign in with Google to access your calendar events and photo albums for background slideshows.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {user ? (
           <div className="flex flex-col items-center space-y-4 py-4">
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
+            <div className="w-16 h-16 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center">
               {user.user_metadata?.avatar_url ? (
                 <img 
                   src={user.user_metadata.avatar_url} 
@@ -136,12 +137,12 @@ const AccountTab = () => {
                   className="w-16 h-16 rounded-full"
                 />
               ) : (
-                <User className="h-8 w-8 text-green-600" />
+                <User className="h-8 w-8 text-green-600 dark:text-green-400" />
               )}
             </div>
             <div className="text-center">
-              <h3 className="font-medium">{user.user_metadata?.full_name || user.email}</h3>
-              <p className="text-sm text-gray-600">{user.email}</p>
+              <h3 className="font-medium text-gray-900 dark:text-gray-100">{user.user_metadata?.full_name || user.email}</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">{user.email}</p>
             </div>
             
             <div className="flex flex-col gap-2 w-full max-w-xs">
@@ -149,7 +150,7 @@ const AccountTab = () => {
                 onClick={handleRefreshToken}
                 disabled={isRefreshing}
                 variant="outline"
-                className="text-blue-600 hover:text-blue-700"
+                className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
               >
                 <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
                 {isRefreshing ? 'Refreshing...' : 'Refresh Access Token'}
@@ -158,7 +159,7 @@ const AccountTab = () => {
               <Button
                 onClick={handleSignOut}
                 variant="outline"
-                className="text-red-600 hover:text-red-700"
+                className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
               >
                 <LogOut className="h-4 w-4 mr-2" />
                 Sign Out
@@ -167,19 +168,19 @@ const AccountTab = () => {
           </div>
         ) : (
           <div className="flex flex-col items-center space-y-4 py-8">
-            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
-              <User className="h-8 w-8 text-blue-600" />
+            <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
+              <User className="h-8 w-8 text-blue-600 dark:text-blue-400" />
             </div>
-            <h3 className="font-medium">Connect Your Google Account</h3>
-            <p className="text-sm text-gray-600 text-center max-w-md">
+            <h3 className="font-medium text-gray-900 dark:text-gray-100">Connect Your Google Account</h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400 text-center max-w-md">
               Sign in with Google to access your calendar events and photo albums for background slideshows.
             </p>
             
-            <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-md max-w-md">
-              <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
+            <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 rounded-md max-w-md">
+              <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
               <div>
-                <p className="text-sm text-amber-800 font-medium">Note</p>
-                <p className="text-sm text-amber-700">
+                <p className="text-sm text-amber-800 dark:text-amber-200 font-medium">Note</p>
+                <p className="text-sm text-amber-700 dark:text-amber-300">
                   You may need to reconnect if you see permission errors. This will ensure proper access to both Calendar and Photos.
                 </p>
               </div>
@@ -188,12 +189,12 @@ const AccountTab = () => {
             <Button 
               onClick={handleGoogleSignIn}
               disabled={isLoading}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
+              className="bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-500 dark:hover:bg-blue-600"
             >
               <User className="h-4 w-4 mr-2" />
               {isLoading ? 'Redirecting to Google...' : 'Sign in with Google'}
             </Button>
-            <p className="text-xs text-gray-500 text-center max-w-md">
+            <p className="text-xs text-gray-500 dark:text-gray-400 text-center max-w-md">
               You will be redirected to Google to complete the sign-in process.
             </p>
           </div>

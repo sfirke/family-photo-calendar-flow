@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Calendar, RefreshCw, AlertCircle, Webhook } from 'lucide-react';
@@ -102,18 +101,18 @@ const GoogleCalendarSync = ({ lastSync, onLastSyncUpdate }: GoogleCalendarSyncPr
   if (!user) {
     console.log('GoogleCalendarSync: No user authenticated');
     return (
-      <Card>
+      <Card className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-gray-100">
             <Calendar className="h-5 w-5" />
             Google Calendar
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="text-gray-600 dark:text-gray-400">
             Sign in to sync your Google Calendar events
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center gap-2 text-amber-600">
+          <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
             <AlertCircle className="h-4 w-4" />
             <span className="text-sm">Authentication required</span>
           </div>
@@ -123,19 +122,19 @@ const GoogleCalendarSync = ({ lastSync, onLastSyncUpdate }: GoogleCalendarSyncPr
   }
 
   return (
-    <Card>
+    <Card className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
+        <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-gray-100">
           <Calendar className="h-5 w-5" />
           Google Calendar Sync
         </CardTitle>
-        <CardDescription>
+        <CardDescription className="text-gray-600 dark:text-gray-400">
           Sync and manage your Google Calendar events with real-time updates
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex items-center justify-between">
-          <div className="text-sm text-gray-600">
+          <div className="text-sm text-gray-600 dark:text-gray-400">
             {lastSync ? `Last synced: ${lastSync.toLocaleString()}` : 'Not synced yet'}
           </div>
           <div className="flex gap-2">
@@ -144,6 +143,7 @@ const GoogleCalendarSync = ({ lastSync, onLastSyncUpdate }: GoogleCalendarSyncPr
               disabled={isSettingUpWebhooks}
               size="sm"
               variant="outline"
+              className="border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
             >
               <Webhook className={`h-4 w-4 mr-2 ${isSettingUpWebhooks ? 'animate-spin' : ''}`} />
               Setup Real-time
@@ -153,6 +153,7 @@ const GoogleCalendarSync = ({ lastSync, onLastSyncUpdate }: GoogleCalendarSyncPr
               disabled={isLoading}
               size="sm"
               variant="outline"
+              className="border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
             >
               <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
               Sync Now
@@ -160,7 +161,7 @@ const GoogleCalendarSync = ({ lastSync, onLastSyncUpdate }: GoogleCalendarSyncPr
           </div>
         </div>
         
-        <div className="text-xs text-gray-500 bg-gray-50 p-3 rounded">
+        <div className="text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 p-3 rounded border border-gray-200 dark:border-gray-700">
           <strong>Real-time sync:</strong> Set up webhooks to automatically update your calendar when events change in Google Calendar. 
           Manual sync is always available as a fallback.
         </div>
