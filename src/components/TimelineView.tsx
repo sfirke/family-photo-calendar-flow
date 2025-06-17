@@ -63,20 +63,20 @@ const TimelineView = ({ events, getWeatherForDate }: TimelineViewProps) => {
     switch (condition.toLowerCase()) {
       case 'sunny':
       case 'clear':
-        return <Sun className="h-4 w-4 text-yellow-400" />;
+        return <Sun className="h-5 w-5 text-yellow-400" />;
       case 'cloudy':
       case 'partly cloudy':
-        return <Cloud className="h-4 w-4 text-gray-300" />;
+        return <Cloud className="h-5 w-5 text-gray-300" />;
       case 'rainy':
       case 'rain':
-        return <CloudRain className="h-4 w-4 text-blue-400" />;
+        return <CloudRain className="h-5 w-5 text-blue-400" />;
       case 'snowy':
       case 'snow':
-        return <CloudSnow className="h-4 w-4 text-white" />;
+        return <CloudSnow className="h-5 w-5 text-white" />;
       case 'thunderstorm':
-        return <Zap className="h-4 w-4 text-yellow-300" />;
+        return <Zap className="h-5 w-5 text-yellow-300" />;
       default:
-        return <Sun className="h-4 w-4 text-yellow-400" />;
+        return <Sun className="h-5 w-5 text-yellow-400" />;
     }
   };
 
@@ -106,27 +106,29 @@ const TimelineView = ({ events, getWeatherForDate }: TimelineViewProps) => {
         
         return (
           <div key={index} className="space-y-4">
-            <div className="flex items-center gap-3">
-              <h3 className={`text-lg font-medium ${isToday ? 'text-yellow-600 dark:text-yellow-300' : 'text-white'}`}>
-                {formatDate(date, 'long')}
-                {isToday && <span className="ml-2 text-sm text-yellow-600 dark:text-yellow-300">(Today)</span>}
-              </h3>
-              <div className="flex-1 h-px bg-white/30"></div>
-              <div className="flex items-center gap-4 text-sm text-white">
-                <span>
-                  {dayEvents.length} event{dayEvents.length !== 1 ? 's' : ''}
-                </span>
+            <div className="flex items-start gap-3">
+              <div className="flex-1 flex items-center gap-3">
+                <h3 className={`text-lg font-medium ${isToday ? 'text-yellow-600 dark:text-yellow-300' : 'text-white'}`}>
+                  {formatDate(date, 'long')}
+                  {isToday && <span className="ml-2 text-sm text-yellow-600 dark:text-yellow-300">(Today)</span>}
+                </h3>
+                <div className="flex-1 h-px bg-white/30"></div>
+                <div className="flex items-center gap-4 text-white">
+                  <span className="text-base">
+                    {dayEvents.length} event{dayEvents.length !== 1 ? 's' : ''}
+                  </span>
+                </div>
               </div>
               {detailedWeather && (
-                <div className="flex flex-col items-end gap-1 text-white min-w-[80px]">
+                <div className="flex flex-col items-end gap-1 text-white min-w-[100px] mt-0">
                   <div className="flex items-center gap-2">
                     {getWeatherIcon(detailedWeather.condition)}
-                    <span className="text-sm font-medium">{detailedWeather.high}°</span>
+                    <span className="text-lg font-medium">{detailedWeather.high}°</span>
                   </div>
-                  <div className="text-xs text-gray-300">
+                  <div className="text-base text-gray-300">
                     Low: {detailedWeather.low}°
                   </div>
-                  <div className="text-xs text-blue-300">
+                  <div className="text-base text-blue-300">
                     Rain: {detailedWeather.chanceOfRain}%
                   </div>
                 </div>

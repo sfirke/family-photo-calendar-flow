@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Calendar as CalendarIcon, RefreshCw } from 'lucide-react';
@@ -119,7 +120,7 @@ const CalendarList = () => {
               variant="outline"
               size="sm"
               onClick={handleSelectAll}
-              className="text-xs border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
+              className="text-xs border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
             >
               Select All ({calendarsFromEvents.length})
             </Button>
@@ -127,7 +128,7 @@ const CalendarList = () => {
               variant="outline"
               size="sm"
               onClick={handleSelectWithEvents}
-              className="text-xs border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
+              className="text-xs border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
               disabled={calendarsWithEventsCount === 0}
             >
               With Events ({calendarsWithEventsCount})
@@ -136,7 +137,7 @@ const CalendarList = () => {
               variant="outline"
               size="sm"
               onClick={clearAllCalendars}
-              className="text-xs border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
+              className="text-xs border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
             >
               Clear All
             </Button>

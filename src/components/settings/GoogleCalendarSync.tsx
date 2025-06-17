@@ -1,11 +1,11 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Calendar, RefreshCw, AlertCircle, Webhook } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { supabase } from '@/integrations/supabase/client';
+import { Calendar, RefreshCw, Webhook, Clock } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { useGoogleCalendarEvents } from '@/hooks/useGoogleCalendarEvents';
 
 interface GoogleCalendarSyncProps {
   lastSync: Date | null;
@@ -14,43 +14,48 @@ interface GoogleCalendarSyncProps {
 
 const GoogleCalendarSync = ({ lastSync, onLastSyncUpdate }: GoogleCalendarSyncProps) => {
   const [isLoading, setIsLoading] = useState(false);
-  const [isSettingUpWebhooks, setIsSettingUpWebhooks] = useState(false);
-  const { user } = useAuth();
+  const [isSettingUpWebhook, setIsSettingUpWebhook] = useState(false);
   const { toast } = useToast();
-  const { refreshEvents } = useGoogleCalendarEvents();
+  const { user } = useAuth();
 
-  const syncCalendar = async () => {
-    if (!user) return;
+  const handleManualSync = async () => {
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please sign in to sync your calendar events.",
+        variant: "destructive"
+      });
+      return;
+    }
 
     setIsLoading(true);
-    console.log('GoogleCalendarSync: Starting Google Calendar sync for user:', user.id);
-    
     try {
+      console.log('Starting manual calendar sync...');
+      
       const { data, error } = await supabase.functions.invoke('sync-google-calendar', {
-        body: { userId: user.id }
+        body: { 
+          userId: user.id,
+          manualSync: true 
+        }
       });
 
       if (error) {
-        console.error('GoogleCalendarSync: Sync error:', error);
+        console.error('Manual sync error:', error);
         throw error;
       }
 
-      console.log('GoogleCalendarSync: Sync successful, events synced:', data.events?.length || 0);
+      console.log('Manual sync completed successfully:', data);
       onLastSyncUpdate(new Date());
+      
       toast({
-        title: "Calendar synced!",
-        description: `Found ${data.events?.length || 0} events from your Google Calendar.`,
+        title: "Calendar synced",
+        description: "Your Google Calendar events have been updated successfully.",
       });
-
-      // Refresh events
-      console.log('GoogleCalendarSync: Refreshing events...');
-      await refreshEvents();
-      console.log('GoogleCalendarSync: Refresh complete');
     } catch (error) {
-      console.error('GoogleCalendarSync: Error syncing calendar:', error);
+      console.error('Error during manual sync:', error);
       toast({
         title: "Sync failed",
-        description: "Unable to sync your Google Calendar. Please try again.",
+        description: "Failed to sync calendar events. Please try again.",
         variant: "destructive"
       });
     } finally {
@@ -58,68 +63,49 @@ const GoogleCalendarSync = ({ lastSync, onLastSyncUpdate }: GoogleCalendarSyncPr
     }
   };
 
-  const setupWebhooks = async () => {
-    if (!user) return;
+  const handleSetupWebhook = async () => {
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please sign in to set up real-time sync.",
+        variant: "destructive"
+      });
+      return;
+    }
 
-    setIsSettingUpWebhooks(true);
-    console.log('GoogleCalendarSync: Setting up webhooks for user:', user.id);
-    
+    setIsSettingUpWebhook(true);
     try {
-      const { data, error } = await supabase.functions.invoke('sync-google-calendar', {
+      console.log('Setting up webhook for real-time sync...');
+      
+      const { data, error } = await supabase.functions.invoke('google-calendar-webhook', {
         body: { 
           userId: user.id,
-          action: 'setup-webhooks'
+          action: 'setup'
         }
       });
 
       if (error) {
-        console.error('GoogleCalendarSync: Webhook setup error:', error);
+        console.error('Webhook setup error:', error);
         throw error;
       }
 
-      console.log('GoogleCalendarSync: Webhooks setup result:', data);
+      console.log('Webhook setup completed:', data);
       
-      const successCount = data.webhookResults?.filter((r: any) => r.success).length || 0;
-      const totalCount = data.webhookResults?.length || 0;
-
       toast({
-        title: "Webhooks configured!",
-        description: `Set up real-time sync for ${successCount} out of ${totalCount} calendars.`,
+        title: "Real-time sync enabled",
+        description: "Your calendar will now update automatically when events change in Google Calendar.",
       });
     } catch (error) {
-      console.error('GoogleCalendarSync: Error setting up webhooks:', error);
+      console.error('Error setting up webhook:', error);
       toast({
-        title: "Webhook setup failed",
-        description: "Unable to set up real-time sync. You can still sync manually.",
+        title: "Setup failed",
+        description: "Failed to enable real-time sync. Manual sync is still available.",
         variant: "destructive"
       });
     } finally {
-      setIsSettingUpWebhooks(false);
+      setIsSettingUpWebhook(false);
     }
   };
-
-  if (!user) {
-    console.log('GoogleCalendarSync: No user authenticated');
-    return (
-      <Card className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-gray-100">
-            <Calendar className="h-5 w-5" />
-            Google Calendar
-          </CardTitle>
-          <CardDescription className="text-gray-600 dark:text-gray-400">
-            Sign in to sync your Google Calendar events
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
-            <AlertCircle className="h-4 w-4" />
-            <span className="text-sm">Authentication required</span>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
 
   return (
     <Card className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
@@ -133,37 +119,50 @@ const GoogleCalendarSync = ({ lastSync, onLastSyncUpdate }: GoogleCalendarSyncPr
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="text-sm text-gray-600 dark:text-gray-400">
-            {lastSync ? `Last synced: ${lastSync.toLocaleString()}` : 'Not synced yet'}
+        <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
+          <div>
+            <p className="font-medium text-gray-900 dark:text-gray-100">
+              {lastSync ? 'Last synced' : 'Not synced yet'}
+            </p>
+            {lastSync && (
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                {lastSync.toLocaleString()}
+              </p>
+            )}
           </div>
           <div className="flex gap-2">
             <Button
-              onClick={setupWebhooks}
-              disabled={isSettingUpWebhooks}
-              size="sm"
+              onClick={handleSetupWebhook}
+              disabled={isSettingUpWebhook}
               variant="outline"
-              className="border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
+              size="sm"
+              className="border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
             >
-              <Webhook className={`h-4 w-4 mr-2 ${isSettingUpWebhooks ? 'animate-spin' : ''}`} />
-              Setup Real-time
+              <Webhook className={`h-4 w-4 mr-2 ${isSettingUpWebhook ? 'animate-spin' : ''}`} />
+              {isSettingUpWebhook ? 'Setting up...' : 'Setup Real-time'}
             </Button>
             <Button
-              onClick={syncCalendar}
+              onClick={handleManualSync}
               disabled={isLoading}
               size="sm"
-              variant="outline"
-              className="border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
+              className="bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-500 dark:hover:bg-blue-600"
             >
               <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-              Sync Now
+              {isLoading ? 'Syncing...' : 'Sync Now'}
             </Button>
           </div>
         </div>
-        
-        <div className="text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 p-3 rounded border border-gray-200 dark:border-gray-700">
-          <strong>Real-time sync:</strong> Set up webhooks to automatically update your calendar when events change in Google Calendar. 
-          Manual sync is always available as a fallback.
+
+        <div className="p-4 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg">
+          <div className="flex items-start gap-2">
+            <Clock className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+            <div className="text-sm">
+              <p className="font-medium text-blue-800 dark:text-blue-200">Real-time sync</p>
+              <p className="text-blue-700 dark:text-blue-300">
+                Set up webhooks to automatically update your calendar when events change in Google Calendar. Manual sync is always available as a fallback.
+              </p>
+            </div>
+          </div>
         </div>
       </CardContent>
     </Card>
