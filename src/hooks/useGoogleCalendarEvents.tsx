@@ -128,6 +128,11 @@ export const useGoogleCalendarEvents = () => {
           });
         }
 
+        // Use calendar_name if available, otherwise fall back to calendar_id or default
+        const calendarName = dbEvent.calendar_name || 
+                            (dbEvent.calendar_id === 'primary' ? 'Primary Calendar' : dbEvent.calendar_id) || 
+                            'Unknown Calendar';
+
         return {
           id: index + 1000,
           title: dbEvent.title,
@@ -140,7 +145,7 @@ export const useGoogleCalendarEvents = () => {
           organizer: 'Google Calendar',
           date: startTime, // Use start_time as the main date
           calendarId: dbEvent.calendar_id || 'primary',
-          calendarName: dbEvent.calendar_id || 'Primary Calendar'
+          calendarName: calendarName
         };
       });
 

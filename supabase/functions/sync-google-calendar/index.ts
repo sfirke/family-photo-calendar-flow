@@ -165,28 +165,37 @@ serve(async (req) => {
     // Default action: sync events from all calendars or specific calendar
     console.log('Starting calendar sync for user:', userId);
     
-    // Get list of all calendars if no specific calendar is provided
-    let calendarsToSync = [];
-    if (calendarId) {
-      calendarsToSync = [{ id: calendarId }];
-    } else {
-      const calendarsResponse = await fetch(
-        'https://www.googleapis.com/calendar/v3/users/me/calendarList',
-        {
-          headers: {
-            'Authorization': `Bearer ${accessToken}`,
-            'Content-Type': 'application/json',
-          },
-        }
-      );
-
-      if (calendarsResponse.ok) {
-        const calendarsData = await calendarsResponse.json();
-        calendarsToSync = calendarsData.items || [];
-      } else {
-        // Fallback to primary calendar
-        calendarsToSync = [{ id: 'primary' }];
+    // Get list of all calendars with their names first
+    const calendarsResponse = await fetch(
+      'https://www.googleapis.com/calendar/v3/users/me/calendarList',
+      {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
       }
+    );
+
+    let calendarsToSync = [];
+    let calendarNameMap = new Map();
+
+    if (calendarsResponse.ok) {
+      const calendarsData = await calendarsResponse.json();
+      calendarsToSync = calendarsData.items || [];
+      
+      // Create a map of calendar ID to human-readable name
+      calendarsToSync.forEach((cal: any) => {
+        calendarNameMap.set(cal.id, cal.summary || cal.id);
+      });
+    } else {
+      // Fallback to primary calendar
+      calendarsToSync = [{ id: 'primary', summary: 'Primary Calendar' }];
+      calendarNameMap.set('primary', 'Primary Calendar');
+    }
+
+    // If specific calendar is requested, filter the list
+    if (calendarId) {
+      calendarsToSync = calendarsToSync.filter((cal: any) => cal.id === calendarId);
     }
 
     // Set up date range for sync
@@ -236,6 +245,9 @@ serve(async (req) => {
         const calendarData = await calendarResponse.json();
         const events = calendarData.items || [];
 
+        // Get human-readable calendar name
+        const calendarName = calendarNameMap.get(calendar.id) || calendar.summary || calendar.id;
+
         // Process events for this calendar
         const eventInserts = events.map((event: any) => {
           const isAllDay = event.start?.date && !event.start?.dateTime;
@@ -277,6 +289,7 @@ serve(async (req) => {
             location: event.location || null,
             attendees: event.attendees || [],
             calendar_id: calendar.id,
+            calendar_name: calendarName, // Store human-readable name
             is_all_day: isAllDay
           };
         });
@@ -290,7 +303,7 @@ serve(async (req) => {
             console.error(`Error inserting events for calendar ${calendar.id}:`, insertError);
           } else {
             totalEventCount += eventInserts.length;
-            console.log(`Synced ${eventInserts.length} events from calendar ${calendar.id}`);
+            console.log(`Synced ${eventInserts.length} events from calendar "${calendarName}" (${calendar.id})`);
           }
         }
       } catch (error) {
@@ -309,7 +322,11 @@ serve(async (req) => {
         timedCount,
         multiDayCount,
         calendarsCount: calendarsToSync.length,
-        syncRange: { timeMin: syncTimeMin, timeMax: syncTimeMax }
+        syncRange: { timeMin: syncTimeMin, timeMax: syncTimeMax },
+        calendars: calendarsToSync.map((cal: any) => ({
+          id: cal.id,
+          name: calendarNameMap.get(cal.id) || cal.summary || cal.id
+        }))
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

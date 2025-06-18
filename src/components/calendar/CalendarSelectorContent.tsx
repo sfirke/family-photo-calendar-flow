@@ -32,6 +32,27 @@ const CalendarSelectorContent = ({
 }: CalendarSelectorContentProps) => {
   const calendarsWithEventsCount = calendarsFromEvents.filter(cal => cal.hasEvents).length;
 
+  // Helper function to get human-readable calendar name
+  const getCalendarDisplayName = (calendar: Calendar) => {
+    // If summary exists, use it
+    if (calendar.summary && calendar.summary !== calendar.id) {
+      return calendar.summary;
+    }
+    
+    // Handle common calendar ID patterns
+    if (calendar.id === 'primary') {
+      return 'Primary Calendar';
+    }
+    
+    // If it's an email address, use just the email
+    if (calendar.id.includes('@')) {
+      return calendar.id;
+    }
+    
+    // For other cases, try to make it more readable
+    return calendar.id.replace(/[@.]/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  };
+
   return (
     <PopoverContent className="w-80 p-0 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700" side="bottom" align="start">
       <div className="p-4">
@@ -70,6 +91,8 @@ const CalendarSelectorContent = ({
         <div className="space-y-2 max-h-64 overflow-y-auto">
           {calendarsFromEvents.map((calendar) => {
             const isSelected = selectedCalendarIds.includes(calendar.id);
+            const displayName = getCalendarDisplayName(calendar);
+            
             return (
               <div 
                 key={calendar.id} 
@@ -89,8 +112,9 @@ const CalendarSelectorContent = ({
                   <label
                     htmlFor={`calendar-${calendar.id}`}
                     className="text-sm font-medium text-gray-900 dark:text-gray-100 cursor-pointer block truncate"
+                    title={displayName}
                   >
-                    {calendar.summary}
+                    {displayName}
                   </label>
                   <div className="flex items-center gap-2 mt-1">
                     {calendar.primary && (
@@ -106,6 +130,12 @@ const CalendarSelectorContent = ({
                       {calendar.eventCount} event{calendar.eventCount !== 1 ? 's' : ''}
                     </span>
                   </div>
+                  {/* Show calendar ID as secondary info if different from display name */}
+                  {displayName !== calendar.id && (
+                    <div className="text-xs text-gray-400 dark:text-gray-500 truncate mt-1">
+                      {calendar.id}
+                    </div>
+                  )}
                 </div>
               </div>
             );

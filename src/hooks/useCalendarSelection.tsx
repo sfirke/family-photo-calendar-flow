@@ -36,12 +36,14 @@ export const useCalendarSelection = () => {
     
     googleEvents.forEach(event => {
       const calendarId = event.calendarId || 'primary';
-      const calendarName = event.calendarName || 'Primary Calendar';
+      // Use the human-readable calendar name from the event
+      const calendarName = event.calendarName || 
+                          (calendarId === 'primary' ? 'Primary Calendar' : calendarId);
       
       if (!calendarMap.has(calendarId)) {
         calendarMap.set(calendarId, {
           id: calendarId,
-          summary: calendarName,
+          summary: calendarName, // Use the human-readable name
           primary: calendarId === 'primary',
           eventCount: 0,
           hasEvents: false
