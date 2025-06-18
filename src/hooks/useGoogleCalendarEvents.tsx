@@ -96,10 +96,12 @@ export const useGoogleCalendarEvents = () => {
         // Check if this is an all-day event
         const isAllDay = dbEvent.is_all_day || false;
         
+        // Ensure start_time and end_time are Date objects
+        const startTime = new Date(dbEvent.start_time);
+        const endTime = new Date(dbEvent.end_time);
+        
         // Check if this is a multi-day event
-        const startDate = new Date(dbEvent.start_time);
-        const endDate = new Date(dbEvent.end_time);
-        const daysDiff = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+        const daysDiff = Math.ceil((endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60 * 24));
         const isMultiDay = daysDiff > 1;
         
         let timeDisplay;
@@ -110,17 +112,17 @@ export const useGoogleCalendarEvents = () => {
             timeDisplay = 'All Day';
           }
         } else if (isMultiDay) {
-          const startTime = startDate.toLocaleTimeString('en-US', { 
+          const startTimeStr = startTime.toLocaleTimeString('en-US', { 
             hour: 'numeric', 
             minute: '2-digit' 
           });
-          const endTime = endDate.toLocaleTimeString('en-US', { 
+          const endTimeStr = endTime.toLocaleTimeString('en-US', { 
             hour: 'numeric', 
             minute: '2-digit' 
           });
-          timeDisplay = `${startTime} - ${endTime} (${daysDiff} days)`;
+          timeDisplay = `${startTimeStr} - ${endTimeStr} (${daysDiff} days)`;
         } else {
-          timeDisplay = startDate.toLocaleTimeString('en-US', { 
+          timeDisplay = startTime.toLocaleTimeString('en-US', { 
             hour: 'numeric', 
             minute: '2-digit' 
           });
@@ -136,7 +138,7 @@ export const useGoogleCalendarEvents = () => {
           color: 'bg-blue-500',
           description: dbEvent.description || '',
           organizer: 'Google Calendar',
-          date: new Date(dbEvent.start_time),
+          date: startTime, // Ensure this is a Date object
           calendarId: dbEvent.calendar_id || 'primary',
           calendarName: dbEvent.calendar_id || 'Primary Calendar'
         };
@@ -169,12 +171,20 @@ export const useGoogleCalendarEvents = () => {
       handleWebhookUpdate(calendarId, eventId);
     };
 
+    const handleCalendarUpdate = (event: CustomEvent) => {
+      console.log('Calendar update event received:', event.detail);
+      // Reload events when calendar is updated
+      loadGoogleEvents(true);
+    };
+
     window.addEventListener('google-calendar-webhook' as any, handleCustomWebhook);
+    window.addEventListener('calendar-updated' as any, handleCalendarUpdate);
 
     return () => {
       window.removeEventListener('google-calendar-webhook' as any, handleCustomWebhook);
+      window.removeEventListener('calendar-updated' as any, handleCalendarUpdate);
     };
-  }, [handleWebhookUpdate]);
+  }, [handleWebhookUpdate, loadGoogleEvents]);
 
   useEffect(() => {
     if (user) {

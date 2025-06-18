@@ -1,3 +1,4 @@
+
 import React, { useState, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -94,10 +95,10 @@ const GoogleCalendarSync = ({ lastSync, onLastSyncUpdate }: GoogleCalendarSyncPr
     try {
       console.log('Setting up webhook for real-time sync...');
       
-      const { data, error } = await supabase.functions.invoke('google-calendar-webhook', {
+      const { data, error } = await supabase.functions.invoke('sync-google-calendar', {
         body: { 
           userId: user.id,
-          action: 'setup'
+          action: 'setup-webhooks'
         }
       });
 
