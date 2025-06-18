@@ -115,9 +115,20 @@ const GoogleCalendarSync = ({ lastSync, onLastSyncUpdate }: GoogleCalendarSyncPr
         description: "Your calendar will now update automatically when events change in Google Calendar.",
       });
 
-      // Set up real-time listener for calendar events
+      // Clean up existing channel first
+      if (calendarChannelRef.current) {
+        try {
+          await supabase.removeChannel(calendarChannelRef.current);
+        } catch (cleanupError) {
+          console.warn('Channel cleanup warning:', cleanupError);
+        }
+        calendarChannelRef.current = null;
+      }
+
+      // Set up real-time listener for calendar events with a unique channel name
+      const channelName = `calendar-changes-${user.id}-${Date.now()}`;
       const channel = supabase
-        .channel('calendar-changes')
+        .channel(channelName)
         .on(
           'postgres_changes',
           {
@@ -134,7 +145,9 @@ const GoogleCalendarSync = ({ lastSync, onLastSyncUpdate }: GoogleCalendarSyncPr
             }));
           }
         )
-        .subscribe();
+        .subscribe((status) => {
+          console.log('Real-time subscription status:', status);
+        });
 
       // Store channel reference for cleanup
       calendarChannelRef.current = channel;

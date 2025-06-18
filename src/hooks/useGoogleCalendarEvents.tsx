@@ -93,14 +93,14 @@ export const useGoogleCalendarEvents = () => {
 
       // Convert database events to Event format
       const convertedEvents: Event[] = (data || []).map((dbEvent, index) => {
-        // Check if this is an all-day event
-        const isAllDay = dbEvent.is_all_day || false;
-        
-        // Ensure start_time and end_time are Date objects
+        // Use start_time from database as the primary date source
         const startTime = new Date(dbEvent.start_time);
         const endTime = new Date(dbEvent.end_time);
         
-        // Check if this is a multi-day event
+        // Check if this is an all-day event
+        const isAllDay = dbEvent.is_all_day || false;
+        
+        // Calculate if this is a multi-day event
         const daysDiff = Math.ceil((endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60 * 24));
         const isMultiDay = daysDiff > 1;
         
@@ -138,7 +138,7 @@ export const useGoogleCalendarEvents = () => {
           color: 'bg-blue-500',
           description: dbEvent.description || '',
           organizer: 'Google Calendar',
-          date: startTime, // Ensure this is a Date object
+          date: startTime, // Use start_time as the main date
           calendarId: dbEvent.calendar_id || 'primary',
           calendarName: dbEvent.calendar_id || 'Primary Calendar'
         };
