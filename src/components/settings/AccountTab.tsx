@@ -150,7 +150,7 @@ const AccountTab = () => {
                 onClick={handleRefreshToken}
                 disabled={isRefreshing}
                 variant="outline"
-                className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
+                className="bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 border-blue-300 dark:border-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-700 dark:hover:text-blue-300"
               >
                 <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
                 {isRefreshing ? 'Refreshing...' : 'Refresh Access Token'}
@@ -159,7 +159,7 @@ const AccountTab = () => {
               <Button
                 onClick={handleSignOut}
                 variant="outline"
-                className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
+                className="bg-white dark:bg-gray-800 text-red-600 dark:text-red-400 border-red-300 dark:border-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-700 dark:hover:text-red-300"
               >
                 <LogOut className="h-4 w-4 mr-2" />
                 Sign Out
@@ -189,7 +189,7 @@ const AccountTab = () => {
             <Button 
               onClick={handleGoogleSignIn}
               disabled={isLoading}
-              className="bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-500 dark:hover:bg-blue-600"
+              className="bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-500 dark:hover:bg-blue-600 border-0"
             >
               <User className="h-4 w-4 mr-2" />
               {isLoading ? 'Redirecting to Google...' : 'Sign in with Google'}

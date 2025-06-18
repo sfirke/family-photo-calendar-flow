@@ -1,11 +1,11 @@
 
 import React from 'react';
 import { PopoverContent } from '@/components/ui/popover';
-import { Calendar as CalendarIcon } from 'lucide-react';
-import QuickActions from './QuickActions';
-import CalendarItem from './CalendarItem';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Badge } from '@/components/ui/badge';
 
-interface CalendarFromEvents {
+interface Calendar {
   id: string;
   summary: string;
   primary?: boolean;
@@ -14,7 +14,7 @@ interface CalendarFromEvents {
 }
 
 interface CalendarSelectorContentProps {
-  calendarsFromEvents: CalendarFromEvents[];
+  calendarsFromEvents: Calendar[];
   selectedCalendarIds: string[];
   onCalendarToggle: (calendarId: string, checked: boolean) => void;
   onSelectAll: () => void;
@@ -32,56 +32,91 @@ const CalendarSelectorContent = ({
 }: CalendarSelectorContentProps) => {
   const calendarsWithEventsCount = calendarsFromEvents.filter(cal => cal.hasEvents).length;
 
-  const sortedCalendars = calendarsFromEvents.sort((a, b) => {
-    // Sort by: primary first, then by event count (descending), then by name
-    if (a.primary && !b.primary) return -1;
-    if (!a.primary && b.primary) return 1;
-    if (a.eventCount !== b.eventCount) return b.eventCount - a.eventCount;
-    return a.summary.localeCompare(b.summary);
-  });
-
   return (
-    <PopoverContent 
-      className="w-80 bg-white/95 backdrop-blur-sm border-white/20 z-50" 
-      align="start"
-      side="bottom"
-      sideOffset={4}
-    >
-      <div className="space-y-4">
-        <h3 className="font-medium text-gray-900 flex items-center gap-2">
-          <CalendarIcon className="h-4 w-4" />
-          Select Calendars
-        </h3>
+    <PopoverContent className="w-80 p-0 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700" side="bottom" align="start">
+      <div className="p-4">
+        <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">Select Calendars</h3>
         
-        <QuickActions
-          totalCalendars={calendarsFromEvents.length}
-          calendarsWithEventsCount={calendarsWithEventsCount}
-          onSelectAll={onSelectAll}
-          onSelectWithEvents={onSelectWithEvents}
-          onClearAll={onClearAll}
-        />
-        
-        {/* Calendar List */}
-        <div className="space-y-2 max-h-64 overflow-y-auto">
-          {sortedCalendars.map((calendar) => (
-            <CalendarItem
-              key={calendar.id}
-              id={calendar.id}
-              summary={calendar.summary}
-              primary={calendar.primary}
-              eventCount={calendar.eventCount}
-              hasEvents={calendar.hasEvents}
-              isSelected={selectedCalendarIds.includes(calendar.id)}
-              onToggle={onCalendarToggle}
-            />
-          ))}
+        {/* Quick Actions */}
+        <div className="flex gap-2 mb-4">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onSelectAll}
+            className="text-xs bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
+          >
+            All ({calendarsFromEvents.length})
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onSelectWithEvents}
+            className="text-xs bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 border-blue-300 dark:border-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+            disabled={calendarsWithEventsCount === 0}
+          >
+            Active ({calendarsWithEventsCount})
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onClearAll}
+            className="text-xs bg-white dark:bg-gray-800 text-red-600 dark:text-red-400 border-red-300 dark:border-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+          >
+            Clear
+          </Button>
         </div>
 
-        {calendarsWithEventsCount === 0 && (
-          <div className="text-center py-4 text-sm text-gray-500 border-t border-gray-200">
-            No calendars have events. Try syncing your Google Calendar first.
-          </div>
-        )}
+        {/* Calendar List */}
+        <div className="space-y-2 max-h-64 overflow-y-auto">
+          {calendarsFromEvents.map((calendar) => {
+            const isSelected = selectedCalendarIds.includes(calendar.id);
+            return (
+              <div 
+                key={calendar.id} 
+                className={`flex items-center space-x-3 p-3 rounded-lg border ${
+                  calendar.hasEvents 
+                    ? 'bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800' 
+                    : 'bg-gray-50 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700'
+                }`}
+              >
+                <Checkbox
+                  id={`calendar-${calendar.id}`}
+                  checked={isSelected}
+                  onCheckedChange={(checked) => onCalendarToggle(calendar.id, checked === true)}
+                  className="data-[state=checked]:bg-blue-600 dark:data-[state=checked]:bg-blue-500 data-[state=checked]:border-blue-600 dark:data-[state=checked]:border-blue-500 border-gray-300 dark:border-gray-600"
+                />
+                <div className="flex-1 min-w-0">
+                  <label
+                    htmlFor={`calendar-${calendar.id}`}
+                    className="text-sm font-medium text-gray-900 dark:text-gray-100 cursor-pointer block truncate"
+                  >
+                    {calendar.summary}
+                  </label>
+                  <div className="flex items-center gap-2 mt-1">
+                    {calendar.primary && (
+                      <Badge variant="secondary" className="text-xs bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200">
+                        Primary
+                      </Badge>
+                    )}
+                    <span className={`text-xs ${
+                      calendar.hasEvents 
+                        ? 'text-blue-600 dark:text-blue-400 font-medium' 
+                        : 'text-gray-500 dark:text-gray-400'
+                    }`}>
+                      {calendar.eventCount} event{calendar.eventCount !== 1 ? 's' : ''}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        
+        <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            {selectedCalendarIds.length} of {calendarsFromEvents.length} calendars selected
+          </p>
+        </div>
       </div>
     </PopoverContent>
   );

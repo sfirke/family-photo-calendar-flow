@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Calendar, RefreshCw, Webhook, Clock } from 'lucide-react';
+import { Calendar, RefreshCw, Webhook, Clock, CheckCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -15,6 +15,7 @@ interface GoogleCalendarSyncProps {
 const GoogleCalendarSync = ({ lastSync, onLastSyncUpdate }: GoogleCalendarSyncProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSettingUpWebhook, setIsSettingUpWebhook] = useState(false);
+  const [webhookSetup, setWebhookSetup] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -30,12 +31,28 @@ const GoogleCalendarSync = ({ lastSync, onLastSyncUpdate }: GoogleCalendarSyncPr
 
     setIsLoading(true);
     try {
-      console.log('Starting manual calendar sync...');
+      console.log('Starting manual calendar sync with extended range...');
+      
+      // Calculate date range: current month + first week of next month
+      const now = new Date();
+      const currentMonth = now.getMonth();
+      const currentYear = now.getFullYear();
+      
+      // Start of current month
+      const timeMin = new Date(currentYear, currentMonth, 1).toISOString();
+      
+      // First week of next month (7 days after next month starts)
+      const nextMonth = currentMonth === 11 ? 0 : currentMonth + 1;
+      const nextYear = currentMonth === 11 ? currentYear + 1 : currentYear;
+      const timeMax = new Date(nextYear, nextMonth, 8).toISOString(); // 8th day = end of first week
       
       const { data, error } = await supabase.functions.invoke('sync-google-calendar', {
         body: { 
           userId: user.id,
-          manualSync: true 
+          manualSync: true,
+          timeMin,
+          timeMax,
+          extendedRange: true
         }
       });
 
@@ -49,7 +66,7 @@ const GoogleCalendarSync = ({ lastSync, onLastSyncUpdate }: GoogleCalendarSyncPr
       
       toast({
         title: "Calendar synced",
-        description: "Your Google Calendar events have been updated successfully.",
+        description: `Successfully synced events for current month and first week of next month. Found ${data.eventCount || 0} events.`,
       });
     } catch (error) {
       console.error('Error during manual sync:', error);
@@ -90,11 +107,37 @@ const GoogleCalendarSync = ({ lastSync, onLastSyncUpdate }: GoogleCalendarSyncPr
       }
 
       console.log('Webhook setup completed:', data);
+      setWebhookSetup(true);
       
       toast({
         title: "Real-time sync enabled",
         description: "Your calendar will now update automatically when events change in Google Calendar.",
       });
+
+      // Set up real-time listener for calendar events
+      const channel = supabase
+        .channel('calendar-changes')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'calendar_events',
+            filter: `user_id=eq.${user.id}`
+          },
+          (payload) => {
+            console.log('Real-time calendar update:', payload);
+            // Trigger a custom event to notify other components
+            window.dispatchEvent(new CustomEvent('calendar-updated', { 
+              detail: { payload, userId: user.id } 
+            }));
+          }
+        )
+        .subscribe();
+
+      // Store channel reference for cleanup
+      window.calendarChannel = channel;
+
     } catch (error) {
       console.error('Error setting up webhook:', error);
       toast({
@@ -133,19 +176,27 @@ const GoogleCalendarSync = ({ lastSync, onLastSyncUpdate }: GoogleCalendarSyncPr
           <div className="flex gap-2">
             <Button
               onClick={handleSetupWebhook}
-              disabled={isSettingUpWebhook}
+              disabled={isSettingUpWebhook || webhookSetup}
               variant="outline"
               size="sm"
-              className="border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
+              className={`${
+                webhookSetup 
+                  ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border-green-300 dark:border-green-600' 
+                  : 'bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 border-blue-300 dark:border-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20'
+              }`}
             >
-              <Webhook className={`h-4 w-4 mr-2 ${isSettingUpWebhook ? 'animate-spin' : ''}`} />
-              {isSettingUpWebhook ? 'Setting up...' : 'Setup Real-time'}
+              {webhookSetup ? (
+                <CheckCircle className="h-4 w-4 mr-2" />
+              ) : (
+                <Webhook className={`h-4 w-4 mr-2 ${isSettingUpWebhook ? 'animate-spin' : ''}`} />
+              )}
+              {webhookSetup ? 'Real-time Active' : isSettingUpWebhook ? 'Setting up...' : 'Setup Real-time'}
             </Button>
             <Button
               onClick={handleManualSync}
               disabled={isLoading}
               size="sm"
-              className="bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-500 dark:hover:bg-blue-600"
+              className="bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-500 dark:hover:bg-blue-600 border-0"
             >
               <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
               {isLoading ? 'Syncing...' : 'Sync Now'}
@@ -157,9 +208,10 @@ const GoogleCalendarSync = ({ lastSync, onLastSyncUpdate }: GoogleCalendarSyncPr
           <div className="flex items-start gap-2">
             <Clock className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
             <div className="text-sm">
-              <p className="font-medium text-blue-800 dark:text-blue-200">Real-time sync</p>
+              <p className="font-medium text-blue-800 dark:text-blue-200">Enhanced Sync Range</p>
               <p className="text-blue-700 dark:text-blue-300">
-                Set up webhooks to automatically update your calendar when events change in Google Calendar. Manual sync is always available as a fallback.
+                Calendar sync now includes all events for the current month plus the first week of the following month. 
+                Real-time sync automatically updates your calendar when events change in Google Calendar.
               </p>
             </div>
           </div>
