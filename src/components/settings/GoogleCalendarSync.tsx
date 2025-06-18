@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Calendar, RefreshCw, Webhook, Clock, CheckCircle } from 'lucide-react';
@@ -18,6 +17,7 @@ const GoogleCalendarSync = ({ lastSync, onLastSyncUpdate }: GoogleCalendarSyncPr
   const [webhookSetup, setWebhookSetup] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
+  const calendarChannelRef = useRef<any>(null);
 
   const handleManualSync = async () => {
     if (!user) {
@@ -136,7 +136,7 @@ const GoogleCalendarSync = ({ lastSync, onLastSyncUpdate }: GoogleCalendarSyncPr
         .subscribe();
 
       // Store channel reference for cleanup
-      window.calendarChannel = channel;
+      calendarChannelRef.current = channel;
 
     } catch (error) {
       console.error('Error setting up webhook:', error);
