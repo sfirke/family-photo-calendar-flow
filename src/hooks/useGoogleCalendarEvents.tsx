@@ -13,6 +13,24 @@ interface CachedEvents {
   timestamp: number;
 }
 
+// Extended database event type to include calendar_name
+interface DatabaseEventWithCalendarName {
+  id: string;
+  user_id: string;
+  title: string;
+  description: string | null;
+  start_time: string;
+  end_time: string;
+  location: string | null;
+  attendees: any[];
+  calendar_id: string | null;
+  calendar_name: string | null;
+  google_event_id: string | null;
+  is_all_day: boolean | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export const useGoogleCalendarEvents = () => {
   const [googleEvents, setGoogleEvents] = useState<Event[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -92,7 +110,7 @@ export const useGoogleCalendarEvents = () => {
       }
 
       // Convert database events to Event format
-      const convertedEvents: Event[] = (data || []).map((dbEvent, index) => {
+      const convertedEvents: Event[] = (data || []).map((dbEvent: DatabaseEventWithCalendarName, index) => {
         // Use start_time from database as the primary date source
         const startTime = new Date(dbEvent.start_time);
         const endTime = new Date(dbEvent.end_time);
