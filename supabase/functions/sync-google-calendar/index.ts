@@ -19,7 +19,7 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const { userId, action, calendarId } = await req.json();
+    const { userId, action, calendarId, manualSync, timeMin, timeMax, extendedRange } = await req.json();
     
     if (!userId) {
       throw new Error('User ID is required');
@@ -63,8 +63,11 @@ serve(async (req) => {
       // Set up webhook for each calendar
       for (const calendar of calendarsData.items || []) {
         try {
+          // Create a valid channel ID (only alphanumeric, dash, underscore, plus, forward slash, equals)
+          const channelId = `${userId.replace(/[^a-zA-Z0-9]/g, '')}_${calendar.id.replace(/[^a-zA-Z0-9]/g, '')}_${Date.now()}`.substring(0, 64);
+          
           const webhookPayload = {
-            id: `${userId}-${calendar.id}-${Date.now()}`,
+            id: channelId,
             type: 'web_hook',
             address: `${Deno.env.get('SUPABASE_URL')}/functions/v1/google-calendar-webhook`,
             token: `${userId}:${calendar.id}`
@@ -159,127 +162,154 @@ serve(async (req) => {
       );
     }
 
-    // Default action: sync events (with optional specific calendar)
-    const targetCalendarId = calendarId || 'primary';
-    console.log(`Syncing events for calendar: ${targetCalendarId}`);
-
-    const calendarResponse = await fetch(
-      `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(targetCalendarId)}/events?maxResults=50&orderBy=startTime&singleEvents=true&timeMin=` + 
-      new Date().toISOString(),
-      {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        },
-      }
-    );
-
-    if (!calendarResponse.ok) {
-      const errorData = await calendarResponse.text();
-      console.error('Google Calendar API error:', errorData);
-      throw new Error(`Google Calendar API error: ${calendarResponse.status}`);
-    }
-
-    const calendarData = await calendarResponse.json();
-    const events = calendarData.items || [];
-
-    // Store events in our database with proper all-day and multi-day event handling
-    const eventInserts = events.map((event: any) => {
-      // Check if this is an all-day event
-      const isAllDay = event.start?.date && !event.start?.dateTime;
-      
-      let startTime, endTime;
-      
-      if (isAllDay) {
-        // For all-day events, use the date and set time to indicate all-day
-        const startDate = new Date(event.start.date);
-        const endDate = new Date(event.end.date);
-        
-        // Set start time to beginning of day
-        startTime = new Date(startDate).toISOString();
-        // Set end time to end of day (or beginning of next day as provided by Google)
-        endTime = new Date(endDate).toISOString();
-        
-        // Check if this is a multi-day event
-        const daysDiff = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-        if (daysDiff > 1) {
-          console.log(`Processing multi-day all-day event: ${event.summary} spanning ${daysDiff} days from ${event.start.date} to ${event.end.date}`);
-        } else {
-          console.log(`Processing single all-day event: ${event.summary} on ${event.start.date}`);
+    // Default action: sync events from all calendars or specific calendar
+    console.log('Starting calendar sync for user:', userId);
+    
+    // Get list of all calendars if no specific calendar is provided
+    let calendarsToSync = [];
+    if (calendarId) {
+      calendarsToSync = [{ id: calendarId }];
+    } else {
+      const calendarsResponse = await fetch(
+        'https://www.googleapis.com/calendar/v3/users/me/calendarList',
+        {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
         }
+      );
+
+      if (calendarsResponse.ok) {
+        const calendarsData = await calendarsResponse.json();
+        calendarsToSync = calendarsData.items || [];
       } else {
-        // For regular events with specific times
-        startTime = event.start?.dateTime || event.start?.date;
-        endTime = event.end?.dateTime || event.end?.date;
-        
-        // Check if this is a multi-day timed event
-        const startDateTime = new Date(startTime);
-        const endDateTime = new Date(endTime);
-        const daysDiff = Math.ceil((endDateTime.getTime() - startDateTime.getTime()) / (1000 * 60 * 60 * 24));
-        
-        if (daysDiff > 1) {
-          console.log(`Processing multi-day timed event: ${event.summary} spanning ${daysDiff} days from ${startTime} to ${endTime}`);
-        } else {
-          console.log(`Processing single-day timed event: ${event.summary} from ${startTime} to ${endTime}`);
-        }
-      }
-
-      return {
-        user_id: userId,
-        google_event_id: event.id,
-        title: event.summary || 'Untitled Event',
-        description: event.description || null,
-        start_time: startTime,
-        end_time: endTime,
-        location: event.location || null,
-        attendees: event.attendees || [],
-        calendar_id: targetCalendarId,
-        is_all_day: isAllDay
-      };
-    });
-
-    if (eventInserts.length > 0) {
-      // Delete existing events for this calendar and user to avoid duplicates
-      await supabaseClient
-        .from('calendar_events')
-        .delete()
-        .eq('user_id', userId)
-        .eq('calendar_id', targetCalendarId);
-
-      // Insert new events
-      const { error: insertError } = await supabaseClient
-        .from('calendar_events')
-        .insert(eventInserts);
-
-      if (insertError) {
-        console.error('Error inserting events:', insertError);
-        throw insertError;
+        // Fallback to primary calendar
+        calendarsToSync = [{ id: 'primary' }];
       }
     }
 
-    const allDayCount = eventInserts.filter(event => event.is_all_day).length;
-    const timedCount = eventInserts.length - allDayCount;
-    
-    // Count multi-day events
-    const multiDayCount = eventInserts.filter(event => {
-      const startDate = new Date(event.start_time);
-      const endDate = new Date(event.end_time);
-      const daysDiff = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-      return daysDiff > 1;
-    }).length;
-    
-    console.log(`Successfully synced ${events.length} calendar events for user ${userId}, calendar ${targetCalendarId}`);
+    // Set up date range for sync
+    let syncTimeMin, syncTimeMax;
+    if (manualSync && extendedRange) {
+      syncTimeMin = timeMin;
+      syncTimeMax = timeMax;
+    } else {
+      // Default: next 2 months
+      const now = new Date();
+      syncTimeMin = now.toISOString();
+      const futureDate = new Date(now);
+      futureDate.setMonth(futureDate.getMonth() + 2);
+      syncTimeMax = futureDate.toISOString();
+    }
+
+    console.log(`Syncing events from ${syncTimeMin} to ${syncTimeMax} for ${calendarsToSync.length} calendars`);
+
+    // Clear existing events for this user to avoid duplicates
+    await supabaseClient
+      .from('calendar_events')
+      .delete()
+      .eq('user_id', userId);
+
+    let totalEventCount = 0;
+    let allDayCount = 0;
+    let timedCount = 0;
+    let multiDayCount = 0;
+
+    // Sync events from each calendar
+    for (const calendar of calendarsToSync) {
+      try {
+        const eventsUrl = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendar.id)}/events?maxResults=250&orderBy=startTime&singleEvents=true&timeMin=${syncTimeMin}&timeMax=${syncTimeMax}`;
+        
+        const calendarResponse = await fetch(eventsUrl, {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!calendarResponse.ok) {
+          console.error(`Failed to fetch events for calendar ${calendar.id}:`, calendarResponse.status);
+          continue;
+        }
+
+        const calendarData = await calendarResponse.json();
+        const events = calendarData.items || [];
+
+        // Process events for this calendar
+        const eventInserts = events.map((event: any) => {
+          const isAllDay = event.start?.date && !event.start?.dateTime;
+          
+          let startTime, endTime;
+          
+          if (isAllDay) {
+            const startDate = new Date(event.start.date);
+            const endDate = new Date(event.end.date);
+            startTime = startDate.toISOString();
+            endTime = endDate.toISOString();
+            
+            const daysDiff = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+            if (daysDiff > 1) {
+              multiDayCount++;
+            }
+            allDayCount++;
+          } else {
+            startTime = event.start?.dateTime || event.start?.date;
+            endTime = event.end?.dateTime || event.end?.date;
+            
+            const startDateTime = new Date(startTime);
+            const endDateTime = new Date(endTime);
+            const daysDiff = Math.ceil((endDateTime.getTime() - startDateTime.getTime()) / (1000 * 60 * 60 * 24));
+            
+            if (daysDiff > 1) {
+              multiDayCount++;
+            }
+            timedCount++;
+          }
+
+          return {
+            user_id: userId,
+            google_event_id: event.id,
+            title: event.summary || 'Untitled Event',
+            description: event.description || null,
+            start_time: startTime,
+            end_time: endTime,
+            location: event.location || null,
+            attendees: event.attendees || [],
+            calendar_id: calendar.id,
+            is_all_day: isAllDay
+          };
+        });
+
+        if (eventInserts.length > 0) {
+          const { error: insertError } = await supabaseClient
+            .from('calendar_events')
+            .insert(eventInserts);
+
+          if (insertError) {
+            console.error(`Error inserting events for calendar ${calendar.id}:`, insertError);
+          } else {
+            totalEventCount += eventInserts.length;
+            console.log(`Synced ${eventInserts.length} events from calendar ${calendar.id}`);
+          }
+        }
+      } catch (error) {
+        console.error(`Error syncing calendar ${calendar.id}:`, error);
+      }
+    }
+
+    console.log(`Successfully synced ${totalEventCount} total events for user ${userId}`);
     console.log(`Breakdown: ${allDayCount} all-day events, ${timedCount} timed events, ${multiDayCount} multi-day events`);
 
     return new Response(
       JSON.stringify({ 
         success: true, 
-        events: eventInserts,
-        count: events.length,
+        eventCount: totalEventCount,
         allDayCount,
         timedCount,
         multiDayCount,
-        calendarId: targetCalendarId
+        calendarsCount: calendarsToSync.length,
+        syncRange: { timeMin: syncTimeMin, timeMax: syncTimeMax }
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
