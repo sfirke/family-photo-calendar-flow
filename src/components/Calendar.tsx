@@ -8,22 +8,28 @@ import { useGoogleCalendarEvents } from '@/hooks/useGoogleCalendarEvents';
 import { useCalendarSelection } from '@/hooks/useCalendarSelection';
 import { useEventFiltering } from '@/hooks/useEventFiltering';
 
-const Calendar = () => {
-  const [view, setView] = useState<'timeline' | 'week' | 'month'>('month');
+interface CalendarProps {
+  view: 'timeline' | 'week' | 'month';
+  selectedCalendarIds: string[];
+  onHasGoogleEventsChange: (hasEvents: boolean) => void;
+}
+
+const Calendar = ({ view, selectedCalendarIds, onHasGoogleEventsChange }: CalendarProps) => {
   const [weekOffset, setWeekOffset] = useState(0);
   const { defaultView } = useSettings();
   const { getWeatherForDate } = useWeather();
   const { googleEvents } = useGoogleCalendarEvents();
-  const { selectedCalendarIds, updateSelectedCalendars } = useCalendarSelection();
+  const { updateSelectedCalendars } = useCalendarSelection();
   
   const { filteredEvents, hasGoogleEvents } = useEventFiltering({
     googleEvents,
     selectedCalendarIds
   });
 
+  // Notify parent component when hasGoogleEvents changes
   useEffect(() => {
-    setView(defaultView);
-  }, [defaultView]);
+    onHasGoogleEventsChange(hasGoogleEvents);
+  }, [hasGoogleEvents, onHasGoogleEventsChange]);
 
   return (
     <div className="space-y-6">
@@ -32,7 +38,7 @@ const Calendar = () => {
         selectedCalendarIds={selectedCalendarIds}
         onCalendarChange={updateSelectedCalendars}
         view={view}
-        onViewChange={setView}
+        onViewChange={() => {}} // No-op since view is controlled by parent
       />
 
       <CalendarContent
