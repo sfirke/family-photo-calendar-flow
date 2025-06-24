@@ -170,7 +170,7 @@ const Index = () => {
         </header>
 
         {/* Main Content - Add top padding to account for fixed header */}
-        <main className="px-6 pb-6 pt-32 flex-1 flex flex-col">
+        <main className="px-6 pb-6 pt-32 flex-1 flex flex-col overflow-visible">
           <div className="flex-1">
             <Calendar />
           </div>
