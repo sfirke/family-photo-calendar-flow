@@ -136,7 +136,6 @@ const Index = () => {
       minute: '2-digit'
     });
   }, [currentTime]);
-
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
@@ -160,7 +159,7 @@ const Index = () => {
           <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/20 to-transparent pointer-events-none" />
           
           <div className="relative z-10">
-            <h1 className="text-xl5 text-white/90 text-6xl font-bold">{formattedTime}</h1>
+            <h1 className="text-xl5 text-white/90 text-7xl font-semibold">{formattedTime}</h1>
           </div>
           
           <div className="flex items-center gap-4 relative z-10">
