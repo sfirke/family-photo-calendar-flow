@@ -3,17 +3,24 @@ import Calendar from '@/components/Calendar';
 import WeatherWidget from '@/components/WeatherWidget';
 import SettingsModal from '@/components/SettingsModal';
 import UserProfileDropdown from '@/components/UserProfileDropdown';
+import CalendarSelector from '@/components/CalendarSelector';
+import ViewSwitcher from '@/components/calendar/ViewSwitcher';
 import { Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { useSettings } from '@/contexts/SettingsContext';
 import { getImagesFromAlbum, getDefaultBackgroundImages } from '@/utils/googlePhotosUtils';
 import { PerformanceMonitor, IntervalManager, displayOptimizations } from '@/utils/performanceUtils';
+
 const Index = () => {
   const [currentBg, setCurrentBg] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
   const [backgroundImages, setBackgroundImages] = useState<string[]>(getDefaultBackgroundImages());
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [view, setView] = useState<'timeline' | 'week' | 'month'>('timeline');
+  const [selectedCalendarIds, setSelectedCalendarIds] = useState<string[]>([]);
+  const [hasGoogleEvents, setHasGoogleEvents] = useState(false);
+
   const {
     user,
     loading
@@ -164,6 +171,13 @@ const Index = () => {
           
           <div className="flex items-center gap-4 relative z-10">
             <WeatherWidget />
+            {hasGoogleEvents && (
+              <CalendarSelector 
+                selectedCalendarIds={selectedCalendarIds} 
+                onCalendarChange={setSelectedCalendarIds} 
+              />
+            )}
+            <ViewSwitcher view={view} onViewChange={setView} />
             <UserProfileDropdown />
           </div>
         </header>
@@ -171,7 +185,11 @@ const Index = () => {
         {/* Main Content */}
         <main className="px-6 pb-6 flex-1 flex flex-col">
           <div className="flex-1">
-            <Calendar />
+            <Calendar 
+              view={view}
+              selectedCalendarIds={selectedCalendarIds}
+              onHasGoogleEventsChange={setHasGoogleEvents}
+            />
           </div>
         </main>
       </div>
@@ -184,4 +202,5 @@ const Index = () => {
       <SettingsModal open={showSettings} onOpenChange={setShowSettings} />
     </div>;
 };
+
 export default Index;
