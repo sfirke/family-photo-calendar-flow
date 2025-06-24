@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Event } from '@/types/calendar';
 import EventCard from './EventCard';
@@ -87,13 +86,11 @@ const TimelineView = ({ events, getWeatherForDate }: TimelineViewProps) => {
     // Generate some mock detailed data for demonstration
     const high = weather.temp;
     const low = Math.max(high - 15, 30); // 15 degrees lower, minimum 30°F
-    const chanceOfRain = Math.floor(Math.random() * 100); // Mock chance of rain
     
     return {
       high,
       low,
-      condition: weather.condition,
-      chanceOfRain
+      condition: weather.condition
     };
   };
 
@@ -127,9 +124,6 @@ const TimelineView = ({ events, getWeatherForDate }: TimelineViewProps) => {
                   </div>
                   <div className="text-base text-gray-300">
                     Low: {detailedWeather.low}°
-                  </div>
-                  <div className="text-base text-blue-300">
-                    Rain: {detailedWeather.chanceOfRain}%
                   </div>
                 </div>
               )}
