@@ -1,3 +1,4 @@
+
 import React from 'react';
 import CalendarSelector from '../CalendarSelector';
 import ViewSwitcher from './ViewSwitcher';
@@ -15,7 +16,7 @@ const CalendarHeader = ({
   view,
   onViewChange
 }: CalendarHeaderProps) => {
-  return <div className="flex items-center justify-between">
+  return <div className="flex items-center justify-end">
       
       
       <div className="flex items-center gap-4">
