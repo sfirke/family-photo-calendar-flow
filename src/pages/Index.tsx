@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import Calendar from '@/components/Calendar';
 import WeatherWidget from '@/components/WeatherWidget';
@@ -134,19 +133,12 @@ const Index = () => {
     };
   }, [backgroundImages, currentBg]);
 
-  // Optimized date/time formatting - only update when time changes
-  const formattedDateTime = useMemo(() => {
-    const dateString = currentTime.toLocaleDateString('en-US', { 
-      weekday: 'long', 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric'
-    });
-    const timeString = currentTime.toLocaleTimeString('en-US', { 
+  // Optimized time formatting - only show time, not date
+  const formattedTime = useMemo(() => {
+    return currentTime.toLocaleTimeString('en-US', { 
       hour: 'numeric', 
       minute: '2-digit'
     });
-    return `${dateString} at ${timeString}`;
   }, [currentTime]);
 
   if (loading) {
@@ -180,7 +172,7 @@ const Index = () => {
           
           <div className="relative z-10">
             <h1 className="text-2xl font-bold text-white">Family Calendar</h1>
-            <p className="text-sm text-white/90">{formattedDateTime}</p>
+            <p className="text-sm text-white/90">{formattedTime}</p>
           </div>
           
           <div className="flex items-center gap-4 relative z-10">
