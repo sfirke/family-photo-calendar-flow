@@ -9,6 +9,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useSettings } from '@/contexts/SettingsContext';
 import { getImagesFromAlbum, getDefaultBackgroundImages } from '@/utils/googlePhotosUtils';
 import { PerformanceMonitor, IntervalManager, displayOptimizations } from '@/utils/performanceUtils';
+
 const Index = () => {
   const [currentBg, setCurrentBg] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
@@ -153,8 +154,8 @@ const Index = () => {
       
       {/* Content */}
       <div className="relative z-10 min-h-screen flex flex-col">
-        {/* Header with gradient overlay */}
-        <header className="relative flex items-center justify-between p-6">
+        {/* Header with gradient overlay - Fixed positioning */}
+        <header className="fixed top-0 left-0 right-0 z-30 flex items-center justify-between p-6">
           {/* Header gradient overlay */}
           <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/20 to-transparent pointer-events-none" />
           
@@ -168,8 +169,8 @@ const Index = () => {
           </div>
         </header>
 
-        {/* Main Content */}
-        <main className="px-6 pb-6 flex-1 flex flex-col">
+        {/* Main Content - Add top padding to account for fixed header */}
+        <main className="px-6 pb-6 pt-32 flex-1 flex flex-col">
           <div className="flex-1">
             <Calendar />
           </div>
