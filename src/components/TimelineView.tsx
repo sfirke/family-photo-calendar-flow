@@ -105,9 +105,9 @@ const TimelineView = ({ events, getWeatherForDate }: TimelineViewProps) => {
           <div key={index} className="space-y-4">
             <div className="flex items-start gap-3">
               <div className="flex-1 flex items-center gap-3">
-                <h3 className={`text-lg font-medium ${isToday ? 'text-yellow-600 dark:text-yellow-300' : 'text-white'}`}>
+                <h3 className={`text-lg font-medium ${isToday ? 'text-amber-400' : 'text-white'}`}>
                   {formatDate(date, 'long')}
-                  {isToday && <span className="ml-2 text-sm text-yellow-600 dark:text-yellow-300">(Today)</span>}
+                  {isToday && <span className="ml-2 text-sm text-amber-400">(Today)</span>}
                 </h3>
                 <div className="flex-1 h-px bg-white/30"></div>
                 <div className="flex items-center gap-4 text-white">
