@@ -9,7 +9,6 @@ import { useAuth } from '@/hooks/useAuth';
 import { useSettings } from '@/contexts/SettingsContext';
 import { getImagesFromAlbum, getDefaultBackgroundImages } from '@/utils/googlePhotosUtils';
 import { PerformanceMonitor, IntervalManager, displayOptimizations } from '@/utils/performanceUtils';
-
 const Index = () => {
   const [currentBg, setCurrentBg] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
@@ -168,6 +167,7 @@ const Index = () => {
           
           <div className="relative z-10">
             <h1 className="text-2xl font-bold text-white">Family Calendar</h1>
+            <p className="text-sm text-white/90">{formattedDateTime}</p>
           </div>
           
           <div className="flex items-center gap-4 relative z-10">
