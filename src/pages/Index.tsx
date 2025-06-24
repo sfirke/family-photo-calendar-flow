@@ -9,14 +9,19 @@ import { useAuth } from '@/hooks/useAuth';
 import { useSettings } from '@/contexts/SettingsContext';
 import { getImagesFromAlbum, getDefaultBackgroundImages } from '@/utils/googlePhotosUtils';
 import { PerformanceMonitor, IntervalManager, displayOptimizations } from '@/utils/performanceUtils';
-
 const Index = () => {
   const [currentBg, setCurrentBg] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
   const [backgroundImages, setBackgroundImages] = useState<string[]>(getDefaultBackgroundImages());
   const [currentTime, setCurrentTime] = useState(new Date());
-  const { user, loading } = useAuth();
-  const { backgroundDuration, publicAlbumUrl } = useSettings();
+  const {
+    user,
+    loading
+  } = useAuth();
+  const {
+    backgroundDuration,
+    publicAlbumUrl
+  } = useSettings();
 
   // Optimized clock update - only update minutes, not seconds
   useEffect(() => {
@@ -33,15 +38,12 @@ const Index = () => {
 
     // Update immediately, then every minute at the start of the minute
     updateClock();
-    
     const now = new Date();
     const msUntilNextMinute = (60 - now.getSeconds()) * 1000 - now.getMilliseconds();
-    
     const timeoutId = setTimeout(() => {
       updateClock();
       IntervalManager.setInterval('clock-update', updateClock, 60000); // Every minute
     }, msUntilNextMinute);
-
     return () => {
       clearTimeout(timeoutId);
       IntervalManager.clearInterval('clock-update');
@@ -52,13 +54,13 @@ const Index = () => {
   useEffect(() => {
     // Start performance monitoring
     PerformanceMonitor.startMonitoring();
-    
+
     // Enable burn-in prevention
     const burnInInterval = displayOptimizations.enableBurnInPrevention();
-    
+
     // Enable OLED optimization
     displayOptimizations.enableOLEDOptimization();
-    
+
     // Adjust for time of day
     const timeAdjustmentInterval = setInterval(() => {
       displayOptimizations.adjustForTimeOfDay();
@@ -66,7 +68,6 @@ const Index = () => {
 
     // Initial time adjustment
     displayOptimizations.adjustForTimeOfDay();
-
     return () => {
       PerformanceMonitor.stopMonitoring();
       clearInterval(burnInInterval);
@@ -94,7 +95,6 @@ const Index = () => {
       setBackgroundImages(getDefaultBackgroundImages());
     }
   }, [publicAlbumUrl]);
-
   useEffect(() => {
     loadBackgroundImages();
   }, [loadBackgroundImages]);
@@ -102,13 +102,10 @@ const Index = () => {
   // Optimized background rotation with proper cleanup
   useEffect(() => {
     if (backgroundImages.length <= 1) return;
-
     const intervalTime = backgroundDuration * 60 * 1000;
-    
     IntervalManager.setInterval('background-rotation', () => {
       setCurrentBg(prev => (prev + 1) % backgroundImages.length);
     }, intervalTime);
-
     return () => {
       IntervalManager.clearInterval('background-rotation');
     };
@@ -117,14 +114,13 @@ const Index = () => {
   // Memoized background style with preloading
   const backgroundStyle = useMemo(() => {
     const currentImage = backgroundImages[currentBg];
-    
+
     // Preload next image for smooth transitions
     if (backgroundImages.length > 1) {
       const nextIndex = (currentBg + 1) % backgroundImages.length;
       const nextImage = new Image();
       nextImage.src = backgroundImages[nextIndex];
     }
-    
     return {
       backgroundImage: `url(${currentImage})`,
       backgroundSize: 'cover',
@@ -133,38 +129,37 @@ const Index = () => {
     };
   }, [backgroundImages, currentBg]);
 
-  // Optimized time formatting - only show time, not date
-  const formattedTime = useMemo(() => {
-    return currentTime.toLocaleTimeString('en-US', { 
-      hour: 'numeric', 
+  // Optimized date/time formatting - only update when time changes
+  const formattedDateTime = useMemo(() => {
+    const dateString = currentTime.toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+    const timeString = currentTime.toLocaleTimeString('en-US', {
+      hour: 'numeric',
       minute: '2-digit'
     });
+    return `${dateString} at ${timeString}`;
   }, [currentTime]);
-
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+    return <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
           <p className="text-muted-foreground">Loading...</p>
         </div>
-      </div>
-    );
+      </div>;
   }
-
-  return (
-    <div className="min-h-screen relative overflow-hidden flex flex-col">
+  return <div className="min-h-screen relative overflow-hidden flex flex-col">
       {/* Background Image with optimized transitions */}
-      <div 
-        className="absolute inset-0 transition-opacity duration-1000 ease-in-out"
-        style={backgroundStyle}
-      />
+      <div className="absolute inset-0 transition-opacity duration-1000 ease-in-out" style={backgroundStyle} />
       
       {/* Glass overlay */}
       <div className="absolute inset-0 bg-white/10 backdrop-blur-[1px] dark:bg-black/20" />
       
       {/* Content */}
-      <div className="relative z-10 min-h-screen flex flex-col">
+      <div className="relative z-10 min-h-screen flex flex-col text-5xl font-bold">
         {/* Header with gradient overlay */}
         <header className="relative flex items-center justify-between p-6">
           {/* Header gradient overlay */}
@@ -172,7 +167,7 @@ const Index = () => {
           
           <div className="relative z-10">
             <h1 className="text-2xl font-bold text-white">Family Calendar</h1>
-            <p className="text-sm text-white/90">{formattedTime}</p>
+            <p className="text-sm text-white/90">{formattedDateTime}</p>
           </div>
           
           <div className="flex items-center gap-4 relative z-10">
@@ -190,21 +185,11 @@ const Index = () => {
       </div>
 
       {/* Settings Button - Fixed in lower right corner */}
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => setShowSettings(true)}
-        className="fixed bottom-6 right-6 z-20 text-white hover:bg-white/20 bg-black/20 backdrop-blur-sm border border-white/20"
-      >
+      <Button variant="ghost" size="sm" onClick={() => setShowSettings(true)} className="fixed bottom-6 right-6 z-20 text-white hover:bg-white/20 bg-black/20 backdrop-blur-sm border border-white/20">
         <Settings className="h-4 w-4" />
       </Button>
 
-      <SettingsModal 
-        open={showSettings} 
-        onOpenChange={setShowSettings}
-      />
-    </div>
-  );
+      <SettingsModal open={showSettings} onOpenChange={setShowSettings} />
+    </div>;
 };
-
 export default Index;
