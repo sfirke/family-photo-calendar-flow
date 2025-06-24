@@ -9,6 +9,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useSettings } from '@/contexts/SettingsContext';
 import { getImagesFromAlbum, getDefaultBackgroundImages } from '@/utils/googlePhotosUtils';
 import { PerformanceMonitor, IntervalManager, displayOptimizations } from '@/utils/performanceUtils';
+
 const Index = () => {
   const [currentBg, setCurrentBg] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
@@ -129,20 +130,15 @@ const Index = () => {
     };
   }, [backgroundImages, currentBg]);
 
-  // Optimized date/time formatting - only update when time changes
-  const formattedDateTime = useMemo(() => {
-    const dateString = currentTime.toLocaleDateString('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-    const timeString = currentTime.toLocaleTimeString('en-US', {
+  // Optimized time formatting - only display time
+  const formattedTime = useMemo(() => {
+    return currentTime.toLocaleTimeString('en-US', {
       hour: 'numeric',
       minute: '2-digit'
     });
-    return `${dateString} at ${timeString}`;
   }, [currentTime]);
+
+  // Loading condition
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
@@ -167,7 +163,7 @@ const Index = () => {
           
           <div className="relative z-10">
             <h1 className="text-2xl font-bold text-white">Family Calendar</h1>
-            <p className="text-sm text-white/90">{formattedDateTime}</p>
+            <h1 className="text-sm text-white/90">{formattedTime}</h1>
           </div>
           
           <div className="flex items-center gap-4 relative z-10">
@@ -192,4 +188,5 @@ const Index = () => {
       <SettingsModal open={showSettings} onOpenChange={setShowSettings} />
     </div>;
 };
+
 export default Index;
