@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -30,7 +29,14 @@ const LOCAL_USER_KEY = 'family_calendar_user';
 const LOCAL_SESSION_KEY = 'family_calendar_session';
 const GOOGLE_TOKENS_KEY = 'family_calendar_google_tokens';
 
-const generateId = () => 'user_' + Math.random().toString(36).substr(2, 9);
+// Generate a proper UUID format for local users
+const generateUUID = () => {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c == 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+};
 
 export const useHybridAuth = () => {
   const [user, setUser] = useState<LocalUser | null>(null);
@@ -52,6 +58,15 @@ export const useHybridAuth = () => {
       if (storedSession && storedUser) {
         const sessionData = JSON.parse(storedSession);
         const userData = JSON.parse(storedUser);
+        
+        // Migrate old user ID format to UUID if needed
+        if (userData.id && !userData.id.includes('-')) {
+          console.log('Migrating user ID to UUID format');
+          userData.id = generateUUID();
+          localStorage.setItem(LOCAL_USER_KEY, JSON.stringify(userData));
+          sessionData.user = userData;
+          localStorage.setItem(LOCAL_SESSION_KEY, JSON.stringify(sessionData));
+        }
         
         // Check if Google tokens exist and are valid
         if (storedTokens) {
@@ -103,11 +118,14 @@ export const useHybridAuth = () => {
       // Store Google tokens in localStorage
       localStorage.setItem(GOOGLE_TOKENS_KEY, JSON.stringify(googleTokens));
 
-      // Also store tokens in database for edge function access
+      // Use the local user ID for database operations
+      const currentUserId = user?.id || generateUUID();
+
+      // Store tokens in database for edge function access using local user ID
       const { error: profileError } = await supabase
         .from('profiles')
         .upsert({
-          id: user?.id || supabaseSession.user.id,
+          id: currentUserId, // Use local UUID instead of Supabase user ID
           email: supabaseSession.user.email,
           full_name: supabaseSession.user.user_metadata?.full_name,
           avatar_url: supabaseSession.user.user_metadata?.avatar_url,
@@ -118,6 +136,8 @@ export const useHybridAuth = () => {
 
       if (profileError) {
         console.error('Error storing profile:', profileError);
+      } else {
+        console.log('Profile stored successfully with local user ID:', currentUserId);
       }
 
       // Update current user with Google connection
@@ -129,7 +149,7 @@ export const useHybridAuth = () => {
           full_name: supabaseSession.user.user_metadata?.full_name || user.full_name,
           avatar_url: supabaseSession.user.user_metadata?.avatar_url || user.avatar_url,
           email: supabaseSession.user.email || user.email,
-          id: user.id // Keep the original local user ID
+          id: currentUserId // Keep the local UUID
         };
 
         const updatedSession = {
@@ -153,7 +173,7 @@ export const useHybridAuth = () => {
 
   const signInAsGuest = () => {
     const guestUser: LocalUser = {
-      id: generateId(),
+      id: generateUUID(), // Use proper UUID format
       email: 'guest@familycalendar.app',
       full_name: 'Guest User',
       user_metadata: {

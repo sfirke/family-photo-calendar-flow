@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -41,7 +40,7 @@ const GoogleCalendarSync = ({ lastSync, onLastSyncUpdate }: GoogleCalendarSyncPr
 
     setIsLoading(true);
     try {
-      console.log('Starting manual calendar sync with extended range...');
+      console.log('Starting manual calendar sync with user ID:', user.id);
       
       // Calculate date range: current month + first week of next month
       const now = new Date();
@@ -91,7 +90,7 @@ const GoogleCalendarSync = ({ lastSync, onLastSyncUpdate }: GoogleCalendarSyncPr
       console.error('Error during manual sync:', error);
       toast({
         title: "Sync failed",
-        description: "Failed to sync calendar events. Please try reconnecting your Google account.",
+        description: "Failed to sync calendar events. Please check your Google Calendar connection.",
         variant: "destructive"
       });
     } finally {
@@ -120,7 +119,7 @@ const GoogleCalendarSync = ({ lastSync, onLastSyncUpdate }: GoogleCalendarSyncPr
 
     setIsSettingUpWebhook(true);
     try {
-      console.log('Setting up webhook for real-time sync...');
+      console.log('Setting up webhook for real-time sync with user ID:', user.id);
       
       const { data, error } = await supabase.functions.invoke('sync-google-calendar', {
         body: { 
@@ -151,18 +150,21 @@ const GoogleCalendarSync = ({ lastSync, onLastSyncUpdate }: GoogleCalendarSyncPr
         description: "Your calendar will now update automatically when events change in Google Calendar.",
       });
 
-      // Clean up existing channel first
+      // Clean up existing channel first to prevent multiple subscriptions
       if (calendarChannelRef.current) {
         try {
+          console.log('Cleaning up existing channel');
           await supabase.removeChannel(calendarChannelRef.current);
+          calendarChannelRef.current = null;
         } catch (cleanupError) {
           console.warn('Channel cleanup warning:', cleanupError);
         }
-        calendarChannelRef.current = null;
       }
 
       // Set up real-time listener for calendar events with a unique channel name
       const channelName = `calendar-changes-${user.id}-${Date.now()}`;
+      console.log('Setting up new channel:', channelName);
+      
       const channel = supabase
         .channel(channelName)
         .on(
@@ -183,6 +185,11 @@ const GoogleCalendarSync = ({ lastSync, onLastSyncUpdate }: GoogleCalendarSyncPr
         )
         .subscribe((status) => {
           console.log('Real-time subscription status:', status);
+          if (status === 'SUBSCRIBED') {
+            console.log('Successfully subscribed to real-time updates');
+          } else if (status === 'CHANNEL_ERROR') {
+            console.error('Channel subscription error');
+          }
         });
 
       // Store channel reference for cleanup
