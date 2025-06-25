@@ -156,25 +156,23 @@ export const useHybridCalendarSync = () => {
 
       if (dbError) throw dbError;
 
-      // Convert database events to Event format
+      // Convert database events to Event format with required properties
       const googleEvents: Event[] = (dbEvents || []).map(dbEvent => ({
         id: parseInt(dbEvent.id) || Date.now(),
         title: dbEvent.title,
-        description: dbEvent.description || undefined,
+        description: dbEvent.description || '',
         date: new Date(dbEvent.start_time),
-        time: dbEvent.is_all_day ? undefined : new Date(dbEvent.start_time).toLocaleTimeString('en-US', {
+        time: dbEvent.is_all_day ? 'All day' : new Date(dbEvent.start_time).toLocaleTimeString('en-US', {
           hour: 'numeric',
           minute: '2-digit'
         }),
-        endTime: dbEvent.is_all_day ? undefined : new Date(dbEvent.end_time).toLocaleTimeString('en-US', {
-          hour: 'numeric',
-          minute: '2-digit'
-        }),
-        location: dbEvent.location || undefined,
+        location: dbEvent.location || '',
+        attendees: Array.isArray(dbEvent.attendees) ? dbEvent.attendees.length : 0,
+        category: 'Work' as const, // Default category for Google events
+        color: '#4285f4', // Google blue color for Google events
+        organizer: dbEvent.calendar_name || 'Google Calendar',
         calendarId: dbEvent.calendar_id,
-        calendarName: dbEvent.calendar_name,
-        isAllDay: dbEvent.is_all_day,
-        attendees: Array.isArray(dbEvent.attendees) ? dbEvent.attendees : []
+        calendarName: dbEvent.calendar_name
       }));
 
       // Combine local and Google events
