@@ -2,10 +2,10 @@
 import React, { useState, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Calendar, RefreshCw, Webhook, Clock, CheckCircle } from 'lucide-react';
+import { Calendar, RefreshCw, Webhook, Clock, CheckCircle, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
+import { useHybridAuth } from '@/hooks/useHybridAuth';
 
 interface GoogleCalendarSyncProps {
   lastSync: Date | null;
@@ -17,7 +17,7 @@ const GoogleCalendarSync = ({ lastSync, onLastSyncUpdate }: GoogleCalendarSyncPr
   const [isSettingUpWebhook, setIsSettingUpWebhook] = useState(false);
   const [webhookSetup, setWebhookSetup] = useState(false);
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user } = useHybridAuth();
   const calendarChannelRef = useRef<any>(null);
 
   const handleManualSync = async () => {
@@ -25,6 +25,15 @@ const GoogleCalendarSync = ({ lastSync, onLastSyncUpdate }: GoogleCalendarSyncPr
       toast({
         title: "Authentication Required",
         description: "Please sign in to sync your calendar events.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!user.isGoogleConnected) {
+      toast({
+        title: "Google Calendar Not Connected",
+        description: "Please connect your Google Calendar in the Account tab first.",
         variant: "destructive"
       });
       return;
@@ -45,7 +54,7 @@ const GoogleCalendarSync = ({ lastSync, onLastSyncUpdate }: GoogleCalendarSyncPr
       // First week of next month (7 days after next month starts)
       const nextMonth = currentMonth === 11 ? 0 : currentMonth + 1;
       const nextYear = currentMonth === 11 ? currentYear + 1 : currentYear;
-      const timeMax = new Date(nextYear, nextMonth, 8).toISOString(); // 8th day = end of first week
+      const timeMax = new Date(nextYear, nextMonth, 8).toISOString();
       
       const { data, error } = await supabase.functions.invoke('sync-google-calendar', {
         body: { 
@@ -62,6 +71,15 @@ const GoogleCalendarSync = ({ lastSync, onLastSyncUpdate }: GoogleCalendarSyncPr
         throw error;
       }
 
+      if (data?.requiresConnection) {
+        toast({
+          title: "Connection Required",
+          description: data.error || "Please reconnect your Google Calendar account.",
+          variant: "destructive"
+        });
+        return;
+      }
+
       console.log('Manual sync completed successfully:', data);
       onLastSyncUpdate(new Date());
       
@@ -73,7 +91,7 @@ const GoogleCalendarSync = ({ lastSync, onLastSyncUpdate }: GoogleCalendarSyncPr
       console.error('Error during manual sync:', error);
       toast({
         title: "Sync failed",
-        description: "Failed to sync calendar events. Please try again.",
+        description: "Failed to sync calendar events. Please try reconnecting your Google account.",
         variant: "destructive"
       });
     } finally {
@@ -86,6 +104,15 @@ const GoogleCalendarSync = ({ lastSync, onLastSyncUpdate }: GoogleCalendarSyncPr
       toast({
         title: "Authentication Required",
         description: "Please sign in to set up real-time sync.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!user.isGoogleConnected) {
+      toast({
+        title: "Google Calendar Not Connected",
+        description: "Please connect your Google Calendar in the Account tab first.",
         variant: "destructive"
       });
       return;
@@ -105,6 +132,15 @@ const GoogleCalendarSync = ({ lastSync, onLastSyncUpdate }: GoogleCalendarSyncPr
       if (error) {
         console.error('Webhook setup error:', error);
         throw error;
+      }
+
+      if (data?.requiresConnection) {
+        toast({
+          title: "Connection Required",
+          description: data.error || "Please reconnect your Google Calendar account.",
+          variant: "destructive"
+        });
+        return;
       }
 
       console.log('Webhook setup completed:', data);
@@ -163,6 +199,33 @@ const GoogleCalendarSync = ({ lastSync, onLastSyncUpdate }: GoogleCalendarSyncPr
       setIsSettingUpWebhook(false);
     }
   };
+
+  if (!user?.isGoogleConnected) {
+    return (
+      <Card className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-gray-100">
+            <Calendar className="h-5 w-5" />
+            Google Calendar Sync
+          </CardTitle>
+          <CardDescription className="text-gray-600 dark:text-gray-400">
+            Connect your Google Calendar to sync events automatically
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-2 p-4 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 rounded-lg">
+            <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400 flex-shrink-0" />
+            <div className="text-sm">
+              <p className="font-medium text-amber-800 dark:text-amber-200">Google Calendar Not Connected</p>
+              <p className="text-amber-700 dark:text-amber-300">
+                Please connect your Google Calendar in the Account tab to enable sync features.
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">

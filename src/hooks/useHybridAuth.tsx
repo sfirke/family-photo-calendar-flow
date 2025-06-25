@@ -100,8 +100,25 @@ export const useHybridAuth = () => {
         expires_at: (supabaseSession.expires_at || 0) * 1000 // Convert to milliseconds
       };
 
-      // Store Google tokens
+      // Store Google tokens in localStorage
       localStorage.setItem(GOOGLE_TOKENS_KEY, JSON.stringify(googleTokens));
+
+      // Also store tokens in database for edge function access
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .upsert({
+          id: user?.id || supabaseSession.user.id,
+          email: supabaseSession.user.email,
+          full_name: supabaseSession.user.user_metadata?.full_name,
+          avatar_url: supabaseSession.user.user_metadata?.avatar_url,
+          google_access_token: googleTokens.access_token,
+          google_refresh_token: googleTokens.refresh_token,
+          google_token_expires_at: new Date(googleTokens.expires_at).toISOString()
+        });
+
+      if (profileError) {
+        console.error('Error storing profile:', profileError);
+      }
 
       // Update current user with Google connection
       if (user) {
@@ -111,7 +128,8 @@ export const useHybridAuth = () => {
           googleTokens,
           full_name: supabaseSession.user.user_metadata?.full_name || user.full_name,
           avatar_url: supabaseSession.user.user_metadata?.avatar_url || user.avatar_url,
-          email: supabaseSession.user.email || user.email
+          email: supabaseSession.user.email || user.email,
+          id: user.id // Keep the original local user ID
         };
 
         const updatedSession = {

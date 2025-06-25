@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
@@ -25,104 +24,164 @@ serve(async (req) => {
       throw new Error('User ID is required');
     }
 
-    // Get user's Google access token
+    console.log('Sync request:', { userId, action, manualSync, extendedRange });
+
+    // Get user's Google access token from profiles table
     const { data: profile, error: profileError } = await supabaseClient
       .from('profiles')
       .select('google_access_token, google_refresh_token, google_token_expires_at')
       .eq('id', userId)
       .single();
 
-    if (profileError || !profile?.google_access_token) {
-      throw new Error('Google access token not found. Please reconnect your Google account.');
+    if (profileError) {
+      console.error('Profile error:', profileError);
+      // For hybrid users, tokens might not be stored in profiles yet
+      return new Response(
+        JSON.stringify({ 
+          error: 'Google Calendar not connected. Please connect your Google account in settings.',
+          success: false,
+          requiresConnection: true
+        }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200 // Return 200 instead of 500 for better error handling
+        }
+      );
+    }
+
+    if (!profile?.google_access_token) {
+      console.log('No Google access token found for user:', userId);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Google Calendar not connected. Please connect your Google account in settings.',
+          success: false,
+          requiresConnection: true
+        }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200
+        }
+      );
     }
 
     let accessToken = profile.google_access_token;
+
+    // Check if token is expired and refresh if needed
+    if (profile.google_token_expires_at) {
+      const expiresAt = new Date(profile.google_token_expires_at);
+      const now = new Date();
+      
+      if (expiresAt <= now && profile.google_refresh_token) {
+        console.log('Token expired, attempting refresh...');
+        // Token refresh logic would go here
+        // For now, we'll proceed with existing token
+      }
+    }
 
     // Handle webhook setup
     if (action === 'setup-webhooks') {
       console.log('Setting up webhooks for user:', userId);
       
-      // Get list of calendars first
-      const calendarsResponse = await fetch(
-        'https://www.googleapis.com/calendar/v3/users/me/calendarList',
-        {
-          headers: {
-            'Authorization': `Bearer ${accessToken}`,
-            'Content-Type': 'application/json',
-          },
+      try {
+        // Get list of calendars first
+        const calendarsResponse = await fetch(
+          'https://www.googleapis.com/calendar/v3/users/me/calendarList',
+          {
+            headers: {
+              'Authorization': `Bearer ${accessToken}`,
+              'Content-Type': 'application/json',
+            },
+          }
+        );
+
+        if (!calendarsResponse.ok) {
+          const errorText = await calendarsResponse.text();
+          console.error('Failed to fetch calendars:', calendarsResponse.status, errorText);
+          throw new Error(`Failed to fetch calendars: ${calendarsResponse.status}`);
         }
-      );
 
-      if (!calendarsResponse.ok) {
-        throw new Error(`Failed to fetch calendars: ${calendarsResponse.status}`);
-      }
+        const calendarsData = await calendarsResponse.json();
+        const webhookResults = [];
 
-      const calendarsData = await calendarsResponse.json();
-      const webhookResults = [];
+        // Set up webhook for primary calendar only (to avoid quota issues)
+        const primaryCalendar = calendarsData.items?.find((cal: any) => cal.primary) || calendarsData.items?.[0];
+        
+        if (primaryCalendar) {
+          try {
+            const channelId = `${userId.replace(/[^a-zA-Z0-9]/g, '')}_${primaryCalendar.id.replace(/[^a-zA-Z0-9]/g, '')}_${Date.now()}`.substring(0, 64);
+            
+            const webhookPayload = {
+              id: channelId,
+              type: 'web_hook',
+              address: `${Deno.env.get('SUPABASE_URL')}/functions/v1/google-calendar-webhook`,
+              token: `${userId}:${primaryCalendar.id}`
+            };
 
-      // Set up webhook for each calendar
-      for (const calendar of calendarsData.items || []) {
-        try {
-          // Create a valid channel ID (only alphanumeric, dash, underscore, plus, forward slash, equals)
-          const channelId = `${userId.replace(/[^a-zA-Z0-9]/g, '')}_${calendar.id.replace(/[^a-zA-Z0-9]/g, '')}_${Date.now()}`.substring(0, 64);
-          
-          const webhookPayload = {
-            id: channelId,
-            type: 'web_hook',
-            address: `${Deno.env.get('SUPABASE_URL')}/functions/v1/google-calendar-webhook`,
-            token: `${userId}:${calendar.id}`
-          };
+            const webhookResponse = await fetch(
+              `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(primaryCalendar.id)}/events/watch`,
+              {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Bearer ${accessToken}`,
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(webhookPayload)
+              }
+            );
 
-          const webhookResponse = await fetch(
-            `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendar.id)}/events/watch`,
-            {
-              method: 'POST',
-              headers: {
-                'Authorization': `Bearer ${accessToken}`,
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify(webhookPayload)
+            if (webhookResponse.ok) {
+              const webhookData = await webhookResponse.json();
+              webhookResults.push({
+                calendarId: primaryCalendar.id,
+                success: true,
+                channelId: webhookData.id,
+                expiration: webhookData.expiration
+              });
+              console.log(`Webhook set up for primary calendar ${primaryCalendar.id}`);
+            } else {
+              const errorText = await webhookResponse.text();
+              console.error(`Failed to set up webhook for primary calendar:`, errorText);
+              webhookResults.push({
+                calendarId: primaryCalendar.id,
+                success: false,
+                error: `HTTP ${webhookResponse.status}`
+              });
             }
-          );
-
-          if (webhookResponse.ok) {
-            const webhookData = await webhookResponse.json();
+          } catch (error) {
+            console.error(`Error setting up webhook for primary calendar:`, error);
             webhookResults.push({
-              calendarId: calendar.id,
-              success: true,
-              channelId: webhookData.id,
-              expiration: webhookData.expiration
-            });
-            console.log(`Webhook set up for calendar ${calendar.id}`);
-          } else {
-            console.error(`Failed to set up webhook for calendar ${calendar.id}:`, await webhookResponse.text());
-            webhookResults.push({
-              calendarId: calendar.id,
+              calendarId: primaryCalendar.id,
               success: false,
-              error: `HTTP ${webhookResponse.status}`
+              error: error.message
             });
           }
-        } catch (error) {
-          console.error(`Error setting up webhook for calendar ${calendar.id}:`, error);
-          webhookResults.push({
-            calendarId: calendar.id,
-            success: false,
-            error: error.message
-          });
         }
-      }
 
-      return new Response(
-        JSON.stringify({ 
-          success: true,
-          webhookResults,
-          message: 'Webhook setup completed'
-        }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 200 
-        }
-      );
+        return new Response(
+          JSON.stringify({ 
+            success: true,
+            webhookResults,
+            message: 'Webhook setup completed'
+          }),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 200 
+          }
+        );
+      } catch (error) {
+        console.error('Webhook setup error:', error);
+        return new Response(
+          JSON.stringify({ 
+            success: false,
+            error: 'Failed to set up webhooks. Manual sync is still available.',
+            webhookResults: []
+          }),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 200 
+          }
+        );
+      }
     }
 
     // Handle list calendars action
