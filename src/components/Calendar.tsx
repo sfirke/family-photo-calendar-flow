@@ -4,7 +4,7 @@ import CalendarHeader from './calendar/CalendarHeader';
 import CalendarContent from './calendar/CalendarContent';
 import { useSettings } from '@/contexts/SettingsContext';
 import { useWeather } from '@/contexts/WeatherContext';
-import { useLocalEvents } from '@/hooks/useLocalEvents';
+import { useHybridCalendarSync } from '@/hooks/useHybridCalendarSync';
 import { useCalendarSelection } from '@/hooks/useCalendarSelection';
 import { useEventFiltering } from '@/hooks/useEventFiltering';
 
@@ -13,11 +13,11 @@ const Calendar = () => {
   const [weekOffset, setWeekOffset] = useState(0);
   const { defaultView } = useSettings();
   const { getWeatherForDate } = useWeather();
-  const { googleEvents } = useLocalEvents(); // Use local events instead
+  const { allEvents, isLoading: syncLoading } = useHybridCalendarSync();
   const { selectedCalendarIds, updateSelectedCalendars } = useCalendarSelection();
   
   const { filteredEvents, hasGoogleEvents } = useEventFiltering({
-    googleEvents,
+    googleEvents: allEvents, // Use combined events
     selectedCalendarIds
   });
 
