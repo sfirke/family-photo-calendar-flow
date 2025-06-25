@@ -7,6 +7,7 @@ const SELECTED_CALENDARS_KEY = 'family_calendar_selected_calendars';
 export const useCalendarSelection = () => {
   const [selectedCalendarIds, setSelectedCalendarIds] = useState<string[]>([]);
   const { localEvents } = useLocalEvents();
+  const [isLoading, setIsLoading] = useState(false);
 
   // Generate calendars from local events
   const calendarsFromEvents = useMemo(() => {
@@ -93,6 +94,13 @@ export const useCalendarSelection = () => {
     saveSelection(allCalendarIds);
   };
 
+  const selectCalendarsWithEvents = () => {
+    const calendarsWithEventsIds = calendarsFromEvents
+      .filter(cal => cal.hasEvents)
+      .map(cal => cal.id);
+    saveSelection(calendarsWithEventsIds);
+  };
+
   const clearAllCalendars = () => {
     saveSelection([]);
   };
@@ -100,9 +108,11 @@ export const useCalendarSelection = () => {
   return {
     selectedCalendarIds,
     calendarsFromEvents,
+    isLoading,
     updateSelectedCalendars,
     toggleCalendar,
     selectAllCalendars,
+    selectCalendarsWithEvents,
     clearAllCalendars
   };
 };
