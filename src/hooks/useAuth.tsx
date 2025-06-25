@@ -21,6 +21,11 @@ export const useAuth = () => {
           console.log('Initial session found:', session.user?.email);
           setSession(session);
           setUser(session.user);
+          
+          // Store Google tokens if this is a fresh login with provider tokens
+          if (session.provider_token) {
+            await storeGoogleTokens(session);
+          }
         }
       } catch (error) {
         console.error('Unexpected error getting session:', error);
@@ -42,15 +47,10 @@ export const useAuth = () => {
         setUser(session?.user ?? null);
         setLoading(false);
         
-        // Store Google tokens if available and user just signed in
+        // Store Google tokens if user just signed in with Google
         if (event === 'SIGNED_IN' && session?.provider_token && session?.user) {
           console.log('Storing Google tokens for user:', session.user.email);
-          // Use setTimeout to avoid blocking the auth state change
-          setTimeout(() => {
-            if (mounted) {
-              updateUserProfile(session);
-            }
-          }, 100);
+          await storeGoogleTokens(session);
         }
         
         // Handle sign out
@@ -69,33 +69,36 @@ export const useAuth = () => {
     };
   }, []);
 
-  const updateUserProfile = async (session: Session) => {
+  const storeGoogleTokens = async (session: Session) => {
     if (!session.user || !session.provider_token) {
       console.log('No user or provider token available for profile update');
       return;
     }
 
     try {
-      console.log('Updating user profile with Google tokens');
-      const { error } = await supabase
-        .from('profiles')
-        .upsert({
-          id: session.user.id,
-          email: session.user.email,
-          full_name: session.user.user_metadata?.full_name,
-          avatar_url: session.user.user_metadata?.avatar_url,
-          google_access_token: session.provider_token,
-          google_refresh_token: session.provider_refresh_token,
-          google_token_expires_at: session.expires_at ? new Date(session.expires_at * 1000).toISOString() : null
-        });
-      
+      console.log('Storing Google tokens via edge function...');
+      const { data, error } = await supabase.functions.invoke('sync-google-calendar', {
+        body: { 
+          userId: session.user.id,
+          action: 'store-profile',
+          profileData: {
+            email: session.user.email,
+            full_name: session.user.user_metadata?.full_name,
+            avatar_url: session.user.user_metadata?.avatar_url,
+            google_access_token: session.provider_token,
+            google_refresh_token: session.provider_refresh_token,
+            google_token_expires_at: session.expires_at ? new Date(session.expires_at * 1000).toISOString() : null
+          }
+        }
+      });
+
       if (error) {
-        console.error('Error updating profile:', error);
+        console.error('Error storing profile via edge function:', error);
       } else {
-        console.log('Profile updated successfully');
+        console.log('Profile stored successfully via edge function:', data);
       }
     } catch (error) {
-      console.error('Unexpected error updating profile:', error);
+      console.error('Unexpected error storing profile:', error);
     }
   };
 

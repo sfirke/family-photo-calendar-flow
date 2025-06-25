@@ -10,7 +10,7 @@ const corsHeaders = {
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response('ok', { headers: corsHeaders });
   }
 
   try {
@@ -19,10 +19,48 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const { userId, action, calendarId, manualSync, timeMin, timeMax, extendedRange } = await req.json();
+    const { userId, action, calendarId, manualSync, timeMin, timeMax, extendedRange, profileData } = await req.json();
     
     if (!userId) {
       throw new Error('User ID is required');
+    }
+
+    // Handle profile storage action (for storing Google tokens after auth)
+    if (action === 'store-profile') {
+      console.log('Storing profile data for user:', userId);
+      
+      if (!profileData) {
+        throw new Error('Profile data is required for store-profile action');
+      }
+
+      const { error: upsertError } = await supabaseClient
+        .from('profiles')
+        .upsert({
+          id: userId,
+          email: profileData.email,
+          full_name: profileData.full_name,
+          avatar_url: profileData.avatar_url,
+          google_access_token: profileData.google_access_token,
+          google_refresh_token: profileData.google_refresh_token,
+          google_token_expires_at: profileData.google_token_expires_at
+        });
+
+      if (upsertError) {
+        console.error('Error upserting profile:', upsertError);
+        throw new Error(`Failed to store profile: ${upsertError.message}`);
+      }
+
+      console.log('Profile stored successfully for user:', userId);
+      return new Response(
+        JSON.stringify({ 
+          success: true,
+          message: 'Profile stored successfully'
+        }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200 
+        }
+      );
     }
 
     // Get user's Google access token
