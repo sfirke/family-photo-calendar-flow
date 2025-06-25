@@ -1,4 +1,5 @@
-import React, { useState, useRef } from 'react';
+
+import React, { useState, useRef, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Calendar, RefreshCw, Webhook, Clock, CheckCircle, AlertCircle } from 'lucide-react';
@@ -18,6 +19,17 @@ const GoogleCalendarSync = ({ lastSync, onLastSyncUpdate }: GoogleCalendarSyncPr
   const { toast } = useToast();
   const { user } = useHybridAuth();
   const calendarChannelRef = useRef<any>(null);
+
+  // Clean up channel on unmount
+  useEffect(() => {
+    return () => {
+      if (calendarChannelRef.current) {
+        console.log('Cleaning up calendar channel on unmount');
+        supabase.removeChannel(calendarChannelRef.current);
+        calendarChannelRef.current = null;
+      }
+    };
+  }, []);
 
   const handleManualSync = async () => {
     if (!user) {
@@ -153,7 +165,7 @@ const GoogleCalendarSync = ({ lastSync, onLastSyncUpdate }: GoogleCalendarSyncPr
       // Clean up existing channel first to prevent multiple subscriptions
       if (calendarChannelRef.current) {
         try {
-          console.log('Cleaning up existing channel');
+          console.log('Cleaning up existing channel before creating new one');
           await supabase.removeChannel(calendarChannelRef.current);
           calendarChannelRef.current = null;
         } catch (cleanupError) {
@@ -182,18 +194,19 @@ const GoogleCalendarSync = ({ lastSync, onLastSyncUpdate }: GoogleCalendarSyncPr
               detail: { payload, userId: user.id } 
             }));
           }
-        )
-        .subscribe((status) => {
-          console.log('Real-time subscription status:', status);
-          if (status === 'SUBSCRIBED') {
-            console.log('Successfully subscribed to real-time updates');
-          } else if (status === 'CHANNEL_ERROR') {
-            console.error('Channel subscription error');
-          }
-        });
+        );
 
-      // Store channel reference for cleanup
-      calendarChannelRef.current = channel;
+      // Subscribe and store reference
+      channel.subscribe((status) => {
+        console.log('Real-time subscription status:', status);
+        if (status === 'SUBSCRIBED') {
+          console.log('Successfully subscribed to real-time updates');
+          calendarChannelRef.current = channel;
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('Channel subscription error');
+          calendarChannelRef.current = null;
+        }
+      });
 
     } catch (error) {
       console.error('Error setting up webhook:', error);
