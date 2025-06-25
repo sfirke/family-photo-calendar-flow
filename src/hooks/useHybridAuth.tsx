@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -121,23 +122,62 @@ export const useHybridAuth = () => {
       // Use the local user ID for database operations
       const currentUserId = user?.id || generateUUID();
 
-      // Store tokens in database for edge function access using local user ID
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .upsert({
-          id: currentUserId, // Use local UUID instead of Supabase user ID
-          email: supabaseSession.user.email,
-          full_name: supabaseSession.user.user_metadata?.full_name,
-          avatar_url: supabaseSession.user.user_metadata?.avatar_url,
-          google_access_token: googleTokens.access_token,
-          google_refresh_token: googleTokens.refresh_token,
-          google_token_expires_at: new Date(googleTokens.expires_at).toISOString()
-        });
+      // Ensure the profile exists in Supabase with proper error handling
+      try {
+        // First, try to get existing profile
+        const { data: existingProfile, error: getError } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('id', currentUserId)
+          .single();
 
-      if (profileError) {
-        console.error('Error storing profile:', profileError);
-      } else {
-        console.log('Profile stored successfully with local user ID:', currentUserId);
+        if (getError && getError.code !== 'PGRST116') {
+          console.error('Error checking existing profile:', getError);
+        }
+
+        // If profile doesn't exist, create it
+        if (!existingProfile) {
+          console.log('Creating new profile for user:', currentUserId);
+          const { error: insertError } = await supabase
+            .from('profiles')
+            .insert({
+              id: currentUserId,
+              email: supabaseSession.user.email,
+              full_name: supabaseSession.user.user_metadata?.full_name,
+              avatar_url: supabaseSession.user.user_metadata?.avatar_url,
+              google_access_token: googleTokens.access_token,
+              google_refresh_token: googleTokens.refresh_token,
+              google_token_expires_at: new Date(googleTokens.expires_at).toISOString()
+            });
+
+          if (insertError) {
+            console.error('Error creating profile:', insertError);
+          } else {
+            console.log('Profile created successfully with local user ID:', currentUserId);
+          }
+        } else {
+          // Update existing profile with new tokens
+          console.log('Updating existing profile with new tokens:', currentUserId);
+          const { error: updateError } = await supabase
+            .from('profiles')
+            .update({
+              email: supabaseSession.user.email,
+              full_name: supabaseSession.user.user_metadata?.full_name,
+              avatar_url: supabaseSession.user.user_metadata?.avatar_url,
+              google_access_token: googleTokens.access_token,
+              google_refresh_token: googleTokens.refresh_token,
+              google_token_expires_at: new Date(googleTokens.expires_at).toISOString()
+            })
+            .eq('id', currentUserId);
+
+          if (updateError) {
+            console.error('Error updating profile:', updateError);
+          } else {
+            console.log('Profile updated successfully with local user ID:', currentUserId);
+          }
+        }
+      } catch (profileError) {
+        console.error('Error managing profile:', profileError);
       }
 
       // Update current user with Google connection
