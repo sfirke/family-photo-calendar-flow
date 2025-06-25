@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Event } from '@/types/calendar';
 import { sampleEvents } from '@/data/sampleEvents';
+import { useICalCalendars } from './useICalCalendars';
 
 const LOCAL_EVENTS_KEY = 'family_calendar_events';
 const EVENTS_VERSION_KEY = 'family_calendar_events_version';
@@ -16,6 +17,7 @@ interface LocalEventStorage {
 export const useLocalEvents = () => {
   const [localEvents, setLocalEvents] = useState<Event[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const { getICalEvents } = useICalCalendars();
 
   // Load events from localStorage
   const loadLocalEvents = useCallback(() => {
@@ -74,6 +76,12 @@ export const useLocalEvents = () => {
     }
   }, []);
 
+  // Get all events (local + iCal)
+  const allEvents = useMemo(() => {
+    const icalEvents = getICalEvents();
+    return [...localEvents, ...icalEvents];
+  }, [localEvents, getICalEvents]);
+
   // Add a new event
   const addEvent = useCallback((newEvent: Omit<Event, 'id'>) => {
     const event: Event = {
@@ -127,7 +135,7 @@ export const useLocalEvents = () => {
 
   // Export events as JSON
   const exportEvents = useCallback(() => {
-    const dataStr = JSON.stringify(localEvents, null, 2);
+    const dataStr = JSON.stringify(allEvents, null, 2);
     const dataBlob = new Blob([dataStr], { type: 'application/json' });
     const url = URL.createObjectURL(dataBlob);
     
@@ -137,7 +145,7 @@ export const useLocalEvents = () => {
     link.click();
     
     URL.revokeObjectURL(url);
-  }, [localEvents]);
+  }, [allEvents]);
 
   // Import events from JSON
   const importEvents = useCallback((file: File) => {
@@ -174,8 +182,8 @@ export const useLocalEvents = () => {
 
   // Memoize return value to prevent unnecessary re-renders
   const memoizedValue = useMemo(() => ({
-    googleEvents: localEvents, // Keep same interface name for compatibility
-    localEvents,
+    googleEvents: allEvents, // Keep same interface name for compatibility
+    localEvents: allEvents, // Return combined events
     isLoading,
     refreshEvents,
     addEvent,
@@ -187,7 +195,7 @@ export const useLocalEvents = () => {
     clearCache: resetToSampleEvents,
     handleWebhookUpdate: () => {} // No-op for compatibility
   }), [
-    localEvents,
+    allEvents,
     isLoading,
     refreshEvents,
     addEvent,

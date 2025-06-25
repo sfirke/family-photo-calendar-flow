@@ -4,6 +4,7 @@ import { useCalendarSelection } from '@/hooks/useCalendarSelection';
 import EventSummary from './EventSummary';
 import CalendarList from './CalendarList';
 import LocalDataManager from '@/components/LocalDataManager';
+import ICalSettings from './ICalSettings';
 
 const CalendarsTab = () => {
   const { selectedCalendarIds, calendarsFromEvents } = useCalendarSelection();
@@ -14,6 +15,8 @@ const CalendarsTab = () => {
   return (
     <div className="space-y-6">
       <LocalDataManager />
+      
+      <ICalSettings />
       
       <EventSummary 
         totalEvents={totalEvents}

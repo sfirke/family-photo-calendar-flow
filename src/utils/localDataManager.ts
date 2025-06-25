@@ -43,7 +43,7 @@ export const localDataManager: LocalDataManager = {
         try {
           const importedData = JSON.parse(e.target?.result as string);
           
-          // Clear existing family calendar data
+          // Clear existing family calendar data (including iCal data)
           const keysToRemove: string[] = [];
           for (let i = 0; i < localStorage.length; i++) {
             const key = localStorage.key(i);
@@ -53,7 +53,7 @@ export const localDataManager: LocalDataManager = {
           }
           keysToRemove.forEach(key => localStorage.removeItem(key));
           
-          // Import new data
+          // Import new data (including iCal calendars and events)
           Object.entries(importedData).forEach(([key, value]) => {
             if (key.startsWith('family_calendar_')) {
               localStorage.setItem(key, typeof value === 'string' ? value : JSON.stringify(value));
