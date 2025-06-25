@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
@@ -38,7 +37,7 @@ serve(async (req) => {
       );
     }
 
-    const { userId, action, calendarId, manualSync, timeMin, timeMax, extendedRange } = requestBody;
+    const { userId, action, profileData, calendarId, manualSync, timeMin, timeMax, extendedRange } = requestBody;
     
     if (!userId) {
       console.error('Missing userId in request');
@@ -55,6 +54,102 @@ serve(async (req) => {
     }
 
     console.log('Sync request:', { userId, action, manualSync, extendedRange });
+
+    // Handle profile storage action
+    if (action === 'store-profile') {
+      if (!profileData) {
+        return new Response(
+          JSON.stringify({ 
+            error: 'Profile data is required for store-profile action',
+            success: false 
+          }),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 400 
+          }
+        );
+      }
+
+      try {
+        // Check if profile exists
+        const { data: existingProfile, error: getError } = await supabaseClient
+          .from('profiles')
+          .select('id')
+          .eq('id', userId)
+          .single();
+
+        if (!existingProfile) {
+          // Create new profile
+          const { error: insertError } = await supabaseClient
+            .from('profiles')
+            .insert({
+              id: userId,
+              ...profileData
+            });
+
+          if (insertError) {
+            console.error('Error creating profile:', insertError);
+            return new Response(
+              JSON.stringify({ 
+                error: 'Failed to create profile',
+                success: false 
+              }),
+              { 
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                status: 500 
+              }
+            );
+          }
+          
+          console.log('Profile created successfully');
+        } else {
+          // Update existing profile
+          const { error: updateError } = await supabaseClient
+            .from('profiles')
+            .update(profileData)
+            .eq('id', userId);
+
+          if (updateError) {
+            console.error('Error updating profile:', updateError);
+            return new Response(
+              JSON.stringify({ 
+                error: 'Failed to update profile',
+                success: false 
+              }),
+              { 
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                status: 500 
+              }
+            );
+          }
+          
+          console.log('Profile updated successfully');
+        }
+
+        return new Response(
+          JSON.stringify({ 
+            success: true,
+            message: 'Profile stored successfully'
+          }),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 200 
+          }
+        );
+      } catch (error) {
+        console.error('Error in store-profile action:', error);
+        return new Response(
+          JSON.stringify({ 
+            error: 'Internal server error during profile storage',
+            success: false 
+          }),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 500 
+          }
+        );
+      }
+    }
 
     // Get user's Google access token from profiles table
     const { data: profile, error: profileError } = await supabaseClient

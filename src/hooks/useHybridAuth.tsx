@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -122,62 +121,31 @@ export const useHybridAuth = () => {
       // Use the local user ID for database operations
       const currentUserId = user?.id || generateUUID();
 
-      // Ensure the profile exists in Supabase with proper error handling
+      // Store profile using edge function to bypass RLS issues
       try {
-        // First, try to get existing profile
-        const { data: existingProfile, error: getError } = await supabase
-          .from('profiles')
-          .select('id')
-          .eq('id', currentUserId)
-          .single();
-
-        if (getError && getError.code !== 'PGRST116') {
-          console.error('Error checking existing profile:', getError);
-        }
-
-        // If profile doesn't exist, create it
-        if (!existingProfile) {
-          console.log('Creating new profile for user:', currentUserId);
-          const { error: insertError } = await supabase
-            .from('profiles')
-            .insert({
-              id: currentUserId,
+        console.log('Storing profile via edge function for user:', currentUserId);
+        const { data, error } = await supabase.functions.invoke('sync-google-calendar', {
+          body: { 
+            userId: currentUserId,
+            action: 'store-profile',
+            profileData: {
               email: supabaseSession.user.email,
               full_name: supabaseSession.user.user_metadata?.full_name,
               avatar_url: supabaseSession.user.user_metadata?.avatar_url,
               google_access_token: googleTokens.access_token,
               google_refresh_token: googleTokens.refresh_token,
               google_token_expires_at: new Date(googleTokens.expires_at).toISOString()
-            });
-
-          if (insertError) {
-            console.error('Error creating profile:', insertError);
-          } else {
-            console.log('Profile created successfully with local user ID:', currentUserId);
+            }
           }
+        });
+
+        if (error) {
+          console.error('Error storing profile via edge function:', error);
         } else {
-          // Update existing profile with new tokens
-          console.log('Updating existing profile with new tokens:', currentUserId);
-          const { error: updateError } = await supabase
-            .from('profiles')
-            .update({
-              email: supabaseSession.user.email,
-              full_name: supabaseSession.user.user_metadata?.full_name,
-              avatar_url: supabaseSession.user.user_metadata?.avatar_url,
-              google_access_token: googleTokens.access_token,
-              google_refresh_token: googleTokens.refresh_token,
-              google_token_expires_at: new Date(googleTokens.expires_at).toISOString()
-            })
-            .eq('id', currentUserId);
-
-          if (updateError) {
-            console.error('Error updating profile:', updateError);
-          } else {
-            console.log('Profile updated successfully with local user ID:', currentUserId);
-          }
+          console.log('Profile stored successfully via edge function:', data);
         }
       } catch (profileError) {
-        console.error('Error managing profile:', profileError);
+        console.error('Error managing profile via edge function:', profileError);
       }
 
       // Update current user with Google connection
