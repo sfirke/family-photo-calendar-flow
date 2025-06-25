@@ -1,11 +1,13 @@
+
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import Calendar from '@/components/Calendar';
 import WeatherWidget from '@/components/WeatherWidget';
 import SettingsModal from '@/components/SettingsModal';
 import UserProfileDropdown from '@/components/UserProfileDropdown';
+import OfflineIndicator from '@/components/OfflineIndicator';
 import { Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useAuth } from '@/hooks/useAuth';
+import { useLocalAuth } from '@/hooks/useLocalAuth';
 import { useSettings } from '@/contexts/SettingsContext';
 import { getImagesFromAlbum, getDefaultBackgroundImages } from '@/utils/googlePhotosUtils';
 import { PerformanceMonitor, IntervalManager, displayOptimizations } from '@/utils/performanceUtils';
@@ -15,14 +17,8 @@ const Index = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [backgroundImages, setBackgroundImages] = useState<string[]>(getDefaultBackgroundImages());
   const [currentTime, setCurrentTime] = useState(new Date());
-  const {
-    user,
-    loading
-  } = useAuth();
-  const {
-    backgroundDuration,
-    publicAlbumUrl
-  } = useSettings();
+  const { user, loading } = useLocalAuth();
+  const { backgroundDuration, publicAlbumUrl } = useSettings();
 
   // Optimized clock update - only update minutes, not seconds
   useEffect(() => {
@@ -77,7 +73,7 @@ const Index = () => {
     };
   }, []);
 
-  // Optimized background image loading with error recovery
+  // Background image loading with error recovery (local album URL support)
   const loadBackgroundImages = useCallback(async () => {
     if (publicAlbumUrl) {
       try {
@@ -96,6 +92,7 @@ const Index = () => {
       setBackgroundImages(getDefaultBackgroundImages());
     }
   }, [publicAlbumUrl]);
+
   useEffect(() => {
     loadBackgroundImages();
   }, [loadBackgroundImages]);
@@ -137,6 +134,7 @@ const Index = () => {
       minute: '2-digit'
     });
   }, [currentTime]);
+
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
@@ -145,6 +143,7 @@ const Index = () => {
         </div>
       </div>;
   }
+
   return <div className="min-h-screen relative overflow-hidden flex flex-col">
       {/* Background Image with optimized transitions */}
       <div className="absolute inset-0 transition-opacity duration-1000 ease-in-out" style={backgroundStyle} />
@@ -164,8 +163,9 @@ const Index = () => {
           </div>
           
           <div className="flex items-center gap-4 relative z-10">
+            <OfflineIndicator />
             <WeatherWidget />
-            <UserProfileDropdown />
+            {user && <UserProfileDropdown />}
           </div>
         </header>
 
@@ -185,4 +185,5 @@ const Index = () => {
       <SettingsModal open={showSettings} onOpenChange={setShowSettings} />
     </div>;
 };
+
 export default Index;

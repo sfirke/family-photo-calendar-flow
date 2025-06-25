@@ -1,52 +1,19 @@
 
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Calendar as CalendarIcon, RefreshCw } from 'lucide-react';
+import { Calendar as CalendarIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { useGoogleCalendarEvents } from '@/hooks/useGoogleCalendarEvents';
 import { useCalendarSelection } from '@/hooks/useCalendarSelection';
 
 const CalendarList = () => {
-  const { googleEvents, isLoading: eventsLoading } = useGoogleCalendarEvents();
   const { 
+    calendarsFromEvents,
     selectedCalendarIds, 
     toggleCalendar,
     selectAllCalendars,
     clearAllCalendars
   } = useCalendarSelection();
-
-  // Group events by calendar to create calendar list
-  const calendarsFromEvents = React.useMemo(() => {
-    const calendarMap = new Map();
-    
-    googleEvents.forEach(event => {
-      const calendarId = event.calendarId || 'primary';
-      const calendarName = event.calendarName || 'Primary Calendar';
-      
-      if (!calendarMap.has(calendarId)) {
-        calendarMap.set(calendarId, {
-          id: calendarId,
-          summary: calendarName,
-          primary: calendarId === 'primary',
-          eventCount: 0,
-          hasEvents: false
-        });
-      }
-      
-      const calendar = calendarMap.get(calendarId);
-      calendar.eventCount += 1;
-      calendar.hasEvents = true;
-    });
-
-    return Array.from(calendarMap.values()).sort((a, b) => {
-      // Sort by: primary first, then by event count (descending), then by name
-      if (a.primary && !b.primary) return -1;
-      if (!a.primary && b.primary) return 1;
-      if (a.eventCount !== b.eventCount) return b.eventCount - a.eventCount;
-      return a.summary.localeCompare(b.summary);
-    });
-  }, [googleEvents]);
 
   const handleSelectAll = () => {
     selectAllCalendars();
@@ -70,34 +37,11 @@ const CalendarList = () => {
         toggleCalendar(calendarId, false);
       }
     });
-    
-    console.log('CalendarList: Selected only calendars with events:', calendarsWithEventsIds);
   };
 
   const calendarsWithEventsCount = calendarsFromEvents.filter(cal => cal.hasEvents).length;
 
   if (calendarsFromEvents.length === 0) {
-    if (eventsLoading) {
-      return (
-        <Card className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-gray-100">
-              <CalendarIcon className="h-5 w-5" />
-              Available Calendars
-            </CardTitle>
-            <CardDescription className="text-gray-600 dark:text-gray-400">
-              Loading calendars from your Google Calendar events...
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-              <RefreshCw className="h-4 w-4 animate-spin" />
-              <span className="text-sm">Loading calendars...</span>
-            </div>
-          </CardContent>
-        </Card>
-      );
-    }
     return null;
   }
 
@@ -109,7 +53,7 @@ const CalendarList = () => {
           Available Calendars
         </CardTitle>
         <CardDescription className="text-gray-600 dark:text-gray-400">
-          Select which calendars to display in your calendar view. Based on calendars found in your synced events.
+          Select which calendars to display in your calendar view. Based on calendars found in your local events.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -193,7 +137,7 @@ const CalendarList = () => {
           <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
             <p className="text-xs text-gray-500 dark:text-gray-400">
               Note: Calendar selections are automatically applied to the calendar view and dropdown filter.
-              Calendars are discovered from your synced Google Calendar events.
+              All data is stored locally in your browser.
             </p>
           </div>
         </div>

@@ -8,10 +8,10 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { LogOut, User as UserIcon } from 'lucide-react';
-import { useAuth } from '@/hooks/useAuth';
+import { useLocalAuth } from '@/hooks/useLocalAuth';
 
 const UserProfileDropdown = () => {
-  const { user, signOut } = useAuth();
+  const { user, signOut } = useLocalAuth();
 
   if (!user) return null;
 
@@ -43,7 +43,7 @@ const UserProfileDropdown = () => {
         </DropdownMenuItem>
         <DropdownMenuItem onClick={handleSignOut} className="text-red-600">
           <LogOut className="mr-2 h-4 w-4" />
-          Sign Out
+          Reset Session
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

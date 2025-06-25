@@ -1,50 +1,35 @@
 
-import React, { useState, useEffect } from 'react';
-import { useGoogleCalendarEvents } from '@/hooks/useGoogleCalendarEvents';
+import { useState, useEffect, useMemo } from 'react';
+import { useLocalEvents } from '@/hooks/useLocalEvents';
 
-const SELECTED_CALENDARS_KEY = 'selectedCalendarIds';
-
-interface CalendarFromEvents {
-  id: string;
-  summary: string;
-  primary?: boolean;
-  eventCount: number;
-  hasEvents: boolean;
-}
+const SELECTED_CALENDARS_KEY = 'family_calendar_selected_calendars';
 
 export const useCalendarSelection = () => {
   const [selectedCalendarIds, setSelectedCalendarIds] = useState<string[]>([]);
-  const { googleEvents, isLoading } = useGoogleCalendarEvents();
+  const { localEvents } = useLocalEvents();
 
-  // Load selected calendar IDs from localStorage
-  useEffect(() => {
-    const stored = localStorage.getItem(SELECTED_CALENDARS_KEY);
-    if (stored) {
-      try {
-        const parsedIds = JSON.parse(stored);
-        setSelectedCalendarIds(parsedIds);
-        console.log('useCalendarSelection: Loaded selected calendar IDs from localStorage:', parsedIds);
-      } catch (error) {
-        console.error('useCalendarSelection: Error parsing stored calendar IDs:', error);
-      }
-    }
-  }, []);
-
-  // Group events by calendar to create calendar list (same logic as CalendarList.tsx)
-  const calendarsFromEvents: CalendarFromEvents[] = React.useMemo(() => {
+  // Generate calendars from local events
+  const calendarsFromEvents = useMemo(() => {
     const calendarMap = new Map();
     
-    googleEvents.forEach(event => {
-      const calendarId = event.calendarId || 'primary';
-      // Use the human-readable calendar name from the event
-      const calendarName = event.calendarName || 
-                          (calendarId === 'primary' ? 'Primary Calendar' : calendarId);
+    // Always include the default local calendar
+    calendarMap.set('local_calendar', {
+      id: 'local_calendar',
+      summary: 'Family Calendar',
+      primary: true,
+      eventCount: 0,
+      hasEvents: false
+    });
+
+    localEvents.forEach(event => {
+      const calendarId = event.calendarId || 'local_calendar';
+      const calendarName = event.calendarName || 'Family Calendar';
       
       if (!calendarMap.has(calendarId)) {
         calendarMap.set(calendarId, {
           id: calendarId,
-          summary: calendarName, // Use the human-readable name
-          primary: calendarId === 'primary',
+          summary: calendarName,
+          primary: calendarId === 'local_calendar',
           eventCount: 0,
           hasEvents: false
         });
@@ -55,104 +40,69 @@ export const useCalendarSelection = () => {
       calendar.hasEvents = true;
     });
 
-    return Array.from(calendarMap.values());
-  }, [googleEvents]);
+    return Array.from(calendarMap.values()).sort((a, b) => {
+      if (a.primary && !b.primary) return -1;
+      if (!a.primary && b.primary) return 1;
+      if (a.eventCount !== b.eventCount) return b.eventCount - a.eventCount;
+      return a.summary.localeCompare(b.summary);
+    });
+  }, [localEvents]);
 
-  // Auto-select all calendars when they are first loaded and no selection exists
+  // Load selected calendars from localStorage
   useEffect(() => {
-    if (calendarsFromEvents.length > 0 && selectedCalendarIds.length === 0) {
+    const savedSelection = localStorage.getItem(SELECTED_CALENDARS_KEY);
+    if (savedSelection) {
+      try {
+        const parsedSelection = JSON.parse(savedSelection);
+        setSelectedCalendarIds(parsedSelection);
+      } catch (error) {
+        console.error('Error loading calendar selection:', error);
+        // Default to all available calendars
+        const allCalendarIds = calendarsFromEvents.map(cal => cal.id);
+        setSelectedCalendarIds(allCalendarIds);
+      }
+    } else {
+      // Default to all available calendars
       const allCalendarIds = calendarsFromEvents.map(cal => cal.id);
       setSelectedCalendarIds(allCalendarIds);
-      localStorage.setItem(SELECTED_CALENDARS_KEY, JSON.stringify(allCalendarIds));
-      console.log('useCalendarSelection: Auto-selecting all calendars on first load:', allCalendarIds);
     }
-  }, [calendarsFromEvents, selectedCalendarIds.length]);
+  }, [calendarsFromEvents]);
 
-  // Update selected calendars and persist to localStorage
-  const updateSelectedCalendars = (newSelectedIds: string[]) => {
-    setSelectedCalendarIds(newSelectedIds);
-    localStorage.setItem(SELECTED_CALENDARS_KEY, JSON.stringify(newSelectedIds));
-    console.log('useCalendarSelection: Updated selected calendar IDs:', newSelectedIds);
-    
-    // Dispatch custom event to notify other components
-    window.dispatchEvent(new CustomEvent('localStorageChange', {
-      detail: { key: SELECTED_CALENDARS_KEY, newValue: JSON.stringify(newSelectedIds) }
-    }));
+  // Save selected calendars to localStorage
+  const saveSelection = (calendarIds: string[]) => {
+    localStorage.setItem(SELECTED_CALENDARS_KEY, JSON.stringify(calendarIds));
+    setSelectedCalendarIds(calendarIds);
+  };
+
+  const updateSelectedCalendars = (calendarIds: string[]) => {
+    saveSelection(calendarIds);
+  };
+
+  const toggleCalendar = (calendarId: string, selected: boolean) => {
+    if (selected) {
+      if (!selectedCalendarIds.includes(calendarId)) {
+        saveSelection([...selectedCalendarIds, calendarId]);
+      }
+    } else {
+      saveSelection(selectedCalendarIds.filter(id => id !== calendarId));
+    }
   };
 
   const selectAllCalendars = () => {
-    const allIds = calendarsFromEvents.map(cal => cal.id);
-    updateSelectedCalendars(allIds);
-  };
-
-  const selectCalendarsWithEvents = () => {
-    const calendarsWithEventsIds = calendarsFromEvents
-      .filter(cal => cal.hasEvents)
-      .map(cal => cal.id);
-    updateSelectedCalendars(calendarsWithEventsIds);
-    console.log('useCalendarSelection: Selected only calendars with events:', calendarsWithEventsIds);
+    const allCalendarIds = calendarsFromEvents.map(cal => cal.id);
+    saveSelection(allCalendarIds);
   };
 
   const clearAllCalendars = () => {
-    updateSelectedCalendars([]);
+    saveSelection([]);
   };
-
-  const toggleCalendar = (calendarId: string, checked: boolean) => {
-    const calendarName = calendarsFromEvents.find(cal => cal.id === calendarId)?.summary || calendarId;
-    console.log('useCalendarSelection: Calendar toggle requested:', { calendarId, calendarName, checked });
-    
-    let newSelection: string[];
-    
-    if (checked) {
-      newSelection = [...selectedCalendarIds, calendarId];
-    } else {
-      newSelection = selectedCalendarIds.filter(id => id !== calendarId);
-    }
-    
-    updateSelectedCalendars(newSelection);
-  };
-
-  // Listen for storage changes from other components
-  useEffect(() => {
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === SELECTED_CALENDARS_KEY && e.newValue) {
-        try {
-          const newSelectedIds = JSON.parse(e.newValue);
-          setSelectedCalendarIds(newSelectedIds);
-        } catch (error) {
-          console.error('useCalendarSelection: Error parsing storage event data:', error);
-        }
-      }
-    };
-
-    const handleCustomStorageChange = (e: CustomEvent) => {
-      if (e.detail.key === SELECTED_CALENDARS_KEY) {
-        try {
-          const newSelectedIds = JSON.parse(e.detail.newValue);
-          setSelectedCalendarIds(newSelectedIds);
-        } catch (error) {
-          console.error('useCalendarSelection: Error parsing custom event data:', error);
-        }
-      }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    window.addEventListener('localStorageChange' as any, handleCustomStorageChange);
-
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('localStorageChange' as any, handleCustomStorageChange);
-    };
-  }, []);
 
   return {
     selectedCalendarIds,
     calendarsFromEvents,
-    isLoading,
+    updateSelectedCalendars,
     toggleCalendar,
     selectAllCalendars,
-    selectCalendarsWithEvents,
-    clearAllCalendars,
-    updateSelectedCalendars
+    clearAllCalendars
   };
 };
