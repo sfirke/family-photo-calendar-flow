@@ -22,15 +22,37 @@ serve(async (req) => {
     const { userId, action, calendarId, manualSync, timeMin, timeMax, extendedRange, profileData } = await req.json();
     
     if (!userId) {
-      throw new Error('User ID is required');
+      console.error('User ID is required');
+      return new Response(
+        JSON.stringify({ 
+          error: 'User ID is required',
+          success: false 
+        }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400 
+        }
+      );
     }
+
+    console.log(`Processing request for user: ${userId}, action: ${action || 'sync'}`);
 
     // Handle profile storage action (for storing Google tokens after auth)
     if (action === 'store-profile') {
       console.log('Storing profile data for user:', userId);
       
       if (!profileData) {
-        throw new Error('Profile data is required for store-profile action');
+        console.error('Profile data is required for store-profile action');
+        return new Response(
+          JSON.stringify({ 
+            error: 'Profile data is required for store-profile action',
+            success: false 
+          }),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 400 
+          }
+        );
       }
 
       const { error: upsertError } = await supabaseClient
@@ -47,7 +69,16 @@ serve(async (req) => {
 
       if (upsertError) {
         console.error('Error upserting profile:', upsertError);
-        throw new Error(`Failed to store profile: ${upsertError.message}`);
+        return new Response(
+          JSON.stringify({ 
+            error: `Failed to store profile: ${upsertError.message}`,
+            success: false 
+          }),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 500 
+          }
+        );
       }
 
       console.log('Profile stored successfully for user:', userId);
@@ -70,11 +101,36 @@ serve(async (req) => {
       .eq('id', userId)
       .single();
 
-    if (profileError || !profile?.google_access_token) {
-      throw new Error('Google access token not found. Please reconnect your Google account.');
+    if (profileError) {
+      console.error('Error fetching profile:', profileError);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Failed to fetch user profile. Please reconnect your Google account.',
+          success: false 
+        }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 404 
+        }
+      );
+    }
+
+    if (!profile?.google_access_token) {
+      console.error('No Google access token found for user:', userId);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Google access token not found. Please reconnect your Google account.',
+          success: false 
+        }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 401 
+        }
+      );
     }
 
     let accessToken = profile.google_access_token;
+    console.log('Found Google access token for user:', userId);
 
     // Handle webhook setup
     if (action === 'setup-webhooks') {
@@ -92,7 +148,17 @@ serve(async (req) => {
       );
 
       if (!calendarsResponse.ok) {
-        throw new Error(`Failed to fetch calendars: ${calendarsResponse.status}`);
+        console.error('Failed to fetch calendars for webhook setup:', calendarsResponse.status);
+        return new Response(
+          JSON.stringify({ 
+            error: `Failed to fetch calendars: ${calendarsResponse.status}`,
+            success: false 
+          }),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: calendarsResponse.status 
+          }
+        );
       }
 
       const calendarsData = await calendarsResponse.json();
@@ -165,6 +231,7 @@ serve(async (req) => {
 
     // Handle list calendars action
     if (action === 'list-calendars') {
+      console.log('Listing calendars for user:', userId);
       const calendarsResponse = await fetch(
         'https://www.googleapis.com/calendar/v3/users/me/calendarList',
         {
@@ -178,7 +245,16 @@ serve(async (req) => {
       if (!calendarsResponse.ok) {
         const errorData = await calendarsResponse.text();
         console.error('Google Calendar API error:', errorData);
-        throw new Error(`Google Calendar API error: ${calendarsResponse.status}`);
+        return new Response(
+          JSON.stringify({ 
+            error: `Google Calendar API error: ${calendarsResponse.status}`,
+            success: false 
+          }),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: calendarsResponse.status 
+          }
+        );
       }
 
       const calendarsData = await calendarsResponse.json();
@@ -226,6 +302,7 @@ serve(async (req) => {
         calendarNameMap.set(cal.id, cal.summary || cal.id);
       });
     } else {
+      console.error('Failed to fetch calendars, using primary calendar as fallback');
       // Fallback to primary calendar
       calendarsToSync = [{ id: 'primary', summary: 'Primary Calendar' }];
       calendarNameMap.set('primary', 'Primary Calendar');
@@ -253,10 +330,14 @@ serve(async (req) => {
     console.log(`Syncing events from ${syncTimeMin} to ${syncTimeMax} for ${calendarsToSync.length} calendars`);
 
     // Clear existing events for this user to avoid duplicates
-    await supabaseClient
+    const { error: deleteError } = await supabaseClient
       .from('calendar_events')
       .delete()
       .eq('user_id', userId);
+
+    if (deleteError) {
+      console.error('Error clearing existing events:', deleteError);
+    }
 
     let totalEventCount = 0;
     let allDayCount = 0;
@@ -327,7 +408,7 @@ serve(async (req) => {
             location: event.location || null,
             attendees: event.attendees || [],
             calendar_id: calendar.id,
-            calendar_name: calendarName, // Store human-readable name
+            calendar_name: calendarName,
             is_all_day: isAllDay
           };
         });
