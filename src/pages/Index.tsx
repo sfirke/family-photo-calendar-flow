@@ -7,7 +7,7 @@ import UserProfileDropdown from '@/components/UserProfileDropdown';
 import OfflineIndicator from '@/components/OfflineIndicator';
 import { Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useHybridAuth } from '@/hooks/useHybridAuth';
+import { useLocalAuth } from '@/hooks/useLocalAuth';
 import { useSettings } from '@/contexts/SettingsContext';
 import { getImagesFromAlbum, getDefaultBackgroundImages } from '@/utils/googlePhotosUtils';
 import { PerformanceMonitor, IntervalManager, displayOptimizations } from '@/utils/performanceUtils';
@@ -17,7 +17,7 @@ const Index = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [backgroundImages, setBackgroundImages] = useState<string[]>(getDefaultBackgroundImages());
   const [currentTime, setCurrentTime] = useState(new Date());
-  const { user, loading } = useHybridAuth();
+  const { user, loading } = useLocalAuth();
   const { backgroundDuration, publicAlbumUrl } = useSettings();
 
   // Optimized clock update - only update minutes, not seconds
