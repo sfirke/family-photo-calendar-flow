@@ -88,6 +88,39 @@ export const useICalCalendars = () => {
     }
   }, [calendars, saveCalendars]);
 
+  // Validate iCal data format
+  const isValidICalData = (data: string): boolean => {
+    if (!data || typeof data !== 'string') {
+      return false;
+    }
+
+    // Check for common error responses
+    const errorIndicators = [
+      'offline', 'error', 'not found', '404', '500', '503',
+      'access denied', 'forbidden', 'unauthorized', 'timeout',
+      'maintenance', 'unavailable'
+    ];
+    
+    const lowerData = data.toLowerCase().trim();
+    
+    // If the response is very short and contains error keywords, it's likely an error
+    if (data.length < 50 && errorIndicators.some(indicator => lowerData.includes(indicator))) {
+      console.log('Data appears to be an error message:', data.substring(0, 100));
+      return false;
+    }
+
+    // Check for basic iCal structure
+    const hasVCalendar = lowerData.includes('begin:vcalendar');
+    const hasVEvent = lowerData.includes('begin:vevent');
+    
+    if (!hasVCalendar) {
+      console.log('Data does not contain BEGIN:VCALENDAR');
+      return false;
+    }
+
+    return true;
+  };
+
   // Try fetching with different methods
   const fetchICalData = async (url: string): Promise<string> => {
     console.log('Attempting to fetch iCal from:', url);
@@ -105,7 +138,12 @@ export const useICalCalendars = () => {
       if (response.ok) {
         const data = await response.text();
         console.log('Direct fetch successful, data length:', data.length);
-        return data;
+        
+        if (isValidICalData(data)) {
+          return data;
+        } else {
+          console.log('Direct fetch returned invalid iCal data');
+        }
       }
     } catch (error) {
       console.log('Direct fetch failed, trying proxies:', error);
@@ -127,19 +165,20 @@ export const useICalCalendars = () => {
           const data = await response.text();
           console.log(`Proxy ${i + 1} successful, data length:`, data.length);
           
-          // Validate that we got iCal data
-          if (data.includes('BEGIN:VCALENDAR') || data.includes('BEGIN:VEVENT')) {
+          if (isValidICalData(data)) {
             return data;
           } else {
-            console.log(`Proxy ${i + 1} returned non-iCal data`);
+            console.log(`Proxy ${i + 1} returned invalid iCal data:`, data.substring(0, 100));
           }
+        } else {
+          console.log(`Proxy ${i + 1} failed with status:`, response.status);
         }
       } catch (error) {
         console.log(`Proxy ${i + 1} failed:`, error);
       }
     }
 
-    throw new Error('All fetch methods failed. Please check if the iCal URL is publicly accessible.');
+    throw new Error('All fetch methods failed or returned invalid data. Please check if the iCal URL is publicly accessible and returns valid calendar data.');
   };
 
   // Fetch and parse iCal feed
@@ -150,8 +189,23 @@ export const useICalCalendars = () => {
     try {
       const icalData = await fetchICalData(calendar.url);
       
+      // Additional validation before parsing
+      if (!icalData || icalData.trim().length === 0) {
+        throw new Error('Received empty calendar data');
+      }
+
+      console.log('Parsing iCal data, length:', icalData.length);
+      
       // Parse iCal data
-      const jcalData = ICAL.parse(icalData);
+      let jcalData;
+      try {
+        jcalData = ICAL.parse(icalData);
+      } catch (parseError) {
+        console.error('ICAL parsing error:', parseError);
+        console.log('Problematic data sample:', icalData.substring(0, 200));
+        throw new Error(`Invalid calendar format: ${parseError instanceof Error ? parseError.message : 'Unknown parsing error'}`);
+      }
+
       const vcalendar = new ICAL.Component(jcalData);
       const vevents = vcalendar.getAllSubcomponents('vevent');
 
