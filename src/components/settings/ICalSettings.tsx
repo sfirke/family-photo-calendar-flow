@@ -8,7 +8,7 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useICalCalendars, ICalCalendar } from '@/hooks/useICalCalendars';
-import { Calendar, Plus, Trash2, RefreshCw, ExternalLink, AlertCircle } from 'lucide-react';
+import { Calendar, Plus, Trash2, RefreshCw, ExternalLink, AlertCircle, RotateCcw } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -29,7 +29,7 @@ const CALENDAR_COLORS = [
 ];
 
 const ICalSettings = () => {
-  const { calendars, isLoading, syncStatus, addCalendar, updateCalendar, removeCalendar, syncCalendar } = useICalCalendars();
+  const { calendars, isLoading, syncStatus, addCalendar, updateCalendar, removeCalendar, syncCalendar, syncAllCalendars } = useICalCalendars();
   const { toast } = useToast();
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [newCalendar, setNewCalendar] = useState({
@@ -99,6 +99,23 @@ const ICalSettings = () => {
     }
   };
 
+  const handleSyncAll = async () => {
+    try {
+      await syncAllCalendars();
+      toast({
+        title: "Sync completed",
+        description: "All enabled calendars have been synced."
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      toast({
+        title: "Sync failed",
+        description: `Failed to sync some calendars: ${errorMessage}`,
+        variant: "destructive"
+      });
+    }
+  };
+
   const handleRemove = (calendar: ICalCalendar) => {
     removeCalendar(calendar.id);
     toast({
@@ -122,16 +139,34 @@ const ICalSettings = () => {
     return <Badge variant="secondary">Not synced</Badge>;
   };
 
+  const enabledCalendarsCount = calendars.filter(cal => cal.enabled).length;
+
   return (
     <Card className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-gray-100">
-          <Calendar className="h-5 w-5" />
-          Calendar Feeds
-        </CardTitle>
-        <CardDescription className="text-gray-600 dark:text-gray-400">
-          Add external calendar feeds using iCal/ICS URLs. No authentication required.
-        </CardDescription>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-gray-100">
+              <Calendar className="h-5 w-5" />
+              Calendar Feeds
+            </CardTitle>
+            <CardDescription className="text-gray-600 dark:text-gray-400">
+              Add external calendar feeds using iCal/ICS URLs. No authentication required.
+            </CardDescription>
+          </div>
+          {calendars.length > 0 && (
+            <Button 
+              onClick={handleSyncAll}
+              disabled={isLoading || enabledCalendarsCount === 0}
+              variant="outline"
+              size="sm"
+              className="ml-4"
+            >
+              <RotateCcw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+              Sync All ({enabledCalendarsCount})
+            </Button>
+          )}
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Add Calendar Button */}
@@ -230,6 +265,7 @@ const ICalSettings = () => {
                     variant="outline"
                     onClick={() => handleSync(calendar)}
                     disabled={isLoading}
+                    title="Sync this calendar"
                   >
                     <RefreshCw className={`h-4 w-4 ${syncStatus[calendar.id] === 'syncing' ? 'animate-spin' : ''}`} />
                   </Button>
@@ -237,6 +273,7 @@ const ICalSettings = () => {
                     size="sm"
                     variant="outline"
                     onClick={() => handleRemove(calendar)}
+                    title="Remove this calendar"
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -263,6 +300,7 @@ const ICalSettings = () => {
             <p>• Look for "Export" or "Share" options in your calendar application</p>
             <p>• Ensure the calendar is set to "Public" or you have the private URL with access key</p>
             <p>• The URL should end with .ics or contain "ical" in the path</p>
+            <p>• Use the sync buttons to manually refresh calendar data</p>
           </AlertDescription>
         </Alert>
       </CardContent>
