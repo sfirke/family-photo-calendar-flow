@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import Calendar from '@/components/Calendar';
 import WeatherWidget from '@/components/WeatherWidget';
@@ -73,6 +74,8 @@ const Index = () => {
 
   // Background image loading with cached photos
   const loadBackgroundImages = useCallback(async () => {
+    console.log('Loading background images, publicAlbumUrl:', publicAlbumUrl);
+    
     if (publicAlbumUrl) {
       try {
         // First try to get cached photos
@@ -87,12 +90,15 @@ const Index = () => {
         }
         
         // Fallback to fetching if no cache
+        console.log('No cached photos found, fetching from album...');
         const albumImages = await getImagesFromAlbum(publicAlbumUrl);
         if (albumImages.length > 0) {
           const randomizedImages = [...albumImages].sort(() => Math.random() - 0.5);
+          console.log(`Loaded ${randomizedImages.length} images from album`);
           setBackgroundImages(randomizedImages);
           setCurrentBg(0);
         } else {
+          console.log('No album images found, using defaults');
           setBackgroundImages(getDefaultBackgroundImages());
         }
       } catch (error) {
@@ -100,25 +106,37 @@ const Index = () => {
         setBackgroundImages(getDefaultBackgroundImages());
       }
     } else {
+      console.log('No album URL set, using default images');
       setBackgroundImages(getDefaultBackgroundImages());
     }
   }, [publicAlbumUrl]);
+
+  // Load background images when component mounts or album URL changes
+  useEffect(() => {
+    loadBackgroundImages();
+  }, [loadBackgroundImages]);
 
   // Optimized background rotation with proper cleanup
   useEffect(() => {
     if (backgroundImages.length <= 1) return;
     const intervalTime = backgroundDuration * 60 * 1000;
+    console.log(`Setting up background rotation every ${backgroundDuration} minutes`);
     IntervalManager.setInterval('background-rotation', () => {
-      setCurrentBg(prev => (prev + 1) % backgroundImages.length);
+      setCurrentBg(prev => {
+        const next = (prev + 1) % backgroundImages.length;
+        console.log(`Changing background from ${prev} to ${next}`);
+        return next;
+      });
     }, intervalTime);
     return () => {
       IntervalManager.clearInterval('background-rotation');
     };
   }, [backgroundDuration, backgroundImages.length]);
 
-  // Memoized background style with preloading
+  // Memoized background style with preloading and proper scaling
   const backgroundStyle = useMemo(() => {
     const currentImage = backgroundImages[currentBg];
+    console.log(`Current background image: ${currentImage}`);
 
     // Preload next image for smooth transitions
     if (backgroundImages.length > 1) {
@@ -126,11 +144,16 @@ const Index = () => {
       const nextImage = new Image();
       nextImage.src = backgroundImages[nextIndex];
     }
+
     return {
-      backgroundImage: `url(${currentImage})`,
+      backgroundImage: `url("${currentImage}")`,
       backgroundSize: 'cover',
       backgroundPosition: 'center',
-      backgroundRepeat: 'no-repeat'
+      backgroundRepeat: 'no-repeat',
+      backgroundAttachment: 'fixed',
+      width: '100%',
+      height: '100vh',
+      minHeight: '100vh'
     };
   }, [backgroundImages, currentBg]);
 
@@ -152,14 +175,17 @@ const Index = () => {
   }
 
   return <div className="min-h-screen relative overflow-hidden flex flex-col">
-      {/* Background Image with optimized transitions */}
-      <div className="absolute inset-0 transition-opacity duration-1000 ease-in-out" style={backgroundStyle} />
+      {/* Background Image with optimized transitions and proper scaling */}
+      <div 
+        className="fixed inset-0 w-full h-full transition-all duration-1000 ease-in-out" 
+        style={backgroundStyle}
+      />
       
       {/* Glass overlay */}
-      <div className="absolute inset-0 bg-white/10 backdrop-blur-[1px] dark:bg-black/20" />
+      <div className="absolute inset-0 bg-white/10 backdrop-blur-[1px] dark:bg-black/20 z-10" />
       
       {/* Content */}
-      <div className="relative z-10 min-h-screen flex flex-col">
+      <div className="relative z-20 min-h-screen flex flex-col">
         {/* Header with gradient overlay - Fixed positioning */}
         <header className="fixed top-0 left-0 right-0 z-30 flex items-center justify-between p-6">
           {/* Header gradient overlay */}
