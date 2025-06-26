@@ -28,17 +28,15 @@ export const useCalendarSelection = () => {
       calendarEventCounts.set(calendarId, (calendarEventCounts.get(calendarId) || 0) + 1);
     });
 
-    // Only add enabled iCal calendars - this ensures deleted calendars don't appear
+    // Add ALL iCal calendars to always show them in the Calendar Feeds section
     iCalCalendars.forEach(iCalCalendar => {
-      if (iCalCalendar.enabled) {
-        calendarMap.set(iCalCalendar.id, {
-          id: iCalCalendar.id,
-          summary: iCalCalendar.name,
-          primary: false,
-          eventCount: calendarEventCounts.get(iCalCalendar.id) || 0,
-          hasEvents: calendarEventCounts.has(iCalCalendar.id)
-        });
-      }
+      calendarMap.set(iCalCalendar.id, {
+        id: iCalCalendar.id,
+        summary: iCalCalendar.name,
+        primary: false,
+        eventCount: calendarEventCounts.get(iCalCalendar.id) || 0,
+        hasEvents: calendarEventCounts.has(iCalCalendar.id)
+      });
     });
 
     // Process events to add any additional calendars not already in the map

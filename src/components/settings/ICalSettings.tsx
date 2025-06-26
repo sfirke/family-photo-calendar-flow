@@ -205,7 +205,7 @@ const ICalSettings = () => {
         {/* Add Calendar Button */}
         <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
           <DialogTrigger asChild>
-            <Button className="w-full" variant="outline">
+            <Button className="w-full bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 hover:bg-gray-800 dark:hover:bg-gray-200" variant="default">
               <Plus className="h-4 w-4 mr-2" />
               Add Calendar Feed
             </Button>
@@ -263,7 +263,7 @@ const ICalSettings = () => {
           </DialogContent>
         </Dialog>
 
-        {/* Calendar List */}
+        {/* Calendar List - Show all calendars regardless of whether they have events */}
         {calendars.length > 0 && (
           <div className="space-y-3">
             {calendars.map(calendar => (
