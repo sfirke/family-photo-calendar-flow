@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import ICAL from 'ical.js';
 
@@ -121,6 +120,12 @@ export const useICalCalendars = () => {
     return true;
   };
 
+  // Check if event is in current year
+  const isEventInCurrentYear = (eventDate: Date): boolean => {
+    const currentYear = new Date().getFullYear();
+    return eventDate.getFullYear() === currentYear;
+  };
+
   // Try fetching with different methods
   const fetchICalData = async (url: string): Promise<string> => {
     console.log('Attempting to fetch iCal from:', url);
@@ -209,43 +214,50 @@ export const useICalCalendars = () => {
       const vcalendar = new ICAL.Component(jcalData);
       const vevents = vcalendar.getAllSubcomponents('vevent');
 
-      const events = vevents.map((vevent, index) => {
-        const event = new ICAL.Event(vevent);
-        
-        // Handle different date formats
-        let eventDate = new Date();
-        let timeString = 'All day';
-        
-        try {
-          if (event.startDate) {
-            eventDate = event.startDate.toJSDate();
-            
-            if (!event.startDate.isDate) {
-              // Has time component
-              const endDate = event.endDate ? event.endDate.toJSDate() : eventDate;
-              timeString = `${eventDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - ${endDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+      const currentYear = new Date().getFullYear();
+      console.log(`Filtering events for year ${currentYear}`);
+
+      const events = vevents
+        .map((vevent, index) => {
+          const event = new ICAL.Event(vevent);
+          
+          // Handle different date formats
+          let eventDate = new Date();
+          let timeString = 'All day';
+          
+          try {
+            if (event.startDate) {
+              eventDate = event.startDate.toJSDate();
+              
+              if (!event.startDate.isDate) {
+                // Has time component
+                const endDate = event.endDate ? event.endDate.toJSDate() : eventDate;
+                timeString = `${eventDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - ${endDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+              }
             }
+          } catch (dateError) {
+            console.warn('Error parsing event date:', dateError);
           }
-        } catch (dateError) {
-          console.warn('Error parsing event date:', dateError);
-        }
-        
-        return {
-          id: Date.now() + index,
-          title: event.summary || 'Untitled Event',
-          time: event.isRecurring() ? 'Recurring' : timeString,
-          location: event.location || '',
-          attendees: 0,
-          category: 'Personal' as const,
-          color: calendar.color,
-          description: event.description || '',
-          organizer: calendar.name,
-          date: eventDate,
-          calendarId: calendar.id,
-          calendarName: calendar.name,
-          source: 'ical'
-        };
-      });
+          
+          return {
+            id: Date.now() + index,
+            title: event.summary || 'Untitled Event',
+            time: event.isRecurring() ? 'Recurring' : timeString,
+            location: event.location || '',
+            attendees: 0,
+            category: 'Personal' as const,
+            color: calendar.color,
+            description: event.description || '',
+            organizer: calendar.name,
+            date: eventDate,
+            calendarId: calendar.id,
+            calendarName: calendar.name,
+            source: 'ical'
+          };
+        })
+        .filter(event => isEventInCurrentYear(event.date)); // Filter for current year only
+
+      console.log(`Filtered ${events.length} events for current year (${currentYear}) from ${vevents.length} total events`);
 
       // Store events
       try {
@@ -264,7 +276,7 @@ export const useICalCalendars = () => {
       });
 
       setSyncStatus(prev => ({ ...prev, [calendar.id]: 'success' }));
-      console.log(`Successfully synced ${events.length} events from ${calendar.name}`);
+      console.log(`Successfully synced ${events.length} events from ${calendar.name} for ${currentYear}`);
       return events;
 
     } catch (error) {
