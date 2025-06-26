@@ -41,13 +41,11 @@ const ICalSettings = () => {
     color: CALENDAR_COLORS[0],
     enabled: true
   });
-  const [refreshKey, setRefreshKey] = useState(0);
 
   // Force refresh when component mounts to ensure all calendars are loaded
   useEffect(() => {
     console.log('ICalSettings mounted, forcing refresh of calendar data');
     forceRefresh();
-    setRefreshKey(prev => prev + 1);
   }, [forceRefresh]);
 
   // Debug logging for calendar state
@@ -55,16 +53,49 @@ const ICalSettings = () => {
     console.log('ICalSettings - Current calendars from hook:', calendars);
     console.log('ICalSettings - Calendars from events:', calendarsFromEvents);
     console.log('ICalSettings - Selected calendar IDs:', selectedCalendarIds);
-  }, [calendars, calendarsFromEvents, selectedCalendarIds, refreshKey]);
+  }, [calendars, calendarsFromEvents, selectedCalendarIds]);
+
+  // Combine calendars from hook and events, prioritizing hook data
+  const allCalendars = React.useMemo(() => {
+    const calendarMap = new Map();
+    
+    // Add calendars from hook first (these have full configuration)
+    calendars.forEach(cal => {
+      calendarMap.set(cal.id, {
+        ...cal,
+        source: 'config',
+        hasEvents: calendarsFromEvents.some(eventCal => eventCal.id === cal.id && eventCal.hasEvents)
+      });
+    });
+    
+    // Add calendars from events that aren't in the hook (orphaned calendars)
+    calendarsFromEvents.forEach(eventCal => {
+      if (!calendarMap.has(eventCal.id) && eventCal.id !== 'local_calendar') {
+        calendarMap.set(eventCal.id, {
+          id: eventCal.id,
+          name: eventCal.summary,
+          url: eventCal.url || 'Unknown URL',
+          color: eventCal.color || '#3b82f6',
+          enabled: true,
+          source: 'events',
+          hasEvents: eventCal.hasEvents,
+          eventCount: eventCal.eventCount,
+          lastSync: eventCal.lastSync
+        });
+      }
+    });
+    
+    return Array.from(calendarMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }, [calendars, calendarsFromEvents]);
 
   const validateCalendar = (name: string, url: string) => {
     // Check for duplicate name
-    const existingByName = calendars.find(cal => 
+    const existingByName = allCalendars.find(cal => 
       cal.name.toLowerCase().trim() === name.toLowerCase().trim()
     );
     
     // Check for duplicate URL
-    const existingByUrl = calendars.find(cal => 
+    const existingByUrl = allCalendars.find(cal => 
       cal.url.toLowerCase().trim() === url.toLowerCase().trim()
     );
 
@@ -118,7 +149,6 @@ const ICalSettings = () => {
       
       // Force refresh to ensure the new calendar appears
       forceRefresh();
-      setRefreshKey(prev => prev + 1);
       
       toast({
         title: "Calendar added",
@@ -137,16 +167,35 @@ const ICalSettings = () => {
       
       // Still force refresh to show the calendar even if sync failed
       forceRefresh();
-      setRefreshKey(prev => prev + 1);
     }
   };
 
-  const handleSync = async (calendar: ICalCalendar) => {
+  const handleSync = async (calendar: any) => {
+    if (calendar.source === 'events' && !calendar.url) {
+      toast({
+        title: "Cannot sync",
+        description: "This calendar doesn't have a valid URL for syncing.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     try {
-      await syncCalendar(calendar);
+      if (calendar.source === 'config') {
+        await syncCalendar(calendar);
+      } else {
+        // For orphaned calendars, we need to create a proper calendar config first
+        const newCal = addCalendar({
+          name: calendar.name,
+          url: calendar.url,
+          color: calendar.color,
+          enabled: true
+        });
+        await syncCalendar(newCal);
+      }
+      
       // Force refresh after sync
       forceRefresh();
-      setRefreshKey(prev => prev + 1);
       
       toast({
         title: "Sync successful",
@@ -167,7 +216,6 @@ const ICalSettings = () => {
       await syncAllCalendars();
       // Force refresh after sync all
       forceRefresh();
-      setRefreshKey(prev => prev + 1);
       
       toast({
         title: "Sync completed",
@@ -183,20 +231,36 @@ const ICalSettings = () => {
     }
   };
 
-  const handleRemove = (calendar: ICalCalendar) => {
-    removeCalendar(calendar.id);
+  const handleRemove = (calendar: any) => {
+    // Remove from iCal calendars if it exists there
+    if (calendar.source === 'config') {
+      removeCalendar(calendar.id);
+    }
+    
+    // Clean up events from localStorage for any calendar
+    try {
+      const storedEvents = localStorage.getItem('family_calendar_ical_events');
+      if (storedEvents) {
+        const events = JSON.parse(storedEvents);
+        const filteredEvents = events.filter((event: any) => event.calendarId !== calendar.id);
+        localStorage.setItem('family_calendar_ical_events', JSON.stringify(filteredEvents));
+        console.log('Calendar events removed from localStorage');
+      }
+    } catch (error) {
+      console.error('Error removing calendar events:', error);
+    }
+    
     // Force refresh after removal
     forceRefresh();
-    setRefreshKey(prev => prev + 1);
     
     toast({
       title: "Calendar removed",
-      description: `${calendar.name} has been removed.`
+      description: `${calendar.name} and all its events have been removed.`
     });
   };
 
-  const getSyncStatusBadge = (calendarId: string, lastSync?: string) => {
-    const status = syncStatus[calendarId];
+  const getSyncStatusBadge = (calendar: any) => {
+    const status = syncStatus[calendar.id];
     
     if (status === 'syncing') {
       return <Badge variant="secondary">Syncing...</Badge>;
@@ -204,13 +268,16 @@ const ICalSettings = () => {
     if (status === 'error') {
       return <Badge variant="destructive">Error</Badge>;
     }
-    if (status === 'success' || lastSync) {
+    if (status === 'success' || calendar.lastSync) {
       return <Badge variant="default">Synced</Badge>;
+    }
+    if (calendar.source === 'events') {
+      return <Badge variant="outline">From Events</Badge>;
     }
     return <Badge variant="secondary">Not synced</Badge>;
   };
 
-  const enabledCalendarsCount = calendars.filter(cal => cal.enabled).length;
+  const enabledCalendarsCount = allCalendars.filter(cal => cal.enabled).length;
   const totalEvents = calendarsFromEvents.reduce((sum, cal) => sum + cal.eventCount, 0);
   const calendarsWithEventsCount = calendarsFromEvents.filter(cal => cal.hasEvents).length;
 
@@ -227,7 +294,7 @@ const ICalSettings = () => {
               Add external calendar feeds using iCal/ICS URLs. No authentication required.
             </CardDescription>
           </div>
-          {calendars.length > 0 && (
+          {allCalendars.length > 0 && (
             <Button 
               onClick={handleSyncAll}
               disabled={isLoading || enabledCalendarsCount === 0}
@@ -242,15 +309,6 @@ const ICalSettings = () => {
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Debug Info - Remove in production */}
-        {process.env.NODE_ENV === 'development' && (
-          <div className="bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3 text-xs">
-            <div>Calendars in hook: {calendars.length}</div>
-            <div>Calendars from events: {calendarsFromEvents.length}</div>
-            <div>Refresh key: {refreshKey}</div>
-          </div>
-        )}
-
         {/* Event Summary */}
         {totalEvents > 0 && (
           <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
@@ -337,14 +395,13 @@ const ICalSettings = () => {
         </Dialog>
 
         {/* Calendar List */}
-        {calendars.length > 0 && (
+        {allCalendars.length > 0 && (
           <div className="space-y-3">
-            {calendars.map(calendar => {
-              const calendarFromEvents = calendarsFromEvents.find(cal => cal.id === calendar.id);
+            {allCalendars.map(calendar => {
               const isSelected = selectedCalendarIds.includes(calendar.id);
               
               return (
-                <div key={`${calendar.id}-${refreshKey}`} className="border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800/50">
+                <div key={calendar.id} className="border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800/50">
                   <div className="flex items-center justify-between p-4">
                     <div className="flex items-center gap-3 flex-1">
                       <div
@@ -368,11 +425,13 @@ const ICalSettings = () => {
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      {getSyncStatusBadge(calendar.id, calendar.lastSync)}
-                      <Switch
-                        checked={calendar.enabled}
-                        onCheckedChange={(enabled) => updateCalendar(calendar.id, { enabled })}
-                      />
+                      {getSyncStatusBadge(calendar)}
+                      {calendar.source === 'config' && (
+                        <Switch
+                          checked={calendar.enabled}
+                          onCheckedChange={(enabled) => updateCalendar(calendar.id, { enabled })}
+                        />
+                      )}
                       <Button
                         size="sm"
                         variant="outline"
@@ -411,19 +470,15 @@ const ICalSettings = () => {
                         </label>
                       </div>
                       
-                      {calendarFromEvents && (
-                        <div className="flex items-center gap-2">
-                          {calendarFromEvents.hasEvents && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200">
-                              {calendarFromEvents.eventCount} event{calendarFromEvents.eventCount !== 1 ? 's' : ''}
-                            </span>
-                          )}
-                          {!calendarFromEvents.hasEvents && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 dark:bg-gray-700/50 text-gray-600 dark:text-gray-400">
-                              No events
-                            </span>
-                          )}
-                        </div>
+                      {calendar.hasEvents && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200">
+                          {calendar.eventCount || 0} event{(calendar.eventCount || 0) !== 1 ? 's' : ''}
+                        </span>
+                      )}
+                      {!calendar.hasEvents && calendar.source === 'events' && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 dark:bg-gray-700/50 text-gray-600 dark:text-gray-400">
+                          No events
+                        </span>
                       )}
                     </div>
                   </div>
@@ -433,7 +488,7 @@ const ICalSettings = () => {
           </div>
         )}
 
-        {calendars.length === 0 && (
+        {allCalendars.length === 0 && (
           <div className="text-center py-8 text-gray-500 dark:text-gray-400">
             <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
             <p>No calendar feeds added yet.</p>
