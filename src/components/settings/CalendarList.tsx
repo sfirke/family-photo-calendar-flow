@@ -14,11 +14,16 @@ const CalendarList = () => {
     selectedCalendarIds, 
     toggleCalendar,
     selectAllCalendars,
-    clearAllCalendars
+    clearAllCalendars,
+    cleanupDeletedCalendar
   } = useCalendarSelection();
   
   const { calendars: iCalCalendars, syncCalendar, syncStatus, removeCalendar } = useICalCalendars();
   const { toast } = useToast();
+
+  const handleCalendarToggle = (calendarId: string, checked: boolean) => {
+    toggleCalendar(calendarId, checked);
+  };
 
   const handleSelectAll = () => {
     selectAllCalendars();
@@ -75,10 +80,8 @@ const CalendarList = () => {
     const calendar = calendarsFromEvents.find(cal => cal.id === calendarId);
     if (!calendar) return;
 
-    // Remove from selections first
-    if (selectedCalendarIds.includes(calendarId)) {
-      toggleCalendar(calendarId, false);
-    }
+    // Clean up from calendar selection first
+    cleanupDeletedCalendar(calendarId);
 
     // Remove from iCal calendars if it exists there
     const iCalCalendar = iCalCalendars.find(cal => cal.id === calendarId);
@@ -88,7 +91,7 @@ const CalendarList = () => {
 
     toast({
       title: "Calendar deleted",
-      description: `${calendar.summary} has been removed.`
+      description: `${calendar.summary} has been removed from your calendar feeds and view.`
     });
   };
 
@@ -109,7 +112,7 @@ const CalendarList = () => {
           Available Calendars
         </CardTitle>
         <CardDescription className="text-gray-600 dark:text-gray-400">
-          Select which calendars to display in your calendar view. Based on calendars found in your synced feeds.
+          Select which calendars to display in your calendar view. Changes will automatically update the calendar dropdown and view.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -163,7 +166,7 @@ const CalendarList = () => {
                   <Checkbox
                     id={`calendar-${calendar.id}`}
                     checked={isSelected}
-                    onCheckedChange={(checked) => toggleCalendar(calendar.id, checked === true)}
+                    onCheckedChange={(checked) => handleCalendarToggle(calendar.id, checked === true)}
                     className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
                   />
                   <div className="flex-1">
@@ -182,6 +185,11 @@ const CalendarList = () => {
                       {calendar.hasEvents && (
                         <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200">
                           {calendar.eventCount} event{calendar.eventCount !== 1 ? 's' : ''}
+                        </span>
+                      )}
+                      {issyncing && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-200">
+                          Syncing...
                         </span>
                       )}
                     </div>
@@ -222,7 +230,7 @@ const CalendarList = () => {
           
           <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
             <p className="text-xs text-gray-500 dark:text-gray-400">
-              Note: Calendar selections are automatically applied to the calendar view and dropdown filter.
+              Note: Calendar selections automatically sync with the calendar view and dropdown filter.
               All data is stored locally in your browser. External calendars can be synced and deleted individually.
             </p>
           </div>

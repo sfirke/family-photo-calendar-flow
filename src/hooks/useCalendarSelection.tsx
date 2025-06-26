@@ -17,7 +17,7 @@ export const useCalendarSelection = () => {
     return [...localEvents, ...iCalEvents];
   }, [localEvents, getICalEvents]);
 
-  // Generate calendars from all events - exclude local calendar from available calendars list
+  // Generate calendars from all events + iCal calendars (even if they don't have events yet)
   const calendarsFromEvents = useMemo(() => {
     const calendarMap = new Map();
     
@@ -28,7 +28,20 @@ export const useCalendarSelection = () => {
       calendarEventCounts.set(calendarId, (calendarEventCounts.get(calendarId) || 0) + 1);
     });
 
-    // Only process iCal calendars for the available calendars list
+    // First, add all iCal calendars (whether they have events or not)
+    iCalCalendars.forEach(iCalCalendar => {
+      if (iCalCalendar.enabled) {
+        calendarMap.set(iCalCalendar.id, {
+          id: iCalCalendar.id,
+          summary: iCalCalendar.name,
+          primary: false,
+          eventCount: calendarEventCounts.get(iCalCalendar.id) || 0,
+          hasEvents: calendarEventCounts.has(iCalCalendar.id)
+        });
+      }
+    });
+
+    // Then, process events to add any additional calendars not already in the map
     allEvents.forEach(event => {
       const calendarId = event.calendarId || 'local_calendar';
       const calendarName = event.calendarName || 'Family Calendar';
@@ -49,8 +62,8 @@ export const useCalendarSelection = () => {
       }
       
       const calendar = calendarMap.get(calendarId);
-      calendar.eventCount += 1;
-      calendar.hasEvents = true;
+      calendar.eventCount = calendarEventCounts.get(calendarId) || 0;
+      calendar.hasEvents = calendarEventCounts.has(calendarId);
     });
 
     return Array.from(calendarMap.values()).sort((a, b) => {
@@ -65,7 +78,16 @@ export const useCalendarSelection = () => {
     if (savedSelection) {
       try {
         const parsedSelection = JSON.parse(savedSelection);
-        setSelectedCalendarIds(parsedSelection);
+        // Filter out any selected calendars that no longer exist
+        const validSelection = parsedSelection.filter((id: string) => 
+          calendarsFromEvents.some(cal => cal.id === id)
+        );
+        setSelectedCalendarIds(validSelection);
+        
+        // Update localStorage if selection was filtered
+        if (validSelection.length !== parsedSelection.length) {
+          localStorage.setItem(SELECTED_CALENDARS_KEY, JSON.stringify(validSelection));
+        }
       } catch (error) {
         console.error('Error loading calendar selection:', error);
         // Default to all available calendars
@@ -115,6 +137,12 @@ export const useCalendarSelection = () => {
     saveSelection([]);
   };
 
+  // Clean up deleted calendars from selection
+  const cleanupDeletedCalendar = (deletedCalendarId: string) => {
+    const updatedSelection = selectedCalendarIds.filter(id => id !== deletedCalendarId);
+    saveSelection(updatedSelection);
+  };
+
   return {
     selectedCalendarIds,
     calendarsFromEvents,
@@ -123,6 +151,7 @@ export const useCalendarSelection = () => {
     toggleCalendar,
     selectAllCalendars,
     selectCalendarsWithEvents,
-    clearAllCalendars
+    clearAllCalendars,
+    cleanupDeletedCalendar
   };
 };

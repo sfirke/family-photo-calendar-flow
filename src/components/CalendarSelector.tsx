@@ -12,15 +12,23 @@ interface CalendarSelectorProps {
 }
 
 const CalendarSelector = ({ selectedCalendarIds, onCalendarChange }: CalendarSelectorProps) => {
-  const { calendarsFromEvents, isLoading, toggleCalendar, selectAllCalendars, selectCalendarsWithEvents, clearAllCalendars } = useCalendarSelection();
+  const { 
+    calendarsFromEvents, 
+    isLoading, 
+    toggleCalendar, 
+    selectAllCalendars, 
+    selectCalendarsWithEvents, 
+    clearAllCalendars,
+    updateSelectedCalendars
+  } = useCalendarSelection();
   const { user } = useLocalAuth();
 
   const handleCalendarToggle = (calendarId: string, checked: boolean) => {
     toggleCalendar(calendarId, checked);
-    // Also update parent component
+    // Sync with parent component
     let newSelection: string[];
     if (checked) {
-      newSelection = [...selectedCalendarIds, calendarId];
+      newSelection = [...selectedCalendarIds.filter(id => id !== calendarId), calendarId];
     } else {
       newSelection = selectedCalendarIds.filter(id => id !== calendarId);
     }
@@ -29,7 +37,8 @@ const CalendarSelector = ({ selectedCalendarIds, onCalendarChange }: CalendarSel
 
   const handleSelectAll = () => {
     selectAllCalendars();
-    onCalendarChange(calendarsFromEvents.map(cal => cal.id));
+    const allIds = calendarsFromEvents.map(cal => cal.id);
+    onCalendarChange(allIds);
   };
 
   const handleSelectWithEvents = () => {
@@ -42,6 +51,17 @@ const CalendarSelector = ({ selectedCalendarIds, onCalendarChange }: CalendarSel
     clearAllCalendars();
     onCalendarChange([]);
   };
+
+  // Sync selected calendars with the hook's state
+  React.useEffect(() => {
+    const hookSelectedIds = calendarsFromEvents
+      .filter(cal => selectedCalendarIds.includes(cal.id))
+      .map(cal => cal.id);
+    
+    if (JSON.stringify(hookSelectedIds.sort()) !== JSON.stringify(selectedCalendarIds.sort())) {
+      updateSelectedCalendars(hookSelectedIds);
+    }
+  }, [calendarsFromEvents, selectedCalendarIds, updateSelectedCalendars]);
 
   if (!user) {
     console.log('CalendarSelector: No user authenticated');

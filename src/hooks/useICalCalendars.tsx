@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import ICAL from 'ical.js';
 
@@ -70,12 +69,20 @@ export const useICalCalendars = () => {
     saveCalendars(updated);
   }, [calendars, saveCalendars]);
 
-  // Remove a calendar
+  // Remove a calendar and clean up all related data
   const removeCalendar = useCallback((id: string) => {
+    // Remove from calendars list
     const updated = calendars.filter(cal => cal.id !== id);
     saveCalendars(updated);
     
-    // Also remove events from this calendar
+    // Clean up sync status
+    setSyncStatus(prev => {
+      const newStatus = { ...prev };
+      delete newStatus[id];
+      return newStatus;
+    });
+    
+    // Remove events from this calendar from localStorage
     try {
       const storedEvents = localStorage.getItem(ICAL_EVENTS_KEY);
       if (storedEvents) {
@@ -86,6 +93,8 @@ export const useICalCalendars = () => {
     } catch (error) {
       console.error('Error removing calendar events:', error);
     }
+    
+    console.log(`Calendar ${id} completely removed from storage`);
   }, [calendars, saveCalendars]);
 
   // Validate iCal data format
