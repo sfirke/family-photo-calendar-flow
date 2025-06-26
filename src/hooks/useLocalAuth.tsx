@@ -1,7 +1,7 @@
 
-import { useState, useEffect, createContext, useContext } from 'react';
+import { useState, useEffect } from 'react';
 
-interface User {
+interface LocalUser {
   id: string;
   email: string;
   full_name?: string;
@@ -10,30 +10,13 @@ interface User {
   };
 }
 
-interface AuthContextType {
-  user: User | null;
-  loading: boolean;
-  signOut: () => Promise<void>;
-  signInAsGuest: () => void;
-}
-
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-};
-
 const LOCAL_USER_KEY = 'family_calendar_user';
 
 // Generate a simple UUID-like string
 const generateId = () => 'user_' + Math.random().toString(36).substr(2, 9);
 
-export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
+export const useLocalAuth = () => {
+  const [user, setUser] = useState<LocalUser | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -57,7 +40,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   const signInAsGuest = () => {
-    const guestUser: User = {
+    const guestUser: LocalUser = {
       id: generateId(),
       email: 'guest@familycalendar.app',
       full_name: 'Guest User',
@@ -82,14 +65,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   }, [loading, user]);
 
-  return (
-    <AuthContext.Provider value={{
-      user,
-      loading,
-      signOut,
-      signInAsGuest
-    }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return {
+    user,
+    loading,
+    signOut,
+    signInAsGuest
+  };
 };
