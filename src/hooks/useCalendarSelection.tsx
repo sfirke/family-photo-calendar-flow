@@ -7,15 +7,21 @@ const SELECTED_CALENDARS_KEY = 'family_calendar_selected_calendars';
 
 export const useCalendarSelection = () => {
   const [selectedCalendarIds, setSelectedCalendarIds] = useState<string[]>([]);
+  const [refreshKey, setRefreshKey] = useState(0);
   const { localEvents } = useLocalEvents();
   const { getICalEvents, calendars: iCalCalendars } = useICalCalendars();
   const [isLoading, setIsLoading] = useState(false);
 
-  // Get all events (local + iCal)
+  // Force refresh of calendar selection when iCal calendars change
+  useEffect(() => {
+    setRefreshKey(prev => prev + 1);
+  }, [iCalCalendars.length]);
+
+  // Get all events (local + iCal) - include refreshKey in dependency
   const allEvents = useMemo(() => {
     const iCalEvents = getICalEvents();
     return [...localEvents, ...iCalEvents];
-  }, [localEvents, getICalEvents]);
+  }, [localEvents, getICalEvents, refreshKey]);
 
   // Generate calendars from all events + iCal calendars (even if they don't have events yet)
   const calendarsFromEvents = useMemo(() => {
@@ -35,7 +41,11 @@ export const useCalendarSelection = () => {
         summary: iCalCalendar.name,
         primary: false,
         eventCount: calendarEventCounts.get(iCalCalendar.id) || 0,
-        hasEvents: calendarEventCounts.has(iCalCalendar.id)
+        hasEvents: calendarEventCounts.has(iCalCalendar.id),
+        color: iCalCalendar.color,
+        enabled: iCalCalendar.enabled,
+        lastSync: iCalCalendar.lastSync,
+        url: iCalCalendar.url
       });
     });
 
@@ -56,7 +66,8 @@ export const useCalendarSelection = () => {
           summary: calendarName,
           primary: false,
           eventCount: 0,
-          hasEvents: false
+          hasEvents: false,
+          color: event.color || '#3b82f6'
         });
       }
       
@@ -69,7 +80,7 @@ export const useCalendarSelection = () => {
       if (a.eventCount !== b.eventCount) return b.eventCount - a.eventCount;
       return a.summary.localeCompare(b.summary);
     });
-  }, [allEvents, iCalCalendars]);
+  }, [allEvents, iCalCalendars, refreshKey]);
 
   // Load selected calendars from localStorage
   useEffect(() => {
@@ -142,6 +153,11 @@ export const useCalendarSelection = () => {
     saveSelection(updatedSelection);
   };
 
+  // Force refresh function for external use
+  const forceRefresh = () => {
+    setRefreshKey(prev => prev + 1);
+  };
+
   return {
     selectedCalendarIds,
     calendarsFromEvents,
@@ -151,6 +167,7 @@ export const useCalendarSelection = () => {
     selectAllCalendars,
     selectCalendarsWithEvents,
     clearAllCalendars,
-    cleanupDeletedCalendar
+    cleanupDeletedCalendar,
+    forceRefresh
   };
 };

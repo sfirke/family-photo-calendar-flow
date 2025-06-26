@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Event } from '@/types/calendar';
 import { Clock, MapPin, ChevronDown, ChevronUp } from 'lucide-react';
@@ -231,17 +232,14 @@ const EventCard = ({
         aria-label={`Multi-day event: ${event.title}`}
       >
         <div className="flex items-center gap-3">
-          {/* Badge Column - Colored Dot */}
-          <div className="flex-shrink-0" role="presentation">
+          {/* Event Details Column - Inline format with dot */}
+          <div className="flex-1 min-w-0 flex items-center gap-2">
             <div 
-              className={`w-3 h-3 rounded-full ${getCalendarDotColor()}`}
+              className="w-3 h-3 rounded-full flex-shrink-0"
+              style={{ backgroundColor: event.color || '#3b82f6' }}
               aria-label={`Calendar: ${event.calendarName || event.category}`}
               role="img"
             />
-          </div>
-
-          {/* Event Details Column - Inline format */}
-          <div className="flex-1 min-w-0 flex items-center gap-2">
             <h3 className={`${textColors.title} ${fontSizes.title} truncate`}>
               {event.title}
             </h3>
@@ -268,22 +266,22 @@ const EventCard = ({
       aria-label={isInteractive ? `${isExpanded ? 'Collapse' : 'Expand'} event details for ${event.title}` : `Event: ${event.title}`}
     >
       <div className="flex items-start gap-3">
-        {/* Badge Column - Colored Dot */}
-        <div className="flex-shrink-0 pt-1" role="presentation">
-          <div 
-            className={`w-3 h-3 rounded-full ${getCalendarDotColor()}`}
-            aria-label={`Calendar: ${event.calendarName || event.category}`}
-            role="img"
-          />
-        </div>
-
         {/* Event Details Column */}
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between">
             <div className="flex-1 min-w-0">
-              <h3 className={`${textColors.title} ${fontSizes.title} mb-1 leading-tight truncate`}>
-                {event.title}
-              </h3>
+              {/* Title with inline color dot */}
+              <div className="flex items-center gap-2 mb-1">
+                <div 
+                  className="w-3 h-3 rounded-full flex-shrink-0"
+                  style={{ backgroundColor: event.color || '#3b82f6' }}
+                  aria-label={`Calendar: ${event.calendarName || event.category}`}
+                  role="img"
+                />
+                <h3 className={`${textColors.title} ${fontSizes.title} leading-tight truncate`}>
+                  {event.title}
+                </h3>
+              </div>
               
               {/* Time display - show "All day" for all-day events in timeline view */}
               <div className={`flex items-center gap-2 ${fontSizes.time} ${textColors.time} mb-2`}>

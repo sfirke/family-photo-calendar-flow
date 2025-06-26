@@ -70,7 +70,7 @@ const WeekView = ({ events, weekOffset, onPreviousWeek, onNextWeek, getWeatherFo
       {/* Week Grid */}
       <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
         {eventsByDay.map(({ day, events: dayEvents }, index) => (
-          <div key={index} className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-lg p-4 border border-white/20 dark:border-gray-600/20">
+          <div key={index} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 min-h-[300px] overflow-hidden">
             <div className="flex items-center justify-between mb-3">
               <div className="text-center">
                 <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
@@ -86,13 +86,9 @@ const WeekView = ({ events, weekOffset, onPreviousWeek, onNextWeek, getWeatherFo
               />
             </div>
             
-            <div className="space-y-2">
+            <div className="space-y-2 overflow-hidden">
               {dayEvents.map(event => (
-                <div key={event.id} className="flex items-start gap-2">
-                  <div 
-                    className="w-2 h-2 rounded-full flex-shrink-0 mt-1"
-                    style={{ backgroundColor: event.color || '#3b82f6' }}
-                  />
+                <div key={event.id} className="truncate">
                   <EventCard event={event} viewMode="week" />
                 </div>
               ))}
