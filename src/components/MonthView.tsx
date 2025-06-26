@@ -1,8 +1,11 @@
+
 import React, { useState } from 'react';
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths, subMonths, isSameDay, isToday, isSameMonth } from 'date-fns';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Event } from '@/types/calendar';
-import DayViewModal from './DayViewModal';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight, Sun, Cloud, CloudRain } from 'lucide-react';
+import DayViewModal from './DayViewModal';
+import WeatherWidget from './WeatherWidget';
 
 interface MonthViewProps {
   events: Event[];
@@ -12,227 +15,149 @@ interface MonthViewProps {
 const MonthView = ({ events, getWeatherForDate }: MonthViewProps) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [showDayModal, setShowDayModal] = useState(false);
 
-  const sortEventsByTimeAndType = (events: Event[]) => {
-    return events.sort((a, b) => {
-      const aIsAllDay = a.time.toLowerCase().includes('all day');
-      const bIsAllDay = b.time.toLowerCase().includes('all day');
-      const aIsMultiDay = a.time.includes('days');
-      const bIsMultiDay = b.time.includes('days');
+  const monthStart = startOfMonth(currentDate);
+  const monthEnd = endOfMonth(currentDate);
+  const calendarStart = new Date(monthStart);
+  calendarStart.setDate(calendarStart.getDate() - getDay(monthStart));
+  
+  const calendarEnd = new Date(monthEnd);
+  calendarEnd.setDate(calendarEnd.getDate() + (6 - getDay(monthEnd)));
+
+  const calendarDays = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
+
+  const getDayEvents = (day: Date) => {
+    const dayEvents = events.filter(event => isSameDay(event.date, day));
+    
+    // Sort events: all-day events first, then by time
+    dayEvents.sort((a, b) => {
+      const aIsAllDay = a.time === 'All day';
+      const bIsAllDay = b.time === 'All day';
       
-      // Multi-day events first
-      if (aIsMultiDay && !bIsMultiDay) return -1;
-      if (!aIsMultiDay && bIsMultiDay) return 1;
-      
-      // All-day events next
       if (aIsAllDay && !bIsAllDay) return -1;
       if (!aIsAllDay && bIsAllDay) return 1;
+      if (aIsAllDay && bIsAllDay) return a.title.localeCompare(b.title);
       
-      // For timed events, sort by time
-      if (!aIsAllDay && !bIsAllDay) {
-        const getTimeValue = (timeStr: string) => {
-          const match = timeStr.match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
-          if (match) {
-            let hours = parseInt(match[1]);
-            const minutes = parseInt(match[2]);
-            const period = match[3]?.toUpperCase();
-            
-            if (period === 'PM' && hours !== 12) hours += 12;
-            if (period === 'AM' && hours === 12) hours = 0;
-            
-            return hours * 60 + minutes;
-          }
-          return 0;
-        };
-        
-        return getTimeValue(a.time) - getTimeValue(b.time);
-      }
-      
-      return 0;
+      return a.time.localeCompare(b.time);
     });
-  };
-
-  const getMonthDays = () => {
-    const startDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
-    const endDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
-
-    const daysInMonth = [];
-    let day = startDate;
-
-    // Add padding days from the previous month
-    const firstDayOfWeek = startDate.getDay();
-    for (let i = 0; i < firstDayOfWeek; i++) {
-      const paddingDate = new Date(startDate);
-      paddingDate.setDate(startDate.getDate() - (firstDayOfWeek - i));
-      daysInMonth.push(paddingDate);
-    }
-
-    while (day <= endDate) {
-      daysInMonth.push(new Date(day));
-      day.setDate(day.getDate() + 1);
-    }
-
-    // Add padding days from the next month
-    const lastDayOfWeek = endDate.getDay();
-    for (let i = 1; i <= 6 - lastDayOfWeek; i++) {
-      const paddingDate = new Date(endDate);
-      paddingDate.setDate(endDate.getDate() + i);
-      daysInMonth.push(paddingDate);
-    }
-
-    return daysInMonth;
-  };
-
-  const getEventsForDate = (date: Date) => {
-    const dayEvents = events.filter(event => 
-      event.date.toDateString() === date.toDateString()
-    );
     
-    return sortEventsByTimeAndType(dayEvents);
+    return dayEvents;
   };
 
-  const handleDayClick = (date: Date, dayEvents: Event[]) => {
+  const handlePreviousMonth = () => {
+    setCurrentDate(subMonths(currentDate, 1));
+  };
+
+  const handleNextMonth = () => {
+    setCurrentDate(addMonths(currentDate, 1));
+  };
+
+  const handleDayClick = (day: Date) => {
+    const dayEvents = getDayEvents(day);
     if (dayEvents.length > 0) {
-      setSelectedDate(date);
-      setShowDayModal(true);
+      setSelectedDate(day);
     }
-  };
-
-  const goToPreviousMonth = () => {
-    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
-  };
-
-  const goToNextMonth = () => {
-    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
-  };
-
-  const getWeatherIcon = (condition: string) => {
-    switch (condition.toLowerCase()) {
-      case 'sunny':
-      case 'clear':
-        return <Sun className="h-3 w-3 text-yellow-400" />;
-      case 'cloudy':
-      case 'partly cloudy':
-        return <Cloud className="h-3 w-3 text-gray-300" />;
-      case 'rainy':
-      case 'rain':
-        return <CloudRain className="h-3 w-3 text-blue-400" />;
-      default:
-        return <Sun className="h-3 w-3 text-yellow-400" />;
-    }
-  };
-
-  const getEventDotColor = (event: Event) => {
-    // Use calendar-specific colors or fall back to event color
-    if (event.calendarName) {
-      const colors = [
-        'bg-blue-500',
-        'bg-green-500', 
-        'bg-purple-500',
-        'bg-orange-500',
-        'bg-red-500',
-        'bg-pink-500',
-        'bg-indigo-500'
-      ];
-      const hash = event.calendarName.split('').reduce((a, b) => {
-        a = ((a << 5) - a) + b.charCodeAt(0);
-        return a & a;
-      }, 0);
-      return colors[Math.abs(hash) % colors.length];
-    }
-    return event.color;
   };
 
   return (
     <div className="space-y-4">
+      {/* Month Navigation */}
       <div className="flex items-center justify-between">
         <Button
-          variant="ghost"
+          variant="outline"
           size="sm"
-          onClick={goToPreviousMonth}
-          className="text-white hover:bg-white/20"
+          onClick={handlePreviousMonth}
+          className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-white/20 dark:border-gray-600/20"
         >
-          <ChevronLeft className="h-4 w-4 mr-1" />
-          Previous
+          <ChevronLeft className="h-4 w-4" />
         </Button>
         
-        <h3 className="text-lg font-bold text-white">
-          {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-        </h3>
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+          {format(currentDate, 'MMMM yyyy')}
+        </h2>
         
         <Button
-          variant="ghost"
+          variant="outline"
           size="sm"
-          onClick={goToNextMonth}
-          className="text-white hover:bg-white/20"
+          onClick={handleNextMonth}
+          className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-white/20 dark:border-gray-600/20"
         >
-          Next
-          <ChevronRight className="h-4 w-4 ml-1" />
+          <ChevronRight className="h-4 w-4" />
         </Button>
       </div>
 
-      <div className="grid grid-cols-7 gap-2">
-        {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
-          <div key={day} className="text-center text-white/70 font-medium py-2 text-sm">
-            {day}
-          </div>
-        ))}
-        
-        {getMonthDays().map((date, index) => {
-          const dayEvents = getEventsForDate(date);
-          const isToday = date.toDateString() === new Date().toDateString();
-          const isCurrentMonth = date.getMonth() === currentDate.getMonth();
-          const weather = getWeatherForDate(date);
-          const hasEvents = dayEvents.length > 0;
-          
-          return (
-            <div
-              key={index}
-              className={`min-h-[120px] p-2 bg-white/10 backdrop-blur-sm rounded-lg border border-white/20 ${
-                isCurrentMonth ? '' : 'opacity-50'
-              } ${hasEvents ? 'cursor-pointer hover:bg-white/20 transition-colors' : ''}`}
-              onClick={() => handleDayClick(date, dayEvents)}
-            >
-              <div className="flex items-center justify-between mb-2">
-                <span className={`text-sm font-medium ${isToday ? 'text-yellow-300' : 'text-white'}`}>
-                  {date.getDate()}
-                </span>
-                <div className="flex items-center gap-1">
-                  {getWeatherIcon(weather.condition)}
-                  <span className="text-xs text-white/70">{weather.temp}°</span>
-                </div>
-              </div>
-              
-              {isToday && <div className="w-full h-0.5 bg-yellow-300 mb-2"></div>}
-              
-              {dayEvents.length > 0 && (
-                <div className="grid grid-cols-4 gap-1 min-h-[60px]">
-                  {dayEvents.slice(0, 16).map((event, eventIndex) => (
-                    <div
-                      key={eventIndex}
-                      className={`w-3 h-3 rounded-full ${getEventDotColor(event)} opacity-80 hover:opacity-100 transition-opacity`}
-                      title={`${event.title} - ${event.time}`}
+      {/* Calendar Grid */}
+      <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-lg border border-white/20 dark:border-gray-600/20">
+        {/* Day Headers */}
+        <div className="grid grid-cols-7 border-b border-gray-200 dark:border-gray-700">
+          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+            <div key={day} className="p-3 text-center text-sm font-medium text-gray-900 dark:text-gray-100">
+              {day}
+            </div>
+          ))}
+        </div>
+
+        {/* Calendar Days */}
+        <div className="grid grid-cols-7">
+          {calendarDays.map((day, index) => {
+            const dayEvents = getDayEvents(day);
+            const isCurrentMonth = isSameMonth(day, currentDate);
+            const isDayToday = isToday(day);
+
+            return (
+              <div
+                key={index}
+                className={`min-h-[120px] p-2 border-b border-r border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 ${
+                  !isCurrentMonth ? 'text-gray-400 dark:text-gray-600' : 'text-gray-900 dark:text-gray-100'
+                } ${isDayToday ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}
+                onClick={() => handleDayClick(day)}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <span className={`text-sm font-medium ${isDayToday ? 'text-blue-600 dark:text-blue-400' : ''}`}>
+                    {format(day, 'd')}
+                  </span>
+                  {isCurrentMonth && (
+                    <WeatherWidget 
+                      weather={getWeatherForDate(day)}
+                      className="text-xs"
                     />
+                  )}
+                </div>
+                
+                <div className="space-y-1">
+                  {dayEvents.slice(0, 3).map(event => (
+                    <div
+                      key={event.id}
+                      className="flex items-center gap-1 text-xs p-1 rounded truncate"
+                      style={{ backgroundColor: `${event.color || '#3b82f6'}20` }}
+                    >
+                      <div 
+                        className="w-2 h-2 rounded-full flex-shrink-0"
+                        style={{ backgroundColor: event.color || '#3b82f6' }}
+                      />
+                      <span className="truncate">{event.title}</span>
+                    </div>
                   ))}
-                  {dayEvents.length > 16 && (
-                    <div className="col-span-4 text-xs text-white/70 font-medium bg-white/20 px-2 py-1 rounded-full text-center">
-                      +{dayEvents.length - 16} more
+                  
+                  {dayEvents.length > 3 && (
+                    <div className="text-xs text-gray-500 dark:text-gray-400 px-1">
+                      +{dayEvents.length - 3} more
                     </div>
                   )}
                 </div>
-              )}
-            </div>
-          );
-        })}
+              </div>
+            );
+          })}
+        </div>
       </div>
 
+      {/* Day View Modal */}
       {selectedDate && (
         <DayViewModal
-          open={showDayModal}
-          onOpenChange={setShowDayModal}
           date={selectedDate}
-          events={getEventsForDate(selectedDate)}
+          events={getDayEvents(selectedDate)}
+          isOpen={!!selectedDate}
+          onClose={() => setSelectedDate(null)}
           getWeatherForDate={getWeatherForDate}
         />
       )}

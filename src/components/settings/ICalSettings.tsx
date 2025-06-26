@@ -8,7 +8,8 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useICalCalendars, ICalCalendar } from '@/hooks/useICalCalendars';
-import { Calendar, Plus, Trash2, RefreshCw, ExternalLink, AlertCircle, RotateCcw } from 'lucide-react';
+import { useCalendarSelection } from '@/hooks/useCalendarSelection';
+import { Calendar, Plus, Trash2, RefreshCw, ExternalLink, AlertCircle, RotateCcw, BarChart3 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -22,6 +23,7 @@ import {
   AlertDescription,
   AlertTitle,
 } from '@/components/ui/alert';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const CALENDAR_COLORS = [
   '#ef4444', '#f97316', '#eab308', '#22c55e', 
@@ -30,6 +32,7 @@ const CALENDAR_COLORS = [
 
 const ICalSettings = () => {
   const { calendars, isLoading, syncStatus, addCalendar, updateCalendar, removeCalendar, syncCalendar, syncAllCalendars } = useICalCalendars();
+  const { selectedCalendarIds, toggleCalendar, calendarsFromEvents } = useCalendarSelection();
   const { toast } = useToast();
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [newCalendar, setNewCalendar] = useState({
@@ -173,6 +176,8 @@ const ICalSettings = () => {
   };
 
   const enabledCalendarsCount = calendars.filter(cal => cal.enabled).length;
+  const totalEvents = calendarsFromEvents.reduce((sum, cal) => sum + cal.eventCount, 0);
+  const calendarsWithEventsCount = calendarsFromEvents.filter(cal => cal.hasEvents).length;
 
   return (
     <Card className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
@@ -202,6 +207,30 @@ const ICalSettings = () => {
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Event Summary */}
+        {totalEvents > 0 && (
+          <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <BarChart3 className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+              <span className="font-medium text-blue-900 dark:text-blue-200">Event Summary</span>
+            </div>
+            <div className="grid grid-cols-3 gap-4 text-sm">
+              <div>
+                <div className="font-medium text-blue-900 dark:text-blue-200">{totalEvents}</div>
+                <div className="text-blue-700 dark:text-blue-300">Total Events</div>
+              </div>
+              <div>
+                <div className="font-medium text-blue-900 dark:text-blue-200">{calendarsWithEventsCount}</div>
+                <div className="text-blue-700 dark:text-blue-300">Active Calendars</div>
+              </div>
+              <div>
+                <div className="font-medium text-blue-900 dark:text-blue-200">{selectedCalendarIds.length}</div>
+                <div className="text-blue-700 dark:text-blue-300">Selected</div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Add Calendar Button */}
         <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
           <DialogTrigger asChild>
@@ -263,58 +292,100 @@ const ICalSettings = () => {
           </DialogContent>
         </Dialog>
 
-        {/* Calendar List - Show all calendars regardless of whether they have events */}
+        {/* Calendar List */}
         {calendars.length > 0 && (
           <div className="space-y-3">
-            {calendars.map(calendar => (
-              <div key={calendar.id} className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800/50">
-                <div className="flex items-center gap-3 flex-1">
-                  <div
-                    className="w-4 h-4 rounded-full border"
-                    style={{ backgroundColor: calendar.color }}
-                  />
-                  <div className="flex-1">
-                    <h4 className="font-medium text-gray-900 dark:text-gray-100">
-                      {calendar.name}
-                    </h4>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-1">
-                      <ExternalLink className="h-3 w-3" />
-                      {calendar.url.length > 50 ? `${calendar.url.substring(0, 50)}...` : calendar.url}
-                    </p>
-                    {calendar.lastSync && (
-                      <p className="text-xs text-gray-400 dark:text-gray-500">
-                        Last synced: {new Date(calendar.lastSync).toLocaleString()}
-                        {calendar.eventCount !== undefined && ` • ${calendar.eventCount} events`}
-                      </p>
-                    )}
+            {calendars.map(calendar => {
+              const calendarFromEvents = calendarsFromEvents.find(cal => cal.id === calendar.id);
+              const isSelected = selectedCalendarIds.includes(calendar.id);
+              
+              return (
+                <div key={calendar.id} className="border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800/50">
+                  <div className="flex items-center justify-between p-4">
+                    <div className="flex items-center gap-3 flex-1">
+                      <div
+                        className="w-4 h-4 rounded-full border"
+                        style={{ backgroundColor: calendar.color }}
+                      />
+                      <div className="flex-1">
+                        <h4 className="font-medium text-gray-900 dark:text-gray-100">
+                          {calendar.name}
+                        </h4>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                          <ExternalLink className="h-3 w-3" />
+                          {calendar.url.length > 50 ? `${calendar.url.substring(0, 50)}...` : calendar.url}
+                        </p>
+                        {calendar.lastSync && (
+                          <p className="text-xs text-gray-400 dark:text-gray-500">
+                            Last synced: {new Date(calendar.lastSync).toLocaleString()}
+                            {calendar.eventCount !== undefined && ` • ${calendar.eventCount} events`}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {getSyncStatusBadge(calendar.id, calendar.lastSync)}
+                      <Switch
+                        checked={calendar.enabled}
+                        onCheckedChange={(enabled) => updateCalendar(calendar.id, { enabled })}
+                      />
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleSync(calendar)}
+                        disabled={isLoading}
+                        title="Sync this calendar"
+                      >
+                        <RefreshCw className={`h-4 w-4 ${syncStatus[calendar.id] === 'syncing' ? 'animate-spin' : ''}`} />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleRemove(calendar)}
+                        title="Remove this calendar"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  {/* Calendar selection and stats */}
+                  <div className="px-4 pb-4 pt-2 border-t border-gray-200 dark:border-gray-700">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Checkbox
+                          id={`calendar-selection-${calendar.id}`}
+                          checked={isSelected}
+                          onCheckedChange={(checked) => toggleCalendar(calendar.id, checked === true)}
+                          className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                        />
+                        <label
+                          htmlFor={`calendar-selection-${calendar.id}`}
+                          className="text-sm text-gray-700 dark:text-gray-300 cursor-pointer"
+                        >
+                          Show in calendar view
+                        </label>
+                      </div>
+                      
+                      {calendarFromEvents && (
+                        <div className="flex items-center gap-2">
+                          {calendarFromEvents.hasEvents && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200">
+                              {calendarFromEvents.eventCount} event{calendarFromEvents.eventCount !== 1 ? 's' : ''}
+                            </span>
+                          )}
+                          {!calendarFromEvents.hasEvents && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 dark:bg-gray-700/50 text-gray-600 dark:text-gray-400">
+                              No events
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  {getSyncStatusBadge(calendar.id, calendar.lastSync)}
-                  <Switch
-                    checked={calendar.enabled}
-                    onCheckedChange={(enabled) => updateCalendar(calendar.id, { enabled })}
-                  />
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleSync(calendar)}
-                    disabled={isLoading}
-                    title="Sync this calendar"
-                  >
-                    <RefreshCw className={`h-4 w-4 ${syncStatus[calendar.id] === 'syncing' ? 'animate-spin' : ''}`} />
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleRemove(calendar)}
-                    title="Remove this calendar"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
 

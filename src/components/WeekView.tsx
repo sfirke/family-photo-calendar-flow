@@ -1,9 +1,11 @@
+
 import React from 'react';
+import { format, addDays, startOfWeek, isSameDay } from 'date-fns';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Event } from '@/types/calendar';
-import EventCard from './EventCard';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight, Sun, Cloud, CloudRain } from 'lucide-react';
-import { getWeekDays, getWeekDateRange } from '@/utils/dateUtils';
+import EventCard from './EventCard';
+import WeatherWidget from './WeatherWidget';
 
 interface WeekViewProps {
   events: Event[];
@@ -14,145 +16,93 @@ interface WeekViewProps {
 }
 
 const WeekView = ({ events, weekOffset, onPreviousWeek, onNextWeek, getWeatherForDate }: WeekViewProps) => {
-  const weekDays = getWeekDays(weekOffset);
+  const today = new Date();
+  const weekStart = addDays(startOfWeek(today, { weekStartsOn: 0 }), weekOffset * 7);
   
-  const sortEventsByTimeAndType = (events: Event[]) => {
-    return events.sort((a, b) => {
-      const aIsAllDay = a.time.toLowerCase().includes('all day');
-      const bIsAllDay = b.time.toLowerCase().includes('all day');
-      const aIsMultiDay = a.time.includes('days');
-      const bIsMultiDay = b.time.includes('days');
+  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+
+  // Group events by day and sort all-day events first
+  const eventsByDay = weekDays.map(day => {
+    const dayEvents = events.filter(event => isSameDay(event.date, day));
+    
+    // Sort events: all-day events first, then by time
+    dayEvents.sort((a, b) => {
+      const aIsAllDay = a.time === 'All day';
+      const bIsAllDay = b.time === 'All day';
       
-      // All-day events first (including multi-day all-day events)
       if (aIsAllDay && !bIsAllDay) return -1;
       if (!aIsAllDay && bIsAllDay) return 1;
+      if (aIsAllDay && bIsAllDay) return a.title.localeCompare(b.title);
       
-      // Within all-day events, multi-day events first
-      if (aIsAllDay && bIsAllDay) {
-        if (aIsMultiDay && !bIsMultiDay) return -1;
-        if (!aIsMultiDay && bIsMultiDay) return 1;
-      }
-      
-      // For timed events, sort by time
-      if (!aIsAllDay && !bIsAllDay) {
-        const getTimeValue = (timeStr: string) => {
-          const match = timeStr.match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
-          if (match) {
-            let hours = parseInt(match[1]);
-            const minutes = parseInt(match[2]);
-            const period = match[3]?.toUpperCase();
-            
-            if (period === 'PM' && hours !== 12) hours += 12;
-            if (period === 'AM' && hours === 12) hours = 0;
-            
-            return hours * 60 + minutes;
-          }
-          return 0;
-        };
-        
-        return getTimeValue(a.time) - getTimeValue(b.time);
-      }
-      
-      return 0;
+      return a.time.localeCompare(b.time);
     });
-  };
-  
-  const getEventsForDate = (date: Date) => {
-    const dayEvents = events.filter(event => 
-      event.date.toDateString() === date.toDateString()
-    );
     
-    return sortEventsByTimeAndType(dayEvents);
-  };
-
-  const getWeatherIcon = (condition: string) => {
-    switch (condition.toLowerCase()) {
-      case 'sunny':
-      case 'clear':
-        return <Sun className="h-4 w-4 text-yellow-400" />;
-      case 'cloudy':
-      case 'partly cloudy':
-        return <Cloud className="h-4 w-4 text-gray-300" />;
-      case 'rainy':
-      case 'rain':
-        return <CloudRain className="h-4 w-4 text-blue-400" />;
-      default:
-        return <Sun className="h-4 w-4 text-yellow-400" />;
-    }
-  };
+    return { day, events: dayEvents };
+  });
 
   return (
     <div className="space-y-4">
-      {/* Week Navigation Header */}
+      {/* Week Navigation */}
       <div className="flex items-center justify-between">
         <Button
-          variant="ghost"
+          variant="outline"
           size="sm"
           onClick={onPreviousWeek}
-          className="text-white hover:bg-white/20"
+          className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-white/20 dark:border-gray-600/20"
         >
-          <ChevronLeft className="h-4 w-4 mr-1" />
-          Previous
+          <ChevronLeft className="h-4 w-4" />
         </Button>
         
-        <h3 className="text-lg font-bold text-white">
-          {getWeekDateRange(weekOffset)}
-        </h3>
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+          {format(weekStart, 'MMMM d')} - {format(addDays(weekStart, 6), 'MMMM d, yyyy')}
+        </h2>
         
         <Button
-          variant="ghost"
+          variant="outline"
           size="sm"
           onClick={onNextWeek}
-          className="text-white hover:bg-white/20"
+          className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-white/20 dark:border-gray-600/20"
         >
-          Next
-          <ChevronRight className="h-4 w-4 ml-1" />
+          <ChevronRight className="h-4 w-4" />
         </Button>
       </div>
 
       {/* Week Grid */}
-      <div className="grid grid-cols-7 gap-4">
-        {weekDays.map((date, index) => {
-          const dayEvents = getEventsForDate(date);
-          const isToday = date.toDateString() === new Date().toDateString();
-          const weather = getWeatherForDate(date);
-          
-          return (
-            <div key={index} className="space-y-3">
+      <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
+        {eventsByDay.map(({ day, events: dayEvents }, index) => (
+          <div key={index} className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-lg p-4 border border-white/20 dark:border-gray-600/20">
+            <div className="flex items-center justify-between mb-3">
               <div className="text-center">
-                <h3 className={`text-sm font-medium ${isToday ? 'text-yellow-300' : 'text-white'}`}>
-                  {date.toLocaleDateString('en-US', { weekday: 'short' })}
-                </h3>
-                <p className={`text-lg ${isToday ? 'text-yellow-300' : 'text-white/80'}`}>
-                  {date.getDate()}
-                </p>
-                
-                {/* Weather Info with forecast data */}
-                <div className="flex items-center justify-center gap-1 mt-2">
-                  {getWeatherIcon(weather.condition)}
-                  <span className="text-sm text-white/70">{weather.temp}°</span>
+                <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                  {format(day, 'EEE')}
+                </div>
+                <div className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                  {format(day, 'd')}
                 </div>
               </div>
-              
-              <div className="space-y-2">
-                {dayEvents.map((event) => (
-                  <EventCard 
-                    key={event.id} 
-                    event={event}
-                    className="animate-fade-in text-xs"
-                    showBoldHeader={true}
-                    viewMode="week"
-                  />
-                ))}
-                {dayEvents.length === 0 && (
-                  <div className="text-white/30 text-xs text-center py-4">
-                    No events
-                  </div>
-                )}
-              </div>
+              <WeatherWidget 
+                weather={getWeatherForDate(day)}
+                className="text-xs"
+              />
             </div>
-          );
-        })}
+            
+            <div className="space-y-2">
+              {dayEvents.map(event => (
+                <div key={event.id} className="flex items-start gap-2">
+                  <div 
+                    className="w-2 h-2 rounded-full flex-shrink-0 mt-1"
+                    style={{ backgroundColor: event.color || '#3b82f6' }}
+                  />
+                  <EventCard event={event} compact />
+                </div>
+              ))}
+              
+              {dayEvents.length === 0 && (
+                <p className="text-xs text-gray-500 dark:text-gray-400 italic">No events</p>
+              )}
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
