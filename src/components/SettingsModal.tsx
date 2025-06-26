@@ -1,3 +1,4 @@
+
 import React from 'react';
 import {
   Dialog,
@@ -7,7 +8,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Camera, Monitor, CloudSun, Calendar } from 'lucide-react';
+import { Camera, Monitor, CloudSun, Calendar, LogOut } from 'lucide-react';
 import { useSettings } from '@/contexts/SettingsContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import PhotosTab from './settings/PhotosTab';
@@ -15,7 +16,7 @@ import DisplayTab from './settings/DisplayTab';
 import WeatherTab from './settings/WeatherTab';
 import CalendarsTab from './settings/CalendarsTab';
 import { useAuth } from '@/hooks/useAuth';
-import { Button, LogOut } from '@/components/ui/button';
+import { Button } from '@/components/ui/button';
 
 interface SettingsModalProps {
   open: boolean;
