@@ -177,34 +177,36 @@ const ICalSettings = () => {
               Add Calendar Feed
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700">
             <DialogHeader>
-              <DialogTitle>Add Calendar Feed</DialogTitle>
-              <DialogDescription>
+              <DialogTitle className="text-gray-900 dark:text-gray-100">Add Calendar Feed</DialogTitle>
+              <DialogDescription className="text-gray-600 dark:text-gray-400">
                 Enter the details for your calendar feed. Make sure the URL is publicly accessible.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <div>
-                <Label htmlFor="calendar-name">Calendar Name</Label>
+                <Label htmlFor="calendar-name" className="text-gray-700 dark:text-gray-300">Calendar Name</Label>
                 <Input
                   id="calendar-name"
                   placeholder="My Calendar"
                   value={newCalendar.name}
                   onChange={(e) => setNewCalendar(prev => ({ ...prev, name: e.target.value }))}
+                  className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100"
                 />
               </div>
               <div>
-                <Label htmlFor="calendar-url">iCal URL</Label>
+                <Label htmlFor="calendar-url" className="text-gray-700 dark:text-gray-300">iCal URL</Label>
                 <Input
                   id="calendar-url"
                   placeholder="https://calendar.example.com/feed.ics"
                   value={newCalendar.url}
                   onChange={(e) => setNewCalendar(prev => ({ ...prev, url: e.target.value }))}
+                  className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100"
                 />
               </div>
               <div>
-                <Label>Calendar Color</Label>
+                <Label className="text-gray-700 dark:text-gray-300">Calendar Color</Label>
                 <div className="flex gap-2 mt-2">
                   {CALENDAR_COLORS.map(color => (
                     <button
@@ -232,7 +234,7 @@ const ICalSettings = () => {
         {calendars.length > 0 && (
           <div className="space-y-3">
             {calendars.map(calendar => (
-              <div key={calendar.id} className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
+              <div key={calendar.id} className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800/50">
                 <div className="flex items-center gap-3 flex-1">
                   <div
                     className="w-4 h-4 rounded-full border"
@@ -292,10 +294,10 @@ const ICalSettings = () => {
         )}
 
         {/* Help and Tips */}
-        <Alert>
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Tips for Calendar Feeds</AlertTitle>
-          <AlertDescription className="text-sm space-y-2">
+        <Alert className="bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800">
+          <AlertCircle className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+          <AlertTitle className="text-blue-800 dark:text-blue-200">Tips for Calendar Feeds</AlertTitle>
+          <AlertDescription className="text-sm space-y-2 text-blue-700 dark:text-blue-300">
             <p>• Most calendar services provide public iCal feeds for sharing</p>
             <p>• Look for "Export" or "Share" options in your calendar application</p>
             <p>• Ensure the calendar is set to "Public" or you have the private URL with access key</p>

@@ -13,29 +13,42 @@ const TimelineView = ({ events, getWeatherForDate }: TimelineViewProps) => {
   const next3Days = getNext3Days();
   
   const getEventsForDate = (date: Date) => {
+    const currentDate = new Date(date);
+    currentDate.setHours(0, 0, 0, 0);
+    
     const allEvents = events.filter(event => {
-      // Check if event falls on this date
       const eventStart = new Date(event.date);
-      const eventEnd = new Date(event.date);
+      eventStart.setHours(0, 0, 0, 0);
       
-      // For multi-day events, we need to check if this date falls within the event span
-      const isMultiDay = event.time.includes('days');
-      if (isMultiDay) {
-        // Extract the number of days from the time string
+      // For all-day events, check if they should appear on this date
+      if (event.time.toLowerCase().includes('all day')) {
+        // If it's a multi-day all-day event, it should appear on each day
+        if (event.time.includes('days')) {
+          const daysMatch = event.time.match(/\((\d+) days\)/);
+          if (daysMatch) {
+            const numDays = parseInt(daysMatch[1]);
+            const eventEnd = new Date(eventStart);
+            eventEnd.setDate(eventStart.getDate() + numDays - 1);
+            return currentDate >= eventStart && currentDate <= eventEnd;
+          }
+        }
+        // Single day all-day event
+        return eventStart.getTime() === currentDate.getTime();
+      }
+      
+      // For regular events with time, check if they fall on this date
+      if (event.time.includes('days')) {
         const daysMatch = event.time.match(/\((\d+) days\)/);
         if (daysMatch) {
           const numDays = parseInt(daysMatch[1]);
+          const eventEnd = new Date(eventStart);
           eventEnd.setDate(eventStart.getDate() + numDays - 1);
+          return currentDate >= eventStart && currentDate <= eventEnd;
         }
       }
       
-      // Check if the current date falls within the event range
-      const currentDate = new Date(date);
-      currentDate.setHours(0, 0, 0, 0);
-      eventStart.setHours(0, 0, 0, 0);
-      eventEnd.setHours(23, 59, 59, 999);
-      
-      return currentDate >= eventStart && currentDate <= eventEnd;
+      // Single day regular event
+      return eventStart.getTime() === currentDate.getTime();
     });
     
     // Separate multi-day and single-day events

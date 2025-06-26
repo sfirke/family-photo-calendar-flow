@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import Calendar from '@/components/Calendar';
 import WeatherWidget from '@/components/WeatherWidget';
@@ -16,6 +15,7 @@ const Index = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [backgroundImages, setBackgroundImages] = useState<string[]>(getDefaultBackgroundImages());
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [isTransitioning, setIsTransitioning] = useState(false);
   const { user, loading } = useLocalAuth();
   const { backgroundDuration, publicAlbumUrl } = useSettings();
 
@@ -116,24 +116,30 @@ const Index = () => {
     loadBackgroundImages();
   }, [loadBackgroundImages]);
 
-  // Optimized background rotation with proper cleanup
+  // Optimized background rotation with seamless fade transitions
   useEffect(() => {
     if (backgroundImages.length <= 1) return;
     const intervalTime = backgroundDuration * 60 * 1000;
     console.log(`Setting up background rotation every ${backgroundDuration} minutes`);
+    
     IntervalManager.setInterval('background-rotation', () => {
-      setCurrentBg(prev => {
-        const next = (prev + 1) % backgroundImages.length;
-        console.log(`Changing background from ${prev} to ${next}`);
-        return next;
-      });
+      setIsTransitioning(true);
+      setTimeout(() => {
+        setCurrentBg(prev => {
+          const next = (prev + 1) % backgroundImages.length;
+          console.log(`Changing background from ${prev} to ${next}`);
+          return next;
+        });
+        setIsTransitioning(false);
+      }, 500); // Half of transition duration
     }, intervalTime);
+    
     return () => {
       IntervalManager.clearInterval('background-rotation');
     };
   }, [backgroundDuration, backgroundImages.length]);
 
-  // Memoized background style with preloading and proper scaling
+  // Memoized background style with preloading and seamless transitions
   const backgroundStyle = useMemo(() => {
     const currentImage = backgroundImages[currentBg];
     console.log(`Current background image: ${currentImage}`);
@@ -150,12 +156,10 @@ const Index = () => {
       backgroundSize: 'cover',
       backgroundPosition: 'center',
       backgroundRepeat: 'no-repeat',
-      backgroundAttachment: 'fixed',
-      width: '100%',
-      height: '100vh',
-      minHeight: '100vh'
+      opacity: isTransitioning ? 0 : 1,
+      transition: 'opacity 1s ease-in-out',
     };
-  }, [backgroundImages, currentBg]);
+  }, [backgroundImages, currentBg, isTransitioning]);
 
   // Optimized time formatting - only update when time changes
   const formattedTime = useMemo(() => {
@@ -175,9 +179,9 @@ const Index = () => {
   }
 
   return <div className="min-h-screen relative overflow-hidden flex flex-col">
-      {/* Background Image with optimized transitions and proper scaling */}
+      {/* Background Image with seamless fade transitions */}
       <div 
-        className="fixed inset-0 w-full h-full transition-all duration-1000 ease-in-out" 
+        className="fixed inset-0 w-full h-full" 
         style={backgroundStyle}
       />
       
