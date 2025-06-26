@@ -5,7 +5,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Event } from '@/types/calendar';
 import { Button } from '@/components/ui/button';
 import DayViewModal from './DayViewModal';
-import WeatherWidget from './WeatherWidget';
+import WeatherDisplay from './WeatherDisplay';
 
 interface MonthViewProps {
   events: Event[];
@@ -117,7 +117,7 @@ const MonthView = ({ events, getWeatherForDate }: MonthViewProps) => {
                     {format(day, 'd')}
                   </span>
                   {isCurrentMonth && (
-                    <WeatherWidget 
+                    <WeatherDisplay 
                       weather={getWeatherForDate(day)}
                       className="text-xs"
                     />
@@ -156,8 +156,8 @@ const MonthView = ({ events, getWeatherForDate }: MonthViewProps) => {
         <DayViewModal
           date={selectedDate}
           events={getDayEvents(selectedDate)}
-          isOpen={!!selectedDate}
-          onClose={() => setSelectedDate(null)}
+          open={!!selectedDate}
+          onOpenChange={() => setSelectedDate(null)}
           getWeatherForDate={getWeatherForDate}
         />
       )}

@@ -3,7 +3,7 @@ import React from 'react';
 import { format, isToday, isTomorrow, isYesterday, addDays, startOfDay } from 'date-fns';
 import { Event } from '@/types/calendar';
 import EventCard from './EventCard';
-import WeatherWidget from './WeatherWidget';
+import WeatherDisplay from './WeatherDisplay';
 
 interface TimelineViewProps {
   events: Event[];
@@ -60,7 +60,7 @@ const TimelineView = ({ events, getWeatherForDate }: TimelineViewProps) => {
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                 {getDateLabel(dateStr)}
               </h3>
-              <WeatherWidget 
+              <WeatherDisplay 
                 weather={getWeatherForDate(date)}
                 className="text-sm"
               />

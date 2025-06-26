@@ -5,7 +5,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Event } from '@/types/calendar';
 import { Button } from '@/components/ui/button';
 import EventCard from './EventCard';
-import WeatherWidget from './WeatherWidget';
+import WeatherDisplay from './WeatherDisplay';
 
 interface WeekViewProps {
   events: Event[];
@@ -80,7 +80,7 @@ const WeekView = ({ events, weekOffset, onPreviousWeek, onNextWeek, getWeatherFo
                   {format(day, 'd')}
                 </div>
               </div>
-              <WeatherWidget 
+              <WeatherDisplay 
                 weather={getWeatherForDate(day)}
                 className="text-xs"
               />
@@ -93,7 +93,7 @@ const WeekView = ({ events, weekOffset, onPreviousWeek, onNextWeek, getWeatherFo
                     className="w-2 h-2 rounded-full flex-shrink-0 mt-1"
                     style={{ backgroundColor: event.color || '#3b82f6' }}
                   />
-                  <EventCard event={event} compact />
+                  <EventCard event={event} viewMode="week" />
                 </div>
               ))}
               
