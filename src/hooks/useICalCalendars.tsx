@@ -27,26 +27,44 @@ export const useICalCalendars = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [syncStatus, setSyncStatus] = useState<{ [key: string]: string }>({});
 
-  // Load calendars from localStorage
+  // Load calendars from localStorage with better error handling
   const loadCalendars = useCallback(() => {
     try {
       const stored = localStorage.getItem(ICAL_CALENDARS_KEY);
+      console.log('Loading calendars from localStorage:', stored);
+      
       if (stored) {
         const parsedCalendars = JSON.parse(stored);
+        console.log('Parsed calendars:', parsedCalendars);
         setCalendars(parsedCalendars);
+        return parsedCalendars;
+      } else {
+        console.log('No calendars found in localStorage');
+        setCalendars([]);
+        return [];
       }
     } catch (error) {
       console.error('Error loading iCal calendars:', error);
+      setCalendars([]);
+      return [];
     }
   }, []);
 
-  // Save calendars to localStorage
+  // Save calendars to localStorage with validation
   const saveCalendars = useCallback((newCalendars: ICalCalendar[]) => {
     try {
+      console.log('Saving calendars to localStorage:', newCalendars);
       localStorage.setItem(ICAL_CALENDARS_KEY, JSON.stringify(newCalendars));
       setCalendars(newCalendars);
+      
+      // Verify the save was successful
+      const saved = localStorage.getItem(ICAL_CALENDARS_KEY);
+      console.log('Verified saved calendars:', saved);
+      
+      return true;
     } catch (error) {
       console.error('Error saving iCal calendars:', error);
+      return false;
     }
   }, []);
 
@@ -56,21 +74,36 @@ export const useICalCalendars = () => {
       ...calendar,
       id: Date.now().toString(),
     };
+    
+    console.log('Adding new calendar:', newCalendar);
     const updated = [...calendars, newCalendar];
-    saveCalendars(updated);
-    return newCalendar;
+    
+    if (saveCalendars(updated)) {
+      console.log('Calendar added successfully');
+      return newCalendar;
+    } else {
+      throw new Error('Failed to save calendar to localStorage');
+    }
   }, [calendars, saveCalendars]);
 
   // Update an existing calendar
   const updateCalendar = useCallback((id: string, updates: Partial<ICalCalendar>) => {
+    console.log('Updating calendar:', id, updates);
     const updated = calendars.map(cal => 
       cal.id === id ? { ...cal, ...updates } : cal
     );
-    saveCalendars(updated);
+    
+    if (saveCalendars(updated)) {
+      console.log('Calendar updated successfully');
+    } else {
+      console.error('Failed to update calendar');
+    }
   }, [calendars, saveCalendars]);
 
   // Remove a calendar and clean up all related data
   const removeCalendar = useCallback((id: string) => {
+    console.log('Removing calendar:', id);
+    
     // Remove from calendars list
     const updated = calendars.filter(cal => cal.id !== id);
     saveCalendars(updated);
@@ -89,6 +122,7 @@ export const useICalCalendars = () => {
         const events = JSON.parse(storedEvents);
         const filteredEvents = events.filter((event: any) => event.calendarId !== id);
         localStorage.setItem(ICAL_EVENTS_KEY, JSON.stringify(filteredEvents));
+        console.log('Calendar events removed from localStorage');
       }
     } catch (error) {
       console.error('Error removing calendar events:', error);
@@ -321,6 +355,7 @@ export const useICalCalendars = () => {
         const filteredExisting = existingEvents.filter((event: any) => event.calendarId !== calendar.id);
         const combinedEvents = [...filteredExisting, ...allEvents];
         localStorage.setItem(ICAL_EVENTS_KEY, JSON.stringify(combinedEvents));
+        console.log('Events stored successfully in localStorage');
       } catch (error) {
         console.error('Error storing iCal events:', error);
       }
@@ -357,16 +392,20 @@ export const useICalCalendars = () => {
     }
   }, [calendars, syncCalendar]);
 
-  // Get all iCal events
+  // Get all iCal events with better error handling
   const getICalEvents = useCallback(() => {
     try {
       const stored = localStorage.getItem(ICAL_EVENTS_KEY);
+      console.log('Loading iCal events from localStorage:', stored ? 'Found events' : 'No events');
+      
       if (stored) {
         const events = JSON.parse(stored);
-        return events.map((event: any) => ({
+        const processedEvents = events.map((event: any) => ({
           ...event,
           date: new Date(event.date)
         }));
+        console.log(`Loaded ${processedEvents.length} iCal events`);
+        return processedEvents;
       }
       return [];
     } catch (error) {
@@ -375,7 +414,14 @@ export const useICalCalendars = () => {
     }
   }, []);
 
+  // Force refresh function
+  const forceRefresh = useCallback(() => {
+    console.log('Force refreshing iCal calendars');
+    loadCalendars();
+  }, [loadCalendars]);
+
   useEffect(() => {
+    console.log('useICalCalendars hook initializing');
     loadCalendars();
   }, [loadCalendars]);
 
@@ -388,6 +434,7 @@ export const useICalCalendars = () => {
     removeCalendar,
     syncCalendar,
     syncAllCalendars,
-    getICalEvents
+    getICalEvents,
+    forceRefresh
   };
 };

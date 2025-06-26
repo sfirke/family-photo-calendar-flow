@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,7 +32,7 @@ const CALENDAR_COLORS = [
 
 const ICalSettings = () => {
   const { calendars, isLoading, syncStatus, addCalendar, updateCalendar, removeCalendar, syncCalendar, syncAllCalendars } = useICalCalendars();
-  const { selectedCalendarIds, toggleCalendar, calendarsFromEvents } = useCalendarSelection();
+  const { selectedCalendarIds, toggleCalendar, calendarsFromEvents, forceRefresh } = useCalendarSelection();
   const { toast } = useToast();
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [newCalendar, setNewCalendar] = useState({
@@ -41,6 +41,21 @@ const ICalSettings = () => {
     color: CALENDAR_COLORS[0],
     enabled: true
   });
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  // Force refresh when component mounts to ensure all calendars are loaded
+  useEffect(() => {
+    console.log('ICalSettings mounted, forcing refresh of calendar data');
+    forceRefresh();
+    setRefreshKey(prev => prev + 1);
+  }, [forceRefresh]);
+
+  // Debug logging for calendar state
+  useEffect(() => {
+    console.log('ICalSettings - Current calendars from hook:', calendars);
+    console.log('ICalSettings - Calendars from events:', calendarsFromEvents);
+    console.log('ICalSettings - Selected calendar IDs:', selectedCalendarIds);
+  }, [calendars, calendarsFromEvents, selectedCalendarIds, refreshKey]);
 
   const validateCalendar = (name: string, url: string) => {
     // Check for duplicate name
@@ -101,6 +116,10 @@ const ICalSettings = () => {
       // Try to sync immediately to validate the URL
       await syncCalendar(calendar);
       
+      // Force refresh to ensure the new calendar appears
+      forceRefresh();
+      setRefreshKey(prev => prev + 1);
+      
       toast({
         title: "Calendar added",
         description: `${newCalendar.name} has been added and synced successfully.`
@@ -115,12 +134,20 @@ const ICalSettings = () => {
         description: `Calendar was added but sync failed: ${errorMessage}`,
         variant: "destructive"
       });
+      
+      // Still force refresh to show the calendar even if sync failed
+      forceRefresh();
+      setRefreshKey(prev => prev + 1);
     }
   };
 
   const handleSync = async (calendar: ICalCalendar) => {
     try {
       await syncCalendar(calendar);
+      // Force refresh after sync
+      forceRefresh();
+      setRefreshKey(prev => prev + 1);
+      
       toast({
         title: "Sync successful",
         description: `${calendar.name} has been synced successfully.`
@@ -138,6 +165,10 @@ const ICalSettings = () => {
   const handleSyncAll = async () => {
     try {
       await syncAllCalendars();
+      // Force refresh after sync all
+      forceRefresh();
+      setRefreshKey(prev => prev + 1);
+      
       toast({
         title: "Sync completed",
         description: "All enabled calendars have been synced."
@@ -154,6 +185,10 @@ const ICalSettings = () => {
 
   const handleRemove = (calendar: ICalCalendar) => {
     removeCalendar(calendar.id);
+    // Force refresh after removal
+    forceRefresh();
+    setRefreshKey(prev => prev + 1);
+    
     toast({
       title: "Calendar removed",
       description: `${calendar.name} has been removed.`
@@ -207,6 +242,15 @@ const ICalSettings = () => {
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Debug Info - Remove in production */}
+        {process.env.NODE_ENV === 'development' && (
+          <div className="bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3 text-xs">
+            <div>Calendars in hook: {calendars.length}</div>
+            <div>Calendars from events: {calendarsFromEvents.length}</div>
+            <div>Refresh key: {refreshKey}</div>
+          </div>
+        )}
+
         {/* Event Summary */}
         {totalEvents > 0 && (
           <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
@@ -300,7 +344,7 @@ const ICalSettings = () => {
               const isSelected = selectedCalendarIds.includes(calendar.id);
               
               return (
-                <div key={calendar.id} className="border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800/50">
+                <div key={`${calendar.id}-${refreshKey}`} className="border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800/50">
                   <div className="flex items-center justify-between p-4">
                     <div className="flex items-center gap-3 flex-1">
                       <div
