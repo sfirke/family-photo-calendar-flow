@@ -1,10 +1,12 @@
 
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Calendar as CalendarIcon } from 'lucide-react';
+import { Calendar as CalendarIcon, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useCalendarSelection } from '@/hooks/useCalendarSelection';
+import { useICalCalendars } from '@/hooks/useICalCalendars';
+import { useToast } from '@/hooks/use-toast';
 
 const CalendarList = () => {
   const { 
@@ -14,6 +16,9 @@ const CalendarList = () => {
     selectAllCalendars,
     clearAllCalendars
   } = useCalendarSelection();
+  
+  const { calendars: iCalCalendars, syncCalendar, syncStatus } = useICalCalendars();
+  const { toast } = useToast();
 
   const handleSelectAll = () => {
     selectAllCalendars();
@@ -37,6 +42,33 @@ const CalendarList = () => {
         toggleCalendar(calendarId, false);
       }
     });
+  };
+
+  const handleSyncCalendar = async (calendarId: string) => {
+    const iCalCalendar = iCalCalendars.find(cal => cal.id === calendarId);
+    if (!iCalCalendar) {
+      toast({
+        title: "Cannot sync",
+        description: "This calendar cannot be synced manually.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      await syncCalendar(iCalCalendar);
+      toast({
+        title: "Sync successful",
+        description: `${iCalCalendar.name} has been synced successfully.`
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      toast({
+        title: "Sync failed",
+        description: `Failed to sync ${iCalCalendar.name}: ${errorMessage}`,
+        variant: "destructive"
+      });
+    }
   };
 
   const calendarsWithEventsCount = calendarsFromEvents.filter(cal => cal.hasEvents).length;
@@ -94,6 +126,10 @@ const CalendarList = () => {
           <div className="space-y-3">
             {calendarsFromEvents.map((calendar) => {
               const isSelected = selectedCalendarIds.includes(calendar.id);
+              const iCalCalendar = iCalCalendars.find(cal => cal.id === calendar.id);
+              const canSync = iCalCalendar && iCalCalendar.enabled;
+              const issyncing = syncStatus[calendar.id] === 'syncing';
+              
               return (
                 <div key={calendar.id} className={`flex items-center space-x-3 p-4 rounded-lg border ${
                   calendar.hasEvents 
@@ -129,6 +165,20 @@ const CalendarList = () => {
                       Calendar ID: {calendar.id}
                     </p>
                   </div>
+                  
+                  {/* Sync Button for iCal calendars */}
+                  {canSync && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleSyncCalendar(calendar.id)}
+                      disabled={issyncing}
+                      title="Sync this calendar"
+                      className="ml-2"
+                    >
+                      <RefreshCw className={`h-4 w-4 ${issyncing ? 'animate-spin' : ''}`} />
+                    </Button>
+                  )}
                 </div>
               );
             })}
@@ -137,7 +187,7 @@ const CalendarList = () => {
           <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
             <p className="text-xs text-gray-500 dark:text-gray-400">
               Note: Calendar selections are automatically applied to the calendar view and dropdown filter.
-              All data is stored locally in your browser.
+              All data is stored locally in your browser. External calendars can be synced manually.
             </p>
           </div>
         </div>
