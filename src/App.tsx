@@ -9,13 +9,12 @@ import { SettingsProvider } from "@/contexts/SettingsContext";
 import { WeatherProvider } from "@/contexts/WeatherContext";
 import InstallPrompt from "@/components/InstallPrompt";
 import Index from "./pages/Index";
-import AuthCallback from "./pages/AuthCallback";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
+  <QueryClient client={queryClient}>
     <ThemeProvider>
       <SettingsProvider>
         <WeatherProvider>
@@ -26,8 +25,6 @@ const App = () => (
             <BrowserRouter>
               <Routes>
                 <Route path="/" element={<Index />} />
-                <Route path="/auth/callback" element={<AuthCallback />} />
-                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </BrowserRouter>
@@ -35,7 +32,7 @@ const App = () => (
         </WeatherProvider>
       </SettingsProvider>
     </ThemeProvider>
-  </QueryClientProvider>
+  </QueryClient>
 );
 
 export default App;

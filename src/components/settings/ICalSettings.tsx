@@ -127,7 +127,7 @@ const ICalSettings = () => {
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-gray-100">
           <Calendar className="h-5 w-5" />
-          iCal Calendars
+          Calendar Feeds
         </CardTitle>
         <CardDescription className="text-gray-600 dark:text-gray-400">
           Add external calendar feeds using iCal/ICS URLs. No authentication required.
@@ -139,14 +139,14 @@ const ICalSettings = () => {
           <DialogTrigger asChild>
             <Button className="w-full" variant="outline">
               <Plus className="h-4 w-4 mr-2" />
-              Add iCal Calendar
+              Add Calendar Feed
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Add iCal Calendar</DialogTitle>
+              <DialogTitle>Add Calendar Feed</DialogTitle>
               <DialogDescription>
-                Enter the details for your iCal calendar feed. Make sure the URL is publicly accessible.
+                Enter the details for your calendar feed. Make sure the URL is publicly accessible.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
@@ -163,7 +163,7 @@ const ICalSettings = () => {
                 <Label htmlFor="calendar-url">iCal URL</Label>
                 <Input
                   id="calendar-url"
-                  placeholder="https://calendar.google.com/calendar/ical/..."
+                  placeholder="https://calendar.example.com/feed.ics"
                   value={newCalendar.url}
                   onChange={(e) => setNewCalendar(prev => ({ ...prev, url: e.target.value }))}
                 />
@@ -249,20 +249,20 @@ const ICalSettings = () => {
         {calendars.length === 0 && (
           <div className="text-center py-8 text-gray-500 dark:text-gray-400">
             <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>No iCal calendars added yet.</p>
-            <p className="text-sm">Add your first calendar to get started.</p>
+            <p>No calendar feeds added yet.</p>
+            <p className="text-sm">Add your first calendar feed to get started.</p>
           </div>
         )}
 
         {/* Help and Tips */}
         <Alert>
           <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Tips for iCal URLs</AlertTitle>
+          <AlertTitle>Tips for Calendar Feeds</AlertTitle>
           <AlertDescription className="text-sm space-y-2">
-            <p>• Google Calendar: Go to Settings → Your calendar → Integrate calendar → Secret address in iCal format</p>
-            <p>• Outlook: Go to Calendar settings → Shared calendars → Publish calendar → ICS link</p>
-            <p>• Apple iCloud: Go to iCloud.com → Calendar → Share calendar → Public calendar</p>
-            <p>• Make sure the calendar is set to "Public" or you have the private URL with access key</p>
+            <p>• Most calendar services provide public iCal feeds for sharing</p>
+            <p>• Look for "Export" or "Share" options in your calendar application</p>
+            <p>• Ensure the calendar is set to "Public" or you have the private URL with access key</p>
+            <p>• The URL should end with .ics or contain "ical" in the path</p>
           </AlertDescription>
         </Alert>
       </CardContent>
