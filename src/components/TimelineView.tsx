@@ -11,7 +11,7 @@ interface TimelineViewProps {
 }
 
 const TimelineView = ({ events, getWeatherForDate }: TimelineViewProps) => {
-  // Get only the next 3 days starting from today
+  // Get today and the next 2 days (total of 3 days starting from today)
   const today = new Date();
   const next3Days = Array.from({ length: 3 }, (_, i) => addDays(today, i));
   
@@ -71,21 +71,21 @@ const TimelineView = ({ events, getWeatherForDate }: TimelineViewProps) => {
             {/* Date header with horizontal rule and weather */}
             <div className="relative flex items-center">
               <div className="flex items-center gap-4">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                <h3 className="text-lg font-semibold text-foreground">
                   {getDateLabel(dateStr)}
                 </h3>
-                <div className="flex items-center gap-3 text-sm text-gray-600 dark:text-gray-400">
+                <div className="flex items-center gap-3 text-sm text-muted-foreground">
                   <span>{dayEvents.length} events</span>
                 </div>
               </div>
               
               {/* Horizontal rule line */}
               <div className="flex-1 mx-4">
-                <hr className="border-gray-200 dark:border-gray-700" />
+                <hr className="border-border" />
               </div>
               
               {/* Weather on the right with low temp below high temp */}
-              <div className="flex items-center gap-3 text-sm text-gray-600 dark:text-gray-400">
+              <div className="flex items-center gap-3 text-sm text-muted-foreground">
                 <div className="text-right">
                   <div className="flex items-center gap-2">
                     <WeatherDisplay 
@@ -93,35 +93,26 @@ const TimelineView = ({ events, getWeatherForDate }: TimelineViewProps) => {
                       className="text-sm"
                     />
                   </div>
-                  <div className="text-xs text-gray-500 dark:text-gray-500">
+                  <div className="text-xs text-muted-foreground/70">
                     Low: {weather.temp - 10}°
                   </div>
                 </div>
               </div>
             </div>
             
-            {/* Border line connecting date to events */}
-            <div className="relative">
-              <div className="absolute left-4 top-0 bottom-0 w-px bg-gray-200 dark:bg-gray-700"></div>
+            {/* Events without border line */}
+            <div className="space-y-3">
+              {dayEvents.map(event => (
+                <div key={event.id}>
+                  <EventCard event={event} viewMode="timeline" />
+                </div>
+              ))}
               
-              <div className="space-y-3 pl-8">
-                {dayEvents.map(event => (
-                  <div key={event.id} className="relative">
-                    {/* Connection dot */}
-                    <div className="absolute -left-6 top-3 w-3 h-3 rounded-full bg-gray-300 dark:bg-gray-600 border-2 border-white dark:border-gray-900"></div>
-                    <EventCard event={event} viewMode="timeline" />
-                  </div>
-                ))}
-                
-                {dayEvents.length === 0 && (
-                  <div className="relative">
-                    <div className="absolute -left-6 top-2 w-3 h-3 rounded-full bg-gray-300 dark:bg-gray-600 border-2 border-white dark:border-gray-900"></div>
-                    <div className="text-center py-4 text-gray-500 dark:text-gray-400">
-                      <p>No events scheduled</p>
-                    </div>
-                  </div>
-                )}
-              </div>
+              {dayEvents.length === 0 && (
+                <div className="text-center py-4 text-muted-foreground">
+                  <p>No events scheduled</p>
+                </div>
+              )}
             </div>
           </div>
         );
