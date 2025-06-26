@@ -68,21 +68,36 @@ const TimelineView = ({ events, getWeatherForDate }: TimelineViewProps) => {
         
         return (
           <div key={dateStr} className="space-y-4">
-            {/* Date header with weather and event count */}
-            <div className="flex items-center justify-between">
+            {/* Date header with horizontal rule and weather */}
+            <div className="relative flex items-center">
               <div className="flex items-center gap-4">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                   {getDateLabel(dateStr)}
                 </h3>
                 <div className="flex items-center gap-3 text-sm text-gray-600 dark:text-gray-400">
                   <span>{dayEvents.length} events</span>
-                  <span>Low: {weather.temp - 10}°</span>
                 </div>
               </div>
-              <WeatherDisplay 
-                weather={weather}
-                className="text-sm"
-              />
+              
+              {/* Horizontal rule line */}
+              <div className="flex-1 mx-4">
+                <hr className="border-gray-200 dark:border-gray-700" />
+              </div>
+              
+              {/* Weather on the right with low temp below high temp */}
+              <div className="flex items-center gap-3 text-sm text-gray-600 dark:text-gray-400">
+                <div className="text-right">
+                  <div className="flex items-center gap-2">
+                    <WeatherDisplay 
+                      weather={weather}
+                      className="text-sm"
+                    />
+                  </div>
+                  <div className="text-xs text-gray-500 dark:text-gray-500">
+                    Low: {weather.temp - 10}°
+                  </div>
+                </div>
+              </div>
             </div>
             
             {/* Border line connecting date to events */}
