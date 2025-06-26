@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -300,7 +299,7 @@ const ICalSettings = () => {
               disabled={isLoading || enabledCalendarsCount === 0}
               variant="outline"
               size="sm"
-              className="ml-4"
+              className="ml-4 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
             >
               <RotateCcw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
               Sync All ({enabledCalendarsCount})
@@ -336,7 +335,7 @@ const ICalSettings = () => {
         {/* Add Calendar Button */}
         <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
           <DialogTrigger asChild>
-            <Button className="w-full bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 hover:bg-gray-800 dark:hover:bg-gray-200" variant="default">
+            <Button className="w-full bg-primary text-primary-foreground hover:bg-primary/90" variant="default">
               <Plus className="h-4 w-4 mr-2" />
               Add Calendar Feed
             </Button>
@@ -383,10 +382,18 @@ const ICalSettings = () => {
                 </div>
               </div>
               <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setShowAddDialog(false)}>
+                <Button 
+                  variant="outline" 
+                  onClick={() => setShowAddDialog(false)}
+                  className="border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+                >
                   Cancel
                 </Button>
-                <Button onClick={handleAddCalendar} disabled={isLoading}>
+                <Button 
+                  onClick={handleAddCalendar} 
+                  disabled={isLoading}
+                  className="bg-primary text-primary-foreground hover:bg-primary/90"
+                >
                   Add Calendar
                 </Button>
               </div>
@@ -438,6 +445,7 @@ const ICalSettings = () => {
                         onClick={() => handleSync(calendar)}
                         disabled={isLoading}
                         title="Sync this calendar"
+                        className="border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
                       >
                         <RefreshCw className={`h-4 w-4 ${syncStatus[calendar.id] === 'syncing' ? 'animate-spin' : ''}`} />
                       </Button>
@@ -446,6 +454,7 @@ const ICalSettings = () => {
                         variant="outline"
                         onClick={() => handleRemove(calendar)}
                         title="Remove this calendar"
+                        className="border-red-300 dark:border-red-600 bg-white dark:bg-gray-800 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -460,7 +469,7 @@ const ICalSettings = () => {
                           id={`calendar-selection-${calendar.id}`}
                           checked={isSelected}
                           onCheckedChange={(checked) => toggleCalendar(calendar.id, checked === true)}
-                          className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                          className="border-gray-300 dark:border-gray-600 data-[state=checked]:bg-primary data-[state=checked]:border-primary data-[state=checked]:text-primary-foreground"
                         />
                         <label
                           htmlFor={`calendar-selection-${calendar.id}`}
