@@ -1,4 +1,3 @@
-
 import React from 'react';
 import {
   Dialog,
@@ -15,6 +14,8 @@ import PhotosTab from './settings/PhotosTab';
 import DisplayTab from './settings/DisplayTab';
 import WeatherTab from './settings/WeatherTab';
 import CalendarsTab from './settings/CalendarsTab';
+import { useAuth } from '@/hooks/useAuth';
+import { Button, LogOut } from '@/components/ui/button';
 
 interface SettingsModalProps {
   open: boolean;
@@ -33,20 +34,45 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
     setWeatherApiKey
   } = useSettings();
   const { setTheme: setActualTheme } = useTheme();
+  const { user, signOut } = useAuth();
 
   const handleThemeChange = (newTheme: 'light' | 'dark' | 'system') => {
     setTheme(newTheme);
     setActualTheme(newTheme);
   };
 
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      onOpenChange(false);
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700">
-        <DialogHeader>
-          <DialogTitle className="text-gray-900 dark:text-gray-100">App Settings</DialogTitle>
-          <DialogDescription className="text-gray-600 dark:text-gray-400">
-            Configure your family calendar app preferences and manage your calendar feeds
-          </DialogDescription>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700">
+        <DialogHeader className="border-b border-gray-200 dark:border-gray-700 pb-4">
+          <div className="flex items-center justify-between">
+            <DialogTitle className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+              Settings
+            </DialogTitle>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-600 dark:text-gray-400">
+                {user?.full_name || user?.email || 'Guest User'}
+              </span>
+              <Button
+                onClick={handleLogout}
+                variant="outline"
+                size="sm"
+                className="border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+              >
+                <LogOut className="h-4 w-4 mr-2" />
+                Sign Out
+              </Button>
+            </div>
+          </div>
         </DialogHeader>
 
         <Tabs defaultValue="calendars" className="w-full">

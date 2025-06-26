@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Event } from '@/types/calendar';
 import { sampleEvents } from '@/data/sampleEvents';
@@ -182,8 +181,7 @@ export const useLocalEvents = () => {
 
   // Memoize return value to prevent unnecessary re-renders
   const memoizedValue = useMemo(() => ({
-    googleEvents: allEvents, // Keep same interface name for compatibility
-    localEvents: allEvents, // Return combined events
+    events: allEvents, // Simplified interface
     isLoading,
     refreshEvents,
     addEvent,
@@ -192,8 +190,7 @@ export const useLocalEvents = () => {
     resetToSampleEvents,
     exportEvents,
     importEvents,
-    clearCache: resetToSampleEvents,
-    handleWebhookUpdate: () => {} // No-op for compatibility
+    clearCache: resetToSampleEvents
   }), [
     allEvents,
     isLoading,
