@@ -71,13 +71,26 @@ const Index = () => {
     };
   }, []);
 
-  // Background image loading with error recovery (local album URL support)
+  // Background image loading with cached photos
   const loadBackgroundImages = useCallback(async () => {
     if (publicAlbumUrl) {
       try {
+        // First try to get cached photos
+        const { photosCache } = await import('@/utils/photosCache');
+        const cachedPhotos = photosCache.getRandomizedPhotos(50);
+        
+        if (cachedPhotos.length > 0) {
+          console.log(`Using ${cachedPhotos.length} cached photos`);
+          setBackgroundImages(cachedPhotos);
+          setCurrentBg(0);
+          return;
+        }
+        
+        // Fallback to fetching if no cache
         const albumImages = await getImagesFromAlbum(publicAlbumUrl);
         if (albumImages.length > 0) {
-          setBackgroundImages(albumImages);
+          const randomizedImages = [...albumImages].sort(() => Math.random() - 0.5);
+          setBackgroundImages(randomizedImages);
           setCurrentBg(0);
         } else {
           setBackgroundImages(getDefaultBackgroundImages());
@@ -90,10 +103,6 @@ const Index = () => {
       setBackgroundImages(getDefaultBackgroundImages());
     }
   }, [publicAlbumUrl]);
-
-  useEffect(() => {
-    loadBackgroundImages();
-  }, [loadBackgroundImages]);
 
   // Optimized background rotation with proper cleanup
   useEffect(() => {
