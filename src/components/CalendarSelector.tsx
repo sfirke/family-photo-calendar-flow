@@ -2,7 +2,7 @@
 import React from 'react';
 import { Popover } from '@/components/ui/popover';
 import { useCalendarSelection } from '@/hooks/useCalendarSelection';
-import { useAuth } from '@/hooks/useAuth';
+import { useLocalAuth } from '@/hooks/useLocalAuth';
 import CalendarSelectorButton from './calendar/CalendarSelectorButton';
 import CalendarSelectorContent from './calendar/CalendarSelectorContent';
 
@@ -14,10 +14,14 @@ interface CalendarSelectorProps {
 const CalendarSelector = ({ selectedCalendarIds, onCalendarChange }: CalendarSelectorProps) => {
   const { 
     calendarsFromEvents, 
+    isLoading, 
     toggleCalendar, 
-    selectAllCalendars
+    selectAllCalendars, 
+    selectCalendarsWithEvents, 
+    clearAllCalendars,
+    updateSelectedCalendars
   } = useCalendarSelection();
-  const { user } = useAuth();
+  const { user } = useLocalAuth();
 
   const handleCalendarToggle = (calendarId: string, checked: boolean) => {
     toggleCalendar(calendarId, checked);
@@ -38,16 +42,40 @@ const CalendarSelector = ({ selectedCalendarIds, onCalendarChange }: CalendarSel
   };
 
   const handleSelectWithEvents = () => {
+    selectCalendarsWithEvents();
     const withEventsIds = calendarsFromEvents.filter(cal => cal.hasEvents).map(cal => cal.id);
     onCalendarChange(withEventsIds);
   };
 
   const handleClearAll = () => {
+    clearAllCalendars();
     onCalendarChange([]);
   };
 
+  // Sync selected calendars with the hook's state
+  React.useEffect(() => {
+    const hookSelectedIds = calendarsFromEvents
+      .filter(cal => selectedCalendarIds.includes(cal.id))
+      .map(cal => cal.id);
+    
+    if (JSON.stringify(hookSelectedIds.sort()) !== JSON.stringify(selectedCalendarIds.sort())) {
+      updateSelectedCalendars(hookSelectedIds);
+    }
+  }, [calendarsFromEvents, selectedCalendarIds, updateSelectedCalendars]);
+
   if (!user) {
     console.log('CalendarSelector: No user authenticated');
+    return (
+      <CalendarSelectorButton
+        selectedCount={0}
+        totalCount={0}
+        disabled={true}
+      />
+    );
+  }
+
+  if (isLoading) {
+    console.log('CalendarSelector: Loading calendars...');
     return (
       <CalendarSelectorButton
         selectedCount={0}

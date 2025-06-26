@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useMemo } from 'react';
 import { useLocalEvents } from './useLocalEvents';
 
@@ -12,7 +11,6 @@ interface CalendarFromEvents {
   hasEvents: boolean;
   eventCount: number;
   lastSync?: string;
-  primary?: boolean;
 }
 
 export const useCalendarSelection = () => {
@@ -58,8 +56,7 @@ export const useCalendarSelection = () => {
           url: event.source === 'ical' ? event.organizer : undefined,
           hasEvents: true,
           eventCount: 1,
-          lastSync: event.lastSync,
-          primary: event.calendarId === 'local_calendar'
+          lastSync: event.lastSync
         });
       } else {
         const calendar = calendarMap.get(event.calendarId)!;
@@ -88,44 +85,16 @@ export const useCalendarSelection = () => {
     setSelectedCalendarIds([...new Set([...allCalendarIds, 'local_calendar'])]);
   };
 
-  // Select calendars with events
-  const selectCalendarsWithEvents = () => {
-    const calendarsWithEventsIds = calendarsFromEvents
-      .filter(cal => cal.hasEvents)
-      .map(cal => cal.id);
-    setSelectedCalendarIds(calendarsWithEventsIds);
-  };
-
-  // Clear all calendars
-  const clearAllCalendars = () => {
-    setSelectedCalendarIds([]);
-  };
-
-  // Update selected calendars
-  const updateSelectedCalendars = (calendarIds: string[]) => {
-    setSelectedCalendarIds(calendarIds);
-  };
-
-  // Cleanup deleted calendar
-  const cleanupDeletedCalendar = (calendarId: string) => {
-    setSelectedCalendarIds(prev => prev.filter(id => id !== calendarId));
-  };
-
-  // Deselect all calendars (alias for clearAllCalendars)
+  // Deselect all calendars
   const deselectAllCalendars = () => {
-    clearAllCalendars();
+    setSelectedCalendarIds([]);
   };
 
   return {
     selectedCalendarIds,
     calendarsFromEvents,
-    isLoading: false,
     toggleCalendar,
     selectAllCalendars,
-    selectCalendarsWithEvents,
-    clearAllCalendars,
-    updateSelectedCalendars,
-    cleanupDeletedCalendar,
     deselectAllCalendars
   };
 };

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, isSameMonth, isSameDay, format, parseISO } from 'date-fns';
 import { ChevronLeft, ChevronRight, Plus, Settings, Sun, Moon } from 'lucide-react';
@@ -12,8 +11,8 @@ const Calendar = () => {
   const { user } = useAuth();
   const { events, isLoading, refreshEvents } = useLocalEvents();
   const { selectedCalendarIds } = useCalendarSelection();
-  const { backgroundImage } = useSettings();
-  const { theme, setTheme } = useTheme();
+  const { settings } = useSettings();
+  const { theme, toggleTheme } = useTheme();
 
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -61,20 +60,16 @@ const Calendar = () => {
     setSelectedDate(day);
   };
 
-  const toggleTheme = () => {
-    setTheme(theme === 'dark' ? 'light' : 'dark');
-  };
-
   const getBackgroundStyle = useCallback(() => {
-    if (backgroundImage) {
+    if (settings.backgroundImage) {
       return {
-        backgroundImage: `url(${backgroundImage})`,
+        backgroundImage: `url(${settings.backgroundImage})`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
       };
     }
     return {};
-  }, [backgroundImage]);
+  }, [settings.backgroundImage]);
 
   return (
     <div className="calendar-app min-h-screen" style={getBackgroundStyle()}>

@@ -14,7 +14,6 @@ const CalendarList = () => {
     selectedCalendarIds, 
     toggleCalendar,
     selectAllCalendars,
-    selectCalendarsWithEvents,
     clearAllCalendars,
     cleanupDeletedCalendar
   } = useCalendarSelection();
@@ -31,7 +30,23 @@ const CalendarList = () => {
   };
 
   const handleSelectWithEvents = () => {
-    selectCalendarsWithEvents();
+    const calendarsWithEventsIds = calendarsFromEvents
+      .filter(cal => cal.hasEvents)
+      .map(cal => cal.id);
+    
+    // Update selected calendars directly
+    calendarsWithEventsIds.forEach(calendarId => {
+      if (!selectedCalendarIds.includes(calendarId)) {
+        toggleCalendar(calendarId, true);
+      }
+    });
+    
+    // Remove any selected calendars that don't have events
+    selectedCalendarIds.forEach(calendarId => {
+      if (!calendarsWithEventsIds.includes(calendarId)) {
+        toggleCalendar(calendarId, false);
+      }
+    });
   };
 
   const handleSyncCalendar = async (calendarId: string) => {
