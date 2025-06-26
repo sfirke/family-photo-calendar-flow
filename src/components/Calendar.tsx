@@ -13,7 +13,7 @@ const Calendar = () => {
   const [weekOffset, setWeekOffset] = useState(0);
   const { defaultView } = useSettings();
   const { getWeatherForDate } = useWeather();
-  const { googleEvents } = useLocalEvents(); // Use local events instead
+  const { googleEvents } = useLocalEvents();
   const { selectedCalendarIds, updateSelectedCalendars } = useCalendarSelection();
   
   const { filteredEvents, hasGoogleEvents } = useEventFiltering({
