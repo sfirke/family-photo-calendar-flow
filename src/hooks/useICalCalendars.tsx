@@ -15,6 +15,14 @@ export interface ICalCalendar {
 const ICAL_CALENDARS_KEY = 'family_calendar_ical_calendars';
 const ICAL_EVENTS_KEY = 'family_calendar_ical_events';
 
+// Multiple CORS proxy options for better reliability
+const CORS_PROXIES = [
+  (url: string) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
+  (url: string) => `https://cors-anywhere.herokuapp.com/${url}`,
+  (url: string) => `https://thingproxy.freeboard.io/fetch/${url}`,
+  (url: string) => `https://cors.bridged.cc/${url}`,
+];
+
 export const useICalCalendars = () => {
   const [calendars, setCalendars] = useState<ICalCalendar[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -80,32 +88,67 @@ export const useICalCalendars = () => {
     }
   }, [calendars, saveCalendars]);
 
+  // Try fetching with different methods
+  const fetchICalData = async (url: string): Promise<string> => {
+    console.log('Attempting to fetch iCal from:', url);
+    
+    // Try direct fetch first (works for some public calendars)
+    try {
+      const response = await fetch(url, {
+        mode: 'cors',
+        headers: {
+          'Accept': 'text/calendar, text/plain, */*',
+          'User-Agent': 'Mozilla/5.0 (compatible; FamilyCalendarApp/1.0)',
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.text();
+        console.log('Direct fetch successful, data length:', data.length);
+        return data;
+      }
+    } catch (error) {
+      console.log('Direct fetch failed, trying proxies:', error);
+    }
+
+    // Try CORS proxies
+    for (let i = 0; i < CORS_PROXIES.length; i++) {
+      try {
+        const proxyUrl = CORS_PROXIES[i](url);
+        console.log(`Trying proxy ${i + 1}/${CORS_PROXIES.length}:`, proxyUrl);
+        
+        const response = await fetch(proxyUrl, {
+          headers: {
+            'Accept': 'text/calendar, text/plain, */*',
+          }
+        });
+
+        if (response.ok) {
+          const data = await response.text();
+          console.log(`Proxy ${i + 1} successful, data length:`, data.length);
+          
+          // Validate that we got iCal data
+          if (data.includes('BEGIN:VCALENDAR') || data.includes('BEGIN:VEVENT')) {
+            return data;
+          } else {
+            console.log(`Proxy ${i + 1} returned non-iCal data`);
+          }
+        }
+      } catch (error) {
+        console.log(`Proxy ${i + 1} failed:`, error);
+      }
+    }
+
+    throw new Error('All fetch methods failed. Please check if the iCal URL is publicly accessible.');
+  };
+
   // Fetch and parse iCal feed
   const syncCalendar = useCallback(async (calendar: ICalCalendar) => {
     setIsLoading(true);
     setSyncStatus(prev => ({ ...prev, [calendar.id]: 'syncing' }));
 
     try {
-      // Try direct fetch first
-      let response: Response;
-      try {
-        response = await fetch(calendar.url, {
-          mode: 'cors',
-          headers: {
-            'Accept': 'text/calendar, text/plain, */*',
-          }
-        });
-      } catch (corsError) {
-        // If CORS fails, try with a CORS proxy
-        const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(calendar.url)}`;
-        response = await fetch(proxyUrl);
-      }
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      const icalData = await response.text();
+      const icalData = await fetchICalData(calendar.url);
       
       // Parse iCal data
       const jcalData = ICAL.parse(icalData);
@@ -115,17 +158,35 @@ export const useICalCalendars = () => {
       const events = vevents.map((vevent, index) => {
         const event = new ICAL.Event(vevent);
         
+        // Handle different date formats
+        let eventDate = new Date();
+        let timeString = 'All day';
+        
+        try {
+          if (event.startDate) {
+            eventDate = event.startDate.toJSDate();
+            
+            if (!event.startDate.isDate) {
+              // Has time component
+              const endDate = event.endDate ? event.endDate.toJSDate() : eventDate;
+              timeString = `${eventDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - ${endDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+            }
+          }
+        } catch (dateError) {
+          console.warn('Error parsing event date:', dateError);
+        }
+        
         return {
           id: Date.now() + index,
           title: event.summary || 'Untitled Event',
-          time: event.isRecurring() ? 'Recurring' : `${event.startDate.toJSDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - ${event.endDate.toJSDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
+          time: event.isRecurring() ? 'Recurring' : timeString,
           location: event.location || '',
           attendees: 0,
           category: 'Personal' as const,
           color: calendar.color,
           description: event.description || '',
-          organizer: 'iCal Import',
-          date: event.startDate.toJSDate(),
+          organizer: calendar.name,
+          date: eventDate,
           calendarId: calendar.id,
           calendarName: calendar.name,
           source: 'ical'
@@ -149,6 +210,7 @@ export const useICalCalendars = () => {
       });
 
       setSyncStatus(prev => ({ ...prev, [calendar.id]: 'success' }));
+      console.log(`Successfully synced ${events.length} events from ${calendar.name}`);
       return events;
 
     } catch (error) {

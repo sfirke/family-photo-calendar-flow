@@ -8,7 +8,7 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useICalCalendars, ICalCalendar } from '@/hooks/useICalCalendars';
-import { Calendar, Plus, Trash2, RefreshCw, ExternalLink } from 'lucide-react';
+import { Calendar, Plus, Trash2, RefreshCw, ExternalLink, AlertCircle } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -17,6 +17,11 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from '@/components/ui/alert';
 
 const CALENDAR_COLORS = [
   '#ef4444', '#f97316', '#eab308', '#22c55e', 
@@ -44,6 +49,16 @@ const ICalSettings = () => {
       return;
     }
 
+    // Basic URL validation
+    if (!newCalendar.url.includes('.ics') && !newCalendar.url.includes('ical')) {
+      toast({
+        title: "Invalid URL",
+        description: "Please enter a valid iCal URL (should contain '.ics' or 'ical').",
+        variant: "destructive"
+      });
+      return;
+    }
+
     try {
       const calendar = addCalendar(newCalendar);
       
@@ -58,9 +73,10 @@ const ICalSettings = () => {
       setNewCalendar({ name: '', url: '', color: CALENDAR_COLORS[0], enabled: true });
       setShowAddDialog(false);
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       toast({
         title: "Sync failed",
-        description: "Calendar was added but initial sync failed. Check the URL and try syncing manually.",
+        description: `Calendar was added but sync failed: ${errorMessage}`,
         variant: "destructive"
       });
     }
@@ -74,9 +90,10 @@ const ICalSettings = () => {
         description: `${calendar.name} has been synced successfully.`
       });
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       toast({
         title: "Sync failed",
-        description: `Failed to sync ${calendar.name}. Please check the URL and try again.`,
+        description: `Failed to sync ${calendar.name}: ${errorMessage}`,
         variant: "destructive"
       });
     }
@@ -129,7 +146,7 @@ const ICalSettings = () => {
             <DialogHeader>
               <DialogTitle>Add iCal Calendar</DialogTitle>
               <DialogDescription>
-                Enter the details for your iCal calendar feed. You can find iCal URLs in most calendar applications.
+                Enter the details for your iCal calendar feed. Make sure the URL is publicly accessible.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
@@ -237,11 +254,17 @@ const ICalSettings = () => {
           </div>
         )}
 
-        <div className="p-3 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg">
-          <p className="text-sm text-blue-800 dark:text-blue-200">
-            <strong>Tip:</strong> Most calendar services provide iCal URLs. Look for "Export" or "Share" options in Google Calendar, Outlook, or other calendar apps.
-          </p>
-        </div>
+        {/* Help and Tips */}
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Tips for iCal URLs</AlertTitle>
+          <AlertDescription className="text-sm space-y-2">
+            <p>• Google Calendar: Go to Settings → Your calendar → Integrate calendar → Secret address in iCal format</p>
+            <p>• Outlook: Go to Calendar settings → Shared calendars → Publish calendar → ICS link</p>
+            <p>• Apple iCloud: Go to iCloud.com → Calendar → Share calendar → Public calendar</p>
+            <p>• Make sure the calendar is set to "Public" or you have the private URL with access key</p>
+          </AlertDescription>
+        </Alert>
       </CardContent>
     </Card>
   );
