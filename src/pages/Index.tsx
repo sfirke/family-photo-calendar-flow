@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import Calendar from '@/components/Calendar';
 import SettingsModal from '@/components/SettingsModal';
 import OfflineIndicator from '@/components/OfflineIndicator';
+import Clock from '@/components/Clock';
 import { useTheme } from '@/contexts/ThemeContext';
 
 const Index = () => {
@@ -18,9 +19,7 @@ const Index = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
             <div className="flex items-center gap-4">
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                Family Calendar
-              </h1>
+              <Clock />
               <OfflineIndicator />
             </div>
             
