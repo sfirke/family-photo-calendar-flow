@@ -1,9 +1,7 @@
-
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import Calendar from '@/components/Calendar';
 import WeatherWidget from '@/components/WeatherWidget';
 import SettingsModal from '@/components/SettingsModal';
-import UserProfileDropdown from '@/components/UserProfileDropdown';
 import OfflineIndicator from '@/components/OfflineIndicator';
 import { Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -165,7 +163,6 @@ const Index = () => {
           <div className="flex items-center gap-4 relative z-10">
             <OfflineIndicator />
             <WeatherWidget />
-            {user && <UserProfileDropdown />}
           </div>
         </header>
 

@@ -14,7 +14,7 @@ import NotFound from "./pages/NotFound";
 const queryClient = new QueryClient();
 
 const App = () => (
-  <QueryClient client={queryClient}>
+  <QueryClientProvider client={queryClient}>
     <ThemeProvider>
       <SettingsProvider>
         <WeatherProvider>
@@ -32,7 +32,7 @@ const App = () => (
         </WeatherProvider>
       </SettingsProvider>
     </ThemeProvider>
-  </QueryClient>
+  </QueryClientProvider>
 );
 
 export default App;

@@ -8,10 +8,9 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { User, Camera, Monitor, CloudSun, Calendar } from 'lucide-react';
+import { Camera, Monitor, CloudSun, Calendar } from 'lucide-react';
 import { useSettings } from '@/contexts/SettingsContext';
 import { useTheme } from '@/contexts/ThemeContext';
-import AccountTab from './settings/AccountTab';
 import PhotosTab from './settings/PhotosTab';
 import DisplayTab from './settings/DisplayTab';
 import WeatherTab from './settings/WeatherTab';
@@ -46,16 +45,12 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
         <DialogHeader>
           <DialogTitle className="text-gray-900 dark:text-gray-100">App Settings</DialogTitle>
           <DialogDescription className="text-gray-600 dark:text-gray-400">
-            Configure your family calendar app preferences and connect your Google account
+            Configure your family calendar app preferences and manage your calendar feeds
           </DialogDescription>
         </DialogHeader>
 
-        <Tabs defaultValue="account" className="w-full">
-          <TabsList className="grid w-full grid-cols-5 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
-            <TabsTrigger value="account" className="flex items-center gap-2 text-gray-700 dark:text-gray-300 data-[state=active]:bg-white data-[state=active]:text-gray-900 dark:data-[state=active]:bg-gray-700 dark:data-[state=active]:text-gray-100">
-              <User className="h-4 w-4" />
-              Account
-            </TabsTrigger>
+        <Tabs defaultValue="calendars" className="w-full">
+          <TabsList className="grid w-full grid-cols-4 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
             <TabsTrigger value="calendars" className="flex items-center gap-2 text-gray-700 dark:text-gray-300 data-[state=active]:bg-white data-[state=active]:text-gray-900 dark:data-[state=active]:bg-gray-700 dark:data-[state=active]:text-gray-100">
               <Calendar className="h-4 w-4" />
               Calendars
@@ -73,10 +68,6 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
               Weather
             </TabsTrigger>
           </TabsList>
-
-          <TabsContent value="account" className="space-y-4 mt-6">
-            <AccountTab />
-          </TabsContent>
 
           <TabsContent value="calendars" className="space-y-4 mt-6">
             <CalendarsTab />
