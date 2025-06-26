@@ -39,11 +39,44 @@ const ICalSettings = () => {
     enabled: true
   });
 
+  const validateCalendar = (name: string, url: string) => {
+    // Check for duplicate name
+    const existingByName = calendars.find(cal => 
+      cal.name.toLowerCase().trim() === name.toLowerCase().trim()
+    );
+    
+    // Check for duplicate URL
+    const existingByUrl = calendars.find(cal => 
+      cal.url.toLowerCase().trim() === url.toLowerCase().trim()
+    );
+
+    if (existingByName) {
+      return { isValid: false, field: 'name', message: 'A calendar with this name already exists' };
+    }
+
+    if (existingByUrl) {
+      return { isValid: false, field: 'url', message: 'A calendar with this URL already exists' };
+    }
+
+    return { isValid: true };
+  };
+
   const handleAddCalendar = async () => {
     if (!newCalendar.name.trim() || !newCalendar.url.trim()) {
       toast({
         title: "Missing information",
         description: "Please provide both a name and URL for the calendar.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Validate for duplicates
+    const validation = validateCalendar(newCalendar.name, newCalendar.url);
+    if (!validation.isValid) {
+      toast({
+        title: "Duplicate calendar",
+        description: validation.message,
         variant: "destructive"
       });
       return;

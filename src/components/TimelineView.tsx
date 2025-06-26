@@ -19,13 +19,15 @@ const TimelineView = ({ events, getWeatherForDate }: TimelineViewProps) => {
       const aIsMultiDay = a.time.includes('days');
       const bIsMultiDay = b.time.includes('days');
       
-      // Multi-day events first
-      if (aIsMultiDay && !bIsMultiDay) return -1;
-      if (!aIsMultiDay && bIsMultiDay) return 1;
-      
-      // All-day events next
+      // All-day events first (including multi-day all-day events)
       if (aIsAllDay && !bIsAllDay) return -1;
       if (!aIsAllDay && bIsAllDay) return 1;
+      
+      // Within all-day events, multi-day events first
+      if (aIsAllDay && bIsAllDay) {
+        if (aIsMultiDay && !bIsMultiDay) return -1;
+        if (!aIsMultiDay && bIsMultiDay) return 1;
+      }
       
       // For timed events, sort by time
       if (!aIsAllDay && !bIsAllDay) {

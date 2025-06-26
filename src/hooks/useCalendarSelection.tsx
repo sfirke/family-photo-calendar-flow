@@ -28,7 +28,7 @@ export const useCalendarSelection = () => {
       calendarEventCounts.set(calendarId, (calendarEventCounts.get(calendarId) || 0) + 1);
     });
 
-    // First, add all iCal calendars (whether they have events or not)
+    // Only add enabled iCal calendars - this ensures deleted calendars don't appear
     iCalCalendars.forEach(iCalCalendar => {
       if (iCalCalendar.enabled) {
         calendarMap.set(iCalCalendar.id, {
@@ -41,7 +41,8 @@ export const useCalendarSelection = () => {
       }
     });
 
-    // Then, process events to add any additional calendars not already in the map
+    // Process events to add any additional calendars not already in the map
+    // but skip local_calendar - don't include it in available calendars
     allEvents.forEach(event => {
       const calendarId = event.calendarId || 'local_calendar';
       const calendarName = event.calendarName || 'Family Calendar';
