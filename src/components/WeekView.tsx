@@ -21,23 +21,63 @@ const WeekView = ({ events, weekOffset, onPreviousWeek, onNextWeek, getWeatherFo
   
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
-  // Group events by day and sort all-day events first
-  const eventsByDay = weekDays.map(day => {
-    const dayEvents = events.filter(event => isSameDay(event.date, day));
+  // Helper function to check if an event is all-day
+  const isAllDayEvent = (event: Event) => {
+    return event.time === 'All day' || event.time.toLowerCase().includes('all day');
+  };
+
+  // Helper function to check if an event spans multiple days
+  const isMultiDayEvent = (event: Event) => {
+    if (!isAllDayEvent(event)) return false;
     
-    // Sort events: all-day events first, then by time
-    dayEvents.sort((a, b) => {
-      const aIsAllDay = a.time === 'All day';
-      const bIsAllDay = b.time === 'All day';
+    // Check if the event title or description indicates multiple days
+    const titleLower = event.title.toLowerCase();
+    const descLower = (event.description || '').toLowerCase();
+    
+    return titleLower.includes('days') || titleLower.includes('week') || 
+           descLower.includes('days') || descLower.includes('week') ||
+           event.time.includes('days');
+  };
+
+  // Get events for each day, including multi-day all-day events
+  const getEventsForDay = (day: Date) => {
+    return events.filter(event => {
+      // Regular events on this specific day
+      if (isSameDay(event.date, day)) {
+        return true;
+      }
       
-      if (aIsAllDay && !bIsAllDay) return -1;
-      if (!aIsAllDay && bIsAllDay) return 1;
-      if (aIsAllDay && bIsAllDay) return a.title.localeCompare(b.title);
+      // Multi-day all-day events that should appear on this day
+      if (isMultiDayEvent(event)) {
+        // For multi-day events, show them on each day in the week
+        // This is a simplified approach - in a real app you'd parse the actual duration
+        return weekDays.some(weekDay => isSameDay(weekDay, day));
+      }
       
-      return a.time.localeCompare(b.time);
+      return false;
     });
+  };
+
+  // Group events by day and categorize them
+  const eventsByDay = weekDays.map(day => {
+    const dayEvents = getEventsForDay(day);
     
-    return { day, events: dayEvents };
+    // Separate all-day events from timed events
+    const allDayEvents = dayEvents.filter(isAllDayEvent);
+    const timedEvents = dayEvents.filter(event => !isAllDayEvent(event));
+    
+    // Sort all-day events alphabetically
+    allDayEvents.sort((a, b) => a.title.localeCompare(b.title));
+    
+    // Sort timed events by time
+    timedEvents.sort((a, b) => a.time.localeCompare(b.time));
+    
+    return { 
+      day, 
+      allDayEvents,
+      timedEvents,
+      totalEvents: dayEvents.length
+    };
   });
 
   return (
@@ -69,7 +109,7 @@ const WeekView = ({ events, weekOffset, onPreviousWeek, onNextWeek, getWeatherFo
 
       {/* Week Grid */}
       <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
-        {eventsByDay.map(({ day, events: dayEvents }, index) => (
+        {eventsByDay.map(({ day, allDayEvents, timedEvents }, index) => (
           <div key={index} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 min-h-[300px] overflow-hidden">
             <div className="flex items-center justify-between mb-3">
               <div className="text-center">
@@ -87,13 +127,25 @@ const WeekView = ({ events, weekOffset, onPreviousWeek, onNextWeek, getWeatherFo
             </div>
             
             <div className="space-y-2 overflow-hidden">
-              {dayEvents.map(event => (
+              {/* All-day events at the top */}
+              {allDayEvents.map(event => (
+                <div key={`${event.id}-${format(day, 'yyyy-MM-dd')}`} className="truncate">
+                  <EventCard 
+                    event={event} 
+                    viewMode="week" 
+                    isMultiDayDisplay={true}
+                  />
+                </div>
+              ))}
+              
+              {/* Timed events below */}
+              {timedEvents.map(event => (
                 <div key={event.id} className="truncate">
                   <EventCard event={event} viewMode="week" />
                 </div>
               ))}
               
-              {dayEvents.length === 0 && (
+              {allDayEvents.length === 0 && timedEvents.length === 0 && (
                 <p className="text-xs text-gray-500 dark:text-gray-400 italic">No events</p>
               )}
             </div>

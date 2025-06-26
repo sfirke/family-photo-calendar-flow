@@ -146,7 +146,7 @@ const EventCard = ({
     if (viewMode !== 'timeline') return '';
     
     if (isMultiDayDisplay) {
-      return 'w-full'; // Full width for multi-day events
+      return 'w-auto min-w-fit max-w-[200px]'; // Flexible width for multi-day events
     }
     
     if (isAllDay) {
@@ -198,15 +198,15 @@ const EventCard = ({
   const getFontSizeClasses = () => {
     if (viewMode === 'timeline') {
       return {
-        title: 'text-lg', // Increased from text-base
-        time: 'text-base', // Increased from text-sm
-        location: 'text-base', // Increased from text-sm
-        description: 'text-base', // Increased from text-sm
-        category: 'text-base' // Increased from text-sm
+        title: isMultiDayDisplay ? 'text-sm' : 'text-lg', // Smaller for multi-day display
+        time: isMultiDayDisplay ? 'text-xs' : 'text-base',
+        location: isMultiDayDisplay ? 'text-xs' : 'text-base',
+        description: isMultiDayDisplay ? 'text-xs' : 'text-base',
+        category: isMultiDayDisplay ? 'text-xs' : 'text-base'
       };
     }
     return {
-      title: 'text-sm', // Default size for other views
+      title: isMultiDayDisplay ? 'text-xs' : 'text-sm',
       time: 'text-xs',
       location: 'text-xs',
       description: 'text-xs',
@@ -216,6 +216,9 @@ const EventCard = ({
 
   // Get padding class based on event type
   const getPaddingClass = () => {
+    if (isMultiDayDisplay) {
+      return 'px-2 py-1'; // Compact padding for multi-day events
+    }
     return isAllDay ? 'pl-3' : 'p-3';
   };
 
@@ -223,30 +226,30 @@ const EventCard = ({
   const textColors = getTextColorClasses();
   const fontSizes = getFontSizeClasses();
 
-  // For multi-day events, show compact format with inline time
+  // For multi-day events, show compact format with inline calendar icon and "All Day"
   if (isMultiDayDisplay) {
     return (
       <article 
-        className={`${getPaddingClass()} pr-2 pt-2 pb-2 rounded-lg ${getBackgroundOpacity()} backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/30 ${getTimelineStyles()} ${className}`}
+        className={`${getPaddingClass()} rounded-lg ${getBackgroundOpacity()} backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/30 ${getTimelineStyles()} ${className}`}
         role="article"
         aria-label={`Multi-day event: ${event.title}`}
       >
-        <div className="flex items-center gap-3">
-          {/* Event Details Column - Inline format with dot */}
-          <div className="flex-1 min-w-0 flex items-center gap-2">
-            <div 
-              className="w-3 h-3 rounded-full flex-shrink-0"
-              style={{ backgroundColor: event.color || '#3b82f6' }}
-              aria-label={`Calendar: ${event.calendarName || event.category}`}
-              role="img"
-            />
-            <h3 className={`${textColors.title} ${fontSizes.title} truncate`}>
-              {event.title}
-            </h3>
-            <span className={`${fontSizes.time} ${textColors.time} flex items-center gap-1 flex-shrink-0`}>
-              <Clock className="h-4 w-4" aria-hidden="true" />
-              All Day
-            </span>
+        <div className="flex items-center gap-2">
+          {/* Color dot */}
+          <div 
+            className="w-2 h-2 rounded-full flex-shrink-0"
+            style={{ backgroundColor: event.color || '#3b82f6' }}
+            aria-label={`Calendar: ${event.calendarName || event.category}`}
+            role="img"
+          />
+          {/* Title */}
+          <h3 className={`${textColors.title} ${fontSizes.title} truncate flex-1`}>
+            {event.title}
+          </h3>
+          {/* Calendar icon and "All Day" text inline */}
+          <div className={`${fontSizes.time} ${textColors.time} flex items-center gap-1 flex-shrink-0`}>
+            <Clock className="h-3 w-3" aria-hidden="true" />
+            <span>All Day</span>
           </div>
         </div>
       </article>

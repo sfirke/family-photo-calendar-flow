@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { format, isToday, isTomorrow, isYesterday, addDays, startOfDay } from 'date-fns';
+import { format, isToday, isTomorrow, isYesterday, addDays, startOfDay, differenceInDays, isSameDay } from 'date-fns';
 import { Event } from '@/types/calendar';
 import EventCard from './EventCard';
 import WeatherDisplay from './WeatherDisplay';
@@ -15,44 +15,66 @@ const TimelineView = ({ events, getWeatherForDate }: TimelineViewProps) => {
   const today = new Date();
   const next3Days = Array.from({ length: 3 }, (_, i) => addDays(today, i));
   
-  // Filter events to only include next 3 days
-  const filteredEvents = events.filter(event => {
-    return next3Days.some(day => 
-      format(event.date, 'yyyy-MM-dd') === format(day, 'yyyy-MM-dd')
-    );
-  });
+  // Helper function to check if an event is all-day
+  const isAllDayEvent = (event: Event) => {
+    return event.time === 'All day' || event.time.toLowerCase().includes('all day');
+  };
 
-  // Group events by date and sort all-day events first
-  const groupedEvents = filteredEvents.reduce((acc, event) => {
-    const dateKey = format(event.date, 'yyyy-MM-dd');
-    if (!acc[dateKey]) {
-      acc[dateKey] = [];
-    }
-    acc[dateKey].push(event);
-    return acc;
-  }, {} as Record<string, Event[]>);
+  // Helper function to check if an event spans multiple days
+  const isMultiDayEvent = (event: Event) => {
+    if (!isAllDayEvent(event)) return false;
+    
+    // Check if the event title or description indicates multiple days
+    const titleLower = event.title.toLowerCase();
+    const descLower = (event.description || '').toLowerCase();
+    
+    return titleLower.includes('days') || titleLower.includes('week') || 
+           descLower.includes('days') || descLower.includes('week') ||
+           event.time.includes('days');
+  };
 
-  // Sort events within each day: all-day events first, then by time
-  Object.keys(groupedEvents).forEach(dateKey => {
-    groupedEvents[dateKey].sort((a, b) => {
-      // All-day events first
-      const aIsAllDay = a.time === 'All day';
-      const bIsAllDay = b.time === 'All day';
+  // Get events for each day, including multi-day all-day events
+  const getEventsForDay = (day: Date) => {
+    return events.filter(event => {
+      // Regular events on this specific day
+      if (isSameDay(event.date, day)) {
+        return true;
+      }
       
-      if (aIsAllDay && !bIsAllDay) return -1;
-      if (!aIsAllDay && bIsAllDay) return 1;
-      if (aIsAllDay && bIsAllDay) return a.title.localeCompare(b.title);
+      // Multi-day all-day events that should appear on this day
+      if (isMultiDayEvent(event)) {
+        // For multi-day events, show them on each day in our range
+        // This is a simplified approach - in a real app you'd parse the actual duration
+        return next3Days.some(rangeDay => isSameDay(rangeDay, day));
+      }
       
-      // For timed events, sort by time
-      return a.time.localeCompare(b.time);
+      return false;
     });
+  };
+
+  // Group events by date and categorize them
+  const groupedEventsByDay = next3Days.map(day => {
+    const dayEvents = getEventsForDay(day);
+    
+    // Separate all-day events from timed events
+    const allDayEvents = dayEvents.filter(isAllDayEvent);
+    const timedEvents = dayEvents.filter(event => !isAllDayEvent(event));
+    
+    // Sort all-day events alphabetically
+    allDayEvents.sort((a, b) => a.title.localeCompare(b.title));
+    
+    // Sort timed events by time
+    timedEvents.sort((a, b) => a.time.localeCompare(b.time));
+    
+    return {
+      day,
+      allDayEvents,
+      timedEvents,
+      totalEvents: dayEvents.length
+    };
   });
 
-  // Get sorted dates for the next 3 days
-  const sortedDates = next3Days.map(day => format(day, 'yyyy-MM-dd'));
-
-  const getDateLabel = (dateStr: string) => {
-    const date = new Date(dateStr);
+  const getDateLabel = (date: Date) => {
     if (isToday(date)) return 'Today';
     if (isTomorrow(date)) return 'Tomorrow';
     if (isYesterday(date)) return 'Yesterday';
@@ -61,10 +83,9 @@ const TimelineView = ({ events, getWeatherForDate }: TimelineViewProps) => {
 
   return (
     <div className="space-y-6">
-      {sortedDates.map(dateStr => {
-        const date = new Date(dateStr);
-        const dayEvents = groupedEvents[dateStr] || [];
-        const weather = getWeatherForDate(date);
+      {groupedEventsByDay.map(({ day, allDayEvents, timedEvents, totalEvents }) => {
+        const dateStr = format(day, 'yyyy-MM-dd');
+        const weather = getWeatherForDate(day);
         
         return (
           <div key={dateStr} className="space-y-4">
@@ -72,10 +93,10 @@ const TimelineView = ({ events, getWeatherForDate }: TimelineViewProps) => {
             <div className="relative flex items-center">
               <div className="flex items-center gap-4">
                 <h3 className="text-lg font-semibold text-foreground">
-                  {getDateLabel(dateStr)}
+                  {getDateLabel(day)}
                 </h3>
                 <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                  <span>{dayEvents.length} events</span>
+                  <span>{totalEvents} events</span>
                 </div>
               </div>
               
@@ -100,15 +121,30 @@ const TimelineView = ({ events, getWeatherForDate }: TimelineViewProps) => {
               </div>
             </div>
             
-            {/* Events without border line */}
+            {/* All-day events at the top - 45% width with flex wrap */}
+            {allDayEvents.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-4" style={{ width: '45%' }}>
+                {allDayEvents.map(event => (
+                  <div key={`${event.id}-${dateStr}`} className="flex-shrink-0">
+                    <EventCard 
+                      event={event} 
+                      viewMode="timeline" 
+                      isMultiDayDisplay={true}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+            
+            {/* Timed events */}
             <div className="space-y-3">
-              {dayEvents.map(event => (
+              {timedEvents.map(event => (
                 <div key={event.id}>
                   <EventCard event={event} viewMode="timeline" />
                 </div>
               ))}
               
-              {dayEvents.length === 0 && (
+              {totalEvents === 0 && (
                 <div className="text-center py-4 text-muted-foreground">
                   <p>No events scheduled</p>
                 </div>
