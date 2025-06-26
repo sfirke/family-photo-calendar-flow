@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import ICAL from 'ical.js';
 
@@ -126,6 +127,85 @@ export const useICalCalendars = () => {
     return eventDate.getFullYear() === currentYear;
   };
 
+  // Generate recurring event occurrences for the current year
+  const expandRecurringEvent = (event: ICAL.Event, calendar: ICalCalendar): any[] => {
+    const currentYear = new Date().getFullYear();
+    const yearStart = new Date(currentYear, 0, 1);
+    const yearEnd = new Date(currentYear, 11, 31);
+    const occurrences: any[] = [];
+
+    try {
+      if (event.isRecurring()) {
+        const iterator = event.iterator();
+        let next;
+        let count = 0;
+        const maxOccurrences = 366; // Limit to prevent infinite loops
+
+        while ((next = iterator.next()) && count < maxOccurrences) {
+          const occurrenceDate = next.toJSDate();
+          
+          // Only include occurrences within the current year
+          if (occurrenceDate >= yearStart && occurrenceDate <= yearEnd) {
+            occurrences.push(createEventObject(event, calendar, occurrenceDate, true));
+          }
+          
+          // Stop if we've passed the end of the year
+          if (occurrenceDate > yearEnd) {
+            break;
+          }
+          
+          count++;
+        }
+      } else {
+        // Non-recurring event
+        const eventDate = event.startDate.toJSDate();
+        if (isEventInCurrentYear(eventDate)) {
+          occurrences.push(createEventObject(event, calendar, eventDate, false));
+        }
+      }
+    } catch (error) {
+      console.warn('Error expanding recurring event:', error);
+      // Fallback: create single event
+      const eventDate = event.startDate ? event.startDate.toJSDate() : new Date();
+      if (isEventInCurrentYear(eventDate)) {
+        occurrences.push(createEventObject(event, calendar, eventDate, false));
+      }
+    }
+
+    return occurrences;
+  };
+
+  // Create event object with consistent structure
+  const createEventObject = (event: ICAL.Event, calendar: ICalCalendar, eventDate: Date, isRecurring: boolean) => {
+    let timeString = 'All day';
+    
+    try {
+      if (event.startDate && !event.startDate.isDate) {
+        // Has time component
+        const endDate = event.endDate ? event.endDate.toJSDate() : eventDate;
+        timeString = `${eventDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - ${endDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+      }
+    } catch (dateError) {
+      console.warn('Error parsing event date:', dateError);
+    }
+
+    return {
+      id: Date.now() + Math.random(), // Unique ID for each occurrence
+      title: event.summary || 'Untitled Event',
+      time: isRecurring ? `${timeString} (Recurring)` : timeString,
+      location: event.location || '',
+      attendees: 0,
+      category: 'Personal' as const,
+      color: calendar.color,
+      description: event.description || '',
+      organizer: calendar.name,
+      date: eventDate,
+      calendarId: calendar.id,
+      calendarName: calendar.name,
+      source: 'ical'
+    };
+  };
+
   // Try fetching with different methods
   const fetchICalData = async (url: string): Promise<string> => {
     console.log('Attempting to fetch iCal from:', url);
@@ -214,57 +294,24 @@ export const useICalCalendars = () => {
       const vcalendar = new ICAL.Component(jcalData);
       const vevents = vcalendar.getAllSubcomponents('vevent');
 
-      const currentYear = new Date().getFullYear();
-      console.log(`Filtering events for year ${currentYear}`);
+      console.log(`Processing ${vevents.length} events from calendar`);
 
-      const events = vevents
-        .map((vevent, index) => {
-          const event = new ICAL.Event(vevent);
-          
-          // Handle different date formats
-          let eventDate = new Date();
-          let timeString = 'All day';
-          
-          try {
-            if (event.startDate) {
-              eventDate = event.startDate.toJSDate();
-              
-              if (!event.startDate.isDate) {
-                // Has time component
-                const endDate = event.endDate ? event.endDate.toJSDate() : eventDate;
-                timeString = `${eventDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - ${endDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
-              }
-            }
-          } catch (dateError) {
-            console.warn('Error parsing event date:', dateError);
-          }
-          
-          return {
-            id: Date.now() + index,
-            title: event.summary || 'Untitled Event',
-            time: event.isRecurring() ? 'Recurring' : timeString,
-            location: event.location || '',
-            attendees: 0,
-            category: 'Personal' as const,
-            color: calendar.color,
-            description: event.description || '',
-            organizer: calendar.name,
-            date: eventDate,
-            calendarId: calendar.id,
-            calendarName: calendar.name,
-            source: 'ical'
-          };
-        })
-        .filter(event => isEventInCurrentYear(event.date)); // Filter for current year only
+      // Process all events and expand recurring ones
+      const allEvents: any[] = [];
+      vevents.forEach((vevent) => {
+        const event = new ICAL.Event(vevent);
+        const eventOccurrences = expandRecurringEvent(event, calendar);
+        allEvents.push(...eventOccurrences);
+      });
 
-      console.log(`Filtered ${events.length} events for current year (${currentYear}) from ${vevents.length} total events`);
+      console.log(`Expanded ${vevents.length} calendar events to ${allEvents.length} occurrences for current year`);
 
       // Store events
       try {
         const existingEvents = JSON.parse(localStorage.getItem(ICAL_EVENTS_KEY) || '[]');
         const filteredExisting = existingEvents.filter((event: any) => event.calendarId !== calendar.id);
-        const allEvents = [...filteredExisting, ...events];
-        localStorage.setItem(ICAL_EVENTS_KEY, JSON.stringify(allEvents));
+        const combinedEvents = [...filteredExisting, ...allEvents];
+        localStorage.setItem(ICAL_EVENTS_KEY, JSON.stringify(combinedEvents));
       } catch (error) {
         console.error('Error storing iCal events:', error);
       }
@@ -272,12 +319,12 @@ export const useICalCalendars = () => {
       // Update calendar with sync info
       updateCalendar(calendar.id, {
         lastSync: new Date().toISOString(),
-        eventCount: events.length
+        eventCount: allEvents.length
       });
 
       setSyncStatus(prev => ({ ...prev, [calendar.id]: 'success' }));
-      console.log(`Successfully synced ${events.length} events from ${calendar.name} for ${currentYear}`);
-      return events;
+      console.log(`Successfully synced ${allEvents.length} event occurrences from ${calendar.name}`);
+      return allEvents;
 
     } catch (error) {
       console.error('Error syncing iCal calendar:', error);
