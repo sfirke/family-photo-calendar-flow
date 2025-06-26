@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Event } from '@/types/calendar';
 import EventCard from './EventCard';
@@ -16,20 +17,51 @@ interface WeekViewProps {
 const WeekView = ({ events, weekOffset, onPreviousWeek, onNextWeek, getWeatherForDate }: WeekViewProps) => {
   const weekDays = getWeekDays(weekOffset);
   
+  const sortEventsByTimeAndType = (events: Event[]) => {
+    return events.sort((a, b) => {
+      const aIsAllDay = a.time.toLowerCase().includes('all day');
+      const bIsAllDay = b.time.toLowerCase().includes('all day');
+      const aIsMultiDay = a.time.includes('days');
+      const bIsMultiDay = b.time.includes('days');
+      
+      // Multi-day events first
+      if (aIsMultiDay && !bIsMultiDay) return -1;
+      if (!aIsMultiDay && bIsMultiDay) return 1;
+      
+      // All-day events next
+      if (aIsAllDay && !bIsAllDay) return -1;
+      if (!aIsAllDay && bIsAllDay) return 1;
+      
+      // For timed events, sort by time
+      if (!aIsAllDay && !bIsAllDay) {
+        const getTimeValue = (timeStr: string) => {
+          const match = timeStr.match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
+          if (match) {
+            let hours = parseInt(match[1]);
+            const minutes = parseInt(match[2]);
+            const period = match[3]?.toUpperCase();
+            
+            if (period === 'PM' && hours !== 12) hours += 12;
+            if (period === 'AM' && hours === 12) hours = 0;
+            
+            return hours * 60 + minutes;
+          }
+          return 0;
+        };
+        
+        return getTimeValue(a.time) - getTimeValue(b.time);
+      }
+      
+      return 0;
+    });
+  };
+  
   const getEventsForDate = (date: Date) => {
     const dayEvents = events.filter(event => 
       event.date.toDateString() === date.toDateString()
     );
     
-    // Sort events: all-day events first, then regular events
-    return dayEvents.sort((a, b) => {
-      const aIsAllDay = a.time.toLowerCase().includes('all day') || a.time === '00:00 - 23:59';
-      const bIsAllDay = b.time.toLowerCase().includes('all day') || b.time === '00:00 - 23:59';
-      
-      if (aIsAllDay && !bIsAllDay) return -1;
-      if (!aIsAllDay && bIsAllDay) return 1;
-      return 0;
-    });
+    return sortEventsByTimeAndType(dayEvents);
   };
 
   const getWeatherIcon = (condition: string) => {

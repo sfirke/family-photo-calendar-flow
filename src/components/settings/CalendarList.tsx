@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Calendar as CalendarIcon, RefreshCw } from 'lucide-react';
+import { Calendar as CalendarIcon, RefreshCw, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useCalendarSelection } from '@/hooks/useCalendarSelection';
@@ -17,7 +17,7 @@ const CalendarList = () => {
     clearAllCalendars
   } = useCalendarSelection();
   
-  const { calendars: iCalCalendars, syncCalendar, syncStatus } = useICalCalendars();
+  const { calendars: iCalCalendars, syncCalendar, syncStatus, removeCalendar } = useICalCalendars();
   const { toast } = useToast();
 
   const handleSelectAll = () => {
@@ -71,9 +71,33 @@ const CalendarList = () => {
     }
   };
 
+  const handleDeleteCalendar = (calendarId: string) => {
+    const calendar = calendarsFromEvents.find(cal => cal.id === calendarId);
+    if (!calendar) return;
+
+    // Remove from selections first
+    if (selectedCalendarIds.includes(calendarId)) {
+      toggleCalendar(calendarId, false);
+    }
+
+    // Remove from iCal calendars if it exists there
+    const iCalCalendar = iCalCalendars.find(cal => cal.id === calendarId);
+    if (iCalCalendar) {
+      removeCalendar(calendarId);
+    }
+
+    toast({
+      title: "Calendar deleted",
+      description: `${calendar.summary} has been removed.`
+    });
+  };
+
   const calendarsWithEventsCount = calendarsFromEvents.filter(cal => cal.hasEvents).length;
 
-  if (calendarsFromEvents.length === 0) {
+  // Filter out local_calendar from display
+  const displayCalendars = calendarsFromEvents.filter(cal => cal.id !== 'local_calendar');
+
+  if (displayCalendars.length === 0) {
     return null;
   }
 
@@ -85,7 +109,7 @@ const CalendarList = () => {
           Available Calendars
         </CardTitle>
         <CardDescription className="text-gray-600 dark:text-gray-400">
-          Select which calendars to display in your calendar view. Based on calendars found in your local events.
+          Select which calendars to display in your calendar view. Based on calendars found in your synced feeds.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -98,7 +122,7 @@ const CalendarList = () => {
               onClick={handleSelectAll}
               className="text-xs border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
             >
-              Select All ({calendarsFromEvents.length})
+              Select All ({displayCalendars.length})
             </Button>
             <Button
               variant="outline"
@@ -118,13 +142,13 @@ const CalendarList = () => {
               Clear All
             </Button>
             <div className="ml-auto text-xs text-gray-500 dark:text-gray-400 self-center">
-              {selectedCalendarIds.length} of {calendarsFromEvents.length} selected
+              {selectedCalendarIds.length} of {displayCalendars.length} selected
             </div>
           </div>
 
           {/* Calendar List */}
           <div className="space-y-3">
-            {calendarsFromEvents.map((calendar) => {
+            {displayCalendars.map((calendar) => {
               const isSelected = selectedCalendarIds.includes(calendar.id);
               const iCalCalendar = iCalCalendars.find(cal => cal.id === calendar.id);
               const canSync = iCalCalendar && iCalCalendar.enabled;
@@ -166,19 +190,31 @@ const CalendarList = () => {
                     </p>
                   </div>
                   
-                  {/* Sync Button for iCal calendars */}
-                  {canSync && (
+                  <div className="flex items-center gap-2">
+                    {/* Sync Button for iCal calendars */}
+                    {canSync && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleSyncCalendar(calendar.id)}
+                        disabled={issyncing}
+                        title="Sync this calendar"
+                      >
+                        <RefreshCw className={`h-4 w-4 ${issyncing ? 'animate-spin' : ''}`} />
+                      </Button>
+                    )}
+                    
+                    {/* Delete Button */}
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => handleSyncCalendar(calendar.id)}
-                      disabled={issyncing}
-                      title="Sync this calendar"
-                      className="ml-2"
+                      onClick={() => handleDeleteCalendar(calendar.id)}
+                      title="Delete this calendar"
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-900/20"
                     >
-                      <RefreshCw className={`h-4 w-4 ${issyncing ? 'animate-spin' : ''}`} />
+                      <Trash2 className="h-4 w-4" />
                     </Button>
-                  )}
+                  </div>
                 </div>
               );
             })}
@@ -187,7 +223,7 @@ const CalendarList = () => {
           <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
             <p className="text-xs text-gray-500 dark:text-gray-400">
               Note: Calendar selections are automatically applied to the calendar view and dropdown filter.
-              All data is stored locally in your browser. External calendars can be synced manually.
+              All data is stored locally in your browser. External calendars can be synced and deleted individually.
             </p>
           </div>
         </div>

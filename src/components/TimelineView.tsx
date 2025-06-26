@@ -12,6 +12,45 @@ interface TimelineViewProps {
 const TimelineView = ({ events, getWeatherForDate }: TimelineViewProps) => {
   const next3Days = getNext3Days();
   
+  const sortEventsByTimeAndType = (events: Event[]) => {
+    return events.sort((a, b) => {
+      const aIsAllDay = a.time.toLowerCase().includes('all day');
+      const bIsAllDay = b.time.toLowerCase().includes('all day');
+      const aIsMultiDay = a.time.includes('days');
+      const bIsMultiDay = b.time.includes('days');
+      
+      // Multi-day events first
+      if (aIsMultiDay && !bIsMultiDay) return -1;
+      if (!aIsMultiDay && bIsMultiDay) return 1;
+      
+      // All-day events next
+      if (aIsAllDay && !bIsAllDay) return -1;
+      if (!aIsAllDay && bIsAllDay) return 1;
+      
+      // For timed events, sort by time
+      if (!aIsAllDay && !bIsAllDay) {
+        const getTimeValue = (timeStr: string) => {
+          const match = timeStr.match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
+          if (match) {
+            let hours = parseInt(match[1]);
+            const minutes = parseInt(match[2]);
+            const period = match[3]?.toUpperCase();
+            
+            if (period === 'PM' && hours !== 12) hours += 12;
+            if (period === 'AM' && hours === 12) hours = 0;
+            
+            return hours * 60 + minutes;
+          }
+          return 0;
+        };
+        
+        return getTimeValue(a.time) - getTimeValue(b.time);
+      }
+      
+      return 0;
+    });
+  };
+  
   const getEventsForDate = (date: Date) => {
     const currentDate = new Date(date);
     currentDate.setHours(0, 0, 0, 0);
@@ -51,24 +90,7 @@ const TimelineView = ({ events, getWeatherForDate }: TimelineViewProps) => {
       return eventStart.getTime() === currentDate.getTime();
     });
     
-    // Separate multi-day and single-day events
-    const multiDayEvents = allEvents.filter(event => 
-      event.time.includes('days')
-    );
-    const singleDayEvents = allEvents.filter(event => 
-      !event.time.includes('days')
-    );
-    
-    // Separate all-day and regular single-day events
-    const allDayEvents = singleDayEvents.filter(event => 
-      event.time.toLowerCase().includes('all day')
-    );
-    const regularEvents = singleDayEvents.filter(event => 
-      !event.time.toLowerCase().includes('all day')
-    );
-    
-    // Return multi-day events first, then all-day events, then regular events
-    return [...multiDayEvents, ...allDayEvents, ...regularEvents];
+    return sortEventsByTimeAndType(allEvents);
   };
 
   const getWeatherIcon = (condition: string) => {

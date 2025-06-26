@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useMemo } from 'react';
 import { useLocalEvents } from '@/hooks/useLocalEvents';
 import { useICalCalendars } from '@/hooks/useICalCalendars';
@@ -16,7 +17,7 @@ export const useCalendarSelection = () => {
     return [...localEvents, ...iCalEvents];
   }, [localEvents, getICalEvents]);
 
-  // Generate calendars from all events
+  // Generate calendars from all events - exclude local calendar from available calendars list
   const calendarsFromEvents = useMemo(() => {
     const calendarMap = new Map();
     
@@ -27,25 +28,13 @@ export const useCalendarSelection = () => {
       calendarEventCounts.set(calendarId, (calendarEventCounts.get(calendarId) || 0) + 1);
     });
 
-    // Check if we have synced iCal calendars with events
-    const syncedICalCalendars = iCalCalendars.filter(cal => 
-      cal.enabled && cal.lastSync && cal.eventCount && cal.eventCount > 0
-    );
-    const hasSyncedICalEvents = syncedICalCalendars.length > 0;
-    
-    const localCalendarHasEvents = calendarEventCounts.get('local_calendar') > 0;
-
-    // Hide local calendar if:
-    // 1. We have synced iCal calendars with events, AND
-    // 2. Local calendar has no events
-    const shouldHideLocalCalendar = hasSyncedICalEvents && !localCalendarHasEvents;
-
+    // Only process iCal calendars for the available calendars list
     allEvents.forEach(event => {
       const calendarId = event.calendarId || 'local_calendar';
       const calendarName = event.calendarName || 'Family Calendar';
       
-      // Skip local calendar if it should be hidden
-      if (calendarId === 'local_calendar' && shouldHideLocalCalendar) {
+      // Skip local calendar - don't include it in available calendars
+      if (calendarId === 'local_calendar') {
         return;
       }
       
@@ -53,7 +42,7 @@ export const useCalendarSelection = () => {
         calendarMap.set(calendarId, {
           id: calendarId,
           summary: calendarName,
-          primary: calendarId === 'local_calendar',
+          primary: false,
           eventCount: 0,
           hasEvents: false
         });
@@ -64,22 +53,7 @@ export const useCalendarSelection = () => {
       calendar.hasEvents = true;
     });
 
-    // Always include local calendar if no synced iCal calendars exist and local has events
-    if (!hasSyncedICalEvents && localCalendarHasEvents) {
-      if (!calendarMap.has('local_calendar')) {
-        calendarMap.set('local_calendar', {
-          id: 'local_calendar',
-          summary: 'Family Calendar',
-          primary: true,
-          eventCount: calendarEventCounts.get('local_calendar') || 0,
-          hasEvents: localCalendarHasEvents
-        });
-      }
-    }
-
     return Array.from(calendarMap.values()).sort((a, b) => {
-      if (a.primary && !b.primary) return -1;
-      if (!a.primary && b.primary) return 1;
       if (a.eventCount !== b.eventCount) return b.eventCount - a.eventCount;
       return a.summary.localeCompare(b.summary);
     });

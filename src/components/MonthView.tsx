@@ -14,6 +14,45 @@ const MonthView = ({ events, getWeatherForDate }: MonthViewProps) => {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [showDayModal, setShowDayModal] = useState(false);
 
+  const sortEventsByTimeAndType = (events: Event[]) => {
+    return events.sort((a, b) => {
+      const aIsAllDay = a.time.toLowerCase().includes('all day');
+      const bIsAllDay = b.time.toLowerCase().includes('all day');
+      const aIsMultiDay = a.time.includes('days');
+      const bIsMultiDay = b.time.includes('days');
+      
+      // Multi-day events first
+      if (aIsMultiDay && !bIsMultiDay) return -1;
+      if (!aIsMultiDay && bIsMultiDay) return 1;
+      
+      // All-day events next
+      if (aIsAllDay && !bIsAllDay) return -1;
+      if (!aIsAllDay && bIsAllDay) return 1;
+      
+      // For timed events, sort by time
+      if (!aIsAllDay && !bIsAllDay) {
+        const getTimeValue = (timeStr: string) => {
+          const match = timeStr.match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
+          if (match) {
+            let hours = parseInt(match[1]);
+            const minutes = parseInt(match[2]);
+            const period = match[3]?.toUpperCase();
+            
+            if (period === 'PM' && hours !== 12) hours += 12;
+            if (period === 'AM' && hours === 12) hours = 0;
+            
+            return hours * 60 + minutes;
+          }
+          return 0;
+        };
+        
+        return getTimeValue(a.time) - getTimeValue(b.time);
+      }
+      
+      return 0;
+    });
+  };
+
   const getMonthDays = () => {
     const startDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
     const endDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
@@ -50,15 +89,7 @@ const MonthView = ({ events, getWeatherForDate }: MonthViewProps) => {
       event.date.toDateString() === date.toDateString()
     );
     
-    // Sort events: all-day events first, then regular events
-    return dayEvents.sort((a, b) => {
-      const aIsAllDay = a.time.toLowerCase().includes('all day') || a.time === '00:00 - 23:59';
-      const bIsAllDay = b.time.toLowerCase().includes('all day') || b.time === '00:00 - 23:59';
-      
-      if (aIsAllDay && !bIsAllDay) return -1;
-      if (!aIsAllDay && bIsAllDay) return 1;
-      return 0;
-    });
+    return sortEventsByTimeAndType(dayEvents);
   };
 
   const handleDayClick = (date: Date, dayEvents: Event[]) => {
@@ -90,6 +121,27 @@ const MonthView = ({ events, getWeatherForDate }: MonthViewProps) => {
       default:
         return <Sun className="h-3 w-3 text-yellow-400" />;
     }
+  };
+
+  const getEventDotColor = (event: Event) => {
+    // Use calendar-specific colors or fall back to event color
+    if (event.calendarName) {
+      const colors = [
+        'bg-blue-500',
+        'bg-green-500', 
+        'bg-purple-500',
+        'bg-orange-500',
+        'bg-red-500',
+        'bg-pink-500',
+        'bg-indigo-500'
+      ];
+      const hash = event.calendarName.split('').reduce((a, b) => {
+        a = ((a << 5) - a) + b.charCodeAt(0);
+        return a & a;
+      }, 0);
+      return colors[Math.abs(hash) % colors.length];
+    }
+    return event.color;
   };
 
   return (
@@ -155,17 +207,17 @@ const MonthView = ({ events, getWeatherForDate }: MonthViewProps) => {
               {isToday && <div className="w-full h-0.5 bg-yellow-300 mb-2"></div>}
               
               {dayEvents.length > 0 && (
-                <div className="flex flex-wrap gap-1 justify-start items-start min-h-[60px]">
-                  {dayEvents.slice(0, 12).map((event, eventIndex) => (
+                <div className="grid grid-cols-4 gap-1 min-h-[60px]">
+                  {dayEvents.slice(0, 16).map((event, eventIndex) => (
                     <div
                       key={eventIndex}
-                      className={`w-3 h-3 rounded-full ${event.color} opacity-80 hover:opacity-100 transition-opacity`}
-                      title={event.title}
+                      className={`w-3 h-3 rounded-full ${getEventDotColor(event)} opacity-80 hover:opacity-100 transition-opacity`}
+                      title={`${event.title} - ${event.time}`}
                     />
                   ))}
-                  {dayEvents.length > 12 && (
-                    <div className="text-xs text-white/70 font-medium bg-white/20 px-2 py-1 rounded-full">
-                      +{dayEvents.length - 12}
+                  {dayEvents.length > 16 && (
+                    <div className="col-span-4 text-xs text-white/70 font-medium bg-white/20 px-2 py-1 rounded-full text-center">
+                      +{dayEvents.length - 16} more
                     </div>
                   )}
                 </div>
