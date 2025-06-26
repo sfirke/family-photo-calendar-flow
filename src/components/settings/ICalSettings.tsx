@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -31,7 +32,7 @@ const CALENDAR_COLORS = [
 
 const ICalSettings = () => {
   const { calendars, isLoading, syncStatus, addCalendar, updateCalendar, removeCalendar, syncCalendar, syncAllCalendars } = useICalCalendars();
-  const { selectedCalendarIds, toggleCalendar, calendarsFromEvents, forceRefresh } = useCalendarSelection();
+  const { selectedCalendarIds, toggleCalendar, calendarsFromEvents } = useCalendarSelection();
   const { toast } = useToast();
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [newCalendar, setNewCalendar] = useState({
@@ -40,12 +41,6 @@ const ICalSettings = () => {
     color: CALENDAR_COLORS[0],
     enabled: true
   });
-
-  // Force refresh when component mounts to ensure all calendars are loaded
-  useEffect(() => {
-    console.log('ICalSettings mounted, forcing refresh of calendar data');
-    forceRefresh();
-  }, [forceRefresh]);
 
   // Debug logging for calendar state
   useEffect(() => {
@@ -141,13 +136,13 @@ const ICalSettings = () => {
     }
 
     try {
-      const calendar = addCalendar(newCalendar);
+      const calendar = addCalendar({
+        ...newCalendar,
+        url: newCalendar.url // Ensure URL is stored
+      });
       
       // Try to sync immediately to validate the URL
       await syncCalendar(calendar);
-      
-      // Force refresh to ensure the new calendar appears
-      forceRefresh();
       
       toast({
         title: "Calendar added",
@@ -163,14 +158,11 @@ const ICalSettings = () => {
         description: `Calendar was added but sync failed: ${errorMessage}`,
         variant: "destructive"
       });
-      
-      // Still force refresh to show the calendar even if sync failed
-      forceRefresh();
     }
   };
 
   const handleSync = async (calendar: any) => {
-    if (calendar.source === 'events' && !calendar.url) {
+    if (!calendar.url || calendar.url === 'Unknown URL') {
       toast({
         title: "Cannot sync",
         description: "This calendar doesn't have a valid URL for syncing.",
@@ -193,9 +185,6 @@ const ICalSettings = () => {
         await syncCalendar(newCal);
       }
       
-      // Force refresh after sync
-      forceRefresh();
-      
       toast({
         title: "Sync successful",
         description: `${calendar.name} has been synced successfully.`
@@ -213,8 +202,6 @@ const ICalSettings = () => {
   const handleSyncAll = async () => {
     try {
       await syncAllCalendars();
-      // Force refresh after sync all
-      forceRefresh();
       
       toast({
         title: "Sync completed",
@@ -248,9 +235,6 @@ const ICalSettings = () => {
     } catch (error) {
       console.error('Error removing calendar events:', error);
     }
-    
-    // Force refresh after removal
-    forceRefresh();
     
     toast({
       title: "Calendar removed",
@@ -421,7 +405,10 @@ const ICalSettings = () => {
                         </h4>
                         <p className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-1">
                           <ExternalLink className="h-3 w-3" />
-                          {calendar.url.length > 50 ? `${calendar.url.substring(0, 50)}...` : calendar.url}
+                          {calendar.url && calendar.url !== 'Unknown URL' 
+                            ? (calendar.url.length > 50 ? `${calendar.url.substring(0, 50)}...` : calendar.url)
+                            : 'No URL available'
+                          }
                         </p>
                         {calendar.lastSync && (
                           <p className="text-xs text-gray-400 dark:text-gray-500">

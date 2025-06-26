@@ -170,6 +170,70 @@ export const useICalCalendars = () => {
     return eventDate.getFullYear() === currentYear;
   };
 
+  // Check if an event is multi-day based on its duration
+  const isMultiDayEvent = (event: ICAL.Event): boolean => {
+    try {
+      if (!event.startDate || !event.endDate) {
+        return false;
+      }
+
+      // For all-day events, check if the duration is more than 1 day
+      if (event.startDate.isDate && event.endDate.isDate) {
+        const startDate = event.startDate.toJSDate();
+        const endDate = event.endDate.toJSDate();
+        
+        // Calculate the difference in days
+        const diffTime = endDate.getTime() - startDate.getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        
+        return diffDays > 1;
+      }
+
+      return false;
+    } catch (error) {
+      console.warn('Error checking if event is multi-day:', error);
+      return false;
+    }
+  };
+
+  // Generate event occurrences for multi-day events
+  const generateMultiDayOccurrences = (event: ICAL.Event, calendar: ICalCalendar): any[] => {
+    const occurrences: any[] = [];
+    
+    try {
+      if (!isMultiDayEvent(event)) {
+        // Single day event
+        const eventDate = event.startDate.toJSDate();
+        if (isEventInCurrentYear(eventDate)) {
+          occurrences.push(createEventObject(event, calendar, eventDate, false, false));
+        }
+        return occurrences;
+      }
+
+      // Multi-day event - create occurrence for each day
+      const startDate = event.startDate.toJSDate();
+      const endDate = event.endDate.toJSDate();
+      
+      // Create an occurrence for each day the event spans
+      const currentDate = new Date(startDate);
+      while (currentDate < endDate && isEventInCurrentYear(currentDate)) {
+        occurrences.push(createEventObject(event, calendar, new Date(currentDate), false, true));
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+      
+      console.log(`Generated ${occurrences.length} occurrences for multi-day event: ${event.summary}`);
+    } catch (error) {
+      console.warn('Error generating multi-day occurrences:', error);
+      // Fallback: create single event
+      const eventDate = event.startDate ? event.startDate.toJSDate() : new Date();
+      if (isEventInCurrentYear(eventDate)) {
+        occurrences.push(createEventObject(event, calendar, eventDate, false, false));
+      }
+    }
+
+    return occurrences;
+  };
+
   // Generate recurring event occurrences for the current year
   const expandRecurringEvent = (event: ICAL.Event, calendar: ICalCalendar): any[] => {
     const currentYear = new Date().getFullYear();
@@ -189,7 +253,13 @@ export const useICalCalendars = () => {
           
           // Only include occurrences within the current year
           if (occurrenceDate >= yearStart && occurrenceDate <= yearEnd) {
-            occurrences.push(createEventObject(event, calendar, occurrenceDate, true));
+            // For recurring events, check if each occurrence is multi-day
+            if (isMultiDayEvent(event)) {
+              const multiDayOccurrences = generateMultiDayOccurrences(event, calendar);
+              occurrences.push(...multiDayOccurrences);
+            } else {
+              occurrences.push(createEventObject(event, calendar, occurrenceDate, true, false));
+            }
           }
           
           // Stop if we've passed the end of the year
@@ -200,18 +270,16 @@ export const useICalCalendars = () => {
           count++;
         }
       } else {
-        // Non-recurring event
-        const eventDate = event.startDate.toJSDate();
-        if (isEventInCurrentYear(eventDate)) {
-          occurrences.push(createEventObject(event, calendar, eventDate, false));
-        }
+        // Non-recurring event - handle multi-day if applicable
+        const multiDayOccurrences = generateMultiDayOccurrences(event, calendar);
+        occurrences.push(...multiDayOccurrences);
       }
     } catch (error) {
       console.warn('Error expanding recurring event:', error);
       // Fallback: create single event
       const eventDate = event.startDate ? event.startDate.toJSDate() : new Date();
       if (isEventInCurrentYear(eventDate)) {
-        occurrences.push(createEventObject(event, calendar, eventDate, false));
+        occurrences.push(createEventObject(event, calendar, eventDate, false, false));
       }
     }
 
@@ -219,7 +287,7 @@ export const useICalCalendars = () => {
   };
 
   // Create event object with consistent structure
-  const createEventObject = (event: ICAL.Event, calendar: ICalCalendar, eventDate: Date, isRecurring: boolean) => {
+  const createEventObject = (event: ICAL.Event, calendar: ICalCalendar, eventDate: Date, isRecurring: boolean, isMultiDay: boolean) => {
     let timeString = 'All day';
     
     try {
@@ -227,15 +295,22 @@ export const useICalCalendars = () => {
         // Has time component
         const endDate = event.endDate ? event.endDate.toJSDate() : eventDate;
         timeString = `${eventDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - ${endDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+      } else if (isMultiDay) {
+        timeString = 'All day (Multi-day)';
       }
     } catch (dateError) {
       console.warn('Error parsing event date:', dateError);
     }
 
+    // Add recurring indicator
+    if (isRecurring && !timeString.includes('Recurring')) {
+      timeString = `${timeString} (Recurring)`;
+    }
+
     return {
-      id: Date.now() + Math.random(), // Unique ID for each occurrence
+      id: `${Date.now()}-${Math.random()}`, // Unique ID for each occurrence
       title: event.summary || 'Untitled Event',
-      time: isRecurring ? `${timeString} (Recurring)` : timeString,
+      time: timeString,
       location: event.location || '',
       attendees: 0,
       category: 'Personal' as const,
@@ -245,7 +320,8 @@ export const useICalCalendars = () => {
       date: eventDate,
       calendarId: calendar.id,
       calendarName: calendar.name,
-      source: 'ical'
+      source: 'ical',
+      isMultiDay: isMultiDay
     };
   };
 
@@ -347,7 +423,7 @@ export const useICalCalendars = () => {
         allEvents.push(...eventOccurrences);
       });
 
-      console.log(`Expanded ${vevents.length} calendar events to ${allEvents.length} occurrences for current year`);
+      console.log(`Expanded ${vevents.length} calendar events to ${allEvents.length} occurrences for current year (including multi-day spans)`);
 
       // Store events
       try {
