@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -151,15 +152,23 @@ const ICalSettings = () => {
       console.log('Calendar added successfully:', calendar);
       
       // Try to sync immediately to validate the URL
-      await syncCalendar(calendar);
+      try {
+        await syncCalendar(calendar);
+        toast({
+          title: "Calendar added and synced",
+          description: `${newCalendar.name} has been added and synced successfully.`
+        });
+      } catch (syncError) {
+        const errorMessage = syncError instanceof Error ? syncError.message : 'Unknown sync error';
+        toast({
+          title: "Calendar added",
+          description: `${newCalendar.name} was added but sync failed: ${errorMessage}`,
+          variant: "destructive"
+        });
+      }
       
       // Force refresh the calendar selection to pick up new events
       forceRefresh();
-      
-      toast({
-        title: "Calendar added",
-        description: `${newCalendar.name} has been added and synced successfully.`
-      });
       
       setNewCalendar({ name: '', url: '', color: CALENDAR_COLORS[0], enabled: true });
       setShowAddDialog(false);
@@ -167,8 +176,8 @@ const ICalSettings = () => {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       toast({
-        title: "Sync failed",
-        description: `Calendar was added but sync failed: ${errorMessage}`,
+        title: "Failed to add calendar",
+        description: errorMessage,
         variant: "destructive"
       });
     }
