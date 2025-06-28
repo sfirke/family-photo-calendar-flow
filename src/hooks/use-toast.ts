@@ -168,12 +168,17 @@ function toast({ ...props }: Toast) {
 }
 
 // Enhanced toast function with theme-aware variants
-const enhancedToast = Object.assign(toast, {
-  success: (props: Omit<Toast, 'variant'>) => toast({ ...props, variant: 'success' }),
-  error: (props: Omit<Toast, 'variant'>) => toast({ ...props, variant: 'destructive' }),
-  warning: (props: Omit<Toast, 'variant'>) => toast({ ...props, variant: 'warning' }),
-  info: (props: Omit<Toast, 'variant'>) => toast({ ...props, variant: 'default' }),
-})
+const enhancedToast = toast as typeof toast & {
+  success: (props: Omit<Toast, 'variant'>) => ReturnType<typeof toast>;
+  error: (props: Omit<Toast, 'variant'>) => ReturnType<typeof toast>;
+  warning: (props: Omit<Toast, 'variant'>) => ReturnType<typeof toast>;
+  info: (props: Omit<Toast, 'variant'>) => ReturnType<typeof toast>;
+}
+
+enhancedToast.success = (props: Omit<Toast, 'variant'>) => toast({ ...props, variant: 'success' })
+enhancedToast.error = (props: Omit<Toast, 'variant'>) => toast({ ...props, variant: 'destructive' })
+enhancedToast.warning = (props: Omit<Toast, 'variant'>) => toast({ ...props, variant: 'warning' })
+enhancedToast.info = (props: Omit<Toast, 'variant'>) => toast({ ...props, variant: 'default' })
 
 function useToast() {
   const [state, setState] = React.useState<State>(memoryState)
