@@ -296,14 +296,14 @@ const ICalSettings = () => {
                 <Input id="calendar-name" placeholder="My Calendar" value={newCalendar.name} onChange={e => setNewCalendar(prev => ({
                 ...prev,
                 name: e.target.value
-              }))} />
+              }))} className="bg-zinc-50" />
               </div>
               <div>
                 <Label htmlFor="calendar-url">iCal URL</Label>
                 <Input id="calendar-url" placeholder="https://calendar.example.com/feed.ics" value={newCalendar.url} onChange={e => setNewCalendar(prev => ({
                 ...prev,
                 url: e.target.value
-              }))} />
+              }))} className="bg-slate-50" />
               </div>
               <div>
                 <Label>Calendar Color</Label>
