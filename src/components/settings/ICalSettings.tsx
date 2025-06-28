@@ -283,7 +283,7 @@ const ICalSettings = () => {
               Add Calendar Feed
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="bg-blue-50">
             <DialogHeader>
               <DialogTitle>Add Calendar Feed</DialogTitle>
               <DialogDescription>
