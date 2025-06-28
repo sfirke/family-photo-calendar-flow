@@ -18,8 +18,6 @@ export class PerformanceMonitor {
     this.memoryCheckInterval = setInterval(() => {
       this.performMemoryCleanup();
     }, 30 * 60 * 1000);
-
-    console.log('Performance monitoring started for 24/7 operation');
   }
 
   static stopMonitoring() {
@@ -57,7 +55,6 @@ export class PerformanceMonitor {
     }
 
     this.performanceMetrics.lastCleanup = now;
-    console.log('Memory cleanup performed at', new Date().toISOString());
   }
 
   static getMetrics() {

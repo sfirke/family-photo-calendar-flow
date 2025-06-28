@@ -1,8 +1,8 @@
+
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import Calendar from '@/components/Calendar';
 import WeatherWidget from '@/components/WeatherWidget';
 import SettingsModal from '@/components/SettingsModal';
-import OfflineIndicator from '@/components/OfflineIndicator';
 import { Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useSettings } from '@/contexts/SettingsContext';
@@ -75,7 +75,6 @@ const Index = () => {
 
   // Background image loading with cached photos
   const loadBackgroundImages = useCallback(async () => {
-    console.log('Loading background images, publicAlbumUrl:', publicAlbumUrl);
     if (publicAlbumUrl) {
       try {
         // First try to get cached photos
@@ -84,22 +83,18 @@ const Index = () => {
         } = await import('@/utils/photosCache');
         const cachedPhotos = photosCache.getRandomizedPhotos(50);
         if (cachedPhotos.length > 0) {
-          console.log(`Using ${cachedPhotos.length} cached photos`);
           setBackgroundImages(cachedPhotos);
           setCurrentBg(0);
           return;
         }
 
         // Fallback to fetching if no cache
-        console.log('No cached photos found, fetching from album...');
         const albumImages = await getImagesFromAlbum(publicAlbumUrl);
         if (albumImages.length > 0) {
           const randomizedImages = [...albumImages].sort(() => Math.random() - 0.5);
-          console.log(`Loaded ${randomizedImages.length} images from album`);
           setBackgroundImages(randomizedImages);
           setCurrentBg(0);
         } else {
-          console.log('No album images found, using defaults');
           setBackgroundImages(getDefaultBackgroundImages());
         }
       } catch (error) {
@@ -107,7 +102,6 @@ const Index = () => {
         setBackgroundImages(getDefaultBackgroundImages());
       }
     } else {
-      console.log('No album URL set, using default images');
       setBackgroundImages(getDefaultBackgroundImages());
     }
   }, [publicAlbumUrl]);
@@ -121,15 +115,10 @@ const Index = () => {
   useEffect(() => {
     if (backgroundImages.length <= 1) return;
     const intervalTime = backgroundDuration * 60 * 1000;
-    console.log(`Setting up background rotation every ${backgroundDuration} minutes`);
     IntervalManager.setInterval('background-rotation', () => {
       setIsTransitioning(true);
       setTimeout(() => {
-        setCurrentBg(prev => {
-          const next = (prev + 1) % backgroundImages.length;
-          console.log(`Changing background from ${prev} to ${next}`);
-          return next;
-        });
+        setCurrentBg(prev => (prev + 1) % backgroundImages.length);
         setIsTransitioning(false);
       }, 500); // Half of transition duration
     }, intervalTime);
@@ -141,7 +130,6 @@ const Index = () => {
   // Memoized background style with preloading and seamless transitions
   const backgroundStyle = useMemo(() => {
     const currentImage = backgroundImages[currentBg];
-    console.log(`Current background image: ${currentImage}`);
 
     // Preload next image for smooth transitions
     if (backgroundImages.length > 1) {

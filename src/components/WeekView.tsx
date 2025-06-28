@@ -38,22 +38,16 @@ const WeekView = ({ events, weekOffset, onPreviousWeek, onNextWeek, getWeatherFo
     
     return events.filter(event => {
       const eventDate = startOfDay(new Date(event.date));
-      console.log(`Week view - Checking event "${event.title}" (${eventDate.toDateString()}) against day ${dayStart.toDateString()}`);
       
       // For explicitly multi-day events, we need to check if this day falls within their range
       if (isMultiDayEvent(event)) {
-        console.log(`Multi-day event "${event.title}" - checking if ${dayStart.toDateString()} is within range`);
         // For now, we'll be conservative and only show on the exact event date
         // TODO: Implement proper date range checking when we have end dates
-        const matches = eventDate.getTime() === dayStart.getTime();
-        console.log(`Multi-day event "${event.title}" matches ${dayStart.toDateString()}: ${matches}`);
-        return matches;
+        return eventDate.getTime() === dayStart.getTime();
       }
       
       // For single-day events, ONLY show on the exact date
-      const matches = eventDate.getTime() === dayStart.getTime();
-      console.log(`Single-day event "${event.title}" matches ${dayStart.toDateString()}: ${matches}`);
-      return matches;
+      return eventDate.getTime() === dayStart.getTime();
     });
   };
 

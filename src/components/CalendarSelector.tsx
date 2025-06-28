@@ -62,7 +62,6 @@ const CalendarSelector = ({ selectedCalendarIds, onCalendarChange }: CalendarSel
   }, [calendarsFromEvents, selectedCalendarIds, updateSelectedCalendars]);
 
   if (isLoading) {
-    console.log('CalendarSelector: Loading calendars...');
     return (
       <CalendarSelectorButton
         selectedCount={0}
@@ -73,7 +72,6 @@ const CalendarSelector = ({ selectedCalendarIds, onCalendarChange }: CalendarSel
   }
 
   if (calendarsFromEvents.length === 0) {
-    console.log('CalendarSelector: No calendars available');
     return (
       <CalendarSelectorButton
         selectedCount={0}
@@ -82,13 +80,6 @@ const CalendarSelector = ({ selectedCalendarIds, onCalendarChange }: CalendarSel
       />
     );
   }
-
-  console.log('CalendarSelector: Rendering selector with calendars:', calendarsFromEvents.map(cal => ({ 
-    id: cal.id, 
-    name: cal.summary, 
-    eventCount: cal.eventCount,
-    hasEvents: cal.hasEvents 
-  })));
 
   return (
     <Popover>
