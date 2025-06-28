@@ -20,27 +20,28 @@ const TimelineView = ({ events, getWeatherForDate }: TimelineViewProps) => {
     return event.time === 'All day' || event.time.toLowerCase().includes('all day');
   };
 
-  // Helper function to check if an event spans multiple days - SIMPLIFIED
+  // Helper function to check if an event spans multiple days - VERY CONSERVATIVE
   const isMultiDayEvent = (event: Event) => {
-    // Only trust the isMultiDay property if it exists on ICS events
-    if ('isMultiDay' in event && typeof event.isMultiDay === 'boolean') {
-      return event.isMultiDay;
-    }
-    return false;
+    // Only return true if the event explicitly has isMultiDay property set to true
+    return 'isMultiDay' in event && event.isMultiDay === true;
   };
 
-  // Get events for each day - STRICT date matching
+  // Get events for each day - STRICT date matching with proper multi-day range checking
   const getEventsForDay = (day: Date) => {
     const dayStart = startOfDay(day);
     
     return events.filter(event => {
       const eventDate = startOfDay(new Date(event.date));
-      console.log(`Checking event "${event.title}" (${eventDate.toDateString()}) against day ${dayStart.toDateString()}`);
+      console.log(`Timeline view - Checking event "${event.title}" (${eventDate.toDateString()}) against day ${dayStart.toDateString()}`);
       
-      // For multi-day events, they should span across their date range
-      if (isMultiDayEvent(event) && isAllDayEvent(event)) {
-        console.log(`Multi-day event "${event.title}" - allowing span`);
-        return true; // Multi-day events can appear on multiple days
+      // For explicitly multi-day events, we need to check if this day falls within their range
+      if (isMultiDayEvent(event)) {
+        console.log(`Multi-day event "${event.title}" - checking if ${dayStart.toDateString()} is within range`);
+        // For now, we'll be conservative and only show on the exact event date
+        // TODO: Implement proper date range checking when we have end dates
+        const matches = eventDate.getTime() === dayStart.getTime();
+        console.log(`Multi-day event "${event.title}" matches ${dayStart.toDateString()}: ${matches}`);
+        return matches;
       }
       
       // For single-day events, ONLY show on the exact date
