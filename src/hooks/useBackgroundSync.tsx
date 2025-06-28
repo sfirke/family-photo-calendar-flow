@@ -139,7 +139,7 @@ export const useBackgroundSync = () => {
     }
   }, [isPeriodicSyncSupported]);
 
-  // Manually trigger background sync
+  // Manually trigger background sync - Fixed TypeScript error
   const triggerBackgroundSync = useCallback(async (): Promise<boolean> => {
     if (!isBackgroundSyncSupported) {
       return false;
@@ -147,14 +147,21 @@ export const useBackgroundSync = () => {
 
     try {
       const registration = await navigator.serviceWorker.ready;
-      await registration.sync.register('calendar-sync');
       
-      toast({
-        title: "Background sync scheduled",
-        description: "Calendar sync will run in the background",
-      });
-      
-      return true;
+      // Check if sync property exists before using it
+      if ('sync' in registration) {
+        await (registration as any).sync.register('calendar-sync');
+        
+        toast({
+          title: "Background sync scheduled",
+          description: "Calendar sync will run in the background",
+        });
+        
+        return true;
+      } else {
+        console.warn('Background sync not available on this registration');
+        return false;
+      }
     } catch (error) {
       console.error('Failed to trigger background sync:', error);
       return false;
