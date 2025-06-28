@@ -246,7 +246,7 @@ const ICalSettings = () => {
               Add external calendar feeds using iCal/ICS URLs. Calendar data is stored locally in IndexedDB.
             </CardDescription>
           </div>
-          {allCalendars.length > 0 && <Button onClick={handleSyncAll} disabled={isLoading || enabledCalendarsCount === 0} variant="outline" size="sm" className="ml-4">
+          {allCalendars.length > 0 && <Button onClick={handleSyncAll} disabled={isLoading || enabledCalendarsCount === 0} variant="outline" size="sm" className="ml-4 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600">
               <RotateCcw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
               Sync All ({enabledCalendarsCount})
             </Button>}
@@ -278,7 +278,7 @@ const ICalSettings = () => {
         {/* Add Calendar Button */}
         <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
           <DialogTrigger asChild>
-            <Button className="w-full bg-slate-900 hover:bg-slate-800">
+            <Button className="w-full bg-gray-700 hover:bg-gray-600 dark:bg-slate-900 dark:hover:bg-slate-800 text-white">
               <Plus className="h-4 w-4 mr-2" />
               Add Calendar Feed
             </Button>
@@ -317,10 +317,10 @@ const ICalSettings = () => {
                 </div>
               </div>
               <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setShowAddDialog(false)} className="border-gray-300 dark:border-gray-600 text-slate-900 bg-slate-200 hover:bg-slate-100">
+                <Button variant="outline" onClick={() => setShowAddDialog(false)} className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600">
                   Cancel
                 </Button>
-                <Button onClick={handleAddCalendar} disabled={isLoading} className="bg-blue-600 hover:bg-blue-700 text-white">
+                <Button onClick={handleAddCalendar} disabled={isLoading} className="bg-gray-600 hover:bg-gray-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white">
                   Add Calendar
                 </Button>
               </div>
@@ -340,10 +340,10 @@ const ICalSettings = () => {
           </div>}
 
         {/* Help and Tips */}
-        <Alert className="bg-blue-100">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Tips for Calendar Feeds</AlertTitle>
-          <AlertDescription className="text-sm space-y-2">
+        <Alert className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800">
+          <AlertCircle className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+          <AlertTitle className="text-blue-900 dark:text-blue-200">Tips for Calendar Feeds</AlertTitle>
+          <AlertDescription className="text-sm space-y-2 text-blue-800 dark:text-blue-300">
             <p>• Calendar data is stored locally in your browser using IndexedDB</p>
             <p>• Click the edit icon to modify calendar name, URL, or color</p>
             <p>• Use the sync buttons to manually refresh calendar data</p>
