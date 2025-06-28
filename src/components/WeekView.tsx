@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { format, addDays, startOfWeek, isSameDay } from 'date-fns';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
@@ -46,13 +47,14 @@ const WeekView = ({ events, weekOffset, onPreviousWeek, onNextWeek, getWeatherFo
   // Get events for each day - only show events on their specific date unless they're truly multi-day
   const getEventsForDay = (day: Date) => {
     return events.filter(event => {
-      // Regular events on this specific day
+      // Regular events and single-day all-day events on this specific day
       if (isSameDay(event.date, day)) {
         return true;
       }
       
-      // Only show multi-day events on other days if they're actually multi-day
-      if (isMultiDayEvent(event)) {
+      // Only show multi-day events on additional days if they're actually multi-day
+      // AND we don't already have them on their original date
+      if (isMultiDayEvent(event) && !isSameDay(event.date, day)) {
         // For multi-day events, show them on each day in the week
         // This is a simplified approach - in a real app you'd parse the actual duration
         return weekDays.some(weekDay => isSameDay(weekDay, day));
