@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { format, addDays, startOfWeek, isSameDay } from 'date-fns';
+import { format, addDays, startOfWeek, isSameDay, startOfDay } from 'date-fns';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Event } from '@/types/calendar';
 import { Button } from '@/components/ui/button';
@@ -26,37 +26,33 @@ const WeekView = ({ events, weekOffset, onPreviousWeek, onNextWeek, getWeatherFo
     return event.time === 'All day' || event.time.toLowerCase().includes('all day');
   };
 
-  // Helper function to check if an event spans multiple days - FIXED VERSION
+  // Helper function to check if an event spans multiple days - SIMPLIFIED
   const isMultiDayEvent = (event: Event) => {
-    if (!isAllDayEvent(event)) return false;
-    
-    // For ICS calendar events, ONLY trust the isMultiDay property if it exists and is explicitly true
-    if ('isMultiDay' in event) {
-      return event.isMultiDay === true;
+    // Only trust the isMultiDay property if it exists on ICS events
+    if ('isMultiDay' in event && typeof event.isMultiDay === 'boolean') {
+      return event.isMultiDay;
     }
-    
-    // For all other events (sample events, events without isMultiDay property), 
-    // be extremely conservative - only consider multi-day if explicitly stated
-    return false; // Default to single-day unless proven otherwise
+    return false;
   };
 
-  // Get events for each day - FIXED to prevent duplication
+  // Get events for each day - STRICT date matching
   const getEventsForDay = (day: Date) => {
+    const dayStart = startOfDay(day);
+    
     return events.filter(event => {
-      // Always show events on their specific date
-      if (isSameDay(event.date, day)) {
-        return true;
+      const eventDate = startOfDay(new Date(event.date));
+      console.log(`Week view - Checking event "${event.title}" (${eventDate.toDateString()}) against day ${dayStart.toDateString()}`);
+      
+      // For multi-day events, they should span across their date range
+      if (isMultiDayEvent(event) && isAllDayEvent(event)) {
+        console.log(`Multi-day event "${event.title}" - allowing span`);
+        return true; // Multi-day events can appear on multiple days
       }
       
-      // ONLY show on additional days if it's explicitly a multi-day event
-      // AND we're dealing with an ICS event that has isMultiDay: true
-      if ('isMultiDay' in event && event.isMultiDay === true && isAllDayEvent(event)) {
-        // This is a truly multi-day event from ICS calendar
-        return true;
-      }
-      
-      // All other cases: don't show the event
-      return false;
+      // For single-day events, ONLY show on the exact date
+      const matches = eventDate.getTime() === dayStart.getTime();
+      console.log(`Single-day event "${event.title}" matches ${dayStart.toDateString()}: ${matches}`);
+      return matches;
     });
   };
 
