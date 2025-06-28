@@ -1,4 +1,6 @@
 
+import { getVersionInfo } from './versionManager';
+
 export const checkForUpdates = async (): Promise<boolean> => {
   if (!('serviceWorker' in navigator)) {
     return false;
@@ -57,5 +59,20 @@ export const applyUpdate = async (): Promise<void> => {
     }
   } catch (error) {
     console.error('Error applying update:', error);
+  }
+};
+
+export const getUpdateInfo = async () => {
+  try {
+    const versionInfo = await getVersionInfo();
+    return {
+      version: versionInfo.version,
+      buildDate: versionInfo.buildDate,
+      gitHash: versionInfo.gitHash,
+      hasUpdate: await checkForUpdates()
+    };
+  } catch (error) {
+    console.error('Error getting update info:', error);
+    return null;
   }
 };

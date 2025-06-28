@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -11,30 +10,51 @@ import InstallPrompt from "@/components/InstallPrompt";
 import UpdateNotification from "@/components/UpdateNotification";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
+import { useState, useEffect } from "react";
+import { getCurrentVersion, getStoredVersion } from "@/utils/versionManager";
+import WhatsNewModal from "@/components/WhatsNewModal";
 
 const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <ThemeProvider>
-      <SettingsProvider>
-        <WeatherProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            <InstallPrompt />
-            <UpdateNotification />
-            <BrowserRouter>
-              <Routes>
-                <Route path="/" element={<Index />} />
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </BrowserRouter>
-          </TooltipProvider>
-        </WeatherProvider>
-      </SettingsProvider>
-    </ThemeProvider>
-  </QueryClientProvider>
-);
+const App = () => {
+  const [showWhatsNew, setShowWhatsNew] = useState(false);
+
+  useEffect(() => {
+    // Check if we should show "What's New" modal
+    const currentVersion = getCurrentVersion();
+    const storedVersion = getStoredVersion();
+    
+    if (!storedVersion || storedVersion !== currentVersion) {
+      setShowWhatsNew(true);
+    }
+  }, []);
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider>
+        <SettingsProvider>
+          <WeatherProvider>
+            <TooltipProvider>
+              <Toaster />
+              <Sonner />
+              <InstallPrompt />
+              <UpdateNotification />
+              <WhatsNewModal 
+                open={showWhatsNew} 
+                onOpenChange={setShowWhatsNew} 
+              />
+              <BrowserRouter>
+                <Routes>
+                  <Route path="/" element={<Index />} />
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </BrowserRouter>
+            </TooltipProvider>
+          </WeatherProvider>
+        </SettingsProvider>
+      </ThemeProvider>
+    </QueryClientProvider>
+  );
+};
 
 export default App;

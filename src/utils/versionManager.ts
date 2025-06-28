@@ -1,9 +1,29 @@
 
-const APP_VERSION = '1.0.0'; // This should be updated with each release
+import packageJson from '../../package.json';
+
+// Read version from package.json instead of hardcoding
+export const getCurrentVersion = () => packageJson.version || '1.0.0';
+
+export const getVersionInfo = async () => {
+  try {
+    const response = await fetch('/version.json');
+    if (response.ok) {
+      return await response.json();
+    }
+  } catch (error) {
+    console.warn('Could not fetch version info:', error);
+  }
+
+  // Fallback to package.json version
+  return {
+    version: getCurrentVersion(),
+    buildDate: new Date().toISOString(),
+    gitHash: 'unknown'
+  };
+};
+
 const VERSION_KEY = 'app_version';
 const LAST_CHECK_KEY = 'last_update_check';
-
-export const getCurrentVersion = () => APP_VERSION;
 
 export const getStoredVersion = () => {
   return localStorage.getItem(VERSION_KEY);
@@ -15,7 +35,8 @@ export const setStoredVersion = (version: string) => {
 
 export const isNewVersion = () => {
   const storedVersion = getStoredVersion();
-  return !storedVersion || storedVersion !== APP_VERSION;
+  const currentVersion = getCurrentVersion();
+  return !storedVersion || storedVersion !== currentVersion;
 };
 
 export const getLastCheckTime = () => {
@@ -34,4 +55,29 @@ export const shouldCheckForUpdates = () => {
   // Check for updates every 30 minutes
   const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
   return lastCheck < thirtyMinutesAgo;
+};
+
+// Semantic version comparison
+export const compareVersions = (version1: string, version2: string): number => {
+  const v1parts = version1.split('.').map(Number);
+  const v2parts = version2.split('.').map(Number);
+  
+  for (let i = 0; i < Math.max(v1parts.length, v2parts.length); i++) {
+    const v1part = v1parts[i] || 0;
+    const v2part = v2parts[i] || 0;
+    
+    if (v1part > v2part) return 1;
+    if (v1part < v2part) return -1;
+  }
+  
+  return 0;
+};
+
+export const getVersionType = (oldVersion: string, newVersion: string): 'major' | 'minor' | 'patch' => {
+  const oldParts = oldVersion.split('.').map(Number);
+  const newParts = newVersion.split('.').map(Number);
+  
+  if (newParts[0] > oldParts[0]) return 'major';
+  if (newParts[1] > oldParts[1]) return 'minor';
+  return 'patch';
 };

@@ -1,5 +1,4 @@
-
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -11,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Camera, Monitor, CloudSun, Calendar, Info } from 'lucide-react';
 import { useSettings } from '@/contexts/SettingsContext';
 import { useTheme } from '@/contexts/ThemeContext';
-import { getCurrentVersion } from '@/utils/versionManager';
+import { getCurrentVersion, getVersionInfo } from '@/utils/versionManager';
 import OfflineIndicator from './OfflineIndicator';
 import PhotosTab from './settings/PhotosTab';
 import DisplayTab from './settings/DisplayTab';
@@ -35,6 +34,22 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
     setWeatherApiKey
   } = useSettings();
   const { setTheme: setActualTheme } = useTheme();
+  const [versionInfo, setVersionInfo] = useState<any>(null);
+
+  useEffect(() => {
+    const loadVersionInfo = async () => {
+      try {
+        const info = await getVersionInfo();
+        setVersionInfo(info);
+      } catch (error) {
+        console.error('Failed to load version info:', error);
+      }
+    };
+
+    if (open) {
+      loadVersionInfo();
+    }
+  }, [open]);
 
   const handleThemeChange = (newTheme: 'light' | 'dark' | 'system') => {
     setTheme(newTheme);
@@ -52,6 +67,16 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
                 <Info className="h-4 w-4 text-gray-500 dark:text-gray-400" />
                 <span className="text-sm text-gray-500 dark:text-gray-400">
                   Version {getCurrentVersion()}
+                  {versionInfo?.buildDate && (
+                    <span className="ml-2 text-xs">
+                      Built: {new Date(versionInfo.buildDate).toLocaleDateString()}
+                    </span>
+                  )}
+                  {versionInfo?.gitHash && versionInfo.gitHash !== 'unknown' && (
+                    <span className="ml-2 text-xs font-mono">
+                      #{versionInfo.gitHash.substring(0, 7)}
+                    </span>
+                  )}
                 </span>
               </div>
             </div>
