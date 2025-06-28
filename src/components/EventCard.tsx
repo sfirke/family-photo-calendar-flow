@@ -108,13 +108,13 @@ const EventCard = ({
   };
 
   const handleClick = () => {
-    if ((viewMode === 'timeline' || viewMode === 'week') && hasAdditionalData() && !isMultiDayDisplay) {
+    if ((viewMode === 'timeline' || viewMode === 'week') && hasAdditionalData() && !isAllDay) {
       setIsExpanded(!isExpanded);
     }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if ((e.key === 'Enter' || e.key === ' ') && (viewMode === 'timeline' || viewMode === 'week') && hasAdditionalData() && !isMultiDayDisplay) {
+    if ((e.key === 'Enter' || e.key === ' ') && (viewMode === 'timeline' || viewMode === 'week') && hasAdditionalData() && !isAllDay) {
       e.preventDefault();
       setIsExpanded(!isExpanded);
     }
@@ -145,13 +145,10 @@ const EventCard = ({
   const getTimelineStyles = () => {
     if (viewMode !== 'timeline') return '';
     
-    if (isMultiDayDisplay) {
-      return 'w-auto min-w-fit max-w-[200px]'; // Flexible width for multi-day events
+    if (isAllDay) {
+      return 'w-auto min-w-fit max-w-[200px]'; // Flexible width for all-day events
     }
     
-    if (isAllDay) {
-      return 'w-full'; // Full width for all-day events
-    }
     return 'w-[35%]'; // 35% width for regular events
   };
 
@@ -198,15 +195,15 @@ const EventCard = ({
   const getFontSizeClasses = () => {
     if (viewMode === 'timeline') {
       return {
-        title: isMultiDayDisplay ? 'text-sm' : 'text-lg', // Smaller for multi-day display
-        time: isMultiDayDisplay ? 'text-xs' : 'text-base',
-        location: isMultiDayDisplay ? 'text-xs' : 'text-base',
-        description: isMultiDayDisplay ? 'text-xs' : 'text-base',
-        category: isMultiDayDisplay ? 'text-xs' : 'text-base'
+        title: isAllDay ? 'text-sm' : 'text-lg',
+        time: isAllDay ? 'text-xs' : 'text-base',
+        location: isAllDay ? 'text-xs' : 'text-base',
+        description: isAllDay ? 'text-xs' : 'text-base',
+        category: isAllDay ? 'text-xs' : 'text-base'
       };
     }
     return {
-      title: isMultiDayDisplay ? 'text-xs' : 'text-sm',
+      title: isAllDay ? 'text-xs' : 'text-sm',
       time: 'text-xs',
       location: 'text-xs',
       description: 'text-xs',
@@ -216,23 +213,23 @@ const EventCard = ({
 
   // Get padding class based on event type
   const getPaddingClass = () => {
-    if (isMultiDayDisplay) {
-      return 'px-2 py-1'; // Compact padding for multi-day events
+    if (isAllDay) {
+      return 'px-2 py-1'; // Compact padding for all-day events
     }
-    return isAllDay ? 'pl-3' : 'p-3';
+    return 'p-3';
   };
 
-  const isInteractive = (viewMode === 'timeline' || viewMode === 'week') && hasAdditionalData() && !isMultiDayDisplay;
+  const isInteractive = (viewMode === 'timeline' || viewMode === 'week') && hasAdditionalData() && !isAllDay;
   const textColors = getTextColorClasses();
   const fontSizes = getFontSizeClasses();
 
-  // For multi-day events, show compact format with inline calendar icon and "All Day"
-  if (isMultiDayDisplay) {
+  // For all-day events (both single and multi-day), show compact format with inline calendar icon and "All Day"
+  if (isAllDay && (viewMode === 'timeline' || viewMode === 'week')) {
     return (
       <article 
         className={`${getPaddingClass()} rounded-lg ${getBackgroundOpacity()} backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/30 ${getTimelineStyles()} ${className}`}
         role="article"
-        aria-label={`Multi-day event: ${event.title}`}
+        aria-label={`All day event: ${event.title}`}
       >
         <div className="flex items-center gap-2">
           {/* Color dot */}
@@ -258,7 +255,7 @@ const EventCard = ({
 
   return (
     <article 
-      className={`${getPaddingClass()} ${isAllDay ? 'pr-3 pt-3 pb-3' : ''} rounded-lg ${getBackgroundOpacity()} backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/30 ${
+      className={`${getPaddingClass()} rounded-lg ${getBackgroundOpacity()} backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/30 ${
         isInteractive ? `cursor-pointer ${getHoverBackgroundOpacity()} transition-colors` : ''
       } ${getTimelineStyles()} ${className}`}
       onClick={handleClick}
@@ -286,11 +283,11 @@ const EventCard = ({
                 </h3>
               </div>
               
-              {/* Time display - show "All day" for all-day events in timeline view */}
+              {/* Time display */}
               <div className={`flex items-center gap-2 ${fontSizes.time} ${textColors.time} mb-2`}>
                 <Clock className="h-4 w-4 flex-shrink-0" aria-hidden="true" />
                 <time dateTime={isAllDay ? event.date.toISOString().split('T')[0] : undefined}>
-                  {isAllDay && viewMode === 'timeline' ? 'All Day' : event.time}
+                  {event.time}
                 </time>
               </div>
               
