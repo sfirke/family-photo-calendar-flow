@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { format, addDays, startOfWeek, isSameDay } from 'date-fns';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
@@ -30,7 +29,12 @@ const WeekView = ({ events, weekOffset, onPreviousWeek, onNextWeek, getWeatherFo
   const isMultiDayEvent = (event: Event) => {
     if (!isAllDayEvent(event)) return false;
     
-    // Check if the event title or description indicates multiple days
+    // For ICS calendar events, respect the isMultiDay property if it exists
+    if ('isMultiDay' in event) {
+      return event.isMultiDay === true;
+    }
+    
+    // For sample events, check if the event title or description indicates multiple days
     const titleLower = event.title.toLowerCase();
     const descLower = (event.description || '').toLowerCase();
     
@@ -39,7 +43,7 @@ const WeekView = ({ events, weekOffset, onPreviousWeek, onNextWeek, getWeatherFo
            event.time.includes('days');
   };
 
-  // Get events for each day, including multi-day all-day events
+  // Get events for each day - only show events on their specific date unless they're truly multi-day
   const getEventsForDay = (day: Date) => {
     return events.filter(event => {
       // Regular events on this specific day
@@ -47,7 +51,7 @@ const WeekView = ({ events, weekOffset, onPreviousWeek, onNextWeek, getWeatherFo
         return true;
       }
       
-      // Multi-day all-day events that should appear on this day
+      // Only show multi-day events on other days if they're actually multi-day
       if (isMultiDayEvent(event)) {
         // For multi-day events, show them on each day in the week
         // This is a simplified approach - in a real app you'd parse the actual duration
@@ -133,7 +137,7 @@ const WeekView = ({ events, weekOffset, onPreviousWeek, onNextWeek, getWeatherFo
                   <EventCard 
                     event={event} 
                     viewMode="week" 
-                    isMultiDayDisplay={true}
+                    isMultiDayDisplay={isMultiDayEvent(event)}
                   />
                 </div>
               ))}
