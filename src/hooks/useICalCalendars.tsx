@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import ICAL from 'ical.js';
 import { calendarStorageService, CalendarFeed } from '@/services/calendarStorage';
@@ -113,7 +114,9 @@ export const useICalCalendars = () => {
     
     try {
       await calendarStorageService.deleteCalendar(id);
-      await loadCalendars(); // Refresh the state
+      
+      // Immediately update the local state to remove the calendar from UI
+      setCalendars(prev => prev.filter(cal => cal.id !== id));
       
       // Clean up sync status
       setSyncStatus(prev => {
@@ -135,7 +138,10 @@ export const useICalCalendars = () => {
         console.error('Error removing calendar events:', error);
       }
       
-      console.log(`Calendar ${id} completely removed from IndexedDB`);
+      // Force a refresh to ensure everything is in sync
+      await loadCalendars();
+      
+      console.log(`Calendar ${id} completely removed from IndexedDB and UI`);
     } catch (error) {
       console.error('Error removing calendar from IndexedDB:', error);
       throw new Error('Failed to remove calendar');
