@@ -35,20 +35,25 @@ export const useICalCalendars = () => {
       
       if (stored) {
         const parsedCalendars = JSON.parse(stored);
-        console.log('Parsed calendars:', parsedCalendars);
+        console.log('Parsed calendars from storage:', parsedCalendars);
         
-        // Ensure all calendars have the required fields including URL
-        const validatedCalendars = parsedCalendars.map((cal: any) => ({
-          id: cal.id || Date.now().toString(),
-          name: cal.name || 'Unknown Calendar',
-          url: cal.url || '', // Preserve the original URL
-          color: cal.color || '#3b82f6',
-          enabled: cal.enabled !== undefined ? cal.enabled : true,
-          lastSync: cal.lastSync,
-          eventCount: cal.eventCount || 0
-        }));
+        // CRITICAL FIX: Preserve all fields exactly as stored, especially URL
+        const validatedCalendars = parsedCalendars.map((cal: any) => {
+          const validatedCal = {
+            id: cal.id || Date.now().toString(),
+            name: cal.name || 'Unknown Calendar',
+            url: cal.url || '', // PRESERVE the original URL - don't modify it
+            color: cal.color || '#3b82f6',
+            enabled: cal.enabled !== undefined ? cal.enabled : true,
+            lastSync: cal.lastSync,
+            eventCount: cal.eventCount || 0
+          };
+          
+          console.log(`Calendar ${cal.name}: URL preserved as "${validatedCal.url}"`);
+          return validatedCal;
+        });
         
-        console.log('Validated calendars with URLs:', validatedCalendars);
+        console.log('Final validated calendars with preserved URLs:', validatedCalendars);
         setCalendars(validatedCalendars);
         return validatedCalendars;
       } else {
@@ -66,13 +71,13 @@ export const useICalCalendars = () => {
   // Save calendars to localStorage ensuring URLs are preserved
   const saveCalendars = useCallback((newCalendars: ICalCalendar[]) => {
     try {
-      console.log('Saving calendars to localStorage:', newCalendars);
+      console.log('Saving calendars to localStorage with URLs:', newCalendars.map(cal => ({ id: cal.id, name: cal.name, url: cal.url })));
       
-      // Ensure all required fields are present and URLs are preserved
+      // Ensure all required fields are present and URLs are preserved EXACTLY
       const calendarData = newCalendars.map(cal => ({
         id: cal.id,
         name: cal.name,
-        url: cal.url, // Make sure URL is always included
+        url: cal.url, // CRITICAL: Always preserve the URL exactly as provided
         color: cal.color,
         enabled: cal.enabled,
         lastSync: cal.lastSync,
@@ -81,14 +86,15 @@ export const useICalCalendars = () => {
       
       const jsonData = JSON.stringify(calendarData, null, 2);
       localStorage.setItem(ICAL_CALENDARS_KEY, jsonData);
-      console.log('Calendars saved successfully:', calendarData);
+      console.log('Calendars saved successfully with URLs preserved');
       
-      // Update state immediately
+      // Update state immediately with the exact same data
       setCalendars(calendarData);
       
       // Verify the save was successful
       const verification = localStorage.getItem(ICAL_CALENDARS_KEY);
-      console.log('Verification - saved data:', verification);
+      const verifiedData = JSON.parse(verification || '[]');
+      console.log('Verification - URLs in saved data:', verifiedData.map((cal: any) => ({ id: cal.id, url: cal.url })));
       
       return true;
     } catch (error) {
@@ -99,7 +105,7 @@ export const useICalCalendars = () => {
 
   // Add a new iCal calendar with proper URL storage
   const addCalendar = useCallback((calendar: Omit<ICalCalendar, 'id'>) => {
-    console.log('Adding new calendar with URL:', calendar);
+    console.log('Adding new calendar with URL:', calendar.url);
     
     // Validate required fields
     if (!calendar.name || !calendar.url) {
@@ -115,30 +121,35 @@ export const useICalCalendars = () => {
     const newCalendar: ICalCalendar = {
       id: `ical_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       name: calendar.name.trim(),
-      url: trimmedUrl,
+      url: trimmedUrl, // Store the URL exactly as provided
       color: calendar.color || '#3b82f6',
       enabled: calendar.enabled !== undefined ? calendar.enabled : true,
       eventCount: 0
     };
     
-    console.log('New calendar object created:', newCalendar);
+    console.log('New calendar object created with URL:', newCalendar.url);
     
     const updatedCalendars = [...calendars, newCalendar];
     
     if (saveCalendars(updatedCalendars)) {
-      console.log('Calendar added successfully with URL:', newCalendar.url);
+      console.log('Calendar added successfully with URL stored:', newCalendar.url);
       return newCalendar;
     } else {
       throw new Error('Failed to save calendar to localStorage');
     }
   }, [calendars, saveCalendars]);
 
-  // Update an existing calendar
+  // Update an existing calendar - PRESERVE URL unless explicitly changed
   const updateCalendar = useCallback((id: string, updates: Partial<ICalCalendar>) => {
-    console.log('Updating calendar:', id, updates);
-    const updated = calendars.map(cal => 
-      cal.id === id ? { ...cal, ...updates } : cal
-    );
+    console.log('Updating calendar:', id, 'with updates:', updates);
+    const updated = calendars.map(cal => {
+      if (cal.id === id) {
+        const updatedCal = { ...cal, ...updates };
+        console.log(`Calendar ${id} URL after update: "${updatedCal.url}"`);
+        return updatedCal;
+      }
+      return cal;
+    });
     
     if (saveCalendars(updated)) {
       console.log('Calendar updated successfully');
@@ -489,7 +500,7 @@ export const useICalCalendars = () => {
         console.error('Error storing iCal events:', error);
       }
 
-      // Update calendar with sync info
+      // Update calendar with sync info - PRESERVE the URL
       updateCalendar(calendar.id, {
         lastSync: new Date().toISOString(),
         eventCount: allEvents.length
