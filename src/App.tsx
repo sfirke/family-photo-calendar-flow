@@ -8,6 +8,7 @@ import { ThemeProvider } from "@/contexts/ThemeContext";
 import { SettingsProvider } from "@/contexts/SettingsContext";
 import { WeatherProvider } from "@/contexts/WeatherContext";
 import InstallPrompt from "@/components/InstallPrompt";
+import UpdateNotification from "@/components/UpdateNotification";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 
@@ -22,6 +23,7 @@ const App = () => (
             <Toaster />
             <Sonner />
             <InstallPrompt />
+            <UpdateNotification />
             <BrowserRouter>
               <Routes>
                 <Route path="/" element={<Index />} />

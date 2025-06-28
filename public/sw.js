@@ -88,3 +88,10 @@ self.addEventListener('activate', (event) => {
       })
   );
 });
+
+// Handle messages from the main thread
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});
