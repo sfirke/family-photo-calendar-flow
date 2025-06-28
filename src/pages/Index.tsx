@@ -73,15 +73,15 @@ const Index = () => {
     };
   }, []);
 
-  // Background image loading with cached photos
+  // Background image loading with ALL cached photos
   const loadBackgroundImages = useCallback(async () => {
     if (publicAlbumUrl) {
       try {
-        // First try to get cached photos
+        // First try to get ALL cached photos
         const {
           photosCache
         } = await import('@/utils/photosCache');
-        const cachedPhotos = photosCache.getRandomizedPhotos(50);
+        const cachedPhotos = photosCache.getRandomizedPhotos(); // Get ALL photos, no limit
         if (cachedPhotos.length > 0) {
           setBackgroundImages(cachedPhotos);
           setCurrentBg(0);

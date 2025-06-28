@@ -52,7 +52,6 @@ export const photosCache = {
       };
 
       localStorage.setItem(CACHE_KEY, JSON.stringify(cache));
-      console.log(`Cached ${photos.length} photos for album: ${albumUrl}`);
     } catch (error) {
       console.error('Error caching photos:', error);
     }
@@ -60,7 +59,6 @@ export const photosCache = {
 
   clear: (): void => {
     localStorage.removeItem(CACHE_KEY);
-    console.log('Photos cache cleared');
   },
 
   isExpired: (): boolean => {
@@ -79,12 +77,19 @@ export const photosCache = {
     return cache.albumUrl !== currentAlbumUrl || photosCache.isExpired();
   },
 
-  getRandomizedPhotos: (count: number = 50): string[] => {
+  // Updated to handle all cached photos, not just 50
+  getRandomizedPhotos: (count?: number): string[] => {
     const cache = photosCache.get();
     if (!cache || cache.photos.length === 0) return [];
     
     // Shuffle the photos array
     const shuffled = [...cache.photos].sort(() => Math.random() - 0.5);
+    
+    // Return all photos if no count specified, otherwise return the requested count
+    if (count === undefined) {
+      return shuffled.map(photo => photo.url);
+    }
+    
     return shuffled.slice(0, count).map(photo => photo.url);
   }
 };

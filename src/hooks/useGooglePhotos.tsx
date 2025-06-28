@@ -20,7 +20,6 @@ export const useGooglePhotos = () => {
     if (cached && cached.albumUrl === publicAlbumUrl) {
       setImages(cached.photos.map(p => p.url));
       setLastFetch(new Date(cached.lastUpdate));
-      console.log(`Loaded ${cached.photos.length} photos from cache`);
       return true;
     }
     return false;
@@ -48,14 +47,13 @@ export const useGooglePhotos = () => {
         throw new Error('Invalid Google Photos album URL format');
       }
 
-      console.log('Fetching photos from album:', albumUrl);
       const fetchedImages = await fetchAlbumImages(albumUrl);
       
       if (fetchedImages.length > 0) {
-        // Randomize the photos before caching
+        // Randomize ALL photos before caching (no limit)
         const randomizedImages = [...fetchedImages].sort(() => Math.random() - 0.5);
         
-        // Cache the photos
+        // Cache ALL the photos
         photosCache.set(randomizedImages, albumUrl);
         
         setImages(randomizedImages);
@@ -146,7 +144,8 @@ export const useGooglePhotos = () => {
     });
   }, [toast]);
 
-  const getRandomizedPhotos = useCallback((count: number = 50) => {
+  // Updated to return all photos by default, with optional count parameter
+  const getRandomizedPhotos = useCallback((count?: number) => {
     return photosCache.getRandomizedPhotos(count);
   }, []);
 
@@ -167,7 +166,6 @@ export const useGooglePhotos = () => {
 
     const checkForDailyRefresh = () => {
       if (photosCache.isExpired()) {
-        console.log('Photos cache expired, refreshing...');
         fetchPhotos(publicAlbumUrl, true);
       }
     };

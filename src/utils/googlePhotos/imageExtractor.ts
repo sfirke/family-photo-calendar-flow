@@ -1,4 +1,3 @@
-
 // Image extraction utilities for Google Photos HTML content
 
 export const extractImagesFromHtml = (html: string): string[] => {
@@ -39,14 +38,13 @@ export const extractImagesFromHtml = (html: string): string[] => {
   
   // Try alternative extraction methods if no images found
   if (foundUrls.size === 0) {
-    console.log('No images found with primary patterns, trying alternative extraction...');
     tryAlternativeExtraction(html, foundUrls);
   }
   
   const finalImageUrls = Array.from(foundUrls);
-  console.log(`Extracted ${finalImageUrls.length} album photos (excluding profile photos and UI elements)`);
   
-  return finalImageUrls.slice(0, 50); // Limit to first 50 images for performance
+  // Return ALL images instead of limiting to 50
+  return finalImageUrls;
 };
 
 const isValidAlbumPhoto = (url: string, html: string): boolean => {
