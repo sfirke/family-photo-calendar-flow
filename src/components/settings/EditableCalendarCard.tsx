@@ -61,9 +61,13 @@ const EditableCalendarCard = ({
   return <div className="border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800/50">
       <div className="flex items-center justify-between p-4">
         <div className="flex items-center gap-3 flex-1">
-          <div className="w-4 h-4 rounded-full border cursor-pointer" style={{
-          backgroundColor: isEditing ? editData.color : calendar.color
-        }} onClick={() => isEditing && setIsEditing(true)} />
+          <div 
+            className="w-4 h-4 rounded-full border cursor-pointer" 
+            style={{
+              backgroundColor: isEditing ? editData.color : calendar.color
+            }} 
+            onClick={() => isEditing && setIsEditing(true)} 
+          />
           <div className="flex-1">
             {isEditing ? <div className="space-y-2">
                 <Input value={editData.name} onChange={e => setEditData(prev => ({
@@ -94,16 +98,20 @@ const EditableCalendarCard = ({
                     Last synced: {new Date(calendar.lastSync).toLocaleString()}
                     {calendar.eventCount !== undefined && ` • ${calendar.eventCount} events`}
                   </p>}
-              </>}
+              </>
           </div>
         </div>
         
         <div className="flex items-center gap-2">
           {getSyncStatusBadge()}
           
-          {calendar.source === 'config' && <Switch checked={calendar.enabled} onCheckedChange={enabled => onUpdate(calendar.id, {
-          enabled
-        })} className="bg-zinc-300 hover:bg-zinc-200" />}
+          {calendar.source === 'config' && (
+            <Switch 
+              checked={calendar.enabled} 
+              onCheckedChange={(enabled) => onUpdate(calendar.id, { enabled })} 
+              className="bg-gray-200 hover:bg-gray-100 dark:bg-zinc-300 dark:hover:bg-zinc-200" 
+            />
+          )}
           
           {isEditing ? <>
               <Button size="sm" variant="outline" onClick={handleSave} className="text-green-600 hover:text-green-700 border-green-300 hover:border-green-400 bg-gray-100 hover:bg-green-50 dark:text-green-400 dark:hover:text-green-300 dark:border-green-600 dark:hover:border-green-500 dark:bg-gray-800 dark:hover:bg-green-900/20">
