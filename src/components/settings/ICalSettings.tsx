@@ -4,12 +4,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { useICalCalendars, ICalCalendar } from '@/hooks/useICalCalendars';
+import { useICalCalendars } from '@/hooks/useICalCalendars';
 import { useCalendarSelection } from '@/hooks/useCalendarSelection';
-import { Calendar, Plus, Trash2, RefreshCw, ExternalLink, AlertCircle, RotateCcw, BarChart3 } from 'lucide-react';
+import { Calendar, Plus, RotateCcw, BarChart3, AlertCircle } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -23,7 +22,7 @@ import {
   AlertDescription,
   AlertTitle,
 } from '@/components/ui/alert';
-import { Checkbox } from '@/components/ui/checkbox';
+import EditableCalendarCard from './EditableCalendarCard';
 
 const CALENDAR_COLORS = [
   '#ef4444', '#f97316', '#eab308', '#22c55e', 
@@ -49,13 +48,13 @@ const ICalSettings = () => {
     console.log('ICalSettings - Selected calendar IDs:', selectedCalendarIds);
   }, [calendars, calendarsFromEvents, selectedCalendarIds]);
 
-  // Combine calendars from hook and events, ensuring URLs are preserved
+  // Combine calendars from hook and events
   const allCalendars = React.useMemo(() => {
     const calendarMap = new Map();
     
-    // Add calendars from hook first (these have the complete configuration including URLs)
+    // Add calendars from IndexedDB first (these have the complete configuration)
     calendars.forEach(cal => {
-      console.log('Processing calendar from hook:', { id: cal.id, name: cal.name, url: cal.url });
+      console.log('Processing calendar from IndexedDB:', { id: cal.id, name: cal.name, url: cal.url });
       calendarMap.set(cal.id, {
         ...cal,
         source: 'config',
@@ -64,14 +63,14 @@ const ICalSettings = () => {
       });
     });
     
-    // Add calendars from events that aren't in the hook (orphaned calendars)
+    // Add calendars from events that aren't in IndexedDB (orphaned calendars)
     calendarsFromEvents.forEach(eventCal => {
       if (!calendarMap.has(eventCal.id) && eventCal.id !== 'local_calendar') {
         console.log('Processing orphaned calendar from events:', { id: eventCal.id, name: eventCal.summary });
         calendarMap.set(eventCal.id, {
           id: eventCal.id,
           name: eventCal.summary,
-          url: '', // Orphaned calendars don't have URLs stored
+          url: '',
           color: eventCal.color || '#3b82f6',
           enabled: true,
           source: 'events',
@@ -87,44 +86,11 @@ const ICalSettings = () => {
     return result;
   }, [calendars, calendarsFromEvents]);
 
-  const validateCalendar = (name: string, url: string) => {
-    // Check for duplicate name
-    const existingByName = allCalendars.find(cal => 
-      cal.name.toLowerCase().trim() === name.toLowerCase().trim()
-    );
-    
-    // Check for duplicate URL
-    const existingByUrl = allCalendars.find(cal => 
-      cal.url && cal.url.toLowerCase().trim() === url.toLowerCase().trim()
-    );
-
-    if (existingByName) {
-      return { isValid: false, field: 'name', message: 'A calendar with this name already exists' };
-    }
-
-    if (existingByUrl) {
-      return { isValid: false, field: 'url', message: 'A calendar with this URL already exists' };
-    }
-
-    return { isValid: true };
-  };
-
   const handleAddCalendar = async () => {
     if (!newCalendar.name.trim() || !newCalendar.url.trim()) {
       toast({
         title: "Missing information",
         description: "Please provide both a name and URL for the calendar.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    // Validate for duplicates
-    const validation = validateCalendar(newCalendar.name, newCalendar.url);
-    if (!validation.isValid) {
-      toast({
-        title: "Duplicate calendar",
-        description: validation.message,
         variant: "destructive"
       });
       return;
@@ -142,7 +108,7 @@ const ICalSettings = () => {
 
     try {
       console.log('Adding calendar with data:', newCalendar);
-      const calendar = addCalendar({
+      const calendar = await addCalendar({
         name: newCalendar.name,
         url: newCalendar.url,
         color: newCalendar.color,
@@ -189,7 +155,7 @@ const ICalSettings = () => {
     if (!calendar.url || calendar.url.trim() === '') {
       toast({
         title: "Cannot sync",
-        description: "This calendar doesn't have a valid URL for syncing. Please re-add the calendar with a valid URL.",
+        description: "This calendar doesn't have a valid URL for syncing.",
         variant: "destructive"
       });
       return;
@@ -230,47 +196,40 @@ const ICalSettings = () => {
     }
   };
 
-  const handleRemove = (calendar: any) => {
-    // Remove from iCal calendars if it exists there
-    if (calendar.source === 'config') {
-      removeCalendar(calendar.id);
-    }
-    
-    // Clean up events from localStorage for any calendar
+  const handleRemove = async (calendar: any) => {
     try {
-      const storedEvents = localStorage.getItem('family_calendar_ical_events');
-      if (storedEvents) {
-        const events = JSON.parse(storedEvents);
-        const filteredEvents = events.filter((event: any) => event.calendarId !== calendar.id);
-        localStorage.setItem('family_calendar_ical_events', JSON.stringify(filteredEvents));
-        console.log('Calendar events removed from localStorage');
-      }
+      await removeCalendar(calendar.id);
+      
+      toast({
+        title: "Calendar removed",
+        description: `${calendar.name} and all its events have been removed.`
+      });
     } catch (error) {
-      console.error('Error removing calendar events:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      toast({
+        title: "Failed to remove calendar",
+        description: errorMessage,
+        variant: "destructive"
+      });
     }
-    
-    toast({
-      title: "Calendar removed",
-      description: `${calendar.name} and all its events have been removed.`
-    });
   };
 
-  const getSyncStatusBadge = (calendar: any) => {
-    const status = syncStatus[calendar.id];
-    
-    if (status === 'syncing') {
-      return <Badge variant="secondary">Syncing...</Badge>;
+  const handleUpdateCalendar = async (id: string, updates: any) => {
+    try {
+      await updateCalendar(id, updates);
+      
+      toast({
+        title: "Calendar updated",
+        description: "Calendar has been updated successfully."
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      toast({
+        title: "Failed to update calendar",
+        description: errorMessage,
+        variant: "destructive"
+      });
     }
-    if (status === 'error') {
-      return <Badge variant="destructive">Error</Badge>;
-    }
-    if (status === 'success' || calendar.lastSync) {
-      return <Badge variant="default">Synced</Badge>;
-    }
-    if (calendar.source === 'events') {
-      return <Badge variant="outline">From Events</Badge>;
-    }
-    return <Badge variant="secondary">Not synced</Badge>;
   };
 
   const enabledCalendarsCount = allCalendars.filter(cal => cal.enabled && cal.source === 'config').length;
@@ -287,7 +246,7 @@ const ICalSettings = () => {
               Calendar Feeds
             </CardTitle>
             <CardDescription className="text-gray-600 dark:text-gray-400">
-              Add external calendar feeds using iCal/ICS URLs. No authentication required.
+              Add external calendar feeds using iCal/ICS URLs. Calendar data is stored locally in IndexedDB.
             </CardDescription>
           </div>
           {allCalendars.length > 0 && (
@@ -296,7 +255,7 @@ const ICalSettings = () => {
               disabled={isLoading || enabledCalendarsCount === 0}
               variant="outline"
               size="sm"
-              className="ml-4 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+              className="ml-4"
             >
               <RotateCcw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
               Sync All ({enabledCalendarsCount})
@@ -332,41 +291,39 @@ const ICalSettings = () => {
         {/* Add Calendar Button */}
         <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
           <DialogTrigger asChild>
-            <Button className="w-full bg-primary text-primary-foreground hover:bg-primary/90" variant="default">
+            <Button className="w-full">
               <Plus className="h-4 w-4 mr-2" />
               Add Calendar Feed
             </Button>
           </DialogTrigger>
-          <DialogContent className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700">
+          <DialogContent>
             <DialogHeader>
-              <DialogTitle className="text-gray-900 dark:text-gray-100">Add Calendar Feed</DialogTitle>
-              <DialogDescription className="text-gray-600 dark:text-gray-400">
-                Enter the details for your calendar feed. Make sure the URL is publicly accessible.
+              <DialogTitle>Add Calendar Feed</DialogTitle>
+              <DialogDescription>
+                Enter the details for your calendar feed. Data will be stored locally in your browser.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <div>
-                <Label htmlFor="calendar-name" className="text-gray-700 dark:text-gray-300">Calendar Name</Label>
+                <Label htmlFor="calendar-name">Calendar Name</Label>
                 <Input
                   id="calendar-name"
                   placeholder="My Calendar"
                   value={newCalendar.name}
                   onChange={(e) => setNewCalendar(prev => ({ ...prev, name: e.target.value }))}
-                  className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100"
                 />
               </div>
               <div>
-                <Label htmlFor="calendar-url" className="text-gray-700 dark:text-gray-300">iCal URL</Label>
+                <Label htmlFor="calendar-url">iCal URL</Label>
                 <Input
                   id="calendar-url"
                   placeholder="https://calendar.example.com/feed.ics"
                   value={newCalendar.url}
                   onChange={(e) => setNewCalendar(prev => ({ ...prev, url: e.target.value }))}
-                  className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100"
                 />
               </div>
               <div>
-                <Label className="text-gray-700 dark:text-gray-300">Calendar Color</Label>
+                <Label>Calendar Color</Label>
                 <div className="flex gap-2 mt-2">
                   {CALENDAR_COLORS.map(color => (
                     <button
@@ -382,14 +339,12 @@ const ICalSettings = () => {
                 <Button 
                   variant="outline" 
                   onClick={() => setShowAddDialog(false)}
-                  className="border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
                 >
                   Cancel
                 </Button>
                 <Button 
                   onClick={handleAddCalendar} 
                   disabled={isLoading}
-                  className="bg-primary text-primary-foreground hover:bg-primary/90"
                 >
                   Add Calendar
                 </Button>
@@ -401,100 +356,18 @@ const ICalSettings = () => {
         {/* Calendar List */}
         {allCalendars.length > 0 && (
           <div className="space-y-3">
-            {allCalendars.map(calendar => {
-              const isSelected = selectedCalendarIds.includes(calendar.id);
-              const hasValidUrl = calendar.url && calendar.url.trim() !== '';
-              
-              return (
-                <div key={calendar.id} className="border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800/50">
-                  <div className="flex items-center justify-between p-4">
-                    <div className="flex items-center gap-3 flex-1">
-                      <div
-                        className="w-4 h-4 rounded-full border"
-                        style={{ backgroundColor: calendar.color }}
-                      />
-                      <div className="flex-1">
-                        <h4 className="font-medium text-gray-900 dark:text-gray-100">
-                          {calendar.name}
-                        </h4>
-                        <p className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-1">
-                          <ExternalLink className="h-3 w-3" />
-                          {hasValidUrl 
-                            ? (calendar.url.length > 50 ? `${calendar.url.substring(0, 50)}...` : calendar.url)
-                            : 'No URL available'
-                          }
-                        </p>
-                        {calendar.lastSync && (
-                          <p className="text-xs text-gray-400 dark:text-gray-500">
-                            Last synced: {new Date(calendar.lastSync).toLocaleString()}
-                            {calendar.eventCount !== undefined && ` • ${calendar.eventCount} events`}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {getSyncStatusBadge(calendar)}
-                      {calendar.source === 'config' && (
-                        <Switch
-                          checked={calendar.enabled}
-                          onCheckedChange={(enabled) => updateCalendar(calendar.id, { enabled })}
-                        />
-                      )}
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleSync(calendar)}
-                        disabled={isLoading || !hasValidUrl}
-                        title={hasValidUrl ? "Sync this calendar" : "No URL available for syncing"}
-                        className="border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
-                      >
-                        <RefreshCw className={`h-4 w-4 ${syncStatus[calendar.id] === 'syncing' ? 'animate-spin' : ''}`} />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleRemove(calendar)}
-                        title="Remove this calendar"
-                        className="border-red-300 dark:border-red-600 bg-white dark:bg-gray-800 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                  
-                  {/* Calendar selection and stats */}
-                  <div className="px-4 pb-4 pt-2 border-t border-gray-200 dark:border-gray-700">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Checkbox
-                          id={`calendar-selection-${calendar.id}`}
-                          checked={isSelected}
-                          onCheckedChange={(checked) => toggleCalendar(calendar.id, checked === true)}
-                          className="border-gray-300 dark:border-gray-600 data-[state=checked]:bg-primary data-[state=checked]:border-primary data-[state=checked]:text-primary-foreground"
-                        />
-                        <label
-                          htmlFor={`calendar-selection-${calendar.id}`}
-                          className="text-sm text-gray-700 dark:text-gray-300 cursor-pointer"
-                        >
-                          Show in calendar view
-                        </label>
-                      </div>
-                      
-                      {calendar.hasEvents && (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200">
-                          {calendar.eventCount || 0} event{(calendar.eventCount || 0) !== 1 ? 's' : ''}
-                        </span>
-                      )}
-                      {!calendar.hasEvents && calendar.source === 'events' && (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 dark:bg-gray-700/50 text-gray-600 dark:text-gray-400">
-                          No events
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+            {allCalendars.map(calendar => (
+              <EditableCalendarCard
+                key={calendar.id}
+                calendar={calendar}
+                isSelected={selectedCalendarIds.includes(calendar.id)}
+                syncStatus={syncStatus[calendar.id] || ''}
+                onUpdate={handleUpdateCalendar}
+                onSync={handleSync}
+                onRemove={handleRemove}
+                onToggleSelection={toggleCalendar}
+              />
+            ))}
           </div>
         )}
 
@@ -507,15 +380,15 @@ const ICalSettings = () => {
         )}
 
         {/* Help and Tips */}
-        <Alert className="bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800">
-          <AlertCircle className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-          <AlertTitle className="text-blue-800 dark:text-blue-200">Tips for Calendar Feeds</AlertTitle>
-          <AlertDescription className="text-sm space-y-2 text-blue-700 dark:text-blue-300">
-            <p>• Most calendar services provide public iCal feeds for sharing</p>
-            <p>• Look for "Export" or "Share" options in your calendar application</p>
-            <p>• Ensure the calendar is set to "Public" or you have the private URL with access key</p>
-            <p>• The URL should end with .ics or contain "ical" in the path</p>
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Tips for Calendar Feeds</AlertTitle>
+          <AlertDescription className="text-sm space-y-2">
+            <p>• Calendar data is stored locally in your browser using IndexedDB</p>
+            <p>• Click the edit icon to modify calendar name, URL, or color</p>
             <p>• Use the sync buttons to manually refresh calendar data</p>
+            <p>• Look for "Export" or "Share" options in your calendar application</p>
+            <p>• The URL should end with .ics or contain "ical" in the path</p>
           </AlertDescription>
         </Alert>
       </CardContent>
