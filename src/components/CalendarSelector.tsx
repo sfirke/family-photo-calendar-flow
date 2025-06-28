@@ -2,7 +2,6 @@
 import React from 'react';
 import { Popover } from '@/components/ui/popover';
 import { useCalendarSelection } from '@/hooks/useCalendarSelection';
-import { useLocalAuth } from '@/hooks/useLocalAuth';
 import CalendarSelectorButton from './calendar/CalendarSelectorButton';
 import CalendarSelectorContent from './calendar/CalendarSelectorContent';
 
@@ -21,7 +20,6 @@ const CalendarSelector = ({ selectedCalendarIds, onCalendarChange }: CalendarSel
     clearAllCalendars,
     updateSelectedCalendars
   } = useCalendarSelection();
-  const { user } = useLocalAuth();
 
   const handleCalendarToggle = (calendarId: string, checked: boolean) => {
     toggleCalendar(calendarId, checked);
@@ -62,17 +60,6 @@ const CalendarSelector = ({ selectedCalendarIds, onCalendarChange }: CalendarSel
       updateSelectedCalendars(hookSelectedIds);
     }
   }, [calendarsFromEvents, selectedCalendarIds, updateSelectedCalendars]);
-
-  if (!user) {
-    console.log('CalendarSelector: No user authenticated');
-    return (
-      <CalendarSelectorButton
-        selectedCount={0}
-        totalCount={0}
-        disabled={true}
-      />
-    );
-  }
 
   if (isLoading) {
     console.log('CalendarSelector: Loading calendars...');

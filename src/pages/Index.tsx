@@ -5,20 +5,16 @@ import SettingsModal from '@/components/SettingsModal';
 import OfflineIndicator from '@/components/OfflineIndicator';
 import { Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useLocalAuth } from '@/hooks/useLocalAuth';
 import { useSettings } from '@/contexts/SettingsContext';
 import { getImagesFromAlbum, getDefaultBackgroundImages } from '@/utils/googlePhotosUtils';
 import { PerformanceMonitor, IntervalManager, displayOptimizations } from '@/utils/performanceUtils';
+
 const Index = () => {
   const [currentBg, setCurrentBg] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
   const [backgroundImages, setBackgroundImages] = useState<string[]>(getDefaultBackgroundImages());
   const [currentTime, setCurrentTime] = useState(new Date());
   const [isTransitioning, setIsTransitioning] = useState(false);
-  const {
-    user,
-    loading
-  } = useLocalAuth();
   const {
     backgroundDuration,
     publicAlbumUrl
@@ -170,14 +166,7 @@ const Index = () => {
       minute: '2-digit'
     });
   }, [currentTime]);
-  if (loading) {
-    return <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading...</p>
-        </div>
-      </div>;
-  }
+
   return <div className="min-h-screen relative overflow-hidden flex flex-col">
       {/* Background Image with seamless fade transitions */}
       <div className="fixed inset-0 w-full h-full" style={backgroundStyle} />
@@ -219,4 +208,5 @@ const Index = () => {
       <SettingsModal open={showSettings} onOpenChange={setShowSettings} />
     </div>;
 };
+
 export default Index;
