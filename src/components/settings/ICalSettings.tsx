@@ -317,7 +317,7 @@ const ICalSettings = () => {
                 </div>
               </div>
               <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setShowAddDialog(false)} className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
+                <Button variant="outline" onClick={() => setShowAddDialog(false)} className="border-gray-300 dark:border-gray-600 text-slate-900 bg-slate-200 hover:bg-slate-100">
                   Cancel
                 </Button>
                 <Button onClick={handleAddCalendar} disabled={isLoading} className="bg-blue-600 hover:bg-blue-700 text-white">
