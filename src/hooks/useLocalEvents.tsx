@@ -180,7 +180,7 @@ export const useLocalEvents = () => {
     loadLocalEvents();
   }, [loadLocalEvents]);
 
-  // Memoize return value to prevent unnecessary re-renders
+  // Return value optimized for local-only usage
   const memoizedValue = useMemo(() => ({
     googleEvents: allEvents, // Keep same interface name for compatibility
     localEvents: allEvents, // Return combined events
@@ -192,8 +192,7 @@ export const useLocalEvents = () => {
     resetToSampleEvents,
     exportEvents,
     importEvents,
-    clearCache: resetToSampleEvents,
-    handleWebhookUpdate: () => {} // No-op for compatibility
+    clearCache: resetToSampleEvents
   }), [
     allEvents,
     isLoading,
