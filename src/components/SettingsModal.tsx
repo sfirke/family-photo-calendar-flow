@@ -1,3 +1,4 @@
+
 import React from 'react';
 import {
   Dialog,
@@ -7,9 +8,10 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Camera, Monitor, CloudSun, Calendar } from 'lucide-react';
+import { Camera, Monitor, CloudSun, Calendar, Info } from 'lucide-react';
 import { useSettings } from '@/contexts/SettingsContext';
 import { useTheme } from '@/contexts/ThemeContext';
+import { getCurrentVersion } from '@/utils/versionManager';
 import OfflineIndicator from './OfflineIndicator';
 import PhotosTab from './settings/PhotosTab';
 import DisplayTab from './settings/DisplayTab';
@@ -44,7 +46,15 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
       <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700">
         <DialogHeader>
           <div className="flex items-center justify-between">
-            <DialogTitle className="text-gray-900 dark:text-gray-100">App Settings</DialogTitle>
+            <div>
+              <DialogTitle className="text-gray-900 dark:text-gray-100">App Settings</DialogTitle>
+              <div className="flex items-center gap-2 mt-1">
+                <Info className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+                <span className="text-sm text-gray-500 dark:text-gray-400">
+                  Version {getCurrentVersion()}
+                </span>
+              </div>
+            </div>
             <OfflineIndicator />
           </div>
           <DialogDescription className="text-gray-600 dark:text-gray-400">
