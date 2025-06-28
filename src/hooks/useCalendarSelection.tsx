@@ -5,18 +5,6 @@ import { useICalCalendars } from '@/hooks/useICalCalendars';
 
 const SELECTED_CALENDARS_KEY = 'family_calendar_selected_calendars';
 
-export interface CalendarFromEvents {
-  id: string;
-  summary: string;
-  primary: boolean;
-  eventCount: number;
-  hasEvents: boolean;
-  color?: string;
-  enabled?: boolean;
-  lastSync?: string;
-  url?: string;
-}
-
 export const useCalendarSelection = () => {
   const [selectedCalendarIds, setSelectedCalendarIds] = useState<string[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
