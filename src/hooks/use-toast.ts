@@ -168,13 +168,12 @@ function toast({ ...props }: Toast) {
 }
 
 // Enhanced toast function with theme-aware variants
-const enhancedToast = {
-  ...toast,
+const enhancedToast = Object.assign(toast, {
   success: (props: Omit<Toast, 'variant'>) => toast({ ...props, variant: 'success' }),
   error: (props: Omit<Toast, 'variant'>) => toast({ ...props, variant: 'destructive' }),
   warning: (props: Omit<Toast, 'variant'>) => toast({ ...props, variant: 'warning' }),
   info: (props: Omit<Toast, 'variant'>) => toast({ ...props, variant: 'default' }),
-}
+})
 
 function useToast() {
   const [state, setState] = React.useState<State>(memoryState)
