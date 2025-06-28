@@ -200,4 +200,4 @@ function useToast() {
   }
 }
 
-export { useToast, toast: enhancedToast }
+export { useToast, enhancedToast as toast }
