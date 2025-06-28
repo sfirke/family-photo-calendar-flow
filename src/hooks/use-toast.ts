@@ -1,3 +1,4 @@
+
 import * as React from "react"
 
 import type {
@@ -90,8 +91,6 @@ export const reducer = (state: State, action: Action): State => {
     case "DISMISS_TOAST": {
       const { toastId } = action
 
-      // ! Side effects ! - This could be extracted into a dismissToast() action,
-      // but I'll keep it here for simplicity
       if (toastId) {
         addToRemoveQueue(toastId)
       } else {
@@ -168,6 +167,14 @@ function toast({ ...props }: Toast) {
   }
 }
 
+// Enhanced toast function with theme-aware variants
+const enhancedToast = Object.assign(toast, {
+  success: (props: Omit<Toast, 'variant'>) => toast({ ...props, variant: 'success' }),
+  error: (props: Omit<Toast, 'variant'>) => toast({ ...props, variant: 'destructive' }),
+  warning: (props: Omit<Toast, 'variant'>) => toast({ ...props, variant: 'warning' }),
+  info: (props: Omit<Toast, 'variant'>) => toast({ ...props, variant: 'default' }),
+})
+
 function useToast() {
   const [state, setState] = React.useState<State>(memoryState)
 
@@ -183,9 +190,9 @@ function useToast() {
 
   return {
     ...state,
-    toast,
+    toast: enhancedToast,
     dismiss: (toastId?: string) => dispatch({ type: "DISMISS_TOAST", toastId }),
   }
 }
 
-export { useToast, toast }
+export { useToast, toast: enhancedToast }
