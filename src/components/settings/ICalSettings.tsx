@@ -48,28 +48,29 @@ const ICalSettings = () => {
     console.log('ICalSettings - Selected calendar IDs:', selectedCalendarIds);
   }, [calendars, calendarsFromEvents, selectedCalendarIds]);
 
-  // Combine calendars from hook and events, prioritizing hook data
+  // Combine calendars from hook and events, ensuring URLs are preserved
   const allCalendars = React.useMemo(() => {
     const calendarMap = new Map();
     
-    // Add calendars from hook first (these have full configuration including URLs)
+    // Add calendars from hook first (these have the complete configuration including URLs)
     calendars.forEach(cal => {
+      console.log('Processing calendar from hook:', { id: cal.id, name: cal.name, url: cal.url });
       calendarMap.set(cal.id, {
         ...cal,
         source: 'config',
         hasEvents: calendarsFromEvents.some(eventCal => eventCal.id === cal.id && eventCal.hasEvents),
-        // Ensure URL is always available from the main calendar configuration
-        url: cal.url || 'Unknown URL'
+        eventCount: calendarsFromEvents.find(eventCal => eventCal.id === cal.id)?.eventCount || cal.eventCount || 0
       });
     });
     
     // Add calendars from events that aren't in the hook (orphaned calendars)
     calendarsFromEvents.forEach(eventCal => {
       if (!calendarMap.has(eventCal.id) && eventCal.id !== 'local_calendar') {
+        console.log('Processing orphaned calendar from events:', { id: eventCal.id, name: eventCal.summary });
         calendarMap.set(eventCal.id, {
           id: eventCal.id,
           name: eventCal.summary,
-          url: eventCal.url || 'Unknown URL',
+          url: '', // Orphaned calendars don't have URLs stored
           color: eventCal.color || '#3b82f6',
           enabled: true,
           source: 'events',
@@ -80,7 +81,9 @@ const ICalSettings = () => {
       }
     });
     
-    return Array.from(calendarMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+    const result = Array.from(calendarMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+    console.log('Combined calendars with URLs:', result.map(cal => ({ id: cal.id, name: cal.name, url: cal.url, source: cal.source })));
+    return result;
   }, [calendars, calendarsFromEvents]);
 
   const validateCalendar = (name: string, url: string) => {
@@ -91,7 +94,7 @@ const ICalSettings = () => {
     
     // Check for duplicate URL
     const existingByUrl = allCalendars.find(cal => 
-      cal.url.toLowerCase().trim() === url.toLowerCase().trim()
+      cal.url && cal.url.toLowerCase().trim() === url.toLowerCase().trim()
     );
 
     if (existingByName) {
@@ -137,15 +140,16 @@ const ICalSettings = () => {
     }
 
     try {
-      console.log('Adding calendar with URL:', newCalendar.url);
+      console.log('Adding calendar with data:', newCalendar);
       const calendar = addCalendar({
         name: newCalendar.name,
-        url: newCalendar.url, // Ensure URL is explicitly passed
+        url: newCalendar.url,
         color: newCalendar.color,
         enabled: newCalendar.enabled
       });
       
-      console.log('Calendar added, attempting sync...');
+      console.log('Calendar added successfully:', calendar);
+      
       // Try to sync immediately to validate the URL
       await syncCalendar(calendar);
       
@@ -160,11 +164,6 @@ const ICalSettings = () => {
       setNewCalendar({ name: '', url: '', color: CALENDAR_COLORS[0], enabled: true });
       setShowAddDialog(false);
       
-      // Trigger a page refresh to ensure all components update with new data
-      setTimeout(() => {
-        window.location.reload();
-      }, 1000);
-      
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       toast({
@@ -176,11 +175,9 @@ const ICalSettings = () => {
   };
 
   const handleSync = async (calendar: any) => {
-    // Ensure we have the URL from the calendar configuration
-    const calendarUrl = calendar.url;
-    console.log('Syncing calendar with URL:', calendarUrl);
+    console.log('Attempting to sync calendar:', calendar);
     
-    if (!calendarUrl || calendarUrl === 'Unknown URL') {
+    if (!calendar.url || calendar.url.trim() === '') {
       toast({
         title: "Cannot sync",
         description: "This calendar doesn't have a valid URL for syncing. Please re-add the calendar with a valid URL.",
@@ -190,18 +187,7 @@ const ICalSettings = () => {
     }
 
     try {
-      if (calendar.source === 'config') {
-        await syncCalendar(calendar);
-      } else {
-        // For orphaned calendars, we need to create a proper calendar config first
-        const newCal = addCalendar({
-          name: calendar.name,
-          url: calendarUrl,
-          color: calendar.color,
-          enabled: true
-        });
-        await syncCalendar(newCal);
-      }
+      await syncCalendar(calendar);
       
       toast({
         title: "Sync successful",
@@ -278,7 +264,7 @@ const ICalSettings = () => {
     return <Badge variant="secondary">Not synced</Badge>;
   };
 
-  const enabledCalendarsCount = allCalendars.filter(cal => cal.enabled).length;
+  const enabledCalendarsCount = allCalendars.filter(cal => cal.enabled && cal.source === 'config').length;
   const totalEvents = calendarsFromEvents.reduce((sum, cal) => sum + cal.eventCount, 0);
   const calendarsWithEventsCount = calendarsFromEvents.filter(cal => cal.hasEvents).length;
 
@@ -408,6 +394,7 @@ const ICalSettings = () => {
           <div className="space-y-3">
             {allCalendars.map(calendar => {
               const isSelected = selectedCalendarIds.includes(calendar.id);
+              const hasValidUrl = calendar.url && calendar.url.trim() !== '';
               
               return (
                 <div key={calendar.id} className="border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800/50">
@@ -423,7 +410,7 @@ const ICalSettings = () => {
                         </h4>
                         <p className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-1">
                           <ExternalLink className="h-3 w-3" />
-                          {calendar.url && calendar.url !== 'Unknown URL' 
+                          {hasValidUrl 
                             ? (calendar.url.length > 50 ? `${calendar.url.substring(0, 50)}...` : calendar.url)
                             : 'No URL available'
                           }
@@ -448,8 +435,8 @@ const ICalSettings = () => {
                         size="sm"
                         variant="outline"
                         onClick={() => handleSync(calendar)}
-                        disabled={isLoading}
-                        title="Sync this calendar"
+                        disabled={isLoading || !hasValidUrl}
+                        title={hasValidUrl ? "Sync this calendar" : "No URL available for syncing"}
                         className="border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
                       >
                         <RefreshCw className={`h-4 w-4 ${syncStatus[calendar.id] === 'syncing' ? 'animate-spin' : ''}`} />

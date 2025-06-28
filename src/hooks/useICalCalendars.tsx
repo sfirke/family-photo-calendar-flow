@@ -37,21 +37,20 @@ export const useICalCalendars = () => {
         const parsedCalendars = JSON.parse(stored);
         console.log('Parsed calendars:', parsedCalendars);
         
-        // Ensure all calendars have a URL field - migrate old data if needed
-        const migratedCalendars = parsedCalendars.map((cal: any) => ({
-          ...cal,
-          url: cal.url || 'Unknown URL' // Fallback for old entries
+        // Validate that all calendars have required fields including URL
+        const validatedCalendars = parsedCalendars.map((cal: any) => ({
+          id: cal.id || Date.now().toString(),
+          name: cal.name || 'Unknown Calendar',
+          url: cal.url || '', // Keep original URL or empty string if not available
+          color: cal.color || '#3b82f6',
+          enabled: cal.enabled !== undefined ? cal.enabled : true,
+          lastSync: cal.lastSync,
+          eventCount: cal.eventCount
         }));
         
-        setCalendars(migratedCalendars);
-        
-        // Save migrated data back if we had to fix any URLs
-        if (migratedCalendars.some((cal: any, index: number) => cal.url !== parsedCalendars[index]?.url)) {
-          localStorage.setItem(ICAL_CALENDARS_KEY, JSON.stringify(migratedCalendars));
-          console.log('Migrated calendar data with missing URLs');
-        }
-        
-        return migratedCalendars;
+        console.log('Validated calendars with URLs:', validatedCalendars);
+        setCalendars(validatedCalendars);
+        return validatedCalendars;
       } else {
         console.log('No calendars found in localStorage');
         setCalendars([]);
@@ -71,11 +70,17 @@ export const useICalCalendars = () => {
       
       // Ensure all calendars have required fields including URL
       const validatedCalendars = newCalendars.map(cal => ({
-        ...cal,
-        url: cal.url || 'Unknown URL' // Ensure URL is always present
+        id: cal.id,
+        name: cal.name,
+        url: cal.url, // Preserve the original URL exactly as provided
+        color: cal.color,
+        enabled: cal.enabled,
+        lastSync: cal.lastSync,
+        eventCount: cal.eventCount
       }));
       
-      localStorage.setItem(ICAL_CALENDARS_KEY, JSON.stringify(validatedCalendars));
+      const jsonData = JSON.stringify(validatedCalendars);
+      localStorage.setItem(ICAL_CALENDARS_KEY, jsonData);
       setCalendars(validatedCalendars);
       
       // Verify the save was successful
@@ -91,13 +96,22 @@ export const useICalCalendars = () => {
 
   // Add a new iCal calendar - ensure URL is properly stored
   const addCalendar = useCallback((calendar: Omit<ICalCalendar, 'id'>) => {
+    console.log('Adding new calendar:', calendar);
+    
+    // Validate required fields
+    if (!calendar.name || !calendar.url) {
+      throw new Error('Calendar name and URL are required');
+    }
+    
     const newCalendar: ICalCalendar = {
-      ...calendar,
       id: Date.now().toString(),
-      url: calendar.url, // Explicitly ensure URL is included
+      name: calendar.name.trim(),
+      url: calendar.url.trim(), // Store the URL exactly as provided
+      color: calendar.color || '#3b82f6',
+      enabled: calendar.enabled !== undefined ? calendar.enabled : true,
     };
     
-    console.log('Adding new calendar with URL:', newCalendar);
+    console.log('New calendar with URL:', newCalendar);
     const updated = [...calendars, newCalendar];
     
     if (saveCalendars(updated)) {
@@ -407,21 +421,19 @@ export const useICalCalendars = () => {
     throw new Error('All fetch methods failed or returned invalid data. Please check if the iCal URL is publicly accessible and returns valid calendar data.');
   };
 
-  // Fetch and parse iCal feed - ensure URL is used from calendar object
+  // Fetch and parse iCal feed - get URL from calendar object
   const syncCalendar = useCallback(async (calendar: ICalCalendar) => {
     setIsLoading(true);
     setSyncStatus(prev => ({ ...prev, [calendar.id]: 'syncing' }));
 
     try {
-      // Use the URL from the calendar object - this should be the original URL
-      const calendarUrl = calendar.url;
-      console.log('Syncing calendar with URL:', calendarUrl);
+      console.log('Syncing calendar:', calendar.name, 'with URL:', calendar.url);
       
-      if (!calendarUrl || calendarUrl === 'Unknown URL') {
-        throw new Error('Calendar does not have a valid URL for syncing');
+      if (!calendar.url || calendar.url.trim() === '') {
+        throw new Error('Calendar does not have a valid URL for syncing. Please re-add the calendar with a valid URL.');
       }
 
-      const icalData = await fetchICalData(calendarUrl);
+      const icalData = await fetchICalData(calendar.url);
       
       // Additional validation before parsing
       if (!icalData || icalData.trim().length === 0) {
