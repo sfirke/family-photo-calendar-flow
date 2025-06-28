@@ -54,10 +54,10 @@ const EditableCalendarCard = ({
       return <Badge variant="secondary">Syncing...</Badge>;
     }
     if (syncStatus === 'error') {
-      return <Badge variant="destructive">Error</Badge>;
+      return <Badge variant="destructive" className="bg-red-500 hover:bg-red-600 text-white">Error</Badge>;
     }
     if (syncStatus === 'success' || calendar.lastSync) {
-      return <Badge variant="default" className="bg-green-700">Synced</Badge>;
+      return <Badge variant="default" className="bg-green-500 hover:bg-green-600 text-white">Synced</Badge>;
     }
     if (calendar.source === 'events') {
       return <Badge variant="outline">From Events</Badge>;
@@ -143,7 +143,7 @@ const EditableCalendarCard = ({
                 size="sm" 
                 variant="outline" 
                 onClick={handleSave}
-                className="text-green-500 hover:text-green-600 border-green-200 hover:border-green-300 hover:bg-green-50 dark:text-green-400 dark:hover:text-green-300 dark:border-green-600 dark:hover:border-green-500 dark:hover:bg-green-900/20"
+                className="text-green-600 hover:text-green-700 border-green-300 hover:border-green-400 hover:bg-green-50 dark:text-green-400 dark:hover:text-green-300 dark:border-green-600 dark:hover:border-green-500 dark:hover:bg-green-900/20"
               >
                 <Save className="h-4 w-4" />
               </Button>
@@ -151,7 +151,7 @@ const EditableCalendarCard = ({
                 size="sm" 
                 variant="outline" 
                 onClick={handleCancel}
-                className="text-red-500 hover:text-red-600 border-red-200 hover:border-red-300 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:border-red-600 dark:hover:border-red-500 dark:hover:bg-red-900/20"
+                className="text-red-600 hover:text-red-700 border-red-300 hover:border-red-400 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:border-red-600 dark:hover:border-red-500 dark:hover:bg-red-900/20"
               >
                 <X className="h-4 w-4" />
               </Button>
@@ -161,7 +161,7 @@ const EditableCalendarCard = ({
               size="sm" 
               variant="outline" 
               onClick={() => setIsEditing(true)}
-              className="text-gray-500 hover:text-gray-600 border-gray-200 hover:border-gray-300 hover:bg-gray-50 dark:text-gray-300 dark:hover:text-gray-100 dark:border-gray-600 dark:hover:border-gray-500 dark:hover:bg-gray-700/50"
+              className="text-gray-500 hover:text-gray-700 border-gray-300 hover:border-gray-400 hover:bg-gray-100 dark:text-gray-300 dark:hover:text-gray-100 dark:border-gray-600 dark:hover:border-gray-500 dark:hover:bg-gray-700/50"
             >
               <Edit2 className="h-4 w-4" />
             </Button>
@@ -173,7 +173,7 @@ const EditableCalendarCard = ({
             onClick={() => onSync(calendar)} 
             disabled={!hasValidUrl}
             title={hasValidUrl ? "Sync this calendar" : "No URL available for syncing"}
-            className="text-blue-500 hover:text-blue-600 border-blue-200 hover:border-blue-300 hover:bg-blue-50 dark:text-blue-400 dark:hover:text-blue-300 dark:border-blue-600 dark:hover:border-blue-500 dark:hover:bg-blue-900/20 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="text-blue-600 hover:text-blue-700 border-blue-300 hover:border-blue-400 hover:bg-blue-50 dark:text-blue-400 dark:hover:text-blue-300 dark:border-blue-600 dark:hover:border-blue-500 dark:hover:bg-blue-900/20 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <RefreshCw className={`h-4 w-4 ${syncStatus === 'syncing' ? 'animate-spin' : ''}`} />
           </Button>
@@ -183,7 +183,7 @@ const EditableCalendarCard = ({
             variant="outline" 
             onClick={() => onRemove(calendar)} 
             title="Remove this calendar"
-            className="text-red-500 hover:text-red-600 border-red-200 hover:border-red-300 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:border-red-600 dark:hover:border-red-500 dark:hover:bg-red-900/20"
+            className="text-red-600 hover:text-red-700 border-red-300 hover:border-red-400 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:border-red-600 dark:hover:border-red-500 dark:hover:bg-red-900/20"
           >
             <Trash2 className="h-4 w-4" />
           </Button>
