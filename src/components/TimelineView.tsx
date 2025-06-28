@@ -24,36 +24,32 @@ const TimelineView = ({ events, getWeatherForDate }: TimelineViewProps) => {
   const isMultiDayEvent = (event: Event) => {
     if (!isAllDayEvent(event)) return false;
     
-    // For ICS calendar events, respect the isMultiDay property if it exists
+    // For ICS calendar events, ONLY trust the isMultiDay property if it exists
     if ('isMultiDay' in event) {
       return event.isMultiDay === true;
     }
     
-    // For sample events, check if the event title or description indicates multiple days
-    const titleLower = event.title.toLowerCase();
-    const descLower = (event.description || '').toLowerCase();
-    
-    return titleLower.includes('days') || titleLower.includes('week') || 
-           descLower.includes('days') || descLower.includes('week') ||
-           event.time.includes('days');
+    // For sample events or events without isMultiDay property, be very conservative
+    // Only consider it multi-day if explicitly stated in the time field
+    return event.time.toLowerCase().includes('multi-day') || 
+           event.time.toLowerCase().includes('multiple days');
   };
 
   // Get events for each day - only show events on their specific date unless they're truly multi-day
   const getEventsForDay = (day: Date) => {
     return events.filter(event => {
-      // Regular events and single-day all-day events on this specific day
+      // Always show events on their specific date
       if (isSameDay(event.date, day)) {
         return true;
       }
       
-      // Only show multi-day events on additional days if they're actually multi-day
-      // AND we don't already have them on their original date
-      if (isMultiDayEvent(event) && !isSameDay(event.date, day)) {
-        // For multi-day events, show them on each day in our range
-        // This is a simplified approach - in a real app you'd parse the actual duration
-        return next3Days.some(rangeDay => isSameDay(rangeDay, day));
+      // For ICS events, only show on additional days if isMultiDay is explicitly true
+      if (isMultiDayEvent(event)) {
+        // This is a truly multi-day event, show it on each day in our range
+        return true;
       }
       
+      // Don't show single-day events on other days
       return false;
     });
   };
