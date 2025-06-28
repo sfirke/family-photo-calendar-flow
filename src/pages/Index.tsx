@@ -9,15 +9,20 @@ import { useLocalAuth } from '@/hooks/useLocalAuth';
 import { useSettings } from '@/contexts/SettingsContext';
 import { getImagesFromAlbum, getDefaultBackgroundImages } from '@/utils/googlePhotosUtils';
 import { PerformanceMonitor, IntervalManager, displayOptimizations } from '@/utils/performanceUtils';
-
 const Index = () => {
   const [currentBg, setCurrentBg] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
   const [backgroundImages, setBackgroundImages] = useState<string[]>(getDefaultBackgroundImages());
   const [currentTime, setCurrentTime] = useState(new Date());
   const [isTransitioning, setIsTransitioning] = useState(false);
-  const { user, loading } = useLocalAuth();
-  const { backgroundDuration, publicAlbumUrl } = useSettings();
+  const {
+    user,
+    loading
+  } = useLocalAuth();
+  const {
+    backgroundDuration,
+    publicAlbumUrl
+  } = useSettings();
 
   // Optimized clock update - only update minutes, not seconds
   useEffect(() => {
@@ -75,20 +80,20 @@ const Index = () => {
   // Background image loading with cached photos
   const loadBackgroundImages = useCallback(async () => {
     console.log('Loading background images, publicAlbumUrl:', publicAlbumUrl);
-    
     if (publicAlbumUrl) {
       try {
         // First try to get cached photos
-        const { photosCache } = await import('@/utils/photosCache');
+        const {
+          photosCache
+        } = await import('@/utils/photosCache');
         const cachedPhotos = photosCache.getRandomizedPhotos(50);
-        
         if (cachedPhotos.length > 0) {
           console.log(`Using ${cachedPhotos.length} cached photos`);
           setBackgroundImages(cachedPhotos);
           setCurrentBg(0);
           return;
         }
-        
+
         // Fallback to fetching if no cache
         console.log('No cached photos found, fetching from album...');
         const albumImages = await getImagesFromAlbum(publicAlbumUrl);
@@ -121,7 +126,6 @@ const Index = () => {
     if (backgroundImages.length <= 1) return;
     const intervalTime = backgroundDuration * 60 * 1000;
     console.log(`Setting up background rotation every ${backgroundDuration} minutes`);
-    
     IntervalManager.setInterval('background-rotation', () => {
       setIsTransitioning(true);
       setTimeout(() => {
@@ -133,7 +137,6 @@ const Index = () => {
         setIsTransitioning(false);
       }, 500); // Half of transition duration
     }, intervalTime);
-    
     return () => {
       IntervalManager.clearInterval('background-rotation');
     };
@@ -150,14 +153,13 @@ const Index = () => {
       const nextImage = new Image();
       nextImage.src = backgroundImages[nextIndex];
     }
-
     return {
       backgroundImage: `url("${currentImage}")`,
       backgroundSize: 'cover',
       backgroundPosition: 'center',
       backgroundRepeat: 'no-repeat',
       opacity: isTransitioning ? 0 : 1,
-      transition: 'opacity 1s ease-in-out',
+      transition: 'opacity 1s ease-in-out'
     };
   }, [backgroundImages, currentBg, isTransitioning]);
 
@@ -168,7 +170,6 @@ const Index = () => {
       minute: '2-digit'
     });
   }, [currentTime]);
-
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
@@ -177,13 +178,9 @@ const Index = () => {
         </div>
       </div>;
   }
-
   return <div className="min-h-screen relative overflow-hidden flex flex-col">
       {/* Background Image with seamless fade transitions */}
-      <div 
-        className="fixed inset-0 w-full h-full" 
-        style={backgroundStyle}
-      />
+      <div className="fixed inset-0 w-full h-full" style={backgroundStyle} />
       
       {/* Glass overlay */}
       <div className="absolute inset-0 bg-white/10 backdrop-blur-[1px] dark:bg-black/20 z-10" />
@@ -196,7 +193,7 @@ const Index = () => {
           <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/20 to-transparent pointer-events-none" />
           
           <div className="relative z-10">
-            <h1 className="text-xl5 text-white/90 text-7xl font-semibold">{formattedTime}</h1>
+            <h1 className="text-xl5 text-white/90 font-semibold text-8xl">{formattedTime}</h1>
           </div>
           
           <div className="flex items-center gap-4 relative z-10">
@@ -221,5 +218,4 @@ const Index = () => {
       <SettingsModal open={showSettings} onOpenChange={setShowSettings} />
     </div>;
 };
-
 export default Index;
