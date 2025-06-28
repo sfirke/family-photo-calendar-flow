@@ -283,30 +283,30 @@ const ICalSettings = () => {
               Add Calendar Feed
             </Button>
           </DialogTrigger>
-          <DialogContent className="bg-blue-50">
+          <DialogContent className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
             <DialogHeader>
-              <DialogTitle>Add Calendar Feed</DialogTitle>
-              <DialogDescription>
+              <DialogTitle className="text-gray-900 dark:text-gray-100">Add Calendar Feed</DialogTitle>
+              <DialogDescription className="text-gray-600 dark:text-gray-400">
                 Enter the details for your calendar feed. Data will be stored locally in your browser.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <div>
-                <Label htmlFor="calendar-name">Calendar Name</Label>
+                <Label htmlFor="calendar-name" className="text-gray-700 dark:text-gray-300">Calendar Name</Label>
                 <Input id="calendar-name" placeholder="My Calendar" value={newCalendar.name} onChange={e => setNewCalendar(prev => ({
                 ...prev,
                 name: e.target.value
-              }))} className="bg-zinc-50" />
+              }))} className="bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-gray-100" />
               </div>
               <div>
-                <Label htmlFor="calendar-url">iCal URL</Label>
+                <Label htmlFor="calendar-url" className="text-gray-700 dark:text-gray-300">iCal URL</Label>
                 <Input id="calendar-url" placeholder="https://calendar.example.com/feed.ics" value={newCalendar.url} onChange={e => setNewCalendar(prev => ({
                 ...prev,
                 url: e.target.value
-              }))} className="bg-slate-50" />
+              }))} className="bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-gray-100" />
               </div>
               <div>
-                <Label>Calendar Color</Label>
+                <Label className="text-gray-700 dark:text-gray-300">Calendar Color</Label>
                 <div className="flex gap-2 mt-2">
                   {CALENDAR_COLORS.map(color => <button key={color} className={`w-6 h-6 rounded-full border-2 ${newCalendar.color === color ? 'border-gray-900 dark:border-gray-100' : 'border-gray-300 dark:border-gray-600'}`} style={{
                   backgroundColor: color
@@ -317,10 +317,10 @@ const ICalSettings = () => {
                 </div>
               </div>
               <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setShowAddDialog(false)} className="bg-slate-900 hover:bg-slate-800 text-slate-50">
+                <Button variant="outline" onClick={() => setShowAddDialog(false)} className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
                   Cancel
                 </Button>
-                <Button onClick={handleAddCalendar} disabled={isLoading} className="bg-blue-950 hover:bg-blue-800">
+                <Button onClick={handleAddCalendar} disabled={isLoading} className="bg-blue-600 hover:bg-blue-700 text-white">
                   Add Calendar
                 </Button>
               </div>
