@@ -26,22 +26,21 @@ const WeekView = ({ events, weekOffset, onPreviousWeek, onNextWeek, getWeatherFo
     return event.time === 'All day' || event.time.toLowerCase().includes('all day');
   };
 
-  // Helper function to check if an event spans multiple days
+  // Helper function to check if an event spans multiple days - FIXED VERSION
   const isMultiDayEvent = (event: Event) => {
     if (!isAllDayEvent(event)) return false;
     
-    // For ICS calendar events, ONLY trust the isMultiDay property if it exists
+    // For ICS calendar events, ONLY trust the isMultiDay property if it exists and is explicitly true
     if ('isMultiDay' in event) {
       return event.isMultiDay === true;
     }
     
-    // For sample events or events without isMultiDay property, be very conservative
-    // Only consider it multi-day if explicitly stated in the time field
-    return event.time.toLowerCase().includes('multi-day') || 
-           event.time.toLowerCase().includes('multiple days');
+    // For all other events (sample events, events without isMultiDay property), 
+    // be extremely conservative - only consider multi-day if explicitly stated
+    return false; // Default to single-day unless proven otherwise
   };
 
-  // Get events for each day - only show events on their specific date unless they're truly multi-day
+  // Get events for each day - FIXED to prevent duplication
   const getEventsForDay = (day: Date) => {
     return events.filter(event => {
       // Always show events on their specific date
@@ -49,13 +48,14 @@ const WeekView = ({ events, weekOffset, onPreviousWeek, onNextWeek, getWeatherFo
         return true;
       }
       
-      // For ICS events, only show on additional days if isMultiDay is explicitly true
-      if (isMultiDayEvent(event)) {
-        // This is a truly multi-day event, show it on each day in the week
+      // ONLY show on additional days if it's explicitly a multi-day event
+      // AND we're dealing with an ICS event that has isMultiDay: true
+      if ('isMultiDay' in event && event.isMultiDay === true && isAllDayEvent(event)) {
+        // This is a truly multi-day event from ICS calendar
         return true;
       }
       
-      // Don't show single-day events on other days
+      // All other cases: don't show the event
       return false;
     });
   };
