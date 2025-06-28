@@ -52,12 +52,14 @@ const ICalSettings = () => {
   const allCalendars = React.useMemo(() => {
     const calendarMap = new Map();
     
-    // Add calendars from hook first (these have full configuration)
+    // Add calendars from hook first (these have full configuration including URLs)
     calendars.forEach(cal => {
       calendarMap.set(cal.id, {
         ...cal,
         source: 'config',
-        hasEvents: calendarsFromEvents.some(eventCal => eventCal.id === cal.id && eventCal.hasEvents)
+        hasEvents: calendarsFromEvents.some(eventCal => eventCal.id === cal.id && eventCal.hasEvents),
+        // Ensure URL is always available from the main calendar configuration
+        url: cal.url || 'Unknown URL'
       });
     });
     
@@ -135,11 +137,15 @@ const ICalSettings = () => {
     }
 
     try {
+      console.log('Adding calendar with URL:', newCalendar.url);
       const calendar = addCalendar({
-        ...newCalendar,
-        url: newCalendar.url // Ensure URL is stored
+        name: newCalendar.name,
+        url: newCalendar.url, // Ensure URL is explicitly passed
+        color: newCalendar.color,
+        enabled: newCalendar.enabled
       });
       
+      console.log('Calendar added, attempting sync...');
       // Try to sync immediately to validate the URL
       await syncCalendar(calendar);
       
@@ -170,10 +176,14 @@ const ICalSettings = () => {
   };
 
   const handleSync = async (calendar: any) => {
-    if (!calendar.url || calendar.url === 'Unknown URL') {
+    // Ensure we have the URL from the calendar configuration
+    const calendarUrl = calendar.url;
+    console.log('Syncing calendar with URL:', calendarUrl);
+    
+    if (!calendarUrl || calendarUrl === 'Unknown URL') {
       toast({
         title: "Cannot sync",
-        description: "This calendar doesn't have a valid URL for syncing.",
+        description: "This calendar doesn't have a valid URL for syncing. Please re-add the calendar with a valid URL.",
         variant: "destructive"
       });
       return;
@@ -186,7 +196,7 @@ const ICalSettings = () => {
         // For orphaned calendars, we need to create a proper calendar config first
         const newCal = addCalendar({
           name: calendar.name,
-          url: calendar.url,
+          url: calendarUrl,
           color: calendar.color,
           enabled: true
         });
