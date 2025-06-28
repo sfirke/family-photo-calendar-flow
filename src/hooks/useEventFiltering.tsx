@@ -32,7 +32,8 @@ export const useEventFiltering = ({ googleEvents, selectedCalendarIds }: UseEven
     // Process events to ensure single-day all-day events only appear on their specific date
     const processedEvents = filtered.map(event => {
       // If it's an all-day event that is NOT multi-day, ensure it only appears on its specific date
-      if (event.time === 'All day' && event.isMultiDay === false) {
+      // Check if isMultiDay property exists on the event before using it
+      if (event.time === 'All day' && ('isMultiDay' in event ? event.isMultiDay === false : true)) {
         // Return the event as-is, but ensure the date is properly set
         return {
           ...event,

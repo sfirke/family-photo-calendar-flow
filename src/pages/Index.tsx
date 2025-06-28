@@ -192,8 +192,9 @@ const Index = () => {
           {/* Header gradient overlay */}
           <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/20 to-transparent pointer-events-none" />
           
-          <div className="relative z-10">
-            <h1 className="text-xl5 text-white/90 font-semibold text-8xl">{formattedTime}</h1>
+          <div className="relative z-10 flex items-baseline gap-2">
+            <h1 className="text-white/90 font-semibold text-8xl">{formattedTime.replace(/ [AP]M/, '')}</h1>
+            <span className="text-white/90 font-semibold text-4xl">{formattedTime.match(/[AP]M/)?.[0]}</span>
           </div>
           
           <div className="flex items-center gap-4 relative z-10">
