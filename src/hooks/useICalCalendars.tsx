@@ -1,7 +1,7 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import ICAL from 'ical.js';
 import { calendarStorageService, CalendarFeed } from '@/services/calendarStorage';
+import { useBackgroundSync } from './useBackgroundSync';
 
 export interface ICalCalendar {
   id: string;
@@ -27,6 +27,13 @@ export const useICalCalendars = () => {
   const [calendars, setCalendars] = useState<ICalCalendar[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [syncStatus, setSyncStatus] = useState<{ [key: string]: string }>({});
+  const { 
+    registerBackgroundSync, 
+    registerPeriodicSync, 
+    triggerBackgroundSync,
+    isBackgroundSyncSupported,
+    processSyncQueue
+  } = useBackgroundSync();
 
   // Load calendars from IndexedDB
   const loadCalendars = useCallback(async () => {
@@ -42,6 +49,83 @@ export const useICalCalendars = () => {
       return [];
     }
   }, []);
+
+  // Initialize background sync when calendars are loaded
+  useEffect(() => {
+    if (calendars.length > 0 && isBackgroundSyncSupported) {
+      const initBackgroundSync = async () => {
+        try {
+          await registerBackgroundSync();
+          await registerPeriodicSync();
+          console.log('Background sync initialized for calendar feeds');
+        } catch (error) {
+          console.error('Failed to initialize background sync:', error);
+        }
+      };
+      
+      initBackgroundSync();
+    }
+  }, [calendars.length, isBackgroundSyncSupported, registerBackgroundSync, registerPeriodicSync]);
+
+  // Listen for background sync data
+  useEffect(() => {
+    const handleBackgroundSyncData = (event: CustomEvent) => {
+      const { syncQueue } = event.detail;
+      
+      // Process background sync results
+      syncQueue.forEach((syncData: any) => {
+        try {
+          processBackgroundSyncData(syncData);
+        } catch (error) {
+          console.error('Error processing background sync data:', error);
+        }
+      });
+    };
+
+    window.addEventListener('background-sync-data-available', handleBackgroundSyncData as EventListener);
+    
+    return () => {
+      window.removeEventListener('background-sync-data-available', handleBackgroundSyncData as EventListener);
+    };
+  }, []);
+
+  const processBackgroundSyncData = useCallback((syncData: any) => {
+    try {
+      const { calendarId, icalData, syncTime } = syncData;
+      
+      // Find the calendar
+      const calendar = calendars.find(cal => cal.id === calendarId);
+      if (!calendar) return;
+
+      // Parse the iCal data
+      const jcalData = ICAL.parse(icalData);
+      const vcalendar = new ICAL.Component(jcalData);
+      const vevents = vcalendar.getAllSubcomponents('vevent');
+
+      const allEvents: any[] = [];
+      vevents.forEach((vevent) => {
+        const event = new ICAL.Event(vevent);
+        const eventOccurrences = expandRecurringEvent(event, calendar);
+        allEvents.push(...eventOccurrences);
+      });
+
+      // Update events in localStorage
+      const existingEvents = JSON.parse(localStorage.getItem(ICAL_EVENTS_KEY) || '[]');
+      const filteredExisting = existingEvents.filter((event: any) => event.calendarId !== calendarId);
+      const combinedEvents = [...filteredExisting, ...allEvents];
+      localStorage.setItem(ICAL_EVENTS_KEY, JSON.stringify(combinedEvents));
+
+      // Update calendar sync status
+      updateCalendar(calendarId, {
+        lastSync: syncTime,
+        eventCount: allEvents.length
+      });
+
+      console.log(`Background sync processed ${allEvents.length} events for ${calendar.name}`);
+    } catch (error) {
+      console.error('Error processing background sync data:', error);
+    }
+  }, [calendars]);
 
   // Add a new iCal calendar
   const addCalendar = useCallback(async (calendar: Omit<ICalCalendar, 'id'>) => {
@@ -86,13 +170,19 @@ export const useICalCalendars = () => {
     try {
       await calendarStorageService.addCalendar(newCalendar);
       await loadCalendars(); // Refresh the state
+      
+      // Schedule background sync for the new calendar
+      if (isBackgroundSyncSupported) {
+        await triggerBackgroundSync();
+      }
+      
       console.log('Calendar added successfully to IndexedDB');
       return newCalendar;
     } catch (error) {
       console.error('Error saving calendar to IndexedDB:', error);
       throw new Error('Failed to save calendar to database');
     }
-  }, [loadCalendars]);
+  }, [loadCalendars, isBackgroundSyncSupported, triggerBackgroundSync]);
 
   // Update an existing calendar
   const updateCalendar = useCallback(async (id: string, updates: Partial<ICalCalendar>) => {
@@ -449,6 +539,20 @@ export const useICalCalendars = () => {
   const syncAllCalendars = useCallback(async () => {
     const enabledCalendars = calendars.filter(cal => cal.enabled);
     
+    // Try background sync first if supported
+    if (isBackgroundSyncSupported && enabledCalendars.length > 0) {
+      try {
+        const success = await triggerBackgroundSync();
+        if (success) {
+          console.log('Background sync triggered for all calendars');
+          return;
+        }
+      } catch (error) {
+        console.error('Background sync failed, falling back to foreground sync:', error);
+      }
+    }
+    
+    // Fallback to foreground sync
     for (const calendar of enabledCalendars) {
       try {
         await syncCalendar(calendar);
@@ -456,7 +560,7 @@ export const useICalCalendars = () => {
         console.error(`Failed to sync calendar ${calendar.name}:`, error);
       }
     }
-  }, [calendars, syncCalendar]);
+  }, [calendars, syncCalendar, isBackgroundSyncSupported, triggerBackgroundSync]);
 
   const getICalEvents = useCallback(() => {
     try {
@@ -482,7 +586,8 @@ export const useICalCalendars = () => {
   const forceRefresh = useCallback(() => {
     console.log('Force refreshing iCal calendars');
     loadCalendars();
-  }, [loadCalendars]);
+    processSyncQueue();
+  }, [loadCalendars, processSyncQueue]);
 
   useEffect(() => {
     console.log('useICalCalendars hook initializing');
@@ -499,6 +604,8 @@ export const useICalCalendars = () => {
     syncCalendar,
     syncAllCalendars,
     getICalEvents,
-    forceRefresh
+    forceRefresh,
+    isBackgroundSyncSupported,
+    triggerBackgroundSync
   };
 };
