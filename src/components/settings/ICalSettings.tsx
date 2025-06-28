@@ -255,23 +255,23 @@ const ICalSettings = () => {
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Event Summary */}
-        {totalEvents > 0 && <div className="bg-gray-100 dark:bg-blue-900/30 border border-gray-300 dark:border-blue-800 rounded-lg p-4">
+        {totalEvents > 0 && <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
             <div className="flex items-center gap-2 mb-2">
-              <BarChart3 className="h-4 w-4 text-gray-700 dark:text-blue-400" />
-              <span className="font-medium text-gray-800 dark:text-blue-200">Event Summary</span>
+              <BarChart3 className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+              <span className="font-medium text-blue-900 dark:text-blue-200">Event Summary</span>
             </div>
             <div className="grid grid-cols-3 gap-4 text-sm">
               <div>
-                <div className="font-medium text-gray-800 dark:text-blue-200">{totalEvents}</div>
-                <div className="text-gray-600 dark:text-blue-300">Total Events</div>
+                <div className="font-medium text-blue-900 dark:text-blue-200">{totalEvents}</div>
+                <div className="text-blue-700 dark:text-blue-300">Total Events</div>
               </div>
               <div>
-                <div className="font-medium text-gray-800 dark:text-blue-200">{calendarsWithEventsCount}</div>
-                <div className="text-gray-600 dark:text-blue-300">Active Calendars</div>
+                <div className="font-medium text-blue-900 dark:text-blue-200">{calendarsWithEventsCount}</div>
+                <div className="text-blue-700 dark:text-blue-300">Active Calendars</div>
               </div>
               <div>
-                <div className="font-medium text-gray-800 dark:text-blue-200">{selectedCalendarIds.length}</div>
-                <div className="text-gray-600 dark:text-blue-300">Selected</div>
+                <div className="font-medium text-blue-900 dark:text-blue-200">{selectedCalendarIds.length}</div>
+                <div className="text-blue-700 dark:text-blue-300">Selected</div>
               </div>
             </div>
           </div>}
@@ -341,10 +341,10 @@ const ICalSettings = () => {
           </div>}
 
         {/* Help and Tips */}
-        <Alert className="bg-gray-100 dark:bg-blue-900/30 border border-gray-300 dark:border-blue-800">
-          <AlertCircle className="h-4 w-4 text-gray-700 dark:text-blue-400" />
-          <AlertTitle className="text-gray-800 dark:text-blue-200">Tips for Calendar Feeds</AlertTitle>
-          <AlertDescription className="text-sm space-y-2 text-gray-600 dark:text-blue-300">
+        <Alert className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800">
+          <AlertCircle className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+          <AlertTitle className="text-blue-900 dark:text-blue-200">Tips for Calendar Feeds</AlertTitle>
+          <AlertDescription className="text-sm space-y-2 text-blue-700 dark:text-blue-300">
             <p>• Calendar data is stored locally in your browser using IndexedDB</p>
             <p>• Click the edit icon to modify calendar name, URL, or color</p>
             <p>• Use the sync buttons to manually refresh calendar data</p>
