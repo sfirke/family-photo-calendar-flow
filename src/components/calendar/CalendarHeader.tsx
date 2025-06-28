@@ -19,13 +19,22 @@ const CalendarHeader = ({
   onViewChange
 }: CalendarHeaderProps) => {
   return (
-    <div className="space-y-4">
-      {/* New row for calendar controls */}
-      <div className="flex items-center justify-end">
-        <div className="flex items-center gap-4">
-          {hasGoogleEvents && <CalendarSelector selectedCalendarIds={selectedCalendarIds} onCalendarChange={onCalendarChange} />}
+    <div className="space-y-3 sm:space-y-4">
+      {/* Responsive calendar controls */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-end gap-3 sm:gap-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 w-full sm:w-auto">
+          {hasGoogleEvents && (
+            <div className="w-full sm:w-auto">
+              <CalendarSelector 
+                selectedCalendarIds={selectedCalendarIds} 
+                onCalendarChange={onCalendarChange} 
+              />
+            </div>
+          )}
           
-          <ViewSwitcher view={view} onViewChange={onViewChange} />
+          <div className="w-full sm:w-auto">
+            <ViewSwitcher view={view} onViewChange={onViewChange} />
+          </div>
         </div>
       </div>
     </div>

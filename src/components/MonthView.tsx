@@ -60,19 +60,20 @@ const MonthView = ({ events, getWeatherForDate }: MonthViewProps) => {
   };
 
   return (
-    <div className="space-y-4">
-      {/* Month Navigation */}
+    <div className="space-y-3 sm:space-y-4">
+      {/* Responsive Month Navigation */}
       <div className="flex items-center justify-between">
         <Button
           variant="outline"
           size="sm"
           onClick={handlePreviousMonth}
-          className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-white/20 dark:border-gray-600/20"
+          className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-white/20 dark:border-gray-600/20 h-9 w-9 sm:h-10 sm:w-auto sm:px-4"
         >
           <ChevronLeft className="h-4 w-4" />
+          <span className="hidden sm:inline ml-1">Previous</span>
         </Button>
         
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+        <h2 className="text-sm sm:text-base md:text-lg font-semibold text-gray-900 dark:text-gray-100 text-center px-2">
           {format(currentDate, 'MMMM yyyy')}
         </h2>
         
@@ -80,24 +81,26 @@ const MonthView = ({ events, getWeatherForDate }: MonthViewProps) => {
           variant="outline"
           size="sm"
           onClick={handleNextMonth}
-          className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-white/20 dark:border-gray-600/20"
+          className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-white/20 dark:border-gray-600/20 h-9 w-9 sm:h-10 sm:w-auto sm:px-4"
         >
           <ChevronRight className="h-4 w-4" />
+          <span className="hidden sm:inline ml-1">Next</span>
         </Button>
       </div>
 
-      {/* Calendar Grid */}
-      <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-lg border border-white/20 dark:border-gray-600/20">
-        {/* Day Headers */}
+      {/* Responsive Calendar Grid */}
+      <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-lg border border-white/20 dark:border-gray-600/20 overflow-hidden">
+        {/* Day Headers - responsive text sizing */}
         <div className="grid grid-cols-7 border-b border-gray-200 dark:border-gray-700">
           {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-            <div key={day} className="p-3 text-center text-sm font-medium text-gray-900 dark:text-gray-100">
-              {day}
+            <div key={day} className="p-2 sm:p-3 text-center text-xs sm:text-sm font-medium text-gray-900 dark:text-gray-100">
+              <span className="sm:hidden">{day.charAt(0)}</span>
+              <span className="hidden sm:inline">{day}</span>
             </div>
           ))}
         </div>
 
-        {/* Calendar Days */}
+        {/* Responsive Calendar Days */}
         <div className="grid grid-cols-7">
           {calendarDays.map((day, index) => {
             const dayEvents = getDayEvents(day);
@@ -107,41 +110,41 @@ const MonthView = ({ events, getWeatherForDate }: MonthViewProps) => {
             return (
               <div
                 key={index}
-                className={`min-h-[120px] p-2 border-b border-r border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 ${
+                className={`min-h-[80px] sm:min-h-[100px] md:min-h-[120px] p-1 sm:p-2 border-b border-r border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 ${
                   !isCurrentMonth ? 'text-gray-400 dark:text-gray-600' : 'text-gray-900 dark:text-gray-100'
                 } ${isDayToday ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}
                 onClick={() => handleDayClick(day)}
               >
                 <div className="flex items-center justify-between mb-1">
-                  <span className={`text-sm font-medium ${isDayToday ? 'text-blue-600 dark:text-blue-400' : ''}`}>
+                  <span className={`text-xs sm:text-sm font-medium ${isDayToday ? 'text-blue-600 dark:text-blue-400' : ''}`}>
                     {format(day, 'd')}
                   </span>
                   {isCurrentMonth && (
                     <WeatherDisplay 
                       weather={getWeatherForDate(day)}
-                      className="text-xs"
+                      className="text-xs hidden sm:block"
                     />
                   )}
                 </div>
                 
                 <div className="space-y-1">
-                  {dayEvents.slice(0, 3).map(event => (
+                  {dayEvents.slice(0, 2).map(event => (
                     <div
                       key={event.id}
                       className="flex items-center gap-1 text-xs p-1 rounded truncate"
                       style={{ backgroundColor: `${event.color || '#3b82f6'}20` }}
                     >
                       <div 
-                        className="w-2 h-2 rounded-full flex-shrink-0"
+                        className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full flex-shrink-0"
                         style={{ backgroundColor: event.color || '#3b82f6' }}
                       />
-                      <span className="truncate">{event.title}</span>
+                      <span className="truncate text-xs">{event.title}</span>
                     </div>
                   ))}
                   
-                  {dayEvents.length > 3 && (
+                  {dayEvents.length > 2 && (
                     <div className="text-xs text-gray-500 dark:text-gray-400 px-1">
-                      +{dayEvents.length - 3} more
+                      +{dayEvents.length - 2} more
                     </div>
                   )}
                 </div>

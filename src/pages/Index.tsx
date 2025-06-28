@@ -147,7 +147,7 @@ const Index = () => {
     };
   }, [backgroundImages, currentBg, isTransitioning]);
 
-  // Optimized time formatting - only update when time changes
+  // Responsive time formatting - only update when time changes
   const formattedTime = useMemo(() => {
     return currentTime.toLocaleTimeString('en-US', {
       hour: 'numeric',
@@ -155,7 +155,8 @@ const Index = () => {
     });
   }, [currentTime]);
 
-  return <div className="min-h-screen relative overflow-hidden flex flex-col">
+  return (
+    <div className="min-h-screen relative overflow-hidden flex flex-col">
       {/* Background Image with seamless fade transitions */}
       <div className="fixed inset-0 w-full h-full" style={backgroundStyle} />
       
@@ -164,36 +165,48 @@ const Index = () => {
       
       {/* Content */}
       <div className="relative z-20 min-h-screen flex flex-col">
-        {/* Header with gradient overlay - Fixed positioning */}
-        <header className="fixed top-0 left-0 right-0 z-30 flex items-center justify-between p-6">
+        {/* Responsive Header with gradient overlay - Fixed positioning */}
+        <header className="fixed top-0 left-0 right-0 z-30 flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 sm:p-4 md:p-6">
           {/* Header gradient overlay */}
           <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/20 to-transparent pointer-events-none" />
           
-          <div className="relative z-10 flex items-baseline gap-2">
-            <h1 className="text-white/90 font-semibold text-8xl">{formattedTime.replace(/ [AP]M/, '')}</h1>
-            <span className="text-white/90 font-semibold text-4xl">{formattedTime.match(/[AP]M/)?.[0]}</span>
+          {/* Responsive Time Display */}
+          <div className="relative z-10 flex items-baseline gap-1 sm:gap-2 mb-2 sm:mb-0">
+            <h1 className="text-white/90 font-semibold text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl">
+              {formattedTime.replace(/ [AP]M/, '')}
+            </h1>
+            <span className="text-white/90 font-semibold text-xl sm:text-2xl md:text-3xl lg:text-4xl">
+              {formattedTime.match(/[AP]M/)?.[0]}
+            </span>
           </div>
           
-          <div className="flex items-center gap-4 relative z-10">
+          {/* Responsive Weather Widget */}
+          <div className="flex items-center gap-2 sm:gap-4 relative z-10 w-full sm:w-auto justify-end">
             <WeatherWidget />
           </div>
         </header>
 
-        {/* Main Content - Add top padding to account for fixed header */}
-        <main className="px-6 pb-6 pt-32 flex-1 flex flex-col overflow-visible">
+        {/* Main Content - Responsive top padding to account for fixed header */}
+        <main className="px-3 sm:px-4 md:px-6 pb-3 sm:pb-4 md:pb-6 pt-20 sm:pt-24 md:pt-28 lg:pt-32 flex-1 flex flex-col overflow-visible">
           <div className="flex-1">
             <Calendar />
           </div>
         </main>
       </div>
 
-      {/* Settings Button - Fixed in lower right corner */}
-      <Button variant="ghost" size="sm" onClick={() => setShowSettings(true)} className="fixed bottom-6 right-6 z-20 text-white hover:bg-white/20 bg-black/20 backdrop-blur-sm border border-white/20">
-        <Settings className="h-4 w-4" />
+      {/* Responsive Settings Button - Fixed in lower right corner */}
+      <Button 
+        variant="ghost" 
+        size="sm" 
+        onClick={() => setShowSettings(true)} 
+        className="fixed bottom-3 right-3 sm:bottom-4 sm:right-4 md:bottom-6 md:right-6 z-20 text-white hover:bg-white/20 bg-black/20 backdrop-blur-sm border border-white/20 h-10 w-10 sm:h-11 sm:w-11 p-0"
+      >
+        <Settings className="h-4 w-4 sm:h-5 sm:w-5" />
       </Button>
 
       <SettingsModal open={showSettings} onOpenChange={setShowSettings} />
-    </div>;
+    </div>
+  );
 };
 
 export default Index;

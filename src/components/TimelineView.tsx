@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { format, isToday, isTomorrow, isYesterday, addDays, startOfDay, differenceInDays, isSameDay } from 'date-fns';
 import { Event } from '@/types/calendar';
@@ -75,36 +74,36 @@ const TimelineView = ({ events, getWeatherForDate }: TimelineViewProps) => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {groupedEventsByDay.map(({ day, allDayEvents, timedEvents, totalEvents }) => {
         const dateStr = format(day, 'yyyy-MM-dd');
         const weather = getWeatherForDate(day);
         
         return (
-          <div key={dateStr} className="space-y-4">
-            {/* Date header with horizontal rule and weather */}
-            <div className="relative flex items-center">
-              <div className="flex items-center gap-4">
-                <h3 className="text-lg font-semibold text-foreground">
+          <div key={dateStr} className="space-y-3 sm:space-y-4">
+            {/* Responsive Date header with horizontal rule and weather */}
+            <div className="relative flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-0">
+              <div className="flex items-center gap-2 sm:gap-4">
+                <h3 className="text-base sm:text-lg font-semibold text-foreground">
                   {getDateLabel(day)}
                 </h3>
-                <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm text-muted-foreground">
                   <span>{totalEvents} events</span>
                 </div>
               </div>
               
-              {/* Horizontal rule line */}
-              <div className="flex-1 mx-4">
-                <hr className="border-border" />
+              {/* Horizontal rule line - hidden on mobile when stacked */}
+              <div className="hidden sm:flex flex-1 mx-4">
+                <hr className="border-border w-full" />
               </div>
               
-              {/* Weather on the right with low temp below high temp */}
-              <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                <div className="text-right">
+              {/* Responsive Weather display */}
+              <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm text-muted-foreground self-start sm:self-center">
+                <div className="text-left sm:text-right">
                   <div className="flex items-center gap-2">
                     <WeatherDisplay 
                       weather={weather}
-                      className="text-sm"
+                      className="text-xs sm:text-sm"
                     />
                   </div>
                   <div className="text-xs text-muted-foreground/70">
@@ -114,11 +113,11 @@ const TimelineView = ({ events, getWeatherForDate }: TimelineViewProps) => {
               </div>
             </div>
             
-            {/* All-day events at the top - 45% width with flex wrap */}
+            {/* Responsive All-day events - full width on mobile, 45% on larger screens */}
             {allDayEvents.length > 0 && (
-              <div className="flex flex-wrap gap-2 mb-4" style={{ width: '45%' }}>
+              <div className="flex flex-wrap gap-2 mb-3 sm:mb-4 w-full sm:w-[45%]">
                 {allDayEvents.map(event => (
-                  <div key={`${event.id}-${dateStr}`} className="flex-shrink-0">
+                  <div key={`${event.id}-${dateStr}`} className="flex-shrink-0 w-full sm:w-auto">
                     <EventCard 
                       event={event} 
                       viewMode="timeline" 
@@ -130,7 +129,7 @@ const TimelineView = ({ events, getWeatherForDate }: TimelineViewProps) => {
             )}
             
             {/* Timed events */}
-            <div className="space-y-3">
+            <div className="space-y-2 sm:space-y-3">
               {timedEvents.map(event => (
                 <div key={event.id}>
                   <EventCard event={event} viewMode="timeline" />
@@ -138,8 +137,8 @@ const TimelineView = ({ events, getWeatherForDate }: TimelineViewProps) => {
               ))}
               
               {totalEvents === 0 && (
-                <div className="text-center py-4 text-muted-foreground">
-                  <p>No events scheduled</p>
+                <div className="text-center py-3 sm:py-4 text-muted-foreground">
+                  <p className="text-sm sm:text-base">No events scheduled</p>
                 </div>
               )}
             </div>

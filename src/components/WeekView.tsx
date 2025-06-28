@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { format, addDays, startOfWeek, isSameDay, startOfDay } from 'date-fns';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
@@ -75,51 +74,53 @@ const WeekView = ({ events, weekOffset, onPreviousWeek, onNextWeek, getWeatherFo
 
   return (
     <div className="space-y-4">
-      {/* Week Navigation */}
+      {/* Responsive Week Navigation */}
       <div className="flex items-center justify-between">
         <Button
           variant="outline"
           size="sm"
           onClick={onPreviousWeek}
-          className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-white/20 dark:border-gray-600/20"
+          className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-white/20 dark:border-gray-600/20 h-9 w-9 sm:h-10 sm:w-auto sm:px-4"
         >
           <ChevronLeft className="h-4 w-4" />
+          <span className="hidden sm:inline ml-1">Previous</span>
         </Button>
         
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-          {format(weekStart, 'MMMM d')} - {format(addDays(weekStart, 6), 'MMMM d, yyyy')}
+        <h2 className="text-sm sm:text-base md:text-lg font-semibold text-gray-900 dark:text-gray-100 text-center px-2">
+          {format(weekStart, 'MMM d')} - {format(addDays(weekStart, 6), 'MMM d, yyyy')}
         </h2>
         
         <Button
           variant="outline"
           size="sm"
           onClick={onNextWeek}
-          className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-white/20 dark:border-gray-600/20"
+          className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-white/20 dark:border-gray-600/20 h-9 w-9 sm:h-10 sm:w-auto sm:px-4"
         >
           <ChevronRight className="h-4 w-4" />
+          <span className="hidden sm:inline ml-1">Next</span>
         </Button>
       </div>
 
-      {/* Week Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
+      {/* Responsive Week Grid - Stack on mobile, grid on larger screens */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-2 sm:gap-3 md:gap-4">
         {eventsByDay.map(({ day, allDayEvents, timedEvents }, index) => (
-          <div key={index} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 min-h-[300px] overflow-hidden">
-            <div className="flex items-center justify-between mb-3">
-              <div className="text-center">
-                <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
+          <div key={index} className="border border-gray-200 dark:border-gray-700 rounded-lg p-2 sm:p-3 md:p-4 min-h-[200px] sm:min-h-[250px] lg:min-h-[300px] overflow-hidden">
+            <div className="flex items-center justify-between mb-2 sm:mb-3">
+              <div className="text-center sm:text-left">
+                <div className="text-xs sm:text-sm font-medium text-gray-900 dark:text-gray-100">
                   {format(day, 'EEE')}
                 </div>
-                <div className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                <div className="text-base sm:text-lg font-bold text-gray-900 dark:text-gray-100">
                   {format(day, 'd')}
                 </div>
               </div>
               <WeatherDisplay 
                 weather={getWeatherForDate(day)}
-                className="text-xs"
+                className="text-xs hidden sm:block"
               />
             </div>
             
-            <div className="space-y-2 overflow-hidden">
+            <div className="space-y-1 sm:space-y-2 overflow-hidden">
               {/* All-day events at the top */}
               {allDayEvents.map(event => (
                 <div key={`${event.id}-${format(day, 'yyyy-MM-dd')}`} className="truncate">
