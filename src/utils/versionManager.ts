@@ -1,8 +1,18 @@
-
-import packageJson from '../../package.json';
-
-// Read version from package.json instead of hardcoding
-export const getCurrentVersion = () => packageJson.version || '1.0.0';
+// Read version from version.json instead of package.json for consistency
+export const getCurrentVersion = async () => {
+  try {
+    const response = await fetch('/version.json');
+    if (response.ok) {
+      const versionInfo = await response.json();
+      return versionInfo.version || '1.0.0';
+    }
+  } catch (error) {
+    console.warn('Could not fetch version from version.json:', error);
+  }
+  
+  // Fallback version
+  return '1.0.0';
+};
 
 export const getVersionInfo = async () => {
   try {
@@ -14,11 +24,13 @@ export const getVersionInfo = async () => {
     console.warn('Could not fetch version info:', error);
   }
 
-  // Fallback to package.json version
+  // Fallback to basic version info
   return {
-    version: getCurrentVersion(),
+    version: '1.0.0',
     buildDate: new Date().toISOString(),
-    gitHash: 'unknown'
+    gitHash: 'unknown',
+    buildNumber: 1,
+    environment: 'development'
   };
 };
 
@@ -35,7 +47,7 @@ export const setStoredVersion = (version: string) => {
 
 export const isNewVersion = () => {
   const storedVersion = getStoredVersion();
-  const currentVersion = getCurrentVersion();
+  const currentVersion = await getCurrentVersion();
   return !storedVersion || storedVersion !== currentVersion;
 };
 

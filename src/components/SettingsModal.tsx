@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import {
   Dialog,
@@ -10,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Camera, Monitor, CloudSun, Calendar, Info } from 'lucide-react';
 import { useSettings } from '@/contexts/SettingsContext';
 import { useTheme } from '@/contexts/ThemeContext';
-import { getCurrentVersion, getVersionInfo } from '@/utils/versionManager';
+import { getVersionInfo } from '@/utils/versionManager';
 import OfflineIndicator from './OfflineIndicator';
 import PhotosTab from './settings/PhotosTab';
 import DisplayTab from './settings/DisplayTab';
@@ -66,7 +67,7 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
               <div className="flex items-center gap-2 mt-1">
                 <Info className="h-4 w-4 text-gray-500 dark:text-gray-400" />
                 <span className="text-sm text-gray-500 dark:text-gray-400">
-                  Version {getCurrentVersion()}
+                  Version {versionInfo?.version || '1.0.0'}
                   {versionInfo?.buildDate && (
                     <span className="ml-2 text-xs">
                       Built: {new Date(versionInfo.buildDate).toLocaleDateString()}
