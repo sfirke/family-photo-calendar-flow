@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -21,12 +22,16 @@ const App = () => {
 
   useEffect(() => {
     // Check if we should show "What's New" modal
-    const currentVersion = getCurrentVersion();
-    const storedVersion = getStoredVersion();
+    const checkVersion = async () => {
+      const currentVersion = await getCurrentVersion();
+      const storedVersion = getStoredVersion();
+      
+      if (!storedVersion || storedVersion !== currentVersion) {
+        setShowWhatsNew(true);
+      }
+    };
     
-    if (!storedVersion || storedVersion !== currentVersion) {
-      setShowWhatsNew(true);
-    }
+    checkVersion();
   }, []);
 
   return (

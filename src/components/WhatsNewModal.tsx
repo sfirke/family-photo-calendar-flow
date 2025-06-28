@@ -47,20 +47,28 @@ const getChangeTypeLabel = (type: ChangeEntry['type']) => {
 const WhatsNewModal = ({ open, onOpenChange }: WhatsNewModalProps) => {
   const [changes, setChanges] = useState<ChangeEntry[]>([]);
   const [versionType, setVersionType] = useState<'major' | 'minor' | 'patch'>('patch');
+  const [currentVersion, setCurrentVersion] = useState<string>('1.0.0');
   
-  const currentVersion = getCurrentVersion();
   const storedVersion = getStoredVersion() || '0.0.0';
 
   useEffect(() => {
-    if (open) {
-      const recentChanges = getChangesSince(storedVersion);
-      setChanges(recentChanges);
-      setVersionType(getVersionType(storedVersion, currentVersion));
-    }
-  }, [open, storedVersion, currentVersion]);
+    const loadVersionData = async () => {
+      if (open) {
+        const version = await getCurrentVersion();
+        setCurrentVersion(version);
+        
+        const recentChanges = getChangesSince(storedVersion);
+        setChanges(recentChanges);
+        setVersionType(getVersionType(storedVersion, version));
+      }
+    };
+    
+    loadVersionData();
+  }, [open, storedVersion]);
 
-  const handleClose = () => {
-    setStoredVersion(currentVersion);
+  const handleClose = async () => {
+    const version = await getCurrentVersion();
+    setStoredVersion(version);
     onOpenChange(false);
   };
 

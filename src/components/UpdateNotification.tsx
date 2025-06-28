@@ -15,16 +15,18 @@ const UpdateNotification = () => {
   useEffect(() => {
     const checkUpdates = async () => {
       // Check if this is a new version based on our version tracking
-      if (isNewVersion()) {
+      const hasNewVersion = await isNewVersion();
+      if (hasNewVersion) {
         setUpdateAvailable(true);
-        setStoredVersion(getCurrentVersion());
+        const currentVersion = await getCurrentVersion();
+        setStoredVersion(currentVersion);
         
         const info = await getUpdateInfo();
         setUpdateInfo(info);
         
         toast({
           title: "App Updated!",
-          description: `Welcome to version ${getCurrentVersion()}! New features and improvements are available.`,
+          description: `Welcome to version ${currentVersion}! New features and improvements are available.`,
           variant: "success",
         });
         return;

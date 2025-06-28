@@ -1,3 +1,4 @@
+
 // Read version from version.json instead of package.json for consistency
 export const getCurrentVersion = async () => {
   try {
@@ -45,7 +46,7 @@ export const setStoredVersion = (version: string) => {
   localStorage.setItem(VERSION_KEY, version);
 };
 
-export const isNewVersion = () => {
+export const isNewVersion = async () => {
   const storedVersion = getStoredVersion();
   const currentVersion = await getCurrentVersion();
   return !storedVersion || storedVersion !== currentVersion;
