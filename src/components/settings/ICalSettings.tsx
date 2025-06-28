@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -32,7 +31,7 @@ const CALENDAR_COLORS = [
 
 const ICalSettings = () => {
   const { calendars, isLoading, syncStatus, addCalendar, updateCalendar, removeCalendar, syncCalendar, syncAllCalendars } = useICalCalendars();
-  const { selectedCalendarIds, toggleCalendar, calendarsFromEvents } = useCalendarSelection();
+  const { selectedCalendarIds, toggleCalendar, calendarsFromEvents, forceRefresh } = useCalendarSelection();
   const { toast } = useToast();
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [newCalendar, setNewCalendar] = useState({
@@ -144,6 +143,9 @@ const ICalSettings = () => {
       // Try to sync immediately to validate the URL
       await syncCalendar(calendar);
       
+      // Force refresh the calendar selection to pick up new events
+      forceRefresh();
+      
       toast({
         title: "Calendar added",
         description: `${newCalendar.name} has been added and synced successfully.`
@@ -151,6 +153,12 @@ const ICalSettings = () => {
       
       setNewCalendar({ name: '', url: '', color: CALENDAR_COLORS[0], enabled: true });
       setShowAddDialog(false);
+      
+      // Trigger a page refresh to ensure all components update with new data
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+      
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       toast({

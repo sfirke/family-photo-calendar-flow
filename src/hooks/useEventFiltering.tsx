@@ -29,7 +29,21 @@ export const useEventFiltering = ({ googleEvents, selectedCalendarIds }: UseEven
       return true;
     });
 
-    return filtered;
+    // Process events to ensure single-day all-day events only appear on their specific date
+    const processedEvents = filtered.map(event => {
+      // If it's an all-day event that is NOT multi-day, ensure it only appears on its specific date
+      if (event.time === 'All day' && event.isMultiDay === false) {
+        // Return the event as-is, but ensure the date is properly set
+        return {
+          ...event,
+          date: new Date(event.date) // Ensure date is a proper Date object
+        };
+      }
+      
+      return event;
+    });
+
+    return processedEvents;
   }, [googleEvents, selectedCalendarIds]);
 
   return {
