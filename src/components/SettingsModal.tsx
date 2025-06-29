@@ -1,4 +1,23 @@
 
+/**
+ * SettingsModal Component
+ * 
+ * Main configuration interface for the Family Calendar application.
+ * Provides tabbed access to different settings categories including:
+ * - Calendar management (iCal feeds, local events)
+ * - Photo backgrounds (Google Photos integration)
+ * - Display preferences (theme, default view)
+ * - Weather configuration (API keys, location)
+ * - Security settings (client-side encryption)
+ * 
+ * Features:
+ * - Responsive design for mobile and desktop
+ * - Security integration with client-side encryption
+ * - Real-time settings validation and persistence
+ * - Version information display
+ * - Offline status indication
+ */
+
 import React, { useState, useEffect } from 'react';
 import {
   Dialog,
@@ -24,11 +43,18 @@ import WeatherTab from './settings/WeatherTab';
 import CalendarsTab from './settings/CalendarsTab';
 
 interface SettingsModalProps {
+  /** Controls modal visibility */
   open: boolean;
+  /** Callback when modal open state changes */
   onOpenChange: (open: boolean) => void;
 }
 
+/**
+ * Main settings modal component with tabbed interface
+ * Integrates all application configuration options in one place
+ */
 const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
+  // Context hooks for settings management
   const { 
     theme, 
     setTheme, 
@@ -39,14 +65,21 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
     weatherApiKey,
     setWeatherApiKey
   } = useSettings();
+  
   const { setTheme: setActualTheme } = useTheme();
   const { isSecurityEnabled, enableSecurity, disableSecurity, getSecurityStatus } = useSecurity();
   const { toast } = useToast();
+  
+  // Local state for version information and security form
   const [versionInfo, setVersionInfo] = useState<any>(null);
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isEnabling, setIsEnabling] = useState(false);
 
+  /**
+   * Load version information when modal opens
+   * Used for debugging and support purposes
+   */
   useEffect(() => {
     const loadVersionInfo = async () => {
       try {
@@ -62,12 +95,21 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
     }
   }, [open]);
 
+  /**
+   * Handle theme changes and apply them immediately
+   * Updates both settings context and theme context
+   */
   const handleThemeChange = (newTheme: 'light' | 'dark' | 'system') => {
     setTheme(newTheme);
     setActualTheme(newTheme);
   };
 
+  /**
+   * Enable security with password validation
+   * Implements client-side AES-256 encryption for sensitive data
+   */
   const handleEnableSecurity = async () => {
+    // Validate password requirements
     if (password.length < 8) {
       toast({
         title: "Password too short",
@@ -77,6 +119,7 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
       return;
     }
 
+    // Ensure password confirmation matches
     if (password !== confirmPassword) {
       toast({
         title: "Passwords don't match",
@@ -94,6 +137,7 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
           title: "Security enabled",
           description: "Your data will now be encrypted locally.",
         });
+        // Clear password fields on success
         setPassword('');
         setConfirmPassword('');
       } else {
@@ -114,6 +158,10 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
     }
   };
 
+  /**
+   * Disable security with user confirmation
+   * Removes encryption and converts data to plain text storage
+   */
   const handleDisableSecurity = () => {
     if (window.confirm('Are you sure you want to disable security? This will remove encryption from your data.')) {
       disableSecurity();
@@ -125,6 +173,10 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
     }
   };
 
+  /**
+   * Unlock existing encrypted data with password
+   * Used when security was previously enabled but session expired
+   */
   const handleUnlock = async () => {
     if (!password) {
       toast({
@@ -162,6 +214,7 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
     }
   };
 
+  // Security state detection for UI logic
   const hasSecuritySalt = localStorage.getItem('security_salt') !== null;
   const needsUnlock = hasSecuritySalt && !isSecurityEnabled;
 
@@ -170,6 +223,7 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
       <DialogContent className="w-full max-w-[95vw] sm:max-w-[90vw] md:max-w-4xl max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 p-0 fixed top-[5vh] left-[50%] translate-x-[-50%] translate-y-0">
         <div className="p-4 sm:p-6">
           <DialogHeader>
+            {/* Responsive header with version info and offline indicator */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-0">
               <div>
                 <DialogTitle className="text-gray-900 dark:text-gray-100 text-lg sm:text-xl">App Settings</DialogTitle>
@@ -180,11 +234,13 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
                       Version {versionInfo?.version || '1.0.0'}
                     </span>
                   </div>
+                  {/* Build date display for debugging */}
                   {versionInfo?.buildDate && (
                     <span className="text-xs text-gray-500 dark:text-gray-400 sm:ml-2">
                       Built: {new Date(versionInfo.buildDate).toLocaleDateString()}
                     </span>
                   )}
+                  {/* Git hash for version tracking */}
                   {versionInfo?.gitHash && versionInfo.gitHash !== 'unknown' && (
                     <span className="text-xs font-mono text-gray-500 dark:text-gray-400 sm:ml-2">
                       #{versionInfo.gitHash.substring(0, 7)}
@@ -202,8 +258,10 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
             </DialogDescription>
           </DialogHeader>
 
+          {/* Main tabbed interface - responsive grid layout */}
           <Tabs defaultValue="calendars" className="w-full mt-4 sm:mt-6">
             <TabsList className="grid w-full grid-cols-3 sm:grid-cols-5 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 h-auto p-1">
+              {/* Calendar management tab */}
               <TabsTrigger 
                 value="calendars" 
                 className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 text-xs sm:text-sm text-gray-700 dark:text-gray-300 data-[state=active]:bg-white data-[state=active]:text-gray-900 dark:data-[state=active]:bg-gray-700 dark:data-[state=active]:text-gray-100 py-2 sm:py-3"
@@ -212,6 +270,8 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
                 <span className="hidden sm:inline">Calendars</span>
                 <span className="sm:hidden">Cal</span>
               </TabsTrigger>
+              
+              {/* Photo backgrounds tab */}
               <TabsTrigger 
                 value="photos" 
                 className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 text-xs sm:text-sm text-gray-700 dark:text-gray-300 data-[state=active]:bg-white data-[state=active]:text-gray-900 dark:data-[state=active]:bg-gray-700 dark:data-[state=active]:text-gray-100 py-2 sm:py-3"
@@ -220,6 +280,8 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
                 <span className="hidden sm:inline">Photos</span>
                 <span className="sm:hidden">Pic</span>
               </TabsTrigger>
+              
+              {/* Display preferences tab */}
               <TabsTrigger 
                 value="display" 
                 className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 text-xs sm:text-sm text-gray-700 dark:text-gray-300 data-[state=active]:bg-white data-[state=active]:text-gray-900 dark:data-[state=active]:bg-gray-700 dark:data-[state=active]:text-gray-100 py-2 sm:py-3"
@@ -228,6 +290,8 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
                 <span className="hidden sm:inline">Display</span>
                 <span className="sm:hidden">Disp</span>
               </TabsTrigger>
+              
+              {/* Weather configuration tab */}
               <TabsTrigger 
                 value="weather" 
                 className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 text-xs sm:text-sm text-gray-700 dark:text-gray-300 data-[state=active]:bg-white data-[state=active]:text-gray-900 dark:data-[state=active]:bg-gray-700 dark:data-[state=active]:text-gray-100 py-2 sm:py-3"
@@ -236,6 +300,8 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
                 <span className="hidden sm:inline">Weather</span>
                 <span className="sm:hidden">Wthr</span>
               </TabsTrigger>
+              
+              {/* Security settings tab */}
               <TabsTrigger 
                 value="security" 
                 className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 text-xs sm:text-sm text-gray-700 dark:text-gray-300 data-[state=active]:bg-white data-[state=active]:text-gray-900 dark:data-[state=active]:bg-gray-700 dark:data-[state=active]:text-gray-100 py-2 sm:py-3"
@@ -247,14 +313,17 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
             </TabsList>
 
             <div className="mt-4 sm:mt-6">
+              {/* Calendar management content */}
               <TabsContent value="calendars" className="space-y-4 mt-0">
                 <CalendarsTab />
               </TabsContent>
 
+              {/* Photo backgrounds content */}
               <TabsContent value="photos" className="space-y-4 mt-0">
                 <PhotosTab />
               </TabsContent>
 
+              {/* Display preferences content */}
               <TabsContent value="display" className="space-y-4 mt-0">
                 <DisplayTab 
                   theme={theme}
@@ -264,6 +333,7 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
                 />
               </TabsContent>
 
+              {/* Weather configuration content */}
               <TabsContent value="weather" className="space-y-4 mt-0">
                 <WeatherTab 
                   zipCode={zipCode}
@@ -273,6 +343,7 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
                 />
               </TabsContent>
 
+              {/* Security settings content - integrated into main modal */}
               <TabsContent value="security" className="space-y-4 mt-0">
                 <div className="space-y-4">
                   <div className="flex items-center gap-2">
@@ -287,7 +358,7 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
                     }
                   </p>
 
-                  {/* Security Status */}
+                  {/* Security status indicator */}
                   <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
                     <div className="flex items-center gap-2">
                       {isSecurityEnabled ? (
@@ -300,7 +371,7 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
                   </div>
 
                   {needsUnlock ? (
-                    /* Unlock Interface */
+                    /* Unlock existing encrypted data interface */
                     <div className="space-y-4">
                       <div className="space-y-2">
                         <Label htmlFor="unlock-password">Security Password</Label>
@@ -323,9 +394,10 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
                       </Button>
                     </div>
                   ) : (
-                    /* Enable/Disable Interface */
+                    /* Enable/Disable security interface */
                     <div className="space-y-4">
                       {!isSecurityEnabled ? (
+                        /* Enable security form */
                         <>
                           <div className="p-3 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg">
                             <div className="flex items-start gap-2">
@@ -369,6 +441,7 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
                           </Button>
                         </>
                       ) : (
+                        /* Security enabled - show disable option */
                         <>
                           <div className="p-3 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-lg">
                             <div className="flex items-center gap-2">
@@ -389,6 +462,7 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
                         </>
                       )}
 
+                      {/* Security warning message */}
                       <div className="p-3 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 rounded-lg">
                         <div className="flex items-start gap-2">
                           <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5" />

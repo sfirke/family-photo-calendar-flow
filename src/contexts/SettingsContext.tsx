@@ -1,37 +1,97 @@
 
+/**
+ * SettingsContext - Application Configuration Management
+ * 
+ * Centralized settings management for the Family Calendar application.
+ * Handles both secure and non-secure settings with automatic encryption
+ * when security is enabled. Provides real-time settings synchronization
+ * across all components.
+ * 
+ * Settings Categories:
+ * - Display: Theme, default view, appearance preferences
+ * - Weather: API keys, location settings (encrypted when possible)
+ * - Photos: Album URLs, background settings (encrypted when possible)
+ * - Security: Encryption preferences and validation
+ * 
+ * Security Integration:
+ * - Automatically encrypts sensitive data when security is enabled
+ * - Graceful fallback to localStorage for non-encrypted storage
+ * - Migration of existing plain-text data to encrypted storage
+ * - Input validation for all user-provided data
+ */
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { SecureStorage } from '@/utils/security/secureStorage';
 import { InputValidator } from '@/utils/security/inputValidation';
 
 interface SettingsContextType {
+  // Display Settings
+  /** Current theme preference (light/dark/system) */
   theme: 'light' | 'dark' | 'system';
+  /** Update theme setting and apply immediately */
   setTheme: (theme: 'light' | 'dark' | 'system') => void;
+  /** Default calendar view on app load */
   defaultView: 'month' | 'week' | 'timeline';
+  /** Update default view preference */
   setDefaultView: (view: 'month' | 'week' | 'timeline') => void;
+  
+  // Weather Settings (Sensitive - encrypted when possible)
+  /** User's zip code for weather location */
   zipCode: string;
+  /** Update zip code with validation */
   setZipCode: (zipCode: string) => void;
-  backgroundDuration: number;
-  setBackgroundDuration: (duration: number) => void;
-  selectedAlbum: string | null;
-  setSelectedAlbum: (albumId: string | null) => void;
+  /** Weather service API key */
   weatherApiKey: string;
+  /** Update weather API key with validation */
   setWeatherApiKey: (apiKey: string) => void;
+  
+  // Photo Settings (Sensitive - encrypted when possible)
+  /** Google Photos public album URL */
   publicAlbumUrl: string;
+  /** Update album URL with validation */
   setPublicAlbumUrl: (url: string) => void;
+  
+  // Background Settings
+  /** Photo background rotation duration in minutes */
+  backgroundDuration: number;
+  /** Update background rotation timing */
+  setBackgroundDuration: (duration: number) => void;
+  /** Currently selected photo album ID */
+  selectedAlbum: string | null;
+  /** Update selected album */
+  setSelectedAlbum: (albumId: string | null) => void;
 }
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
 
+/**
+ * Settings Provider Component
+ * 
+ * Manages all application settings with intelligent storage selection.
+ * Automatically encrypts sensitive data when security is enabled and
+ * provides seamless migration between storage modes.
+ */
 export const SettingsProvider = ({ children }: { children: React.ReactNode }) => {
+  // Display preferences (non-sensitive)
   const [theme, setTheme] = useState<'light' | 'dark' | 'system'>('system');
   const [defaultView, setDefaultView] = useState<'month' | 'week' | 'timeline'>('month');
+  
+  // Location and API settings (sensitive - encrypted when possible)
   const [zipCode, setZipCode] = useState('90210');
-  const [backgroundDuration, setBackgroundDuration] = useState(30); // Default 30 minutes
-  const [selectedAlbum, setSelectedAlbum] = useState<string | null>(null);
   const [weatherApiKey, setWeatherApiKey] = useState('');
   const [publicAlbumUrl, setPublicAlbumUrl] = useState('');
+  
+  // Background and UI settings (non-sensitive)
+  const [backgroundDuration, setBackgroundDuration] = useState(30); // Default 30 minutes
+  const [selectedAlbum, setSelectedAlbum] = useState<string | null>(null);
 
-  // Load settings from localStorage on mount
+  /**
+   * Load all settings from appropriate storage on app initialization
+   * 
+   * Handles both regular localStorage and secure encrypted storage.
+   * Includes automatic migration of existing unencrypted data to
+   * secure storage when encryption is enabled.
+   */
   useEffect(() => {
     const loadSettings = async () => {
       try {
@@ -41,12 +101,13 @@ export const SettingsProvider = ({ children }: { children: React.ReactNode }) =>
         const savedDuration = localStorage.getItem('backgroundDuration');
         const savedAlbum = localStorage.getItem('selectedAlbum');
 
+        // Apply loaded settings with fallback to defaults
         if (savedTheme) setTheme(savedTheme);
         if (savedView) setDefaultView(savedView);
         if (savedDuration) setBackgroundDuration(parseInt(savedDuration));
         if (savedAlbum) setSelectedAlbum(savedAlbum);
 
-        // Load sensitive settings from secure storage (if available)
+        // Load sensitive settings from secure storage (with fallback to localStorage)
         try {
           const savedZipCode = await SecureStorage.getItem('zipCode') || localStorage.getItem('zipCode');
           const savedApiKey = await SecureStorage.getItem('weatherApiKey') || localStorage.getItem('weatherApiKey');
@@ -56,12 +117,13 @@ export const SettingsProvider = ({ children }: { children: React.ReactNode }) =>
           if (savedApiKey) setWeatherApiKey(savedApiKey);
           if (savedPublicAlbumUrl) setPublicAlbumUrl(savedPublicAlbumUrl);
 
-          // Migrate old unencrypted data to secure storage
+          // Automatic migration: Move unencrypted sensitive data to secure storage
           if (SecureStorage.isEncryptionEnabled()) {
             const oldZipCode = localStorage.getItem('zipCode');
             const oldApiKey = localStorage.getItem('weatherApiKey');
             const oldAlbumUrl = localStorage.getItem('publicAlbumUrl');
 
+            // Migrate and remove unencrypted versions
             if (oldZipCode) {
               await SecureStorage.setItem('zipCode', oldZipCode);
               localStorage.removeItem('zipCode');
@@ -77,6 +139,7 @@ export const SettingsProvider = ({ children }: { children: React.ReactNode }) =>
           }
         } catch (error) {
           console.warn('Could not load secure settings:', error);
+          // Continue with regular localStorage fallback
         }
       } catch (error) {
         console.error('Error loading settings:', error);
@@ -86,7 +149,7 @@ export const SettingsProvider = ({ children }: { children: React.ReactNode }) =>
     loadSettings();
   }, []);
 
-  // Save non-sensitive settings to localStorage
+  // Auto-save non-sensitive settings to localStorage
   useEffect(() => {
     localStorage.setItem('theme', theme);
   }, [theme]);
@@ -107,7 +170,12 @@ export const SettingsProvider = ({ children }: { children: React.ReactNode }) =>
     }
   }, [selectedAlbum]);
 
-  // Save sensitive settings to secure storage
+  /**
+   * Auto-save zip code to appropriate storage (secure or regular)
+   * 
+   * Automatically chooses encrypted storage when available,
+   * falls back to localStorage when encryption is disabled.
+   */
   useEffect(() => {
     const saveZipCode = async () => {
       try {
@@ -125,6 +193,9 @@ export const SettingsProvider = ({ children }: { children: React.ReactNode }) =>
     saveZipCode();
   }, [zipCode]);
 
+  /**
+   * Auto-save weather API key to appropriate storage (secure or regular)
+   */
   useEffect(() => {
     const saveApiKey = async () => {
       try {
@@ -142,6 +213,9 @@ export const SettingsProvider = ({ children }: { children: React.ReactNode }) =>
     saveApiKey();
   }, [weatherApiKey]);
 
+  /**
+   * Auto-save public album URL to appropriate storage (secure or regular)
+   */
   useEffect(() => {
     const savePublicAlbumUrl = async () => {
       try {
@@ -159,7 +233,12 @@ export const SettingsProvider = ({ children }: { children: React.ReactNode }) =>
     savePublicAlbumUrl();
   }, [publicAlbumUrl]);
 
-  // Enhanced setters with validation
+  /**
+   * Enhanced zip code setter with input validation
+   * 
+   * Validates zip code format before accepting the value.
+   * Logs validation errors for debugging but allows empty strings.
+   */
   const setValidatedZipCode = (newZipCode: string) => {
     const validation = InputValidator.validateZipCode(newZipCode);
     if (validation.isValid || newZipCode === '') {
@@ -169,6 +248,12 @@ export const SettingsProvider = ({ children }: { children: React.ReactNode }) =>
     }
   };
 
+  /**
+   * Enhanced weather API key setter with input validation
+   * 
+   * Validates API key format before accepting the value.
+   * Allows empty strings for disabling weather functionality.
+   */
   const setValidatedWeatherApiKey = (apiKey: string) => {
     if (apiKey === '') {
       setWeatherApiKey(apiKey);
@@ -183,6 +268,12 @@ export const SettingsProvider = ({ children }: { children: React.ReactNode }) =>
     }
   };
 
+  /**
+   * Enhanced public album URL setter with input validation
+   * 
+   * Validates URL format before accepting the value.
+   * Allows empty strings for disabling photo backgrounds.
+   */
   const setValidatedPublicAlbumUrl = (url: string) => {
     if (url === '') {
       setPublicAlbumUrl(url);
@@ -221,6 +312,14 @@ export const SettingsProvider = ({ children }: { children: React.ReactNode }) =>
   );
 };
 
+/**
+ * Hook to access settings context
+ * 
+ * Must be used within a SettingsProvider component.
+ * Provides access to all application settings and their setters.
+ * 
+ * @throws Error if used outside SettingsProvider
+ */
 export const useSettings = () => {
   const context = useContext(SettingsContext);
   if (context === undefined) {

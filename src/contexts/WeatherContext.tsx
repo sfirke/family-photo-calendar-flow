@@ -1,3 +1,25 @@
+/**
+ * WeatherContext - Weather Data Management
+ * 
+ * Centralized weather data management for the Family Calendar application.
+ * Provides real-time and forecast weather information with:
+ * - Automatic background updates every 30 minutes
+ * - Intelligent caching to prevent excessive API calls
+ * - Graceful error handling with cached data fallback
+ * - Performance optimization using IntervalManager
+ * 
+ * Features:
+ * - Current weather conditions with location
+ * - 7-day weather forecasts for calendar planning
+ * - Temperature and condition information for each day
+ * - Automatic retry logic for failed API calls
+ * 
+ * Performance Considerations:
+ * - Rate limiting: Minimum 5 minutes between API calls
+ * - Background refresh: Updates every 30 minutes
+ * - Memory optimization: Memoized callbacks and computed values
+ * - Error recovery: Falls back to cached data on API failures
+ */
 
 import React, { createContext, useContext, useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { fetchWeatherData, WeatherData } from '@/services/weatherService';
@@ -5,29 +27,50 @@ import { useSettings } from './SettingsContext';
 import { IntervalManager } from '@/utils/performanceUtils';
 
 interface WeatherContextType {
+  /** Current weather data object or null if not loaded */
   weatherData: WeatherData | null;
+  /** Whether weather data is currently being fetched */
   isLoading: boolean;
+  /** Get weather forecast for a specific date */
   getWeatherForDate: (date: Date) => { temp: number; condition: string };
+  /** Get current weather conditions and location */
   getCurrentWeather: () => { temp: number; condition: string; location: string };
+  /** Manually refresh weather data (bypasses rate limiting) */
   refreshWeather: () => Promise<void>;
 }
 
 const WeatherContext = createContext<WeatherContextType | undefined>(undefined);
 
+/**
+ * Weather Provider Component
+ * 
+ * Manages weather data fetching, caching, and distribution throughout
+ * the application. Automatically handles background updates and provides
+ * fallback data when API calls fail.
+ */
 export const WeatherProvider = ({ children }: { children: React.ReactNode }) => {
   const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { zipCode, weatherApiKey } = useSettings();
   const lastFetchRef = useRef<number>(0);
 
-  // Optimized load function with caching and error recovery
+  /**
+   * Optimized weather loading function with rate limiting and error recovery
+   * 
+   * Implements intelligent API call management:
+   * - Prevents excessive API calls with 5-minute minimum interval
+   * - Gracefully handles API failures by maintaining cached data
+   * - Updates loading state appropriately for UI feedback
+   * 
+   * @param forceRefresh - Bypass rate limiting for manual refreshes
+   */
   const loadWeather = useCallback(async (forceRefresh = false) => {
     if (!zipCode) return;
     
     const now = Date.now();
     const timeSinceLastFetch = now - lastFetchRef.current;
     
-    // Prevent excessive API calls (minimum 5 minutes between calls)
+    // Rate limiting: Prevent excessive API calls (minimum 5 minutes between calls)
     if (!forceRefresh && timeSinceLastFetch < 5 * 60 * 1000) {
       return;
     }
@@ -41,34 +84,58 @@ export const WeatherProvider = ({ children }: { children: React.ReactNode }) => 
     } catch (error) {
       console.warn('Weather fetch failed, using cached data if available:', error);
       // Keep existing data on error for 24/7 reliability
+      // This ensures the app continues to work even when weather APIs are down
     } finally {
       setIsLoading(false);
     }
   }, [zipCode, weatherApiKey]);
 
-  // Exposed refresh function for manual weather updates
+  /**
+   * Exposed refresh function for manual weather updates
+   * 
+   * Allows users to manually refresh weather data through UI actions.
+   * Bypasses rate limiting since it's user-initiated.
+   */
   const refreshWeather = useCallback(async () => {
     await loadWeather(true);
   }, [loadWeather]);
 
+  /**
+   * Initialize weather loading and set up automatic refresh intervals
+   * 
+   * Sets up the weather system with:
+   * - Initial data load on component mount
+   * - Automatic background refresh every 30 minutes
+   * - Cleanup of intervals on component unmount
+   */
   useEffect(() => {
-    // Initial load
+    // Initial load when component mounts or settings change
     loadWeather();
 
     // Set up optimized refresh interval using IntervalManager
+    // This prevents memory leaks and manages multiple intervals efficiently
     IntervalManager.setInterval('weather-refresh', () => {
       loadWeather();
-    }, 30 * 60 * 1000); // 30 minutes
+    }, 30 * 60 * 1000); // 30 minutes - good balance of freshness and API usage
 
-    // Cleanup on unmount
+    // Cleanup interval on unmount or dependency changes
     return () => {
       IntervalManager.clearInterval('weather-refresh');
     };
   }, [loadWeather]);
 
+  /**
+   * Get current weather conditions with fallback
+   * 
+   * Provides current weather data with sensible defaults when
+   * weather data is not available. Memoized for performance.
+   * 
+   * @returns Object with current temperature, condition, and location
+   */
   const getCurrentWeather = useMemo(() => {
     return () => {
       if (!weatherData) {
+        // Fallback data when weather API is unavailable
         return { temp: 75, condition: 'Sunny', location: 'Location not found' };
       }
       
@@ -80,15 +147,27 @@ export const WeatherProvider = ({ children }: { children: React.ReactNode }) => 
     };
   }, [weatherData]);
 
+  /**
+   * Get weather forecast for specific date with intelligent fallbacks
+   * 
+   * Provides weather information for calendar dates with multiple fallback strategies:
+   * 1. Use forecast data if available for the specific date
+   * 2. Use current weather for today's date
+   * 3. Generate reasonable estimates based on current weather
+   * 
+   * @param date - The date to get weather for
+   * @returns Object with temperature and weather condition
+   */
   const getWeatherForDate = useMemo(() => {
     return (date: Date) => {
       if (!weatherData) {
+        // Default fallback when no weather data is available
         return { temp: 75, condition: 'Sunny' };
       }
 
       const dateString = date.toISOString().split('T')[0];
       
-      // Try to find in extended forecast array
+      // Try to find forecast data for the specific date
       if (weatherData.forecast && weatherData.forecast.length > 0) {
         const forecast = weatherData.forecast.find(f => f.date === dateString);
         if (forecast) {
@@ -102,15 +181,21 @@ export const WeatherProvider = ({ children }: { children: React.ReactNode }) => 
         return { temp: weatherData.temperature, condition: weatherData.condition };
       }
       
-      // Final fallback with some variation
+      // Generate reasonable estimates for future dates without forecast data
       const daysSinceToday = Math.floor((date.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
-      const tempVariation = Math.floor(Math.random() * 11) - 5; // -5 to +5
-      const fallbackTemp = Math.max(weatherData.temperature + tempVariation, 50);
+      const tempVariation = Math.floor(Math.random() * 11) - 5; // -5 to +5 degree variation
+      const fallbackTemp = Math.max(weatherData.temperature + tempVariation, 50); // Minimum 50°F
       
       return { temp: fallbackTemp, condition: weatherData.condition };
     };
   }, [weatherData]);
 
+  /**
+   * Memoized context value to prevent unnecessary re-renders
+   * 
+   * Optimizes performance by only updating context when actual
+   * weather data or functions change, not on every render.
+   */
   const contextValue = useMemo(() => ({
     weatherData,
     isLoading,
@@ -126,6 +211,14 @@ export const WeatherProvider = ({ children }: { children: React.ReactNode }) => 
   );
 };
 
+/**
+ * Hook to access weather context
+ * 
+ * Must be used within a WeatherProvider component.
+ * Provides access to weather data and management functions.
+ * 
+ * @throws Error if used outside WeatherProvider
+ */
 export const useWeather = () => {
   const context = useContext(WeatherContext);
   if (context === undefined) {
