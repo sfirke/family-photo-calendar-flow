@@ -8,6 +8,87 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.2] - 2024-12-29
+
+### Added
+- Enhanced update status dashboard with comprehensive version information
+- Improved GitHub API integration with better error handling
+- Advanced version comparison utilities for semantic versioning
+- Enhanced upstream update notifications with release notes display
+
+### Changed
+- Refined update manager with better separation of concerns
+- Improved caching mechanisms for upstream version data
+- Enhanced user experience for version checking and updates
+- Better fallback strategies for update detection
+
+### Technical
+- Final refinements to GitHub API integration
+- Enhanced update manager architecture
+- Improved error handling and user feedback systems
+
+## [1.4.1] - 2024-12-29
+
+### Added
+- Comprehensive input validation system for security
+- XSS prevention with text sanitization utilities
+- Path traversal protection for URL validation
+- API key format validation and security checks
+- Enhanced error handling with security-focused messaging
+
+### Security
+- Input sanitization for user-provided data
+- URL validation against dangerous protocols
+- Protection against directory traversal attacks
+- Secure handling of API keys and sensitive configuration
+
+### Technical
+- Security utilities for input validation
+- Enhanced error handling without information leakage
+- Improved validation for external data sources
+
+## [1.4.0] - 2024-12-29
+
+### Added
+- Dual update system (Service Worker + GitHub Releases)
+- Automatic GitHub release detection and comparison
+- Smart update notifications with toast integration
+- Version comparison dashboard in settings
+- Background update checks with configurable intervals
+- Release notes integration from GitHub API
+
+### Changed
+- Enhanced update notification system with persistent cards
+- Improved update detection with two-layer approach
+- Better user experience for update management
+- Enhanced settings interface for update controls
+
+### Technical
+- GitHub API integration with rate limiting
+- Enhanced update manager architecture
+- Improved caching and fallback mechanisms
+- Better separation of service worker vs upstream updates
+
+## [1.3.0] - 2024-12-29
+
+### Added
+- GitHub Releases API integration for upstream version checking
+- Upstream version comparison system with semantic versioning
+- Hourly update checks for GitHub releases
+- Enhanced update detection with dual-layer system
+- Version caching and intelligent refresh mechanisms
+
+### Changed
+- Improved update manager with upstream integration
+- Enhanced version tracking and comparison utilities
+- Better update notification flow with multiple sources
+
+### Technical
+- GitHub API integration with proper error handling
+- Enhanced version management utilities
+- Improved caching strategies for version data
+- Better separation of local vs upstream version tracking
+
 ## [1.2.0] - 2024-12-28
 
 ### Added

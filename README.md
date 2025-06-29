@@ -1,7 +1,7 @@
 
 # Family Calendar - Modern Web Calendar Application
 
-A sophisticated, privacy-focused family calendar application built with React and TypeScript. Features client-side encryption, weather integration, photo backgrounds, and multiple calendar feed support.
+A sophisticated, privacy-focused family calendar application built with React and TypeScript. Features client-side encryption, automatic updates, security hardening, weather integration, photo backgrounds, and multiple calendar feed support.
 
 ![Family Calendar Screenshot](public/placeholder.svg)
 
@@ -17,8 +17,20 @@ A sophisticated, privacy-focused family calendar application built with React an
 ### 🔒 Security & Privacy
 - **Client-Side Encryption**: AES-256-GCM encryption for sensitive data
 - **Password Protection**: Secure your API keys and personal information
+- **Input Validation**: Comprehensive validation against XSS and injection attacks
+- **Path Traversal Protection**: URL validation against directory traversal attacks
+- **API Key Security**: Format validation and secure handling of API keys
 - **No Server Required**: All data stored locally in your browser
 - **PBKDF2 Key Derivation**: Industry-standard password-based encryption
+
+### 🔄 Automatic Updates
+- **Dual Update System**: Service Worker updates + GitHub Releases integration
+- **Smart Detection**: Automatic detection of both immediate and upstream updates
+- **Background Checks**: Hourly checks for GitHub releases with intelligent caching
+- **Update Dashboard**: Comprehensive update status in settings with version comparison
+- **Release Notes**: Display detailed release notes from GitHub releases
+- **One-Click Updates**: Easy installation of service worker updates
+- **Version Tracking**: Semantic version comparison and update type detection
 
 ### 🌤️ Weather Integration
 - **Weather Overlays**: See weather information on calendar dates
@@ -49,15 +61,24 @@ A sophisticated, privacy-focused family calendar application built with React an
 
 ### Data Management
 - **Context API** - Centralized state management
-- **LocalStorage** - Persistent data storage
+- **LocalStorage** - Persistent data storage with encryption
 - **IndexedDB** - Large data caching (photos, events)
 - **Web Crypto API** - Client-side encryption
 
 ### Security Implementation
 - **AES-256-GCM** - Authenticated encryption for data
 - **PBKDF2** - Password-based key derivation (100,000 iterations)
+- **Input Validation** - Comprehensive sanitization and validation
+- **XSS Prevention** - Text sanitization and dangerous protocol detection
 - **Random Salt Generation** - Unique encryption salt per user
 - **Session-Based Keys** - Encryption keys never persisted
+
+### Update Management
+- **Version Manager** - Centralized version tracking and comparison
+- **Update Manager** - Dual-layer update detection (Service Worker + GitHub)
+- **GitHub Integration** - API integration for upstream release checking
+- **Semantic Versioning** - Proper version comparison and update type detection
+- **Caching System** - Intelligent caching of version data with hourly refresh
 
 ## 🚀 Quick Start
 
@@ -103,6 +124,11 @@ npm run preview
 
 ## ⚙️ Configuration
 
+### Update System Setup
+1. **GitHub Repository**: Configure in `src/utils/upstreamVersionManager.ts`
+2. **Update Frequency**: Modify check intervals in version manager utilities
+3. **Update Notifications**: Customize toast and notification settings
+
 ### Weather Setup
 1. **Get API Key**: Sign up for a weather service (OpenWeatherMap, WeatherAPI, etc.)
 2. **Configure Location**: Enter your zip code in Settings → Weather
@@ -136,7 +162,10 @@ src/
 ├── hooks/              # Custom React hooks
 ├── utils/              # Utility functions
 │   ├── security/       # Encryption and security utilities
-│   └── googlePhotos/   # Photo integration utilities
+│   ├── googlePhotos/   # Photo integration utilities
+│   ├── versionManager.ts        # Version tracking and comparison
+│   ├── upstreamVersionManager.ts # GitHub API integration
+│   └── updateManager.ts         # Update detection and management
 ├── services/           # External API services
 ├── types/              # TypeScript type definitions
 └── data/               # Sample data and constants
@@ -148,6 +177,15 @@ src/
 - `SecurityContext.tsx` - Global security state management
 - `secureStorage.ts` - Encrypted localStorage wrapper
 - `encryption.ts` - Web Crypto API utilities
+- `inputValidation.ts` - Input sanitization and validation
+
+#### Update Management System
+- `versionManager.ts` - Version tracking and comparison utilities
+- `upstreamVersionManager.ts` - GitHub API integration and upstream checking
+- `updateManager.ts` - Centralized update detection and management
+- `useUpdateManager.tsx` - React hook for update management
+- `UpdateNotification.tsx` - Update notification component
+- `UpdateTab.tsx` - Settings panel for update management
 
 #### Calendar System
 - `Calendar.tsx` - Main calendar component
@@ -183,6 +221,12 @@ npm run test:e2e
 - **Salt**: Unique 128-bit random salt per user
 - **IV**: Random 96-bit initialization vector per encryption
 
+### Input Security
+- **Sanitization**: HTML and script tag removal from user inputs
+- **URL Validation**: Protocol validation and path traversal prevention
+- **API Key Validation**: Format validation and secure storage
+- **XSS Prevention**: Content Security Policy and input filtering
+
 ### Data Protection
 - **API Keys**: Weather and calendar service keys encrypted
 - **Personal Data**: Zip codes and album URLs encrypted
@@ -190,9 +234,30 @@ npm run test:e2e
 - **No Server Storage**: All data remains on user's device
 
 ### Threat Model
-- **Protects Against**: Local storage inspection, device theft
+- **Protects Against**: Local storage inspection, device theft, XSS attacks, injection attacks
 - **Limitations**: Not protected against malware or browser vulnerabilities
 - **Recovery**: No password recovery - users must remember passwords
+
+## 🔄 Update Management
+
+### Update Detection System
+- **Service Worker Updates**: Immediate updates for app changes
+- **GitHub Releases**: Upstream updates from the official repository
+- **Automatic Checking**: Hourly checks for GitHub releases
+- **Smart Caching**: Intelligent caching with configurable refresh intervals
+
+### Update Process
+1. **Background Detection**: Automatic checking during app usage
+2. **User Notification**: Toast notifications and persistent update cards
+3. **Release Information**: Display of release notes and version details
+4. **One-Click Installation**: Easy update installation for service worker updates
+5. **External Updates**: Direct links to GitHub releases for major updates
+
+### Version Management
+- **Semantic Versioning**: Proper version comparison (major.minor.patch)
+- **Version Tracking**: Local version storage and comparison
+- **Update Types**: Classification of updates as major, minor, or patch
+- **Rollback Support**: Version history and rollback capabilities
 
 ## 🌐 Deployment
 
@@ -209,6 +274,11 @@ npm run build
 # Deploy dist/ folder to your web server
 # Ensure HTTPS is enabled for Web Crypto API
 ```
+
+### Update Configuration for Self-Hosting
+1. **GitHub Repository**: Update repository details in `upstreamVersionManager.ts`
+2. **Version File**: Ensure `public/version.json` is updated during build
+3. **Service Worker**: Configure service worker for your domain
 
 ### Docker Deployment
 ```dockerfile
@@ -229,6 +299,8 @@ EXPOSE 80
 - **TypeScript**: Use strict typing, avoid `any`
 - **Components**: Keep components small and focused
 - **Hooks**: Extract complex logic into custom hooks
+- **Security**: Follow security best practices for input validation
+- **Updates**: Test update detection and notification systems
 - **Comments**: Document complex algorithms and security code
 - **Testing**: Add tests for new features
 
@@ -236,10 +308,12 @@ EXPOSE 80
 1. **Update Documentation**: README, code comments, and type definitions
 2. **Test Changes**: Ensure all tests pass
 3. **Security Review**: Review any security-related changes carefully
-4. **Performance Check**: Verify no performance regressions
+4. **Update System**: Test update detection and notification
+5. **Performance Check**: Verify no performance regressions
 
 ### Security Contributions
 - **Encryption Changes**: Require careful review and testing
+- **Input Validation**: Test against common attack vectors
 - **Key Management**: Follow established patterns
 - **API Integration**: Validate all external data
 - **Error Handling**: Avoid leaking sensitive information
@@ -255,6 +329,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **Storage Limits**: Browser localStorage ~5-10MB limit
 - **Calendar Sync**: Check CORS policies for external feeds
 - **Photo Loading**: Verify Google Photos album is public
+- **Update Issues**: Check network connectivity and GitHub API rate limits
+- **Security Errors**: Verify encryption setup and password complexity
 
 ### Getting Help
 - **Issues**: GitHub Issues for bug reports
@@ -272,8 +348,9 @@ See [CHANGELOG.md](CHANGELOG.md) for detailed version history and updates.
 - **Lucide React** - Comprehensive icon set
 - **Date-fns** - Reliable date manipulation
 - **Web Crypto API** - Browser-native encryption
+- **GitHub API** - Release information and version tracking
 - **React Community** - Excellent ecosystem and documentation
 
 ---
 
-**Built with ❤️ for families who value privacy and functionality**
+**Built with ❤️ for families who value privacy, security, and functionality**
