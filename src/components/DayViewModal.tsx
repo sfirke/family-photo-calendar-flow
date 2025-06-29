@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Event } from '@/types/calendar';
 import EventCard from './EventCard';
@@ -33,6 +32,9 @@ const DayViewModal = ({
   
   const weather = getWeatherForDate(date);
   const isToday = date.toDateString() === new Date().toDateString();
+
+  // Debug logging
+  console.log('DayViewModal rendered with onNavigateDay:', !!onNavigateDay);
 
   const handleNavigation = (direction: 'prev' | 'next') => {
     if (!onNavigateDay || isTransitioning) return;
@@ -160,29 +162,34 @@ const DayViewModal = ({
             </div>
           </DialogTitle>
           
-          {/* Navigation buttons */}
-          {onNavigateDay && (
-            <div className="flex items-center justify-center gap-4 mt-4">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => handleNavigation('prev')}
-                disabled={isTransitioning}
-                className="flex items-center gap-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100/50"
-              >
-                <ChevronLeft className="h-4 w-4" />
-                Previous Day
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => handleNavigation('next')}
-                disabled={isTransitioning}
-                className="flex items-center gap-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100/50"
-              >
-                Next Day
-                <ChevronRight className="h-4 w-4" />
-              </Button>
+          {/* Navigation buttons - Always show for debugging */}
+          <div className="flex items-center justify-center gap-4 mt-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleNavigation('prev')}
+              disabled={isTransitioning || !onNavigateDay}
+              className="flex items-center gap-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100/50"
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Previous Day
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleNavigation('next')}
+              disabled={isTransitioning || !onNavigateDay}
+              className="flex items-center gap-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100/50"
+            >
+              Next Day
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+          
+          {/* Debug info */}
+          {!onNavigateDay && (
+            <div className="text-xs text-red-500 text-center mt-2">
+              Navigation disabled - onNavigateDay prop not provided
             </div>
           )}
         </DialogHeader>
