@@ -17,7 +17,7 @@ const ViewSwitcher = ({ view, onViewChange }: ViewSwitcherProps) => {
         onClick={() => onViewChange('timeline')}
         className={view === 'timeline' 
           ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm' 
-          : 'text-gray-700 dark:text-white hover:bg-white/50 dark:hover:bg-white/20'
+          : 'text-gray-700 dark:text-white hover:bg-white dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white hover:shadow-sm'
         }
       >
         <List className="h-4 w-4 mr-1" />
@@ -29,7 +29,7 @@ const ViewSwitcher = ({ view, onViewChange }: ViewSwitcherProps) => {
         onClick={() => onViewChange('week')}
         className={view === 'week' 
           ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm' 
-          : 'text-gray-700 dark:text-white hover:bg-white/50 dark:hover:bg-white/20'
+          : 'text-gray-700 dark:text-white hover:bg-white dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white hover:shadow-sm'
         }
       >
         <Clock className="h-4 w-4 mr-1" />
@@ -41,7 +41,7 @@ const ViewSwitcher = ({ view, onViewChange }: ViewSwitcherProps) => {
         onClick={() => onViewChange('month')}
         className={view === 'month' 
           ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm' 
-          : 'text-gray-700 dark:text-white hover:bg-white/50 dark:hover:bg-white/20'
+          : 'text-gray-700 dark:text-white hover:bg-white dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white hover:shadow-sm'
         }
       >
         <CalendarIcon className="h-4 w-4 mr-1" />
