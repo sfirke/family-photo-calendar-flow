@@ -163,6 +163,9 @@ const Index = () => {
       {/* Glass overlay */}
       <div className="absolute inset-0 bg-white/10 backdrop-blur-[1px] dark:bg-black/20 z-10" />
       
+      {/* Right side gradient overlay */}
+      <div className="fixed top-0 right-0 h-full w-[120px] bg-gradient-to-l from-black/30 to-transparent z-15 pointer-events-none" />
+      
       {/* Content */}
       <div className="relative z-20 min-h-screen flex flex-col">
         {/* Responsive Header with gradient overlay - Fixed positioning */}
