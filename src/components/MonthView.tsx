@@ -1,6 +1,5 @@
-
 import React, { useState } from 'react';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths, subMonths, isSameDay, isToday, isSameMonth } from 'date-fns';
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths, subMonths, isSameDay, isToday, isSameMonth, addDays, subDays } from 'date-fns';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Event } from '@/types/calendar';
 import { Button } from '@/components/ui/button';
@@ -57,6 +56,13 @@ const MonthView = ({ events, getWeatherForDate }: MonthViewProps) => {
     if (dayEvents.length > 0) {
       setSelectedDate(day);
     }
+  };
+
+  const handleNavigateDay = (direction: 'prev' | 'next') => {
+    if (!selectedDate) return;
+    
+    const newDate = direction === 'next' ? addDays(selectedDate, 1) : subDays(selectedDate, 1);
+    setSelectedDate(newDate);
   };
 
   return (
@@ -162,6 +168,7 @@ const MonthView = ({ events, getWeatherForDate }: MonthViewProps) => {
           open={!!selectedDate}
           onOpenChange={() => setSelectedDate(null)}
           getWeatherForDate={getWeatherForDate}
+          onNavigateDay={handleNavigateDay}
         />
       )}
     </div>
