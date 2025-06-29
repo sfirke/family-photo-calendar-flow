@@ -63,7 +63,7 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="w-full max-w-[95vw] sm:max-w-[90vw] md:max-w-4xl h-[90vh] sm:max-h-[80vh] overflow-y-auto bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 p-0">
+        <DialogContent className="w-full max-w-[95vw] sm:max-w-[90vw] md:max-w-4xl max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 p-0 fixed top-[5vh] left-[50%] translate-x-[-50%] translate-y-0">
           <div className="p-4 sm:p-6">
             <DialogHeader>
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-0">
@@ -99,7 +99,6 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
             </DialogHeader>
 
             <Tabs defaultValue="calendars" className="w-full mt-4 sm:mt-6">
-              {/* Responsive Tabs List */}
               <TabsList className="grid w-full grid-cols-3 sm:grid-cols-5 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 h-auto p-1">
                 <TabsTrigger 
                   value="calendars" 
