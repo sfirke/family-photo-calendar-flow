@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Shield, Lock } from 'lucide-react';
 import { useSecurity } from '@/contexts/SecurityContext';
+import SecurityUnlockBanner from '@/components/security/SecurityUnlockBanner';
 
 interface WeatherSettingsProps {
   zipCode: string;
@@ -22,6 +23,9 @@ const WeatherSettings = ({
 
   return (
     <div className="space-y-4">
+      {/* Show unlock banner if data is locked */}
+      <SecurityUnlockBanner />
+
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <Label htmlFor="api-key" className="text-gray-700 dark:text-gray-300">OpenWeatherMap API Key</Label>

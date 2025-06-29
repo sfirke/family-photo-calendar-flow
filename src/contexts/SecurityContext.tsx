@@ -27,12 +27,16 @@ interface SecurityContextType {
   isSecurityEnabled: boolean;
   /** Whether the security system has been initialized */
   isInitialized: boolean;
+  /** Whether encrypted data exists but is currently locked */
+  hasLockedData: boolean;
   /** Enable security with user password - returns success status */
   enableSecurity: (password: string) => Promise<boolean>;
   /** Disable security and convert all data to plain text */
   disableSecurity: () => void;
   /** Get human-readable security status for UI display */
   getSecurityStatus: () => string;
+  /** Check if specific data is available (encrypted or plain) */
+  isDataAvailable: (key: string) => Promise<boolean>;
 }
 
 const SecurityContext = createContext<SecurityContextType | undefined>(undefined);
@@ -46,6 +50,24 @@ const SecurityContext = createContext<SecurityContextType | undefined>(undefined
 export const SecurityProvider = ({ children }: { children: React.ReactNode }) => {
   const [isSecurityEnabled, setIsSecurityEnabled] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [hasLockedData, setHasLockedData] = useState(false);
+
+  /**
+   * Check if encrypted data exists but is locked
+   */
+  const checkForLockedData = async () => {
+    const hasSecuritySalt = localStorage.getItem('security_salt') !== null;
+    if (!hasSecuritySalt) {
+      setHasLockedData(false);
+      return;
+    }
+
+    // Check for encrypted data markers
+    const encryptedKeys = ['secure_zipCode_encrypted', 'secure_weatherApiKey_encrypted', 'secure_publicAlbumUrl_encrypted'];
+    const hasEncryptedData = encryptedKeys.some(key => localStorage.getItem(key) === 'true');
+    
+    setHasLockedData(hasEncryptedData && !isSecurityEnabled);
+  };
 
   /**
    * Initialize security system on application startup
@@ -62,9 +84,11 @@ export const SecurityProvider = ({ children }: { children: React.ReactNode }) =>
         // Security was previously enabled, but we need password to initialize
         // Set to false until user provides password
         setIsSecurityEnabled(false);
+        await checkForLockedData();
       } else {
         // Initialize in non-encrypted mode for new users
         await SecureStorage.initialize();
+        setHasLockedData(false);
       }
       
       setIsInitialized(true);
@@ -72,6 +96,11 @@ export const SecurityProvider = ({ children }: { children: React.ReactNode }) =>
 
     initSecurity();
   }, []);
+
+  // Update locked data status when security state changes
+  useEffect(() => {
+    checkForLockedData();
+  }, [isSecurityEnabled]);
 
   /**
    * Enable security with user password
@@ -90,6 +119,7 @@ export const SecurityProvider = ({ children }: { children: React.ReactNode }) =>
     if (success) {
       // Update context state to reflect active encryption
       setIsSecurityEnabled(SecureStorage.isEncryptionEnabled());
+      await checkForLockedData();
       return true;
     }
     
@@ -107,6 +137,7 @@ export const SecurityProvider = ({ children }: { children: React.ReactNode }) =>
     SecureStorage.clear();
     SecureStorage.initialize(); // Reinitialize in non-encrypted mode
     setIsSecurityEnabled(false);
+    setHasLockedData(false);
   };
 
   /**
@@ -126,6 +157,10 @@ export const SecurityProvider = ({ children }: { children: React.ReactNode }) =>
       return 'Security Enabled - Data encrypted';
     }
     
+    if (hasLockedData) {
+      return 'Security Locked - Enter password to unlock encrypted data';
+    }
+    
     // Check if security was previously set up but is locked
     const hasSecuritySalt = localStorage.getItem('security_salt') !== null;
     if (hasSecuritySalt) {
@@ -135,14 +170,29 @@ export const SecurityProvider = ({ children }: { children: React.ReactNode }) =>
     return 'Security Disabled - Data stored in plain text';
   };
 
+  /**
+   * Check if specific data is available (either encrypted and unlocked, or plain text)
+   */
+  const isDataAvailable = async (key: string): Promise<boolean> => {
+    try {
+      const secureData = await SecureStorage.getItem(key);
+      const plainData = localStorage.getItem(key);
+      return secureData !== null || plainData !== null;
+    } catch {
+      return localStorage.getItem(key) !== null;
+    }
+  };
+
   return (
     <SecurityContext.Provider
       value={{
         isSecurityEnabled,
         isInitialized,
+        hasLockedData,
         enableSecurity,
         disableSecurity,
         getSecurityStatus,
+        isDataAvailable,
       }}
     >
       {children}

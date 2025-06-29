@@ -6,12 +6,13 @@ import { Label } from '@/components/ui/label';
 import { Shield, Lock, Unlock, AlertTriangle } from 'lucide-react';
 import { useSecurity } from '@/contexts/SecurityContext';
 import { useToast } from '@/hooks/use-toast';
+import SecurityUnlockBanner from '@/components/security/SecurityUnlockBanner';
 
 const SecurityTab = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isEnabling, setIsEnabling] = useState(false);
-  const { isSecurityEnabled, enableSecurity, disableSecurity, getSecurityStatus } = useSecurity();
+  const { isSecurityEnabled, hasLockedData, enableSecurity, disableSecurity, getSecurityStatus } = useSecurity();
   const { toast } = useToast();
 
   const handleEnableSecurity = async () => {
@@ -126,10 +127,15 @@ const SecurityTab = () => {
         }
       </p>
 
+      {/* Show unlock banner if data is locked */}
+      <SecurityUnlockBanner />
+
       <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
         <div className="flex items-center gap-2">
           {isSecurityEnabled ? (
             <Lock className="h-4 w-4 text-green-600" />
+          ) : hasLockedData ? (
+            <Lock className="h-4 w-4 text-amber-600" />
           ) : (
             <Unlock className="h-4 w-4 text-gray-500" />
           )}
