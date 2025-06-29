@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { format, isToday, isTomorrow, isYesterday, addDays, startOfDay, differenceInDays, isSameDay } from 'date-fns';
 import { Event } from '@/types/calendar';
@@ -107,7 +108,7 @@ const TimelineView = ({ events, getWeatherForDate }: TimelineViewProps) => {
                       forceWhite={true}
                     />
                   </div>
-                  <div className="text-xs text-white/50">
+                  <div className="text-xs text-white">
                     Low: {weather.temp - 10}°
                   </div>
                 </div>
