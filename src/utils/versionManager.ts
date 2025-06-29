@@ -1,4 +1,3 @@
-
 // Read version from version.json instead of package.json for consistency
 export const getCurrentVersion = async () => {
   try {
@@ -61,11 +60,12 @@ export const setLastCheckTime = () => {
   localStorage.setItem(LAST_CHECK_KEY, new Date().toISOString());
 };
 
+// Change the service worker check frequency to be more specific
 export const shouldCheckForUpdates = () => {
   const lastCheck = getLastCheckTime();
   if (!lastCheck) return true;
   
-  // Check for updates every 30 minutes
+  // Check for service worker updates every 30 minutes
   const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
   return lastCheck < thirtyMinutesAgo;
 };
