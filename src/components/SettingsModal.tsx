@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import {
   Dialog,
@@ -7,17 +8,20 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Camera, Monitor, CloudSun, Calendar, Info, Shield } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Camera, Monitor, CloudSun, Calendar, Info, Shield, Lock, Unlock, AlertTriangle } from 'lucide-react';
 import { useSettings } from '@/contexts/SettingsContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useSecurity } from '@/contexts/SecurityContext';
+import { useToast } from '@/hooks/use-toast';
 import { getVersionInfo } from '@/utils/versionManager';
 import OfflineIndicator from './OfflineIndicator';
 import PhotosTab from './settings/PhotosTab';
 import DisplayTab from './settings/DisplayTab';
 import WeatherTab from './settings/WeatherTab';
 import CalendarsTab from './settings/CalendarsTab';
-import SecurityModal from './security/SecurityModal';
 
 interface SettingsModalProps {
   open: boolean;
@@ -36,9 +40,12 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
     setWeatherApiKey
   } = useSettings();
   const { setTheme: setActualTheme } = useTheme();
-  const { getSecurityStatus } = useSecurity();
+  const { isSecurityEnabled, enableSecurity, disableSecurity, getSecurityStatus } = useSecurity();
+  const { toast } = useToast();
   const [versionInfo, setVersionInfo] = useState<any>(null);
-  const [showSecurityModal, setShowSecurityModal] = useState(false);
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [isEnabling, setIsEnabling] = useState(false);
 
   useEffect(() => {
     const loadVersionInfo = async () => {
@@ -60,130 +67,346 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
     setActualTheme(newTheme);
   };
 
+  const handleEnableSecurity = async () => {
+    if (password.length < 8) {
+      toast({
+        title: "Password too short",
+        description: "Password must be at least 8 characters long.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      toast({
+        title: "Passwords don't match",
+        description: "Please ensure both password fields match.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsEnabling(true);
+    try {
+      const success = await enableSecurity(password);
+      if (success) {
+        toast({
+          title: "Security enabled",
+          description: "Your data will now be encrypted locally.",
+        });
+        setPassword('');
+        setConfirmPassword('');
+      } else {
+        toast({
+          title: "Failed to enable security",
+          description: "Please check your password and try again.",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Security error",
+        description: "An error occurred while enabling security.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsEnabling(false);
+    }
+  };
+
+  const handleDisableSecurity = () => {
+    if (window.confirm('Are you sure you want to disable security? This will remove encryption from your data.')) {
+      disableSecurity();
+      toast({
+        title: "Security disabled",
+        description: "Your data is no longer encrypted.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleUnlock = async () => {
+    if (!password) {
+      toast({
+        title: "Password required",
+        description: "Please enter your security password.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsEnabling(true);
+    try {
+      const success = await enableSecurity(password);
+      if (success) {
+        toast({
+          title: "Security unlocked",
+          description: "Your encrypted data is now accessible.",
+        });
+        setPassword('');
+      } else {
+        toast({
+          title: "Incorrect password",
+          description: "Please check your password and try again.",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Unlock failed",
+        description: "Failed to unlock security. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsEnabling(false);
+    }
+  };
+
+  const hasSecuritySalt = localStorage.getItem('security_salt') !== null;
+  const needsUnlock = hasSecuritySalt && !isSecurityEnabled;
+
   return (
-    <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="w-full max-w-[95vw] sm:max-w-[90vw] md:max-w-4xl max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 p-0 fixed top-[5vh] left-[50%] translate-x-[-50%] translate-y-0">
-          <div className="p-4 sm:p-6">
-            <DialogHeader>
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-0">
-                <div>
-                  <DialogTitle className="text-gray-900 dark:text-gray-100 text-lg sm:text-xl">App Settings</DialogTitle>
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mt-1">
-                    <div className="flex items-center gap-2">
-                      <Info className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-                      <span className="text-sm text-gray-500 dark:text-gray-400">
-                        Version {versionInfo?.version || '1.0.0'}
-                      </span>
-                    </div>
-                    {versionInfo?.buildDate && (
-                      <span className="text-xs text-gray-500 dark:text-gray-400 sm:ml-2">
-                        Built: {new Date(versionInfo.buildDate).toLocaleDateString()}
-                      </span>
-                    )}
-                    {versionInfo?.gitHash && versionInfo.gitHash !== 'unknown' && (
-                      <span className="text-xs font-mono text-gray-500 dark:text-gray-400 sm:ml-2">
-                        #{versionInfo.gitHash.substring(0, 7)}
-                      </span>
-                    )}
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="w-full max-w-[95vw] sm:max-w-[90vw] md:max-w-4xl max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 p-0 fixed top-[5vh] left-[50%] translate-x-[-50%] translate-y-0">
+        <div className="p-4 sm:p-6">
+          <DialogHeader>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-0">
+              <div>
+                <DialogTitle className="text-gray-900 dark:text-gray-100 text-lg sm:text-xl">App Settings</DialogTitle>
+                <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mt-1">
+                  <div className="flex items-center gap-2">
+                    <Info className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+                    <span className="text-sm text-gray-500 dark:text-gray-400">
+                      Version {versionInfo?.version || '1.0.0'}
+                    </span>
                   </div>
+                  {versionInfo?.buildDate && (
+                    <span className="text-xs text-gray-500 dark:text-gray-400 sm:ml-2">
+                      Built: {new Date(versionInfo.buildDate).toLocaleDateString()}
+                    </span>
+                  )}
+                  {versionInfo?.gitHash && versionInfo.gitHash !== 'unknown' && (
+                    <span className="text-xs font-mono text-gray-500 dark:text-gray-400 sm:ml-2">
+                      #{versionInfo.gitHash.substring(0, 7)}
+                    </span>
+                  )}
                 </div>
-                <OfflineIndicator />
               </div>
-              <DialogDescription className="text-gray-600 dark:text-gray-400 text-sm sm:text-base">
-                Configure your family calendar app preferences and manage your calendar feeds
-                <div className="mt-1 text-xs">
-                  Security: {getSecurityStatus()}
+              <OfflineIndicator />
+            </div>
+            <DialogDescription className="text-gray-600 dark:text-gray-400 text-sm sm:text-base">
+              Configure your family calendar app preferences and manage your calendar feeds
+              <div className="mt-1 text-xs">
+                Security: {getSecurityStatus()}
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+
+          <Tabs defaultValue="calendars" className="w-full mt-4 sm:mt-6">
+            <TabsList className="grid w-full grid-cols-3 sm:grid-cols-5 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 h-auto p-1">
+              <TabsTrigger 
+                value="calendars" 
+                className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 text-xs sm:text-sm text-gray-700 dark:text-gray-300 data-[state=active]:bg-white data-[state=active]:text-gray-900 dark:data-[state=active]:bg-gray-700 dark:data-[state=active]:text-gray-100 py-2 sm:py-3"
+              >
+                <Calendar className="h-4 w-4" />
+                <span className="hidden sm:inline">Calendars</span>
+                <span className="sm:hidden">Cal</span>
+              </TabsTrigger>
+              <TabsTrigger 
+                value="photos" 
+                className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 text-xs sm:text-sm text-gray-700 dark:text-gray-300 data-[state=active]:bg-white data-[state=active]:text-gray-900 dark:data-[state=active]:bg-gray-700 dark:data-[state=active]:text-gray-100 py-2 sm:py-3"
+              >
+                <Camera className="h-4 w-4" />
+                <span className="hidden sm:inline">Photos</span>
+                <span className="sm:hidden">Pic</span>
+              </TabsTrigger>
+              <TabsTrigger 
+                value="display" 
+                className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 text-xs sm:text-sm text-gray-700 dark:text-gray-300 data-[state=active]:bg-white data-[state=active]:text-gray-900 dark:data-[state=active]:bg-gray-700 dark:data-[state=active]:text-gray-100 py-2 sm:py-3"
+              >
+                <Monitor className="h-4 w-4" />
+                <span className="hidden sm:inline">Display</span>
+                <span className="sm:hidden">Disp</span>
+              </TabsTrigger>
+              <TabsTrigger 
+                value="weather" 
+                className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 text-xs sm:text-sm text-gray-700 dark:text-gray-300 data-[state=active]:bg-white data-[state=active]:text-gray-900 dark:data-[state=active]:bg-gray-700 dark:data-[state=active]:text-gray-100 py-2 sm:py-3"
+              >
+                <CloudSun className="h-4 w-4" />
+                <span className="hidden sm:inline">Weather</span>
+                <span className="sm:hidden">Wthr</span>
+              </TabsTrigger>
+              <TabsTrigger 
+                value="security" 
+                className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 text-xs sm:text-sm text-gray-700 dark:text-gray-300 data-[state=active]:bg-white data-[state=active]:text-gray-900 dark:data-[state=active]:bg-gray-700 dark:data-[state=active]:text-gray-100 py-2 sm:py-3"
+              >
+                <Shield className="h-4 w-4" />
+                <span className="hidden sm:inline">Security</span>
+                <span className="sm:hidden">Sec</span>
+              </TabsTrigger>
+            </TabsList>
+
+            <div className="mt-4 sm:mt-6">
+              <TabsContent value="calendars" className="space-y-4 mt-0">
+                <CalendarsTab />
+              </TabsContent>
+
+              <TabsContent value="photos" className="space-y-4 mt-0">
+                <PhotosTab />
+              </TabsContent>
+
+              <TabsContent value="display" className="space-y-4 mt-0">
+                <DisplayTab 
+                  theme={theme}
+                  onThemeChange={handleThemeChange}
+                  defaultView={defaultView}
+                  onDefaultViewChange={setDefaultView}
+                />
+              </TabsContent>
+
+              <TabsContent value="weather" className="space-y-4 mt-0">
+                <WeatherTab 
+                  zipCode={zipCode}
+                  onZipCodeChange={setZipCode}
+                  weatherApiKey={weatherApiKey}
+                  onWeatherApiKeyChange={setWeatherApiKey}
+                />
+              </TabsContent>
+
+              <TabsContent value="security" className="space-y-4 mt-0">
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Shield className="h-5 w-5" />
+                    <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Security Settings</h3>
+                  </div>
+                  
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    {needsUnlock 
+                      ? "Enter your password to unlock encrypted data"
+                      : "Configure client-side encryption for your sensitive data"
+                    }
+                  </p>
+
+                  {/* Security Status */}
+                  <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      {isSecurityEnabled ? (
+                        <Lock className="h-4 w-4 text-green-600" />
+                      ) : (
+                        <Unlock className="h-4 w-4 text-gray-500" />
+                      )}
+                      <span className="text-sm font-medium">{getSecurityStatus()}</span>
+                    </div>
+                  </div>
+
+                  {needsUnlock ? (
+                    /* Unlock Interface */
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="unlock-password">Security Password</Label>
+                        <Input
+                          id="unlock-password"
+                          type="password"
+                          placeholder="Enter your security password"
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          onKeyPress={(e) => e.key === 'Enter' && handleUnlock()}
+                        />
+                      </div>
+                      
+                      <Button
+                        onClick={handleUnlock}
+                        disabled={isEnabling || !password}
+                        className="w-full"
+                      >
+                        {isEnabling ? 'Unlocking...' : 'Unlock Security'}
+                      </Button>
+                    </div>
+                  ) : (
+                    /* Enable/Disable Interface */
+                    <div className="space-y-4">
+                      {!isSecurityEnabled ? (
+                        <>
+                          <div className="p-3 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg">
+                            <div className="flex items-start gap-2">
+                              <Shield className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5" />
+                              <div className="text-sm text-blue-800 dark:text-blue-200">
+                                <p className="font-medium mb-1">Enhanced Security</p>
+                                <p>Encrypts API keys and sensitive data locally using AES-256 encryption.</p>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="new-password">Create Security Password</Label>
+                            <Input
+                              id="new-password"
+                              type="password"
+                              placeholder="Enter a strong password (min 8 characters)"
+                              value={password}
+                              onChange={(e) => setPassword(e.target.value)}
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="confirm-password">Confirm Password</Label>
+                            <Input
+                              id="confirm-password"
+                              type="password"
+                              placeholder="Confirm your password"
+                              value={confirmPassword}
+                              onChange={(e) => setConfirmPassword(e.target.value)}
+                              onKeyPress={(e) => e.key === 'Enter' && handleEnableSecurity()}
+                            />
+                          </div>
+
+                          <Button
+                            onClick={handleEnableSecurity}
+                            disabled={isEnabling || password.length < 8 || password !== confirmPassword}
+                            className="w-full"
+                          >
+                            {isEnabling ? 'Enabling...' : 'Enable Security'}
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          <div className="p-3 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-lg">
+                            <div className="flex items-center gap-2">
+                              <Lock className="h-4 w-4 text-green-600 dark:text-green-400" />
+                              <span className="text-sm text-green-800 dark:text-green-200">
+                                Security is active - your data is encrypted
+                              </span>
+                            </div>
+                          </div>
+
+                          <Button
+                            onClick={handleDisableSecurity}
+                            variant="outline"
+                            className="w-full text-red-600 border-red-300 hover:bg-red-50"
+                          >
+                            Disable Security
+                          </Button>
+                        </>
+                      )}
+
+                      <div className="p-3 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 rounded-lg">
+                        <div className="flex items-start gap-2">
+                          <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5" />
+                          <div className="text-xs text-amber-800 dark:text-amber-200">
+                            <p className="font-medium">Important:</p>
+                            <p>If you forget your password, your encrypted data cannot be recovered. Keep your password safe!</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              </DialogDescription>
-            </DialogHeader>
-
-            <Tabs defaultValue="calendars" className="w-full mt-4 sm:mt-6">
-              <TabsList className="grid w-full grid-cols-3 sm:grid-cols-5 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 h-auto p-1">
-                <TabsTrigger 
-                  value="calendars" 
-                  className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 text-xs sm:text-sm text-gray-700 dark:text-gray-300 data-[state=active]:bg-white data-[state=active]:text-gray-900 dark:data-[state=active]:bg-gray-700 dark:data-[state=active]:text-gray-100 py-2 sm:py-3"
-                >
-                  <Calendar className="h-4 w-4" />
-                  <span className="hidden sm:inline">Calendars</span>
-                  <span className="sm:hidden">Cal</span>
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="photos" 
-                  className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 text-xs sm:text-sm text-gray-700 dark:text-gray-300 data-[state=active]:bg-white data-[state=active]:text-gray-900 dark:data-[state=active]:bg-gray-700 dark:data-[state=active]:text-gray-100 py-2 sm:py-3"
-                >
-                  <Camera className="h-4 w-4" />
-                  <span className="hidden sm:inline">Photos</span>
-                  <span className="sm:hidden">Pic</span>
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="display" 
-                  className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 text-xs sm:text-sm text-gray-700 dark:text-gray-300 data-[state=active]:bg-white data-[state=active]:text-gray-900 dark:data-[state=active]:bg-gray-700 dark:data-[state=active]:text-gray-100 py-2 sm:py-3"
-                >
-                  <Monitor className="h-4 w-4" />
-                  <span className="hidden sm:inline">Display</span>
-                  <span className="sm:hidden">Disp</span>
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="weather" 
-                  className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 text-xs sm:text-sm text-gray-700 dark:text-gray-300 data-[state=active]:bg-white data-[state=active]:text-gray-900 dark:data-[state=active]:bg-gray-700 dark:data-[state=active]:text-gray-100 py-2 sm:py-3"
-                >
-                  <CloudSun className="h-4 w-4" />
-                  <span className="hidden sm:inline">Weather</span>
-                  <span className="sm:hidden">Wthr</span>
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="security" 
-                  className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 text-xs sm:text-sm text-gray-700 dark:text-gray-300 data-[state=active]:bg-white data-[state=active]:text-gray-900 dark:data-[state=active]:bg-gray-700 dark:data-[state=active]:text-gray-100 py-2 sm:py-3"
-                  onClick={() => setShowSecurityModal(true)}
-                >
-                  <Shield className="h-4 w-4" />
-                  <span className="hidden sm:inline">Security</span>
-                  <span className="sm:hidden">Sec</span>
-                </TabsTrigger>
-              </TabsList>
-
-              <div className="mt-4 sm:mt-6">
-                <TabsContent value="calendars" className="space-y-4 mt-0">
-                  <CalendarsTab />
-                </TabsContent>
-
-                <TabsContent value="photos" className="space-y-4 mt-0">
-                  <PhotosTab />
-                </TabsContent>
-
-                <TabsContent value="display" className="space-y-4 mt-0">
-                  <DisplayTab 
-                    theme={theme}
-                    onThemeChange={handleThemeChange}
-                    defaultView={defaultView}
-                    onDefaultViewChange={setDefaultView}
-                  />
-                </TabsContent>
-
-                <TabsContent value="weather" className="space-y-4 mt-0">
-                  <WeatherTab 
-                    zipCode={zipCode}
-                    onZipCodeChange={setZipCode}
-                    weatherApiKey={weatherApiKey}
-                    onWeatherApiKeyChange={setWeatherApiKey}
-                  />
-                </TabsContent>
-
-                <TabsContent value="security" className="space-y-4 mt-0">
-                  {/* Security content handled by modal */}
-                </TabsContent>
-              </div>
-            </Tabs>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      <SecurityModal 
-        open={showSecurityModal} 
-        onOpenChange={setShowSecurityModal} 
-      />
-    </>
+              </TabsContent>
+            </div>
+          </Tabs>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 
