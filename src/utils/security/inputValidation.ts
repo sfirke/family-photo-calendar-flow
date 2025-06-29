@@ -1,0 +1,115 @@
+
+// Enhanced input validation and sanitization
+export class InputValidator {
+  // URL validation with enhanced security checks
+  static validateUrl(url: string): { isValid: boolean; error?: string } {
+    if (!url || typeof url !== 'string') {
+      return { isValid: false, error: 'URL is required' };
+    }
+
+    const trimmedUrl = url.trim();
+    
+    if (trimmedUrl.length === 0) {
+      return { isValid: false, error: 'URL cannot be empty' };
+    }
+
+    if (trimmedUrl.length > 2048) {
+      return { isValid: false, error: 'URL is too long' };
+    }
+
+    // Check for dangerous protocols
+    const dangerousProtocols = ['javascript:', 'data:', 'vbscript:', 'file:'];
+    const lowerUrl = trimmedUrl.toLowerCase();
+    
+    if (dangerousProtocols.some(protocol => lowerUrl.startsWith(protocol))) {
+      return { isValid: false, error: 'Unsafe URL protocol detected' };
+    }
+
+    // Must be HTTP or HTTPS
+    if (!lowerUrl.startsWith('http://') && !lowerUrl.startsWith('https://')) {
+      return { isValid: false, error: 'URL must use HTTP or HTTPS protocol' };
+    }
+
+    try {
+      const urlObj = new URL(trimmedUrl);
+      
+      // Check for suspicious characters
+      if (urlObj.hostname.includes('..') || urlObj.pathname.includes('..')) {
+        return { isValid: false, error: 'URL contains suspicious path traversal' };
+      }
+
+      // Basic domain validation
+      if (urlObj.hostname.length === 0 || urlObj.hostname.length > 253) {
+        return { isValid: false, error: 'Invalid domain name' };
+      }
+
+      return { isValid: true };
+    } catch (error) {
+      return { isValid: false, error: 'Invalid URL format' };
+    }
+  }
+
+  // Sanitize text input
+  static sanitizeText(input: string): string {
+    if (!input || typeof input !== 'string') {
+      return '';
+    }
+
+    return input
+      .replace(/[<>]/g, '') // Remove HTML brackets
+      .replace(/javascript:/gi, '') // Remove javascript protocol
+      .replace(/on\w+\s*=/gi, '') // Remove event handlers
+      .trim()
+      .substring(0, 1000); // Limit length
+  }
+
+  // Validate API key format
+  static validateApiKey(apiKey: string): { isValid: boolean; error?: string } {
+    if (!apiKey || typeof apiKey !== 'string') {
+      return { isValid: false, error: 'API key is required' };
+    }
+
+    const trimmed = apiKey.trim();
+    
+    if (trimmed.length === 0) {
+      return { isValid: false, error: 'API key cannot be empty' };
+    }
+
+    if (trimmed.length < 8) {
+      return { isValid: false, error: 'API key appears to be too short' };
+    }
+
+    if (trimmed.length > 256) {
+      return { isValid: false, error: 'API key is too long' };
+    }
+
+    // Check for suspicious patterns
+    if (trimmed.includes('<') || trimmed.includes('>') || trimmed.includes('script')) {
+      return { isValid: false, error: 'API key contains invalid characters' };
+    }
+
+    return { isValid: true };
+  }
+
+  // Validate zip code
+  static validateZipCode(zipCode: string): { isValid: boolean; error?: string } {
+    if (!zipCode || typeof zipCode !== 'string') {
+      return { isValid: false, error: 'Zip code is required' };
+    }
+
+    const trimmed = zipCode.trim();
+    
+    if (trimmed.length === 0) {
+      return { isValid: false, error: 'Zip code cannot be empty' };
+    }
+
+    // US ZIP code format (5 digits or 5+4)
+    const zipRegex = /^\d{5}(-\d{4})?$/;
+    
+    if (!zipRegex.test(trimmed)) {
+      return { isValid: false, error: 'Invalid zip code format (use 12345 or 12345-6789)' };
+    }
+
+    return { isValid: true };
+  }
+}

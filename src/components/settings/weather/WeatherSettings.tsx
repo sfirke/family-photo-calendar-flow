@@ -2,6 +2,8 @@
 import React from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Shield, Lock } from 'lucide-react';
+import { useSecurity } from '@/contexts/SecurityContext';
 
 interface WeatherSettingsProps {
   zipCode: string;
@@ -16,10 +18,20 @@ const WeatherSettings = ({
   weatherApiKey,
   onWeatherApiKeyChange
 }: WeatherSettingsProps) => {
+  const { isSecurityEnabled } = useSecurity();
+
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="api-key" className="text-gray-700 dark:text-gray-300">OpenWeatherMap API Key</Label>
+        <div className="flex items-center justify-between">
+          <Label htmlFor="api-key" className="text-gray-700 dark:text-gray-300">OpenWeatherMap API Key</Label>
+          {isSecurityEnabled && (
+            <div className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
+              <Lock className="h-3 w-3" />
+              <span>Encrypted</span>
+            </div>
+          )}
+        </div>
         <Input
           id="api-key"
           type="password"
@@ -42,7 +54,15 @@ const WeatherSettings = ({
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="zipcode" className="text-gray-700 dark:text-gray-300">Zip Code</Label>
+        <div className="flex items-center justify-between">
+          <Label htmlFor="zipcode" className="text-gray-700 dark:text-gray-300">Zip Code</Label>
+          {isSecurityEnabled && (
+            <div className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
+              <Lock className="h-3 w-3" />
+              <span>Encrypted</span>
+            </div>
+          )}
+        </div>
         <Input
           id="zipcode"
           placeholder="Enter your zip code (e.g., 90210)"
@@ -51,6 +71,18 @@ const WeatherSettings = ({
           className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100"
         />
       </div>
+
+      {!isSecurityEnabled && (
+        <div className="p-3 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 rounded-lg">
+          <div className="flex items-start gap-2">
+            <Shield className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5" />
+            <div className="text-sm text-amber-800 dark:text-amber-200">
+              <p className="font-medium">Security Notice</p>
+              <p>Your API key is stored unencrypted. Enable security in the Security tab for enhanced protection.</p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
