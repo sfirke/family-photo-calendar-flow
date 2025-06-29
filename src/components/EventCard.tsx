@@ -257,7 +257,7 @@ const EventCard = ({
     <article 
       className={`${getPaddingClass()} rounded-lg ${getBackgroundOpacity()} backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/30 ${
         isInteractive ? `cursor-pointer ${getHoverBackgroundOpacity()} transition-colors` : ''
-      } ${getTimelineStyles()} ${className}`}
+      } ${getTimelineStyles()} ${className} self-start`}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
       tabIndex={isInteractive ? 0 : undefined}
