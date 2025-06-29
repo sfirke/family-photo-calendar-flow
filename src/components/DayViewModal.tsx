@@ -109,7 +109,7 @@ const DayViewModal = ({ open, onOpenChange, date, events, getWeatherForDate }: D
           </DialogTitle>
         </DialogHeader>
         
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto px-6 pb-6">
           {sortedEvents.length > 0 ? (
             <div className="space-y-6">
               {/* All-day events section */}
