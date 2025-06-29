@@ -171,7 +171,7 @@ const Index = () => {
         {/* Responsive Header with gradient overlay - Fixed positioning */}
         <header className="fixed top-0 left-0 right-0 z-30 flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 sm:p-4 md:p-6">
           {/* Header gradient overlay */}
-          <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/20 to-transparent pointer-events-none" />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/30 to-transparent pointer-events-none" />
           
           {/* Responsive Time Display */}
           <div className="relative z-10 flex items-baseline gap-1 sm:gap-2 mb-2 sm:mb-0">
