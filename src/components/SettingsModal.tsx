@@ -8,6 +8,7 @@
  * - Photo backgrounds (Google Photos integration)
  * - Display preferences (theme, default view)
  * - Weather configuration (API keys, location)
+ * - App updates (manual check and install)
  * - Security settings (client-side encryption)
  * 
  * Features:
@@ -16,6 +17,7 @@
  * - Real-time settings validation and persistence
  * - Version information display
  * - Offline status indication
+ * - Manual update management
  */
 
 import React from 'react';
@@ -33,6 +35,7 @@ import PhotosTab from './settings/PhotosTab';
 import DisplayTab from './settings/DisplayTab';
 import WeatherTab from './settings/WeatherTab';
 import CalendarsTab from './settings/CalendarsTab';
+import UpdateTab from './settings/UpdateTab';
 
 interface SettingsModalProps {
   /** Controls modal visibility */
@@ -108,6 +111,11 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
                   weatherApiKey={weatherApiKey}
                   onWeatherApiKeyChange={setWeatherApiKey}
                 />
+              </TabsContent>
+
+              {/* App updates content */}
+              <TabsContent value="updates" className="space-y-4 mt-0">
+                <UpdateTab />
               </TabsContent>
 
               {/* Security settings content */}
