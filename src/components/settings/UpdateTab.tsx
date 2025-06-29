@@ -37,7 +37,7 @@ const UpdateTab = () => {
   return (
     <div className="space-y-4">
       {/* Current Version Card */}
-      <Card className="border border-gray-200 dark:border-gray-700">
+      <Card className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
         <CardHeader className="pb-3">
           <CardTitle className="text-lg flex items-center gap-2 text-gray-900 dark:text-gray-100">
             <Info className="h-5 w-5" />
@@ -65,7 +65,7 @@ const UpdateTab = () => {
       </Card>
 
       {/* Update Status Card */}
-      <Card className="border border-gray-200 dark:border-gray-700">
+      <Card className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
         <CardHeader className="pb-3">
           <CardTitle className="text-lg flex items-center gap-2 text-gray-900 dark:text-gray-100">
             <RefreshCw className="h-5 w-5" />
@@ -118,7 +118,7 @@ const UpdateTab = () => {
               onClick={checkForUpdatesManually}
               disabled={isChecking || isUpdating}
               variant="outline"
-              className="flex-1"
+              className="flex-1 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
             >
               {isChecking ? (
                 <>
@@ -137,7 +137,7 @@ const UpdateTab = () => {
               <Button
                 onClick={installUpdate}
                 disabled={isUpdating || isChecking}
-                className="flex-1 bg-blue-500 hover:bg-blue-600 text-white"
+                className="flex-1 bg-blue-500 hover:bg-blue-600 text-white dark:bg-blue-600 dark:hover:bg-blue-700"
               >
                 {isUpdating ? (
                   <>
