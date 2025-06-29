@@ -83,7 +83,7 @@ const DayViewModal = ({ open, onOpenChange, date, events, getWeatherForDate }: D
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-[85vw] max-w-3xl h-[85vh] max-h-none bg-white/95 backdrop-blur-sm border-white/20 p-0">
-        <DialogHeader className="px-4 pt-3 pb-6 border-b border-gray-200/50">
+        <DialogHeader className="px-4 pt-3 pb-6 border-b border-gray-200/50 h-[120px]">
           <DialogTitle className="flex items-center justify-between text-lg pr-8">
             <div className="flex items-center gap-2 min-w-0 flex-1">
               <Calendar className="h-5 w-5 text-gray-600 flex-shrink-0" />
