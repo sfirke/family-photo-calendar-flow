@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { format, addDays, startOfWeek, isSameDay, startOfDay } from 'date-fns';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
@@ -105,7 +104,7 @@ const WeekView = ({ events, weekOffset, onPreviousWeek, onNextWeek, getWeatherFo
       {/* Responsive Week Grid - Stack on mobile, grid on larger screens */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-2 sm:gap-3 md:gap-4">
         {eventsByDay.map(({ day, allDayEvents, timedEvents }, index) => (
-          <div key={index} className="border border-gray-200 dark:border-gray-700 rounded-lg p-2 sm:p-3 md:p-4 min-h-[200px] sm:min-h-[250px] lg:min-h-[300px] overflow-hidden">
+          <div key={index} className="rounded-lg p-2 sm:p-3 md:p-4 min-h-[200px] sm:min-h-[250px] lg:min-h-[300px] overflow-hidden">
             <div className="flex items-center justify-between mb-2 sm:mb-3">
               <div className="text-center sm:text-left">
                 <div className="text-xs sm:text-sm font-medium text-white">
