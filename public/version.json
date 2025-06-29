@@ -1,8 +1,8 @@
 
 {
-  "version": "1.2.0",
+  "version": "1.2.1",
   "buildDate": "2024-12-28T14:00:00.000Z",
   "gitHash": "unknown",
-  "buildNumber": 3,
+  "buildNumber": 4,
   "environment": "production"
 }
