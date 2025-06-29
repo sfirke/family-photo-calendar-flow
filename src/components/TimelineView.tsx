@@ -84,10 +84,10 @@ const TimelineView = ({ events, getWeatherForDate }: TimelineViewProps) => {
             {/* Responsive Date header with horizontal rule and weather */}
             <div className="relative flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-0">
               <div className="flex items-center gap-2 sm:gap-4">
-                <h3 className="text-base sm:text-lg font-semibold text-foreground">
+                <h3 className="text-base sm:text-lg font-semibold text-white">
                   {getDateLabel(day)}
                 </h3>
-                <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm text-muted-foreground">
+                <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm text-white/70">
                   <span>{totalEvents} events</span>
                 </div>
               </div>
@@ -98,7 +98,7 @@ const TimelineView = ({ events, getWeatherForDate }: TimelineViewProps) => {
               </div>
               
               {/* Responsive Weather display */}
-              <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm text-muted-foreground self-start sm:self-center">
+              <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm text-white/70 self-start sm:self-center">
                 <div className="text-left sm:text-right">
                   <div className="flex items-center gap-2">
                     <WeatherDisplay 
@@ -106,7 +106,7 @@ const TimelineView = ({ events, getWeatherForDate }: TimelineViewProps) => {
                       className="text-xs sm:text-sm"
                     />
                   </div>
-                  <div className="text-xs text-muted-foreground/70">
+                  <div className="text-xs text-white/50">
                     Low: {weather.temp - 10}°
                   </div>
                 </div>
