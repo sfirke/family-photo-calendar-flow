@@ -125,7 +125,7 @@ const DayViewModal = ({ open, onOpenChange, date, events, getWeatherForDate }: D
                       <EventCard 
                         key={event.id} 
                         event={event}
-                        className="bg-white/80 border border-gray-200 shadow-sm"
+                        className="bg-white/80 border border-gray-200 shadow-sm w-full"
                         viewMode="timeline"
                       />
                     ))}
@@ -147,7 +147,7 @@ const DayViewModal = ({ open, onOpenChange, date, events, getWeatherForDate }: D
                       <EventCard 
                         key={event.id} 
                         event={event}
-                        className="bg-white/80 border border-gray-200 shadow-sm"
+                        className="bg-white/80 border border-gray-200 shadow-sm w-full"
                         viewMode="timeline"
                       />
                     ))}
