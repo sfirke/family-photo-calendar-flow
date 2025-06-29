@@ -5,9 +5,10 @@ import { Sun, Cloud, CloudRain, Snowflake } from 'lucide-react';
 interface WeatherDisplayProps {
   weather: { temp: number; condition: string };
   className?: string;
+  forceWhite?: boolean;
 }
 
-const WeatherDisplay = ({ weather, className = '' }: WeatherDisplayProps) => {
+const WeatherDisplay = ({ weather, className = '', forceWhite = false }: WeatherDisplayProps) => {
   const getWeatherIcon = (condition: string) => {
     switch (condition.toLowerCase()) {
       case 'sunny':
@@ -27,8 +28,10 @@ const WeatherDisplay = ({ weather, className = '' }: WeatherDisplayProps) => {
     }
   };
 
+  const textColor = forceWhite ? 'text-white' : 'text-gray-600 dark:text-gray-300';
+
   return (
-    <div className={`flex items-center gap-2 text-gray-600 dark:text-gray-300 ${className}`}>
+    <div className={`flex items-center gap-2 ${textColor} ${className}`}>
       {getWeatherIcon(weather.condition)}
       <span className="font-medium">{weather.temp}°</span>
     </div>

@@ -104,6 +104,7 @@ const TimelineView = ({ events, getWeatherForDate }: TimelineViewProps) => {
                     <WeatherDisplay 
                       weather={weather}
                       className="text-xs sm:text-sm"
+                      forceWhite={true}
                     />
                   </div>
                   <div className="text-xs text-white/50">
