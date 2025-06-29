@@ -64,16 +64,16 @@ const WeatherConnectionTest = ({
       <div className="flex flex-col sm:flex-row gap-3">
         <Button
           onClick={testConnection}
-          disabled={isTestiing || !zipCode.trim()}
+          disabled={isTesting || !zipCode.trim()}
           className="flex items-center gap-2"
           variant="outline"
         >
-          {isTestiing ? (
+          {isTesting ? (
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
             <CheckCircle className="h-4 w-4" />
           )}
-          {isTestiing ? 'Testing Connection...' : 'Test Weather Connection'}
+          {isTesting ? 'Testing Connection...' : 'Test Weather Connection'}
         </Button>
 
         {testResult?.success && (
