@@ -1,128 +1,115 @@
 
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { CheckCircle, XCircle, Loader2, Key, Eye } from 'lucide-react';
+import { CheckCircle, XCircle, Loader2, Eye, EyeOff } from 'lucide-react';
 import { fetchWeatherData } from '@/services/weatherService';
-import { useWeather } from '@/contexts/WeatherContext';
 
 interface WeatherConnectionTestProps {
   zipCode: string;
-  weatherApiKey: string;
-  onTestResult: (result: {
-    success: boolean;
-    message: string;
-    data?: any;
-  } | null) => void;
+  onTestResult: (result: { success: boolean; message: string; data?: any }) => void;
   onShowPreviewToggle: () => void;
   showPreview: boolean;
-  testResult: {
-    success: boolean;
-    message: string;
-    data?: any;
-  } | null;
+  testResult: { success: boolean; message: string; data?: any } | null;
 }
 
 const WeatherConnectionTest = ({
   zipCode,
-  weatherApiKey,
   onTestResult,
   onShowPreviewToggle,
   showPreview,
   testResult
 }: WeatherConnectionTestProps) => {
-  const [isTestingConnection, setIsTestingConnection] = useState(false);
-  const { refreshWeather } = useWeather();
+  const [isTesting, setIsTesting] = useState(false);
 
-  const handleTestConnection = async () => {
-    if (!weatherApiKey.trim()) {
-      onTestResult({
-        success: false,
-        message: 'Please enter an API key before testing.'
-      });
-      return;
-    }
-
+  const testConnection = async () => {
     if (!zipCode.trim()) {
       onTestResult({
         success: false,
-        message: 'Please enter a zip code before testing.'
+        message: 'Please enter a zip code first'
       });
       return;
     }
 
-    setIsTestingConnection(true);
-    onTestResult(null);
-
+    setIsTesting(true);
+    
     try {
-      const weatherData = await fetchWeatherData(zipCode, weatherApiKey);
+      console.log('Testing weather connection...');
+      const weatherData = await fetchWeatherData(zipCode);
       
-      // Check if we got mock data (indicates API failure)
       if (weatherData.location === 'Location not found') {
         onTestResult({
           success: false,
-          message: 'API key or zip code is invalid. Please check your credentials.'
+          message: 'Could not find weather data for the provided zip code. Please check your zip code and try again.'
         });
       } else {
         onTestResult({
           success: true,
-          message: `Successfully connected! Location: ${weatherData.location}`,
+          message: `Successfully connected! Found weather data for ${weatherData.location}`,
           data: weatherData
         });
-        
-        // Refresh weather data in the main app after successful test
-        refreshWeather();
       }
     } catch (error) {
+      console.error('Weather connection test failed:', error);
       onTestResult({
         success: false,
-        message: 'Failed to connect to weather service. Please check your API key and zip code.'
+        message: 'Connection test failed. Please check your zip code and try again.'
       });
     } finally {
-      setIsTestingConnection(false);
+      setIsTesting(false);
     }
   };
 
   return (
     <div className="space-y-4">
-      <div className="flex gap-2">
+      <div className="flex flex-col sm:flex-row gap-3">
         <Button
-          onClick={handleTestConnection}
-          disabled={isTestingConnection}
+          onClick={testConnection}
+          disabled={isTestiing || !zipCode.trim()}
+          className="flex items-center gap-2"
           variant="outline"
-          className="border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
         >
-          {isTestingConnection ? (
-            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+          {isTestiing ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
-            <Key className="h-4 w-4 mr-2" />
+            <CheckCircle className="h-4 w-4" />
           )}
-          {isTestingConnection ? 'Testing...' : 'Test Connection'}
+          {isTestiing ? 'Testing Connection...' : 'Test Weather Connection'}
         </Button>
-        
-        {testResult?.success && testResult.data && (
+
+        {testResult?.success && (
           <Button
             onClick={onShowPreviewToggle}
             variant="outline"
-            className="border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
+            className="flex items-center gap-2"
           >
-            <Eye className="h-4 w-4 mr-2" />
-            {showPreview ? 'Hide Preview' : 'Show Preview'}
+            {showPreview ? (
+              <>
+                <EyeOff className="h-4 w-4" />
+                Hide Preview
+              </>
+            ) : (
+              <>
+                <Eye className="h-4 w-4" />
+                Show Preview
+              </>
+            )}
           </Button>
         )}
       </div>
 
       {testResult && (
-        <Alert className={testResult.success ? 'bg-green-50 dark:bg-green-900/30 border-green-200 dark:border-green-800' : 'bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-800'}>
+        <div className={`flex items-center gap-2 p-3 rounded-lg ${
+          testResult.success 
+            ? 'bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-200' 
+            : 'bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-200'
+        }`}>
           {testResult.success ? (
-            <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
+            <CheckCircle className="h-4 w-4 flex-shrink-0" />
           ) : (
-            <XCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
+            <XCircle className="h-4 w-4 flex-shrink-0" />
           )}
-          <AlertDescription className={testResult.success ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'}>
-            {testResult.message}
-          </AlertDescription>
-        </Alert>
+          <span className="text-sm">{testResult.message}</span>
+        </div>
       )}
     </div>
   );
