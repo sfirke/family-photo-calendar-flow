@@ -1,4 +1,5 @@
-import React from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { Event } from '@/types/calendar';
 import EventCard from './EventCard';
 import {
@@ -7,7 +8,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Sun, Cloud, CloudRain, Calendar, Clock } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Sun, Cloud, CloudRain, Calendar, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface DayViewModalProps {
   open: boolean;
@@ -15,11 +17,48 @@ interface DayViewModalProps {
   date: Date;
   events: Event[];
   getWeatherForDate: (date: Date) => { temp: number; condition: string };
+  onNavigateDay?: (direction: 'prev' | 'next') => void;
 }
 
-const DayViewModal = ({ open, onOpenChange, date, events, getWeatherForDate }: DayViewModalProps) => {
+const DayViewModal = ({ 
+  open, 
+  onOpenChange, 
+  date, 
+  events, 
+  getWeatherForDate,
+  onNavigateDay 
+}: DayViewModalProps) => {
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const [transitionDirection, setTransitionDirection] = useState<'prev' | 'next' | null>(null);
+  
   const weather = getWeatherForDate(date);
   const isToday = date.toDateString() === new Date().toDateString();
+
+  const handleNavigation = (direction: 'prev' | 'next') => {
+    if (!onNavigateDay || isTransitioning) return;
+    
+    setIsTransitioning(true);
+    setTransitionDirection(direction);
+    
+    // Trigger the navigation after a brief delay to show the exit animation
+    setTimeout(() => {
+      onNavigateDay(direction);
+      
+      // Reset transition state after the new content loads
+      setTimeout(() => {
+        setIsTransitioning(false);
+        setTransitionDirection(null);
+      }, 300);
+    }, 150);
+  };
+
+  // Reset transition state when modal opens/closes
+  useEffect(() => {
+    if (!open) {
+      setIsTransitioning(false);
+      setTransitionDirection(null);
+    }
+  }, [open]);
 
   const sortEventsByTimeAndType = (events: Event[]) => {
     return events.sort((a, b) => {
@@ -80,6 +119,19 @@ const DayViewModal = ({ open, onOpenChange, date, events, getWeatherForDate }: D
     }
   };
 
+  // Get transition classes based on current state
+  const getContentTransitionClasses = () => {
+    if (!isTransitioning) {
+      return 'transform transition-all duration-300 ease-in-out translate-x-0 scale-100 opacity-100';
+    }
+    
+    if (transitionDirection === 'next') {
+      return 'transform transition-all duration-300 ease-in-out -translate-x-full scale-75 opacity-0';
+    } else {
+      return 'transform transition-all duration-300 ease-in-out translate-x-full scale-75 opacity-0';
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-[85vw] max-w-3xl h-[85vh] max-h-none bg-white/95 backdrop-blur-sm border-white/20 p-0">
@@ -107,9 +159,35 @@ const DayViewModal = ({ open, onOpenChange, date, events, getWeatherForDate }: D
               </div>
             </div>
           </DialogTitle>
+          
+          {/* Navigation buttons */}
+          {onNavigateDay && (
+            <div className="flex items-center justify-center gap-4 mt-4">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handleNavigation('prev')}
+                disabled={isTransitioning}
+                className="flex items-center gap-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100/50"
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Previous Day
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handleNavigation('next')}
+                disabled={isTransitioning}
+                className="flex items-center gap-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100/50"
+              >
+                Next Day
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
         </DialogHeader>
         
-        <div className="flex-1 overflow-y-auto px-6 pb-6">
+        <div className={`flex-1 overflow-y-auto px-6 pb-6 ${getContentTransitionClasses()}`}>
           {sortedEvents.length > 0 ? (
             <div className="space-y-6">
               {/* All-day events section */}
