@@ -30,7 +30,9 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
     defaultView, 
     setDefaultView, 
     zipCode, 
-    setZipCode
+    setZipCode,
+    weatherApiKey,
+    setWeatherApiKey
   } = useSettings();
   const { setTheme: setActualTheme } = useTheme();
   const [versionInfo, setVersionInfo] = useState<any>(null);
@@ -148,6 +150,8 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
                 <WeatherTab 
                   zipCode={zipCode}
                   onZipCodeChange={setZipCode}
+                  weatherApiKey={weatherApiKey}
+                  onWeatherApiKeyChange={setWeatherApiKey}
                 />
               </TabsContent>
             </div>

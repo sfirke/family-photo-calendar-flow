@@ -17,7 +17,7 @@ const WeatherContext = createContext<WeatherContextType | undefined>(undefined);
 export const WeatherProvider = ({ children }: { children: React.ReactNode }) => {
   const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const { zipCode } = useSettings();
+  const { zipCode, weatherApiKey } = useSettings();
   const lastFetchRef = useRef<number>(0);
 
   // Optimized load function with caching and error recovery
@@ -36,16 +36,15 @@ export const WeatherProvider = ({ children }: { children: React.ReactNode }) => 
     lastFetchRef.current = now;
     
     try {
-      const data = await fetchWeatherData(zipCode);
+      const data = await fetchWeatherData(zipCode, weatherApiKey);
       setWeatherData(data);
-      console.log('Weather data loaded successfully');
     } catch (error) {
       console.warn('Weather fetch failed, using cached data if available:', error);
       // Keep existing data on error for 24/7 reliability
     } finally {
       setIsLoading(false);
     }
-  }, [zipCode]);
+  }, [zipCode, weatherApiKey]);
 
   // Exposed refresh function for manual weather updates
   const refreshWeather = useCallback(async () => {

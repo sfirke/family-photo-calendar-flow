@@ -1,6 +1,3 @@
-
-import { supabase } from '@/integrations/supabase/client';
-
 const BASE_URL = 'https://api.openweathermap.org/data/2.5';
 
 export interface WeatherData {
@@ -16,49 +13,39 @@ export interface WeatherData {
   }>;
 }
 
-export const fetchWeatherData = async (zipCode: string): Promise<WeatherData> => {
-  if (!zipCode) {
+export const fetchWeatherData = async (zipCode: string, apiKey: string): Promise<WeatherData> => {
+  if (!apiKey) {
     return getMockWeatherData();
   }
 
   try {
-    console.log(`Fetching weather data for zip code: ${zipCode}`);
+    // Current weather
+    const currentResponse = await fetch(
+      `${BASE_URL}/weather?zip=${zipCode}&appid=${apiKey}&units=imperial`
+    );
     
-    // Fetch current weather through secure proxy
-    const { data: currentData, error: currentError } = await supabase.functions.invoke('weather-proxy', {
-      body: { zipCode, endpoint: 'current' }
-    });
-
-    if (currentError) {
-      console.error('Current weather fetch error:', currentError);
-      return getMockWeatherData();
+    if (!currentResponse.ok) {
+      throw new Error(`Weather API request failed: ${currentResponse.status}`);
     }
-
-    if (!currentData || currentData.error) {
-      console.error('Current weather API error:', currentData?.error);
-      return getMockWeatherData();
-    }
-
-    // Fetch forecast through secure proxy
-    const { data: forecastData, error: forecastError } = await supabase.functions.invoke('weather-proxy', {
-      body: { zipCode, endpoint: 'forecast' }
-    });
-
-    if (forecastError) {
-      console.error('Forecast fetch error:', forecastError);
-      // Continue with current weather only
-    }
-
-    // Process forecast data if available
-    let extendedForecast: Array<{date: string; temp: number; high?: number; low?: number; condition: string}> = [];
     
-    if (forecastData && !forecastData.error && forecastData.list) {
-      const dailyForecasts = processDailyForecasts(forecastData.list);
-      extendedForecast = extendForecastData(dailyForecasts);
-    } else {
-      // Generate mock forecast based on current weather
-      extendedForecast = generateMockForecast(currentData.main.temp, currentData.weather[0].main);
+    const currentData = await currentResponse.json();
+    
+    // 5-day forecast
+    const forecastResponse = await fetch(
+      `${BASE_URL}/forecast?zip=${zipCode}&appid=${apiKey}&units=imperial`
+    );
+    
+    if (!forecastResponse.ok) {
+      throw new Error(`Forecast API request failed: ${forecastResponse.status}`);
     }
+    
+    const forecastData = await forecastResponse.json();
+    
+    // Process forecast data to get daily highs and lows
+    const dailyForecasts = processDailyForecasts(forecastData.list);
+    
+    // Extend forecast to 14 days using intelligent patterns
+    const extendedForecast = extendForecastData(dailyForecasts);
     
     return {
       temperature: Math.round(currentData.main.temp),
@@ -157,20 +144,6 @@ const extendForecastData = (apiForecast: Array<{date: string; temp: number; high
   }
   
   return extended;
-};
-
-const generateMockForecast = (baseTemp: number, baseCondition: string) => {
-  return Array.from({ length: 14 }, (_, i) => {
-    const high = baseTemp + Math.floor(Math.random() * 11) - 5; // ±5°F variation
-    const low = high - 10 - Math.floor(Math.random() * 6); // 10-15°F lower than high
-    return {
-      date: new Date(Date.now() + i * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      temp: high,
-      high,
-      low,
-      condition: getWeatherCondition(baseCondition)
-    };
-  });
 };
 
 const getMockWeatherData = (): WeatherData => {

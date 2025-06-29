@@ -12,6 +12,8 @@ interface SettingsContextType {
   setBackgroundDuration: (duration: number) => void;
   selectedAlbum: string | null;
   setSelectedAlbum: (albumId: string | null) => void;
+  weatherApiKey: string;
+  setWeatherApiKey: (apiKey: string) => void;
   publicAlbumUrl: string;
   setPublicAlbumUrl: (url: string) => void;
 }
@@ -24,6 +26,7 @@ export const SettingsProvider = ({ children }: { children: React.ReactNode }) =>
   const [zipCode, setZipCode] = useState('90210');
   const [backgroundDuration, setBackgroundDuration] = useState(30); // Default 30 minutes
   const [selectedAlbum, setSelectedAlbum] = useState<string | null>(null);
+  const [weatherApiKey, setWeatherApiKey] = useState('');
   const [publicAlbumUrl, setPublicAlbumUrl] = useState('');
 
   // Load settings from localStorage on mount
@@ -33,6 +36,7 @@ export const SettingsProvider = ({ children }: { children: React.ReactNode }) =>
     const savedZipCode = localStorage.getItem('zipCode');
     const savedDuration = localStorage.getItem('backgroundDuration');
     const savedAlbum = localStorage.getItem('selectedAlbum');
+    const savedApiKey = localStorage.getItem('weatherApiKey');
     const savedPublicAlbumUrl = localStorage.getItem('publicAlbumUrl');
 
     if (savedTheme) setTheme(savedTheme);
@@ -40,6 +44,7 @@ export const SettingsProvider = ({ children }: { children: React.ReactNode }) =>
     if (savedZipCode) setZipCode(savedZipCode);
     if (savedDuration) setBackgroundDuration(parseInt(savedDuration));
     if (savedAlbum) setSelectedAlbum(savedAlbum);
+    if (savedApiKey) setWeatherApiKey(savedApiKey);
     if (savedPublicAlbumUrl) setPublicAlbumUrl(savedPublicAlbumUrl);
   }, []);
 
@@ -69,6 +74,10 @@ export const SettingsProvider = ({ children }: { children: React.ReactNode }) =>
   }, [selectedAlbum]);
 
   useEffect(() => {
+    localStorage.setItem('weatherApiKey', weatherApiKey);
+  }, [weatherApiKey]);
+
+  useEffect(() => {
     localStorage.setItem('publicAlbumUrl', publicAlbumUrl);
   }, [publicAlbumUrl]);
 
@@ -85,6 +94,8 @@ export const SettingsProvider = ({ children }: { children: React.ReactNode }) =>
         setBackgroundDuration,
         selectedAlbum,
         setSelectedAlbum,
+        weatherApiKey,
+        setWeatherApiKey,
         publicAlbumUrl,
         setPublicAlbumUrl,
       }}
