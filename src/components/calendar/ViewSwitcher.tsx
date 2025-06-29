@@ -16,7 +16,7 @@ const ViewSwitcher = ({ view, onViewChange }: ViewSwitcherProps) => {
         size="sm"
         onClick={() => onViewChange('timeline')}
         className={view === 'timeline' 
-          ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm' 
+          ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm hover:bg-white dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white hover:shadow-sm' 
           : 'text-gray-700 dark:text-white hover:bg-white dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white hover:shadow-sm'
         }
       >
@@ -28,7 +28,7 @@ const ViewSwitcher = ({ view, onViewChange }: ViewSwitcherProps) => {
         size="sm"
         onClick={() => onViewChange('week')}
         className={view === 'week' 
-          ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm' 
+          ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm hover:bg-white dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white hover:shadow-sm' 
           : 'text-gray-700 dark:text-white hover:bg-white dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white hover:shadow-sm'
         }
       >
@@ -40,7 +40,7 @@ const ViewSwitcher = ({ view, onViewChange }: ViewSwitcherProps) => {
         size="sm"
         onClick={() => onViewChange('month')}
         className={view === 'month' 
-          ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm' 
+          ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm hover:bg-white dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white hover:shadow-sm' 
           : 'text-gray-700 dark:text-white hover:bg-white dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white hover:shadow-sm'
         }
       >
