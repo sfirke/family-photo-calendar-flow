@@ -118,7 +118,7 @@ const UpdateTab = () => {
               onClick={checkForUpdatesManually}
               disabled={isChecking || isUpdating}
               variant="outline"
-              className="flex-1 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+              className="flex-1 bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-700"
             >
               {isChecking ? (
                 <>
