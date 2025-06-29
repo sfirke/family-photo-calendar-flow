@@ -1,8 +1,8 @@
 
 // Configuration - Update this with your actual GitHub repository
 const GITHUB_REPO = {
-  owner: 'your-username', // Replace with actual GitHub username/organization
-  repo: 'your-repo-name'   // Replace with actual repository name
+  owner: 'cardner', // Replace with actual GitHub username/organization
+  repo: 'family-photo-calendar-flow'   // Replace with actual repository name
 };
 
 const GITHUB_API_BASE = 'https://api.github.com';
