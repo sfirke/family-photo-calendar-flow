@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { format, addDays, startOfWeek, isSameDay, startOfDay } from 'date-fns';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
@@ -86,7 +87,7 @@ const WeekView = ({ events, weekOffset, onPreviousWeek, onNextWeek, getWeatherFo
           <span className="hidden sm:inline ml-1">Previous</span>
         </Button>
         
-        <h2 className="text-sm sm:text-base md:text-lg font-semibold text-gray-900 dark:text-gray-100 text-center px-2">
+        <h2 className="text-sm sm:text-base md:text-lg font-semibold text-white text-center px-2">
           {format(weekStart, 'MMM d')} - {format(addDays(weekStart, 6), 'MMM d, yyyy')}
         </h2>
         
@@ -107,16 +108,17 @@ const WeekView = ({ events, weekOffset, onPreviousWeek, onNextWeek, getWeatherFo
           <div key={index} className="border border-gray-200 dark:border-gray-700 rounded-lg p-2 sm:p-3 md:p-4 min-h-[200px] sm:min-h-[250px] lg:min-h-[300px] overflow-hidden">
             <div className="flex items-center justify-between mb-2 sm:mb-3">
               <div className="text-center sm:text-left">
-                <div className="text-xs sm:text-sm font-medium text-gray-900 dark:text-gray-100">
+                <div className="text-xs sm:text-sm font-medium text-white">
                   {format(day, 'EEE')}
                 </div>
-                <div className="text-base sm:text-lg font-bold text-gray-900 dark:text-gray-100">
+                <div className="text-base sm:text-lg font-bold text-white">
                   {format(day, 'd')}
                 </div>
               </div>
               <WeatherDisplay 
                 weather={getWeatherForDate(day)}
                 className="text-xs hidden sm:block"
+                forceWhite={true}
               />
             </div>
             
@@ -140,7 +142,7 @@ const WeekView = ({ events, weekOffset, onPreviousWeek, onNextWeek, getWeatherFo
               ))}
               
               {allDayEvents.length === 0 && timedEvents.length === 0 && (
-                <p className="text-xs text-gray-500 dark:text-gray-400 italic">No events</p>
+                <p className="text-xs text-white/70 italic">No events</p>
               )}
             </div>
           </div>
