@@ -8,6 +8,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2024-12-28
+
+### Added
+- Comprehensive responsive design implementation
+- Mobile-first layout approach with progressive enhancement
+- Touch-friendly controls and navigation for mobile devices
+- Responsive typography system that scales across all screen sizes
+- Adaptive calendar views optimized for different device sizes
+- Smart navigation that adapts to mobile and desktop contexts
+- Full-screen modal support for mobile devices
+- Flexible spacing system using responsive Tailwind classes
+
+### Changed
+- Redesigned main layout to be fully responsive across all device sizes
+- Updated calendar components (Month, Week, Timeline) for mobile optimization
+- Enhanced settings modal with responsive tabs and mobile-friendly interface
+- Improved calendar header with stacked controls on mobile devices
+- Optimized button sizes and spacing for touch interaction
+- Enhanced weather display and event cards for mobile screens
+
+### Technical
+- Implemented mobile-first CSS approach using Tailwind responsive prefixes
+- Added comprehensive breakpoint system for phones, tablets, and desktops
+- Optimized component layouts for iPhone 11, Google Pixel, iPad, and desktop screens
+- Enhanced touch target sizes to meet accessibility standards (minimum 44px)
+- Improved viewport handling and responsive container sizing
+
 ## [1.1.0] - 2024-12-28
 
 ### Added
