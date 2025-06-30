@@ -155,11 +155,18 @@ export const useLocalEvents = () => {
         try {
           const importedEvents: ImportedEvent[] = JSON.parse(e.target?.result as string);
           
-          // Validate and convert imported events
-          const validEvents = importedEvents.map((event: ImportedEvent, index: number) => ({
-            ...event,
+          // Validate and convert imported events with all required Event properties
+          const validEvents: Event[] = importedEvents.map((event: ImportedEvent, index: number) => ({
             id: event.id || (Date.now() + index),
+            title: event.title,
             date: new Date(event.date),
+            time: event.time || '12:00',
+            location: event.location || '',
+            description: event.description || '',
+            attendees: 0,
+            category: 'Personal' as const,
+            color: '#3b82f6',
+            organizer: 'User',
             calendarId: event.calendarId || 'imported_calendar',
             calendarName: event.calendarName || 'Imported Calendar'
           }));

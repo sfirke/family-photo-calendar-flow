@@ -24,8 +24,10 @@ export interface UpdateInfo {
 
 export interface VersionInfo {
   version: string;
-  buildDate: string;
-  gitHash: string;
+  buildDate?: string;
+  gitHash?: string;
+  buildNumber?: number;
+  environment?: string;
 }
 
 export interface SyncData {
