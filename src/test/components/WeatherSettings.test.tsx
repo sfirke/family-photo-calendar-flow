@@ -3,12 +3,20 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '../utils/testUtils';
 import WeatherSettings from '@/components/settings/weather/WeatherSettings';
 
-// Mock the security context
+// Mock the security context with all exports
 vi.mock('@/contexts/SecurityContext', () => ({
-  useSecurity: () => ({
+  SecurityProvider: ({ children }: { children: React.ReactNode }) => children,
+  useSecurity: vi.fn(() => ({
     isSecurityEnabled: false,
     hasLockedData: false,
-  }),
+    isInitialized: true,
+    enableSecurity: vi.fn(),
+    disableSecurity: vi.fn(),
+    unlockSecurity: vi.fn(),
+    lockSecurity: vi.fn(),
+    encryptData: vi.fn(),
+    decryptData: vi.fn(),
+  })),
 }));
 
 describe('WeatherSettings', () => {

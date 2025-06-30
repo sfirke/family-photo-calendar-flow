@@ -5,6 +5,17 @@ import { fetchWeatherData } from '@/services/weatherService';
 // Mock the fetch function
 global.fetch = vi.fn();
 
+// Mock InputValidator with all methods
+vi.mock('@/utils/security/inputValidation', () => ({
+  InputValidator: {
+    validateZipCode: vi.fn().mockReturnValue({ isValid: true, error: null }),
+    validateApiKey: vi.fn().mockReturnValue({ isValid: true, error: null }),
+    validateUrl: vi.fn().mockReturnValue({ isValid: true, error: null }),
+    validateGithubUsername: vi.fn().mockReturnValue({ isValid: true, error: null }),
+    validateGithubRepoName: vi.fn().mockReturnValue({ isValid: true, error: null }),
+  },
+}));
+
 describe('weatherService', () => {
   beforeEach(() => {
     vi.resetAllMocks();

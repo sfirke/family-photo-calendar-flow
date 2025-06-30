@@ -3,47 +3,63 @@ import { describe, it, expect, vi } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { SettingsProvider, useSettings } from '@/contexts/SettingsContext';
 
-// Mock all the individual hooks
+// Mock all the individual hooks with complete exports
 vi.mock('@/contexts/settings/useDisplaySettings', () => ({
-  useDisplaySettings: () => ({
+  useDisplaySettings: vi.fn(() => ({
     theme: 'light',
     setTheme: vi.fn(),
     defaultView: 'month',
     setDefaultView: vi.fn(),
-  }),
+  })),
 }));
 
 vi.mock('@/contexts/settings/useWeatherSettings', () => ({
-  useWeatherSettings: () => ({
+  useWeatherSettings: vi.fn(() => ({
     zipCode: '90210',
     setZipCode: vi.fn(),
     weatherApiKey: '',
     setWeatherApiKey: vi.fn(),
-  }),
+  })),
 }));
 
 vi.mock('@/contexts/settings/usePhotoSettings', () => ({
-  usePhotoSettings: () => ({
+  usePhotoSettings: vi.fn(() => ({
     publicAlbumUrl: '',
     setPublicAlbumUrl: vi.fn(),
     backgroundDuration: 30,
     setBackgroundDuration: vi.fn(),
     selectedAlbum: '',
     setSelectedAlbum: vi.fn(),
-  }),
+  })),
 }));
 
 vi.mock('@/contexts/settings/useGitHubSettings', () => ({
-  useGitHubSettings: () => ({
+  useGitHubSettings: vi.fn(() => ({
     githubOwner: '',
     setGithubOwner: vi.fn(),
     githubRepo: '',
     setGithubRepo: vi.fn(),
-  }),
+  })),
 }));
 
 vi.mock('@/contexts/settings/useSettingsInitialization', () => ({
   useSettingsInitialization: vi.fn(),
+}));
+
+// Mock SecurityContext with all exports
+vi.mock('@/contexts/SecurityContext', () => ({
+  SecurityProvider: ({ children }: { children: React.ReactNode }) => children,
+  useSecurity: vi.fn(() => ({
+    isSecurityEnabled: false,
+    hasLockedData: false,
+    isInitialized: true,
+    enableSecurity: vi.fn(),
+    disableSecurity: vi.fn(),
+    unlockSecurity: vi.fn(),
+    lockSecurity: vi.fn(),
+    encryptData: vi.fn(),
+    decryptData: vi.fn(),
+  })),
 }));
 
 describe('SettingsContext', () => {

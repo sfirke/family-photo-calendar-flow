@@ -3,10 +3,23 @@ import { describe, it, expect, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useWeatherSettings } from '@/contexts/settings/useWeatherSettings';
 
-// Mock the SettingsStorage
+// Mock the SettingsStorage with all static methods
 vi.mock('@/contexts/settings/settingsStorage', () => ({
   SettingsStorage: {
-    saveSetting: vi.fn(),
+    saveSetting: vi.fn().mockResolvedValue(undefined),
+    loadAllSettings: vi.fn().mockResolvedValue({}),
+    removeSetting: vi.fn().mockResolvedValue(undefined),
+  },
+}));
+
+// Mock the InputValidator with all validation methods
+vi.mock('@/utils/security/inputValidation', () => ({
+  InputValidator: {
+    validateZipCode: vi.fn().mockReturnValue({ isValid: true, error: null }),
+    validateApiKey: vi.fn().mockReturnValue({ isValid: true, error: null }),
+    validateUrl: vi.fn().mockReturnValue({ isValid: true, error: null }),
+    validateGithubUsername: vi.fn().mockReturnValue({ isValid: true, error: null }),
+    validateGithubRepoName: vi.fn().mockReturnValue({ isValid: true, error: null }),
   },
 }));
 
