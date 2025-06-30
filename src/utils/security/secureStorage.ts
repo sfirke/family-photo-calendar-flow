@@ -1,3 +1,4 @@
+
 import { encryptData, decryptData } from './encryption';
 
 interface SecureStorageItem {
@@ -21,7 +22,7 @@ class SecureStorage {
     }
 
     try {
-      const const salt = crypto.getRandomValues(new Uint8Array(16));  // Fixed: use const
+      const salt = crypto.getRandomValues(new Uint8Array(16));  // Fixed: removed duplicate const
       const encryptedData = await encryptData(value, password, salt);
       
       const storageItem: SecureStorageItem = {
