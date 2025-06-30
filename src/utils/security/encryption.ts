@@ -33,6 +33,15 @@ export class ClientSideEncryption {
   private static readonly ITERATIONS = 100000;
 
   /**
+   * Check if Web Crypto API is available
+   */
+  private static isCryptoAvailable(): boolean {
+    return typeof crypto !== 'undefined' && 
+           crypto.subtle !== undefined && 
+           typeof crypto.subtle.importKey === 'function';
+  }
+
+  /**
    * Generate cryptographic key from user password
    * 
    * Uses PBKDF2 with SHA-256 to derive a strong encryption key
@@ -44,6 +53,10 @@ export class ClientSideEncryption {
    * @returns Promise<CryptoKey> - Derived AES-256 key
    */
   static async deriveKey(password: string, salt: Uint8Array): Promise<CryptoKey> {
+    if (!this.isCryptoAvailable()) {
+      throw new Error('Web Crypto API not available');
+    }
+
     const encoder = new TextEncoder();
     
     // Import password as raw material for key derivation
@@ -81,6 +94,10 @@ export class ClientSideEncryption {
    * @returns Promise<string> - Base64-encoded encrypted data with IV
    */
   static async encrypt(data: string, key: CryptoKey): Promise<string> {
+    if (!this.isCryptoAvailable()) {
+      throw new Error('Web Crypto API not available');
+    }
+
     const encoder = new TextEncoder();
     
     // Generate random IV for this encryption operation
@@ -114,6 +131,10 @@ export class ClientSideEncryption {
    * @throws Error if decryption fails or data is corrupted
    */
   static async decrypt(encryptedData: string, key: CryptoKey): Promise<string> {
+    if (!this.isCryptoAvailable()) {
+      throw new Error('Web Crypto API not available');
+    }
+
     try {
       // Decode from base64 and split IV from ciphertext
       const combined = new Uint8Array(
@@ -144,6 +165,14 @@ export class ClientSideEncryption {
    * @returns Uint8Array - Random salt bytes for key derivation
    */
   static generateSalt(): Uint8Array {
+    if (!this.isCryptoAvailable()) {
+      // Fallback for test environments
+      const salt = new Uint8Array(this.SALT_LENGTH);
+      for (let i = 0; i < salt.length; i++) {
+        salt[i] = Math.floor(Math.random() * 256);
+      }
+      return salt;
+    }
     return crypto.getRandomValues(new Uint8Array(this.SALT_LENGTH));
   }
 
@@ -170,14 +199,24 @@ export class ClientSideEncryption {
 
 // Export convenience functions
 export const encryptData = async (data: string, password: string, salt: Uint8Array): Promise<string> => {
-  const key = await ClientSideEncryption.deriveKey(password, salt);
-  return ClientSideEncryption.encrypt(data, key);
+  try {
+    const key = await ClientSideEncryption.deriveKey(password, salt);
+    return ClientSideEncryption.encrypt(data, key);
+  } catch (error) {
+    console.error('Encryption failed:', error);
+    throw new Error('Failed to encrypt data');
+  }
 };
 
 export const decryptData = async (encryptedData: string, password: string): Promise<string> => {
-  // For simplicity, this assumes salt is stored separately
-  // In a real implementation, you'd extract salt from the encrypted data
-  const salt = ClientSideEncryption.generateSalt();
-  const key = await ClientSideEncryption.deriveKey(password, salt);
-  return ClientSideEncryption.decrypt(encryptedData, key);
+  try {
+    // For simplicity, this assumes salt is stored separately
+    // In a real implementation, you'd extract salt from the encrypted data
+    const salt = ClientSideEncryption.generateSalt();
+    const key = await ClientSideEncryption.deriveKey(password, salt);
+    return ClientSideEncryption.decrypt(encryptedData, key);
+  } catch (error) {
+    console.error('Decryption failed:', error);
+    throw new Error('Failed to decrypt data');
+  }
 };

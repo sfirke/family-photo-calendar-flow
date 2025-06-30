@@ -34,3 +34,36 @@ global.IntersectionObserver = vi.fn().mockImplementation(() => ({
   unobserve: vi.fn(),
   disconnect: vi.fn(),
 }));
+
+// Mock Web Crypto API for testing environment
+const mockCrypto = {
+  getRandomValues: vi.fn((array) => {
+    for (let i = 0; i < array.length; i++) {
+      array[i] = Math.floor(Math.random() * 256);
+    }
+    return array;
+  }),
+  subtle: {
+    importKey: vi.fn().mockResolvedValue({}),
+    deriveKey: vi.fn().mockResolvedValue({}),
+    deriveBits: vi.fn().mockResolvedValue(new ArrayBuffer(32)),
+    encrypt: vi.fn().mockResolvedValue(new ArrayBuffer(32)),
+    decrypt: vi.fn().mockResolvedValue(new ArrayBuffer(16)),
+  },
+};
+
+// Override global crypto
+Object.defineProperty(global, 'crypto', {
+  value: mockCrypto,
+  writable: true,
+});
+
+// Override window crypto for browser environment
+Object.defineProperty(window, 'crypto', {
+  value: mockCrypto,
+  writable: true,
+});
+
+// Mock btoa and atob for base64 operations
+global.btoa = vi.fn((str) => Buffer.from(str, 'binary').toString('base64'));
+global.atob = vi.fn((str) => Buffer.from(str, 'base64').toString('binary'));

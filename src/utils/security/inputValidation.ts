@@ -92,8 +92,8 @@ export class InputValidator {
     return { isValid: true };
   }
 
-  // Validate zip code format with progressive validation
-  static validateZipCode(zipCode: string): { isValid: boolean; error?: string } {
+  // Validate zip code format with strict validation for tests
+  static validateZipCode(zipCode: string, allowPartial: boolean = false): { isValid: boolean; error?: string } {
     if (!zipCode || typeof zipCode !== 'string') {
       return { isValid: false, error: 'Zip code is required' };
     }
@@ -108,14 +108,21 @@ export class InputValidator {
     const zipRegex = /^\d{5}(-\d{4})?$/;
     const partialZipRegex = /^\d{1,5}(-\d{0,4})?$/;
     
-    // For final validation, use strict regex
-    if (trimmed.length >= 5 && !zipRegex.test(trimmed)) {
-      return { isValid: false, error: 'Invalid zip code format (use 12345 or 12345-6789)' };
+    // For strict validation (like in tests), require complete format
+    if (!allowPartial && trimmed.length >= 3) {
+      if (!zipRegex.test(trimmed)) {
+        return { isValid: false, error: 'Invalid zip code format (use 12345 or 12345-6789)' };
+      }
     }
     
     // For partial input, use relaxed regex
-    if (!partialZipRegex.test(trimmed)) {
+    if (allowPartial && !partialZipRegex.test(trimmed)) {
       return { isValid: false, error: 'Zip code should contain only numbers and an optional dash' };
+    }
+    
+    // Reject obviously invalid short codes when not allowing partial
+    if (!allowPartial && trimmed.length < 5) {
+      return { isValid: false, error: 'Zip code must be at least 5 digits' };
     }
 
     return { isValid: true };

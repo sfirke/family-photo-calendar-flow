@@ -10,14 +10,16 @@ describe('InputValidator', () => {
     });
 
     it('should reject invalid zip codes', () => {
+      // Test with strict validation (allowPartial = false, which is default)
       expect(InputValidator.validateZipCode('123').isValid).toBe(false);
       expect(InputValidator.validateZipCode('abcde').isValid).toBe(false);
       expect(InputValidator.validateZipCode('').isValid).toBe(false);
     });
 
     it('should allow partial input during typing', () => {
-      expect(InputValidator.validateZipCode('9').isValid).toBe(true);
-      expect(InputValidator.validateZipCode('902').isValid).toBe(true);
+      // Test with allowPartial = true for progressive typing
+      expect(InputValidator.validateZipCode('9', true).isValid).toBe(true);
+      expect(InputValidator.validateZipCode('902', true).isValid).toBe(true);
     });
   });
 
