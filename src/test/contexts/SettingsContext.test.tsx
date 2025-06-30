@@ -3,6 +3,10 @@ import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { SettingsProvider, useSettings } from '@/contexts/SettingsContext';
+import { mockSecurityContext } from '../utils/securityMocks';
+
+// Use the standardized SecurityContext mock
+mockSecurityContext();
 
 // Mock all the individual hooks with complete exports
 vi.mock('@/contexts/settings/useDisplaySettings', () => ({
@@ -45,21 +49,6 @@ vi.mock('@/contexts/settings/useGitHubSettings', () => ({
 
 vi.mock('@/contexts/settings/useSettingsInitialization', () => ({
   useSettingsInitialization: vi.fn(),
-}));
-
-// Mock SecurityContext with all exports - consistent with other test files
-vi.mock('@/contexts/SecurityContext', () => ({
-  SecurityProvider: ({ children }: { children: React.ReactNode }) => children,
-  SecurityContext: React.createContext(undefined),
-  useSecurity: vi.fn(() => ({
-    isSecurityEnabled: false,
-    hasLockedData: false,
-    isInitialized: true,
-    enableSecurity: vi.fn(),
-    disableSecurity: vi.fn(),
-    getSecurityStatus: vi.fn(() => 'Security Disabled - Data stored in plain text'),
-    isDataAvailable: vi.fn().mockResolvedValue(true),
-  })),
 }));
 
 // Mock ThemeContext

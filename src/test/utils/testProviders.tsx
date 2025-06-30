@@ -5,29 +5,8 @@ import { ThemeProvider } from '@/contexts/ThemeContext';
 import { SettingsProvider } from '@/contexts/SettingsContext';
 import { WeatherProvider } from '@/contexts/WeatherContext';
 
-// Create a test-specific SecurityContext instead of importing from the module
-const TestSecurityContext = React.createContext(undefined);
-
-// Test-specific SecurityProvider that provides a proper React Context
-const TestSecurityProvider = ({ children }: { children: React.ReactNode }) => {
-  const mockSecurityContext = {
-    isSecurityEnabled: false,
-    isInitialized: true,
-    hasLockedData: false,
-    enableSecurity: async () => true,
-    disableSecurity: () => {},
-    getSecurityStatus: () => 'Security Disabled - Data stored in plain text',
-    isDataAvailable: async () => true,
-  };
-
-  return (
-    <TestSecurityContext.Provider value={mockSecurityContext}>
-      {children}
-    </TestSecurityContext.Provider>
-  );
-};
-
 // Enhanced AllTheProviders with proper provider chain order
+// Note: SecurityProvider is now handled by the module mock, not a separate TestSecurityProvider
 export const AllTheProviders = ({ children }: { children: React.ReactNode }) => {
   const queryClient = new QueryClient({
     defaultOptions: {
@@ -45,13 +24,11 @@ export const AllTheProviders = ({ children }: { children: React.ReactNode }) => 
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
-        <TestSecurityProvider>
-          <SettingsProvider>
-            <WeatherProvider>
-              {children}
-            </WeatherProvider>
-          </SettingsProvider>
-        </TestSecurityProvider>
+        <SettingsProvider>
+          <WeatherProvider>
+            {children}
+          </WeatherProvider>
+        </SettingsProvider>
       </ThemeProvider>
     </QueryClientProvider>
   );

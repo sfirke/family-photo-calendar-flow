@@ -4,21 +4,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, act } from '../utils/testUtils';
 import { BrowserRouter } from 'react-router-dom';
 import Index from '@/pages/Index';
+import { mockSecurityContext } from '../utils/securityMocks';
 
-// Mock SecurityContext with all exports - must be at top level
-vi.mock('@/contexts/SecurityContext', () => ({
-  SecurityProvider: ({ children }: { children: React.ReactNode }) => children,
-  SecurityContext: React.createContext(undefined),
-  useSecurity: vi.fn(() => ({
-    isSecurityEnabled: false,
-    hasLockedData: false,
-    isInitialized: true,
-    enableSecurity: vi.fn(),
-    disableSecurity: vi.fn(),
-    getSecurityStatus: vi.fn(() => 'Security Disabled - Data stored in plain text'),
-    isDataAvailable: vi.fn().mockResolvedValue(true),
-  })),
-}));
+// Use the standardized SecurityContext mock
+mockSecurityContext();
 
 // Mock version manager to prevent fetch errors
 vi.mock('@/utils/versionManager', () => ({
