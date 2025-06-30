@@ -2,6 +2,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useWeatherSettings } from '@/contexts/settings/useWeatherSettings';
+import { mockSecurityModule, resetSecurityMocks } from '../utils/securityMocks';
+
+// Apply direct module mock at the top level
+mockSecurityModule();
 
 // Mock the SettingsStorage with all static methods
 vi.mock('@/contexts/settings/settingsStorage', () => ({
@@ -23,24 +27,9 @@ vi.mock('@/utils/security/inputValidation', () => ({
   },
 }));
 
-// Mock SecurityContext
-vi.mock('@/contexts/SecurityContext', () => ({
-  useSecurity: vi.fn(() => ({
-    isSecurityEnabled: false,
-    hasLockedData: false,
-    isInitialized: true,
-    enableSecurity: vi.fn(),
-    disableSecurity: vi.fn(),
-    unlockSecurity: vi.fn(),
-    lockSecurity: vi.fn(),
-    encryptData: vi.fn(),
-    decryptData: vi.fn(),
-  })),
-}));
-
 describe('useWeatherSettings', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    resetSecurityMocks();
   });
 
   it('should initialize with default values', () => {

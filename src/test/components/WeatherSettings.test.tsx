@@ -1,14 +1,12 @@
 
-import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import WeatherSettings from '@/components/settings/weather/WeatherSettings';
 import { AllTheProviders } from '../utils/testProviders';
-import { mockSecurityContext } from '../utils/securityMocks';
+import { mockSecurityModule, resetSecurityMocks } from '../utils/securityMocks';
 
-// Apply the SecurityContext mock before any imports
-beforeAll(() => {
-  mockSecurityContext();
-});
+// Apply direct module mock at the top level
+mockSecurityModule();
 
 // Mock SecurityUnlockBanner to render nothing when hasLockedData is false
 vi.mock('@/components/security/SecurityUnlockBanner', () => ({
@@ -80,7 +78,7 @@ vi.mock('@/contexts/WeatherContext', () => ({
 
 describe('WeatherSettings', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    resetSecurityMocks();
   });
 
   const defaultProps = {

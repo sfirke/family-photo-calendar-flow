@@ -1,13 +1,12 @@
+
 import React from 'react';
-import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { SettingsProvider, useSettings } from '@/contexts/SettingsContext';
-import { mockSecurityContext, MockSecurityProvider } from '../utils/securityMocks';
+import { mockSecurityModule, resetSecurityMocks } from '../utils/securityMocks';
 
-// Apply the SecurityContext mock before any imports
-beforeAll(() => {
-  mockSecurityContext();
-});
+// Apply direct module mock at the top level
+mockSecurityModule();
 
 // Mock all the individual hooks with complete exports
 vi.mock('@/contexts/settings/useDisplaySettings', () => ({
@@ -74,13 +73,11 @@ vi.mock('@/contexts/WeatherContext', () => ({
 
 describe('SettingsContext', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    resetSecurityMocks();
   });
 
   const wrapper = ({ children }: { children: React.ReactNode }) => (
-    <MockSecurityProvider>
-      <SettingsProvider>{children}</SettingsProvider>
-    </MockSecurityProvider>
+    <SettingsProvider>{children}</SettingsProvider>
   );
 
   it('should provide settings context', () => {

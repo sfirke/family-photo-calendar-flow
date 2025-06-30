@@ -1,16 +1,14 @@
-import { describe, it, expect, vi, beforeAll } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render } from '../utils/testUtils';
 import TimelineView from '@/components/TimelineView';
 import WeekView from '@/components/WeekView';
 import MonthView from '@/components/MonthView';
 import { Event } from '@/types/calendar';
 import { compareTimeStrings } from '@/utils/timeUtils';
-import { mockSecurityContext } from '../utils/securityMocks';
+import { mockSecurityModule, resetSecurityMocks } from '../utils/securityMocks';
 
-// Apply the SecurityContext mock before any imports
-beforeAll(() => {
-  mockSecurityContext();
-});
+// Apply direct module mock at the top level
+mockSecurityModule();
 
 // Mock weather function
 const mockGetWeatherForDate = vi.fn().mockReturnValue({ temp: 75, condition: 'Sunny' });
@@ -104,6 +102,10 @@ const createTestEvents = (): Event[] => [
 ];
 
 describe('Event Sorting', () => {
+  beforeEach(() => {
+    resetSecurityMocks();
+  });
+
   describe('TimelineView', () => {
     it('should render all-day events first, sorted alphabetically', async () => {
       const events = createTestEvents();

@@ -1,14 +1,12 @@
 import React from 'react';
-import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, act } from '../utils/testUtils';
 import { BrowserRouter } from 'react-router-dom';
 import Index from '@/pages/Index';
-import { mockSecurityContext } from '../utils/securityMocks';
+import { mockSecurityModule, resetSecurityMocks } from '../utils/securityMocks';
 
-// Apply the SecurityContext mock before any imports
-beforeAll(() => {
-  mockSecurityContext();
-});
+// Apply direct module mock at the top level
+mockSecurityModule();
 
 // Mock version manager to prevent fetch errors
 vi.mock('@/utils/versionManager', () => ({
@@ -189,7 +187,7 @@ vi.mock('@/contexts/WeatherContext', () => ({
 
 describe('Calendar Integration', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    resetSecurityMocks();
   });
 
   const renderCalendar = async () => {
