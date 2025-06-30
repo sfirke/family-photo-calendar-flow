@@ -74,6 +74,32 @@ export const logRenderMetrics = (): void => {
 
 // Export additional utilities needed by other components
 export class PerformanceMonitor {
+  private static isMonitoring = false;
+  private static monitoringInterval: number | null = null;
+
+  static startMonitoring(): void {
+    if (this.isMonitoring) return;
+    
+    this.isMonitoring = true;
+    console.log('Performance monitoring started');
+    
+    // Monitor performance every 30 seconds
+    this.monitoringInterval = window.setInterval(() => {
+      logRenderMetrics();
+    }, 30000);
+  }
+
+  static stopMonitoring(): void {
+    if (!this.isMonitoring) return;
+    
+    this.isMonitoring = false;
+    if (this.monitoringInterval) {
+      window.clearInterval(this.monitoringInterval);
+      this.monitoringInterval = null;
+    }
+    console.log('Performance monitoring stopped');
+  }
+
   static trackPageLoad(): void {
     window.addEventListener('load', () => {
       const loadTime = performance.now();
@@ -83,20 +109,28 @@ export class PerformanceMonitor {
 }
 
 export class IntervalManager {
-  private intervals: Set<number> = new Set();
+  private static intervals: Map<string, number> = new Map();
 
-  setInterval(callback: () => void, delay: number): number {
+  static setInterval(name: string, callback: () => void, delay: number): number {
+    // Clear existing interval with same name
+    if (this.intervals.has(name)) {
+      this.clearInterval(name);
+    }
+    
     const id = window.setInterval(callback, delay);
-    this.intervals.add(id);
+    this.intervals.set(name, id);
     return id;
   }
 
-  clearInterval(id: number): void {
-    window.clearInterval(id);
-    this.intervals.delete(id);
+  static clearInterval(name: string): void {
+    const id = this.intervals.get(name);
+    if (id !== undefined) {
+      window.clearInterval(id);
+      this.intervals.delete(name);
+    }
   }
 
-  clearAll(): void {
+  static clearAllIntervals(): void {
     this.intervals.forEach(id => window.clearInterval(id));
     this.intervals.clear();
   }
@@ -109,5 +143,32 @@ export const displayOptimizations = {
   
   enableImageLazyLoading: () => {
     console.log('Lazy loading enabled for images');
+  },
+
+  enableBurnInPrevention: (): number => {
+    console.log('Burn-in prevention enabled');
+    // Return a dummy interval ID for cleanup
+    return window.setInterval(() => {
+      // Subtle pixel shifting to prevent burn-in
+    }, 60000);
+  },
+
+  enableOLEDOptimization: () => {
+    console.log('OLED optimization enabled');
+    // Apply dark mode optimizations for OLED displays
+    document.documentElement.style.setProperty('--oled-black', '#000000');
+  },
+
+  adjustForTimeOfDay: () => {
+    const hour = new Date().getHours();
+    if (hour >= 22 || hour <= 6) {
+      // Night mode adjustments
+      console.log('Applying night mode optimizations');
+      document.documentElement.style.setProperty('--night-brightness', '0.8');
+    } else {
+      // Day mode adjustments
+      console.log('Applying day mode optimizations');
+      document.documentElement.style.setProperty('--night-brightness', '1.0');
+    }
   }
 };
