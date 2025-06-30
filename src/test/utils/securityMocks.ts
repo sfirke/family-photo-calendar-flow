@@ -1,4 +1,5 @@
 
+import React from 'react';
 import { vi } from 'vitest';
 
 // Consistent SecurityContext mock that can be used across all test files

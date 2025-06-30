@@ -38,7 +38,7 @@ interface SecurityContextType {
   isDataAvailable: (key: string) => Promise<boolean>;
 }
 
-const SecurityContext = createContext<SecurityContextType | undefined>(undefined);
+export const SecurityContext = createContext<SecurityContextType | undefined>(undefined);
 
 /**
  * Security Provider Component
