@@ -1,131 +1,73 @@
 
-// Performance utilities for 24/7 display operation
-export class PerformanceMonitor {
-  private static memoryCheckInterval: NodeJS.Timeout | null = null;
-  private static performanceMetrics = {
-    memoryUsage: 0,
-    renderCount: 0,
-    lastCleanup: Date.now()
-  };
+interface PerformanceEntry {
+  name: string;
+  startTime: number;
+  duration?: number;
+}
 
-  static startMonitoring() {
-    // Clear any existing interval
-    if (this.memoryCheckInterval) {
-      clearInterval(this.memoryCheckInterval);
-    }
+interface PerformanceMetrics {
+  renderTime: number;
+  memoryUsage?: number;
+  componentCount: number;
+}
 
-    // Monitor memory usage every 30 minutes
-    this.memoryCheckInterval = setInterval(() => {
-      this.performMemoryCleanup();
-    }, 30 * 60 * 1000);
-  }
+class PerformanceTracker {
+  private entries: Map<string, PerformanceEntry> = new Map();
 
-  static stopMonitoring() {
-    if (this.memoryCheckInterval) {
-      clearInterval(this.memoryCheckInterval);
-      this.memoryCheckInterval = null;
-    }
-  }
-
-  static performMemoryCleanup() {
-    // Clear localStorage of old cache entries (older than 24 hours)
-    const now = Date.now();
-    const keys = Object.keys(localStorage);
-    
-    keys.forEach(key => {
-      if (key.includes('cache') || key.includes('temp')) {
-        try {
-          const item = localStorage.getItem(key);
-          if (item) {
-            const data = JSON.parse(item);
-            if (data.timestamp && (now - data.timestamp) > 24 * 60 * 60 * 1000) {
-              localStorage.removeItem(key);
-            }
-          }
-        } catch (error) {
-          // Remove corrupted items
-          localStorage.removeItem(key);
-        }
-      }
+  startMeasurement(name: string): void {
+    this.entries.set(name, {
+      name,
+      startTime: performance.now()
     });
-
-    // Force garbage collection if available
-    if ('gc' in window) {
-      (window as any).gc();
-    }
-
-    this.performanceMetrics.lastCleanup = now;
   }
 
-  static getMetrics() {
-    return { ...this.performanceMetrics };
+  endMeasurement(name: string): number | null {
+    const entry = this.entries.get(name);
+    if (!entry) return null;
+
+    const duration = performance.now() - entry.startTime;
+    entry.duration = duration;
+    
+    console.log(`Performance: ${name} took ${duration.toFixed(2)}ms`);
+    return duration;
+  }
+
+  getMetrics(): PerformanceMetrics {
+    const renderEntry = this.entries.get('render');
+    
+    return {
+      renderTime: renderEntry?.duration || 0,
+      memoryUsage: this.getMemoryUsage(),
+      componentCount: this.entries.size
+    };
+  }
+
+  private getMemoryUsage(): number | undefined {
+    if ('memory' in performance) {
+      const memoryInfo = (performance as PerformanceEntry & { memory?: { usedJSHeapSize: number } }).memory;
+      return memoryInfo ? Math.round(memoryInfo.usedJSHeapSize / 1024 / 1024) : undefined;
+    }
+    return undefined;
+  }
+
+  reset(): void {
+    this.entries.clear();
   }
 }
 
-// Efficient interval manager to prevent memory leaks
-export class IntervalManager {
-  private static intervals = new Map<string, NodeJS.Timeout>();
+export const performanceTracker = new PerformanceTracker();
 
-  static setInterval(key: string, callback: () => void, delay: number) {
-    // Clear existing interval with same key
-    this.clearInterval(key);
-    
-    const intervalId = setInterval(callback, delay);
-    this.intervals.set(key, intervalId);
-    
-    return intervalId;
-  }
+export const measureComponentRender = <T>(
+  component: () => T,
+  componentName: string
+): T => {
+  performanceTracker.startMeasurement(`${componentName}-render`);
+  const result = component();
+  performanceTracker.endMeasurement(`${componentName}-render`);
+  return result;
+};
 
-  static clearInterval(key: string) {
-    const intervalId = this.intervals.get(key);
-    if (intervalId) {
-      clearInterval(intervalId);
-      this.intervals.delete(key);
-    }
-  }
-
-  static clearAllIntervals() {
-    this.intervals.forEach((intervalId) => {
-      clearInterval(intervalId);
-    });
-    this.intervals.clear();
-  }
-
-  static getActiveIntervals() {
-    return Array.from(this.intervals.keys());
-  }
-}
-
-// Display optimization utilities
-export const displayOptimizations = {
-  // Prevent screen burn-in by slightly adjusting elements
-  enableBurnInPrevention: () => {
-    let offset = 0;
-    
-    return setInterval(() => {
-      offset = (offset + 1) % 4; // Move 0-3 pixels
-      document.body.style.transform = `translate(${offset}px, ${offset}px)`;
-    }, 10 * 60 * 1000); // Every 10 minutes
-  },
-
-  // Optimize for OLED displays
-  enableOLEDOptimization: () => {
-    // Add dark mode preference for OLED
-    document.documentElement.setAttribute('data-oled-optimized', 'true');
-  },
-
-  // Reduce animations after midnight to save power
-  adjustForTimeOfDay: () => {
-    const hour = new Date().getHours();
-    const isNightTime = hour >= 22 || hour <= 6;
-    
-    if (isNightTime) {
-      document.documentElement.setAttribute('data-night-mode', 'true');
-      // Reduce animation durations
-      document.documentElement.style.setProperty('--animation-duration', '0.1s');
-    } else {
-      document.documentElement.removeAttribute('data-night-mode');
-      document.documentElement.style.removeProperty('--animation-duration');
-    }
-  }
+export const logRenderMetrics = (): void => {
+  const metrics = performanceTracker.getMetrics();
+  console.table(metrics);
 };

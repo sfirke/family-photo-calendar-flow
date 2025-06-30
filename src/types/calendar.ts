@@ -1,4 +1,3 @@
-
 export interface Event {
   id: number;
   title: string;
@@ -22,4 +21,32 @@ export interface FilterState {
   Family: boolean;
   Kids: boolean;
   Holidays: boolean;
+}
+
+export interface CalendarSyncData {
+  calendarId: string;
+  icalData: string;
+  syncTime: string;
+}
+
+export interface BackgroundSyncData {
+  type: string;
+  data: Record<string, unknown>;
+  timestamp: number;
+}
+
+export interface ImportedEvent {
+  id?: number;
+  title: string;
+  date: string | Date;
+  time?: string;
+  location?: string;
+  description?: string;
+  calendarId?: string;
+  calendarName?: string;
+  [key: string]: unknown;
+}
+
+export interface CalendarSettings {
+  [key: string]: unknown;
 }

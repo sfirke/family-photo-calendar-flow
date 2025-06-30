@@ -1,4 +1,3 @@
-
 /**
  * Update Manager Hook - Manual Updates Only
  * 
@@ -22,12 +21,13 @@ import {
   setLastUpstreamCheckTime 
 } from '@/utils/upstreamVersionManager';
 import { toast } from '@/hooks/use-toast';
+import { UpdateInfo } from '@/types/update';
 
 export const useUpdateManager = () => {
   const [isChecking, setIsChecking] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [updateAvailable, setUpdateAvailable] = useState(false);
-  const [updateInfo, setUpdateInfo] = useState<any>(null);
+  const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
   const [currentVersion, setCurrentVersion] = useState<string>('');
   const [lastCheckTime, setLastCheckTimeState] = useState<Date | null>(null);
   const [updateProgress, setUpdateProgress] = useState<UpdateProgress | null>(null);

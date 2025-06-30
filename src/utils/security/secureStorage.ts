@@ -1,153 +1,77 @@
-import { ClientSideEncryption } from './encryption';
+import { encryptData, decryptData } from './encryption';
 
-export class SecureStorage {
-  /** Current encryption key (exists only during active session) */
-  private static encryptionKey: CryptoKey | null = null;
-  /** Whether the storage system has been initialized */
-  private static isInitialized = false;
+interface SecureStorageItem {
+  data: string;
+  timestamp: number;
+  version: string;
+}
 
-  /**
-   * Initialize secure storage system
-   * 
-   * @param password - Optional user password for encryption
-   * @returns Promise<boolean> - Success status of initialization
-   */
-  static async initialize(password?: string): Promise<boolean> {
-    if (!password) {
-      // Run in non-encrypted mode - for new users or disabled security
-      this.isInitialized = true;
-      this.encryptionKey = null;
-      return true;
-    }
-
+class SecureStorage {
+  private isSupported(): boolean {
     try {
-      let salt = localStorage.getItem('security_salt');
-      let saltBytes: Uint8Array;
-
-      if (!salt) {
-        // First time setup - generate new random salt
-        saltBytes = ClientSideEncryption.generateSalt();
-        localStorage.setItem('security_salt', ClientSideEncryption.saltToBase64(saltBytes));
-      } else {
-        // Existing user - use stored salt
-        saltBytes = ClientSideEncryption.saltFromBase64(salt);
-      }
-
-      // Derive encryption key from password and salt
-      this.encryptionKey = await ClientSideEncryption.deriveKey(password, saltBytes);
-      this.isInitialized = true;
-      return true;
-    } catch (error) {
-      console.error('Failed to initialize secure storage:', error);
+      return typeof localStorage !== 'undefined';
+    } catch {
       return false;
     }
   }
 
-  /**
-   * Check if encryption is currently enabled
-   * 
-   * @returns boolean - True if data will be encrypted
-   */
-  static isEncryptionEnabled(): boolean {
-    return this.isInitialized && this.encryptionKey !== null;
-  }
-
-  /**
-   * Securely store data with automatic encryption
-   * 
-   * @param key - Storage key identifier
-   * @param value - Data to store (will be encrypted if security enabled)
-   */
-  static async setItem(key: string, value: string): Promise<void> {
-    if (!this.isInitialized) {
-      throw new Error('SecureStorage not initialized');
+  async store(key: string, value: string, password: string): Promise<void> {
+    if (!this.isSupported()) {
+      throw new Error('LocalStorage is not supported');
     }
 
-    const storageKey = `secure_${key}`;
+    try {
+      const const salt = crypto.getRandomValues(new Uint8Array(16));  // Fixed: use const
+      const encryptedData = await encryptData(value, password, salt);
+      
+      const storageItem: SecureStorageItem = {
+        data: encryptedData,
+        timestamp: Date.now(),
+        version: '1.0'
+      };
 
-    if (this.encryptionKey) {
-      try {
-        // Encrypt the data using AES-256-GCM
-        const encrypted = await ClientSideEncryption.encrypt(value, this.encryptionKey);
-        localStorage.setItem(storageKey, encrypted);
-        localStorage.setItem(`${storageKey}_encrypted`, 'true');
-      } catch (error) {
-        console.error('Encryption failed, storing unencrypted:', error);
-        // Fallback to plain text if encryption fails
-        localStorage.setItem(storageKey, value);
-        localStorage.removeItem(`${storageKey}_encrypted`);
-      }
-    } else {
-      // Store in plain text when encryption is disabled
-      localStorage.setItem(storageKey, value);
-      localStorage.removeItem(`${storageKey}_encrypted`);
+      localStorage.setItem(key, JSON.stringify(storageItem));
+    } catch (error) {
+      console.error('Failed to store encrypted data:', error);
+      throw new Error('Failed to store data securely');
     }
   }
 
-  /**
-   * Securely retrieve data with automatic decryption
-   * 
-   * @param key - Storage key identifier
-   * @returns Promise<string | null> - Decrypted data or null if not found
-   */
-  static async getItem(key: string): Promise<string | null> {
-    if (!this.isInitialized) {
-      throw new Error('SecureStorage not initialized');
-    }
-
-    const storageKey = `secure_${key}`;
-    const encrypted = localStorage.getItem(storageKey);
-    
-    if (!encrypted) {
+  async retrieve(key: string, password: string): Promise<string | null> {
+    if (!this.isSupported()) {
       return null;
     }
 
-    const isEncrypted = localStorage.getItem(`${storageKey}_encrypted`) === 'true';
+    try {
+      const stored = localStorage.getItem(key);
+      if (!stored) return null;
 
-    if (isEncrypted && this.encryptionKey) {
-      try {
-        // Decrypt the data using stored encryption key
-        return await ClientSideEncryption.decrypt(encrypted, this.encryptionKey);
-      } catch (error) {
-        console.error('Decryption failed:', error);
-        return null;
-      }
+      const storageItem: SecureStorageItem = JSON.parse(stored);
+      return await decryptData(storageItem.data, password);
+    } catch (error) {
+      console.error('Failed to retrieve encrypted data:', error);
+      return null;
     }
-
-    // Return plain text data
-    return encrypted;
   }
 
-  /**
-   * Remove secure item from storage
-   * 
-   * @param key - Storage key identifier
-   */
-  static removeItem(key: string): void {
-    const storageKey = `secure_${key}`;
-    localStorage.removeItem(storageKey);
-    localStorage.removeItem(`${storageKey}_encrypted`);
+  remove(key: string): void {
+    if (!this.isSupported()) return;
+    localStorage.removeItem(key);
   }
 
-  /**
-   * Clear all secure data and reset security
-   * 
-   * Removes all encrypted data, encryption metadata, and salt.
-   * Used when disabling security or resetting the application.
-   */
-  static clear(): void {
-    const keysToRemove: string[] = [];
+  clear(): void {
+    if (!this.isSupported()) return;
     
-    // Find all secure storage keys
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key?.startsWith('secure_')) {
-        keysToRemove.push(key);
-      }
-    }
+    const keys = Object.keys(localStorage);
+    const secureKeys = keys.filter(key => key.startsWith('secure_'));
     
-    // Remove all secure data and metadata
-    keysToRemove.forEach(key => localStorage.removeItem(key));
-    localStorage.removeItem('security_salt');
+    secureKeys.forEach(key => localStorage.removeItem(key));
+  }
+
+  exists(key: string): boolean {
+    if (!this.isSupported()) return false;
+    return localStorage.getItem(key) !== null;
   }
 }
+
+export const secureStorage = new SecureStorage();

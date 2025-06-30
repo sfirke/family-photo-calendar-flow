@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -7,10 +6,11 @@ import { checkForUpdates } from '@/utils/updateManager';
 import { getInstalledVersion, setInstalledVersion } from '@/utils/versionManager';
 import { shouldCheckUpstream, setLastUpstreamCheckTime } from '@/utils/upstreamVersionManager';
 import { toast } from '@/hooks/use-toast';
+import { UpdateInfo } from '@/types/update';
 
 const UpdateNotification = () => {
   const [updateAvailable, setUpdateAvailable] = useState(false);
-  const [updateInfo, setUpdateInfo] = useState<any>(null);
+  const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
 
   useEffect(() => {
     const checkUpdates = async () => {

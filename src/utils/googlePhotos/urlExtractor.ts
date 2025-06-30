@@ -1,31 +1,25 @@
 
-// URL extraction and validation utilities for Google Photos albums
-
 export const extractAlbumIdFromUrl = (url: string): string | null => {
-  try {
-    // Handle different Google Photos URL formats
-    const patterns = [
-      /photos\.google\.com\/share\/([^\/\?]+)/,
-      /photos\.app\.goo\.gl\/([^\/\?]+)/
-    ];
-    
-    for (const pattern of patterns) {
-      const match = url.match(pattern);
-      if (match) {
-        return match[1];
-      }
+  if (!url) return null;
+  
+  // Handle various Google Photos album URL formats
+  const patterns = [
+    /\/albums\/([a-zA-Z0-9_-]+)(?:\/|\?|$)/,  // Fixed escapes
+    /albumid=([a-zA-Z0-9_-]+)(?:&|\?|$)/,     // Fixed escapes
+    /album\/([a-zA-Z0-9_-]+)/,
+    /shared\/([a-zA-Z0-9_-]+)/
+  ];
+  
+  for (const pattern of patterns) {
+    const match = url.match(pattern);
+    if (match && match[1]) {
+      return match[1];
     }
-    
-    return null;
-  } catch (error) {
-    console.error('Error extracting album ID:', error);
-    return null;
   }
+  
+  return null;
 };
 
-export const validateGooglePhotosUrl = (url: string): boolean => {
-  const googlePhotosPattern = /^https:\/\/photos\.google\.com\/share\/.+/;
-  const googlePhotosAppPattern = /^https:\/\/photos\.app\.goo\.gl\/.+/;
-  
-  return googlePhotosPattern.test(url) || googlePhotosAppPattern.test(url);
+export const constructGooglePhotosApiUrl = (albumId: string): string => {
+  return `https://photos.google.com/share/${albumId}`;
 };

@@ -1,26 +1,18 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { CheckCircle, XCircle, Loader2, Key, Eye } from 'lucide-react';
 import { fetchWeatherData } from '@/services/weatherService';
 import { useWeather } from '@/contexts/WeatherContext';
+import { WeatherTestResult } from '@/types/weather';
 
 interface WeatherConnectionTestProps {
   zipCode: string;
   weatherApiKey: string;
-  onTestResult: (result: {
-    success: boolean;
-    message: string;
-    data?: any;
-  } | null) => void;
+  onTestResult: (result: WeatherTestResult | null) => void;
   onShowPreviewToggle: () => void;
   showPreview: boolean;
-  testResult: {
-    success: boolean;
-    message: string;
-    data?: any;
-  } | null;
+  testResult: WeatherTestResult | null;
 }
 
 const WeatherConnectionTest = ({

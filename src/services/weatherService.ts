@@ -1,57 +1,41 @@
-const BASE_URL = 'https://api.openweathermap.org/data/2.5';
 
-export interface WeatherData {
-  temperature: number;
-  condition: string;
-  location: string;
-  forecast: Array<{
-    date: string;
-    temp: number;
-    high?: number;
-    low?: number;
-    condition: string;
-  }>;
-}
+import { WeatherData, WeatherApiResponse, WeatherForecastResponse } from '@/types/weather';
+
+const WEATHER_API_BASE = 'https://api.openweathermap.org/data/2.5';
 
 export const fetchWeatherData = async (zipCode: string, apiKey: string): Promise<WeatherData> => {
-  if (!apiKey) {
+  if (!apiKey || !zipCode) {
     return getMockWeatherData();
   }
 
   try {
-    // Current weather
+    // Fetch current weather
     const currentResponse = await fetch(
-      `${BASE_URL}/weather?zip=${zipCode}&appid=${apiKey}&units=imperial`
+      `${WEATHER_API_BASE}/weather?zip=${zipCode}&appid=${apiKey}&units=imperial`
     );
-    
+
     if (!currentResponse.ok) {
-      throw new Error(`Weather API request failed: ${currentResponse.status}`);
+      console.error('Weather API error:', currentResponse.status);
+      return getMockWeatherData();
     }
-    
-    const currentData = await currentResponse.json();
-    
-    // 5-day forecast
+
+    const currentData: WeatherApiResponse = await currentResponse.json();
+
+    // Fetch 5-day forecast
     const forecastResponse = await fetch(
-      `${BASE_URL}/forecast?zip=${zipCode}&appid=${apiKey}&units=imperial`
+      `${WEATHER_API_BASE}/forecast?zip=${zipCode}&appid=${apiKey}&units=imperial`
     );
-    
-    if (!forecastResponse.ok) {
-      throw new Error(`Forecast API request failed: ${forecastResponse.status}`);
+
+    let forecastData: WeatherForecastResponse | null = null;
+    if (forecastResponse.ok) {
+      forecastData = await forecastResponse.json();
     }
-    
-    const forecastData = await forecastResponse.json();
-    
-    // Process forecast data to get daily highs and lows
-    const dailyForecasts = processDailyForecasts(forecastData.list);
-    
-    // Extend forecast to 14 days using intelligent patterns
-    const extendedForecast = extendForecastData(dailyForecasts);
-    
+
     return {
+      location: currentData.name || 'Unknown Location',
       temperature: Math.round(currentData.main.temp),
-      condition: getWeatherCondition(currentData.weather[0].main),
-      location: `${currentData.name}, ${currentData.sys.country}`,
-      forecast: extendedForecast
+      condition: currentData.weather[0]?.main || 'Unknown',
+      forecast: forecastData ? formatForecastData(forecastData) : []
     };
   } catch (error) {
     console.error('Error fetching weather data:', error);
@@ -59,126 +43,34 @@ export const fetchWeatherData = async (zipCode: string, apiKey: string): Promise
   }
 };
 
-const processDailyForecasts = (forecastList: any[]) => {
-  // Group forecasts by date
-  const dailyData: { [key: string]: any[] } = {};
+const formatForecastData = (data: WeatherForecastResponse) => {
+  // Group by day and take one forecast per day
+  const dailyForecasts = new Map();
   
-  forecastList.forEach((item: any) => {
-    const date = new Date(item.dt * 1000).toISOString().split('T')[0];
-    if (!dailyData[date]) {
-      dailyData[date] = [];
+  data.list.forEach((item: WeatherForecastResponse['list'][0]) => {
+    const date = new Date(item.dt * 1000);
+    const dateKey = date.toDateString();
+    
+    if (!dailyForecasts.has(dateKey)) {
+      dailyForecasts.set(dateKey, {
+        date: date.toISOString(),
+        high: Math.round(item.main.temp_max),
+        low: Math.round(item.main.temp_min),
+        condition: item.weather[0]?.main || 'Unknown'
+      });
     }
-    dailyData[date].push(item);
   });
   
-  // Calculate daily highs, lows, and most common condition using temp_max and temp_min
-  return Object.entries(dailyData).map(([date, items]) => {
-    // Use temp_max and temp_min from the API response
-    const maxTemps = items.map(item => item.main.temp_max);
-    const minTemps = items.map(item => item.main.temp_min);
-    
-    const high = Math.round(Math.max(...maxTemps));
-    const low = Math.round(Math.min(...minTemps));
-    
-    // Get most common weather condition for the day
-    const conditions = items.map(item => item.weather[0].main);
-    const conditionCounts = conditions.reduce((acc, condition) => {
-      acc[condition] = (acc[condition] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
-    
-    const mostCommonCondition = Object.entries(conditionCounts)
-      .sort(([,a], [,b]) => (b as number) - (a as number))[0][0];
-    
-    return {
-      date,
-      temp: high, // Use high as the primary temp
-      high,
-      low,
-      condition: getWeatherCondition(mostCommonCondition)
-    };
-  }).slice(0, 5); // API provides 5 days max
+  return Array.from(dailyForecasts.values()).slice(0, 7);
 };
 
-const extendForecastData = (apiForecast: Array<{date: string; temp: number; high?: number; low?: number; condition: string}>) => {
-  if (apiForecast.length === 0) return [];
-  
-  const extended = [...apiForecast];
-  const lastForecast = apiForecast[apiForecast.length - 1];
-  const lastDate = new Date(lastForecast.date);
-  
-  // Calculate average temperatures from available data - ensure we're working with numbers
-  const validHighs = apiForecast.map(f => f.high).filter((high): high is number => typeof high === 'number');
-  const validLows = apiForecast.map(f => f.low).filter((low): low is number => typeof low === 'number');
-  
-  const avgHigh = validHighs.length > 0 ? Math.round(validHighs.reduce((sum, high) => sum + high, 0) / validHighs.length) : 75;
-  const avgLow = validLows.length > 0 ? Math.round(validLows.reduce((sum, low) => sum + low, 0) / validLows.length) : 60;
-  
-  // Get most common condition
-  const conditionCounts = apiForecast.reduce((acc, f) => {
-    acc[f.condition] = (acc[f.condition] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
-  
-  const mostCommonCondition = Object.entries(conditionCounts)
-    .sort(([,a], [,b]) => (b as number) - (a as number))[0][0];
-  
-  // Extend forecast for up to 14 days total
-  for (let i = 1; i <= 9; i++) { // 5 + 9 = 14 days
-    const extendedDate = new Date(lastDate);
-    extendedDate.setDate(lastDate.getDate() + i);
-    
-    // Add some temperature variation (±5 degrees) - ensure all values are numbers
-    const highVariation = Math.floor(Math.random() * 11) - 5; // -5 to +5
-    const lowVariation = Math.floor(Math.random() * 11) - 5;
-    const extendedHigh = Math.max(avgHigh + highVariation, 55); // Minimum 55°F
-    const extendedLow = Math.max(avgLow + lowVariation, 45); // Minimum 45°F
-    
-    extended.push({
-      date: extendedDate.toISOString().split('T')[0],
-      temp: extendedHigh, // Use high as the primary temp
-      high: extendedHigh,
-      low: extendedLow,
-      condition: mostCommonCondition
-    });
-  }
-  
-  return extended;
-};
-
-const getMockWeatherData = (): WeatherData => {
-  return {
-    temperature: 75,
-    condition: 'Sunny',
-    location: 'Location not found',
-    forecast: Array.from({ length: 14 }, (_, i) => {
-      const high = 75 + Math.floor(Math.random() * 11) - 5; // 70-80°F range
-      const low = high - 10 - Math.floor(Math.random() * 6); // 10-15°F lower than high
-      return {
-        date: new Date(Date.now() + i * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        temp: high, // Use high as the primary temp
-        high,
-        low,
-        condition: ['Sunny', 'Cloudy', 'Rainy'][Math.floor(Math.random() * 3)]
-      };
-    })
-  };
-};
-
-const getWeatherCondition = (main: string): string => {
-  switch (main.toLowerCase()) {
-    case 'clear':
-      return 'Sunny';
-    case 'clouds':
-      return 'Cloudy';
-    case 'rain':
-    case 'drizzle':
-      return 'Rainy';
-    case 'snow':
-      return 'Snowy';
-    case 'thunderstorm':
-      return 'Rainy';
-    default:
-      return 'Sunny';
-  }
-};
+const getMockWeatherData = (): WeatherData => ({
+  location: 'Location not found',
+  temperature: 72,
+  condition: 'Clear',
+  forecast: [
+    { date: new Date().toISOString(), temp: 75, condition: 'Sunny' },
+    { date: new Date(Date.now() + 86400000).toISOString(), temp: 73, condition: 'Cloudy' },
+    { date: new Date(Date.now() + 172800000).toISOString(), temp: 71, condition: 'Rainy' }
+  ]
+});

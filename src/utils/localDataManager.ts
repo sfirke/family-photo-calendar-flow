@@ -1,30 +1,24 @@
 
-export interface LocalDataManager {
-  exportAllData: () => void;
-  importAllData: (file: File) => Promise<void>;
-  clearAllData: () => void;
-  getStorageUsage: () => { used: number; total: number };
+import { Event } from '@/types/calendar';
+
+interface ExportData {
+  events: Event[];
+  exportDate: string;
+  version: string;
 }
 
-const getAllLocalStorageData = () => {
-  const data: Record<string, any> = {};
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    if (key?.startsWith('family_calendar_')) {
-      try {
-        data[key] = JSON.parse(localStorage.getItem(key) || '');
-      } catch {
-        data[key] = localStorage.getItem(key);
-      }
-    }
-  }
-  return data;
-};
-
-export const localDataManager: LocalDataManager = {
-  exportAllData: () => {
-    const allData = getAllLocalStorageData();
-    const dataStr = JSON.stringify(allData, null, 2);
+export const exportLocalData = (): void => {
+  try {
+    const localEvents = localStorage.getItem('family_calendar_events');
+    const events = localEvents ? JSON.parse(localEvents) : [];
+    
+    const exportData: ExportData = {
+      events,
+      exportDate: new Date().toISOString(),
+      version: '1.0'
+    };
+    
+    const dataStr = JSON.stringify(exportData, null, 2);
     const dataBlob = new Blob([dataStr], { type: 'application/json' });
     const url = URL.createObjectURL(dataBlob);
     
@@ -34,66 +28,42 @@ export const localDataManager: LocalDataManager = {
     link.click();
     
     URL.revokeObjectURL(url);
-  },
+  } catch (error) {
+    console.error('Failed to export data:', error);
+    throw new Error('Failed to export local data');
+  }
+};
 
-  importAllData: (file: File) => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        try {
-          const importedData = JSON.parse(e.target?.result as string);
-          
-          // Clear existing family calendar data (including iCal data)
-          const keysToRemove: string[] = [];
-          for (let i = 0; i < localStorage.length; i++) {
-            const key = localStorage.key(i);
-            if (key?.startsWith('family_calendar_')) {
-              keysToRemove.push(key);
-            }
-          }
-          keysToRemove.forEach(key => localStorage.removeItem(key));
-          
-          // Import new data (including iCal calendars and events)
-          Object.entries(importedData).forEach(([key, value]) => {
-            if (key.startsWith('family_calendar_')) {
-              localStorage.setItem(key, typeof value === 'string' ? value : JSON.stringify(value));
-            }
-          });
-          
+export const importLocalData = (file: File): Promise<void> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    
+    reader.onload = (e) => {
+      try {
+        const importData: ExportData = JSON.parse(e.target?.result as string);
+        
+        if (importData.events && Array.isArray(importData.events)) {
+          localStorage.setItem('family_calendar_events', JSON.stringify(importData.events));
           resolve();
-        } catch (error) {
-          reject(new Error('Invalid backup file format'));
+        } else {
+          reject(new Error('Invalid file format'));
         }
-      };
-      reader.onerror = () => reject(new Error('Failed to read backup file'));
-      reader.readAsText(file);
-    });
-  },
-
-  clearAllData: () => {
-    const keysToRemove: string[] = [];
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key?.startsWith('family_calendar_')) {
-        keysToRemove.push(key);
+      } catch (error) {
+        reject(new Error('Failed to parse import file'));
       }
-    }
-    keysToRemove.forEach(key => localStorage.removeItem(key));
-  },
+    };
+    
+    reader.onerror = () => reject(new Error('Failed to read file'));
+    reader.readAsText(file);
+  });
+};
 
-  getStorageUsage: () => {
-    let used = 0;
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key?.startsWith('family_calendar_')) {
-        const value = localStorage.getItem(key) || '';
-        used += key.length + value.length;
-      }
-    }
-    
-    // Estimate total available (5MB is typical localStorage limit)
-    const total = 5 * 1024 * 1024; // 5MB in bytes
-    
-    return { used, total };
+export const clearLocalData = (): void => {
+  try {
+    localStorage.removeItem('family_calendar_events');
+    localStorage.removeItem('family_calendar_events_version');
+    localStorage.removeItem('family_calendar_ical_events');
+  } catch (error) {
+    console.error('Failed to clear local data:', error);
   }
 };

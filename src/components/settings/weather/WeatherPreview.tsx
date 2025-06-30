@@ -1,20 +1,10 @@
 
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { WeatherData, WeatherForecastDay } from '@/types/weather';
 
 interface WeatherPreviewProps {
-  weatherData: {
-    location: string;
-    temperature: number;
-    condition: string;
-    forecast: Array<{
-      date: string;
-      temp?: number;
-      high?: number;
-      low?: number;
-      condition: string;
-    }>;
-  };
+  weatherData: WeatherData;
 }
 
 const WeatherPreview = ({ weatherData }: WeatherPreviewProps) => {
@@ -45,7 +35,7 @@ const WeatherPreview = ({ weatherData }: WeatherPreviewProps) => {
           <div className="space-y-2">
             <h4 className="font-medium text-gray-900 dark:text-gray-100">7-Day Forecast</h4>
             <div className="space-y-1 max-h-32 overflow-y-auto">
-              {weatherData.forecast.slice(0, 7).map((day: any, index: number) => {
+              {weatherData.forecast.slice(0, 7).map((day: WeatherForecastDay, index: number) => {
                 const date = new Date(day.date);
                 const isToday = index === 0;
                 return (

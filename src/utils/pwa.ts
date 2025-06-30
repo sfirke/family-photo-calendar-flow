@@ -1,57 +1,93 @@
 
-export const registerServiceWorker = () => {
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js')
-        .then((registration) => {
-          console.log('SW registered: ', registration);
-        })
-        .catch((registrationError) => {
-          console.log('SW registration failed: ', registrationError);
-        });
+interface BeforeInstallPromptEvent extends Event {
+  readonly platforms: string[];
+  readonly userChoice: Promise<{
+    outcome: 'accepted' | 'dismissed';
+    platform: string;
+  }>;
+  prompt(): Promise<void>;
+}
+
+interface PWAInstallState {
+  isInstallable: boolean;
+  isInstalled: boolean;
+  platform: string | null;
+}
+
+class PWAManager {
+  private installPromptEvent: BeforeInstallPromptEvent | null = null;
+  private installCallback: ((state: PWAInstallState) => void) | null = null;
+
+  constructor() {
+    this.setupEventListeners();
+  }
+
+  private setupEventListeners(): void {
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      this.installPromptEvent = e as BeforeInstallPromptEvent;
+      this.notifyStateChange();
+    });
+
+    window.addEventListener('appinstalled', () => {
+      this.installPromptEvent = null;
+      this.notifyStateChange();
     });
   }
-};
 
-export const unregisterServiceWorker = () => {
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.ready
-      .then((registration) => {
-        registration.unregister();
-      })
-      .catch((error) => {
-        console.error(error.message);
-      });
+  onInstallStateChange(callback: (state: PWAInstallState) => void): void {
+    this.installCallback = callback;
+    this.notifyStateChange(); // Immediate callback with current state
   }
-};
 
-// Install prompt functionality
-let deferredPrompt: any;
+  async promptInstall(): Promise<boolean> {
+    if (!this.installPromptEvent) {
+      return false;
+    }
 
-export const setupInstallPrompt = () => {
-  window.addEventListener('beforeinstallprompt', (e) => {
-    // Prevent the mini-infobar from appearing on mobile
-    e.preventDefault();
-    // Stash the event so it can be triggered later
-    deferredPrompt = e;
-  });
-};
+    try {
+      await this.installPromptEvent.prompt();
+      const { outcome } = await this.installPromptEvent.userChoice;
+      
+      if (outcome === 'accepted') {
+        this.installPromptEvent = null;
+        this.notifyStateChange();
+        return true;
+      }
+    } catch (error) {
+      console.error('PWA install prompt failed:', error);
+    }
 
-export const showInstallPrompt = async () => {
-  if (deferredPrompt) {
-    // Show the prompt
-    deferredPrompt.prompt();
-    // Wait for the user to respond to the prompt
-    const { outcome } = await deferredPrompt.userChoice;
-    console.log(`User response to the install prompt: ${outcome}`);
-    // Clear the saved prompt since it can't be used again
-    deferredPrompt = null;
-    return outcome === 'accepted';
+    return false;
   }
-  return false;
+
+  getInstallState(): PWAInstallState {
+    return {
+      isInstallable: !!this.installPromptEvent,
+      isInstalled: this.isInstalled(),
+      platform: this.installPromptEvent?.platforms?.[0] || null
+    };
+  }
+
+  private isInstalled(): boolean {
+    return window.matchMedia('(display-mode: standalone)').matches ||
+           window.matchMedia('(display-mode: fullscreen)').matches ||
+           (window.navigator as Navigator & { standalone?: boolean }).standalone === true;
+  }
+
+  private notifyStateChange(): void {
+    if (this.installCallback) {
+      this.installCallback(this.getInstallState());
+    }
+  }
+}
+
+export const pwaManager = new PWAManager();
+
+export const checkPWAInstallability = (): PWAInstallState => {
+  return pwaManager.getInstallState();
 };
 
-export const isInstalled = () => {
-  return window.matchMedia('(display-mode: standalone)').matches || 
-         (window.navigator as any).standalone === true;
+export const triggerPWAInstall = (): Promise<boolean> => {
+  return pwaManager.promptInstall();
 };

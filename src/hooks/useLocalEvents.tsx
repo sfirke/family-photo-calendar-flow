@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Event } from '@/types/calendar';
 import { sampleEvents } from '@/data/sampleEvents';
 import { useICalCalendars } from './useICalCalendars';
+import { ImportedEvent } from '@/types/calendar';
 
 const LOCAL_EVENTS_KEY = 'family_calendar_events';
 const EVENTS_VERSION_KEY = 'family_calendar_events_version';
@@ -18,6 +19,35 @@ export const useLocalEvents = () => {
   const [localEvents, setLocalEvents] = useState<Event[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { getICalEvents } = useICalCalendars();
+
+  // Save events to localStorage
+  const saveEventsToStorage = useCallback((events: Event[]) => {
+    try {
+      const storageData: LocalEventStorage = {
+        events,
+        lastSync: new Date().toISOString(),
+        version: CURRENT_VERSION
+      };
+      
+      localStorage.setItem(LOCAL_EVENTS_KEY, JSON.stringify(storageData));
+      localStorage.setItem(EVENTS_VERSION_KEY, CURRENT_VERSION);
+    } catch (error) {
+      console.error('Error saving events to localStorage:', error);
+    }
+  }, []);
+
+  // Initialize with sample events
+  const initializeWithSampleEvents = useCallback(() => {
+    const enhancedSampleEvents = sampleEvents.map((event, index) => ({
+      ...event,
+      id: event.id || (1000 + index),
+      calendarId: 'local_calendar',
+      calendarName: 'Family Calendar'
+    }));
+
+    setLocalEvents(enhancedSampleEvents);
+    saveEventsToStorage(enhancedSampleEvents);
+  }, [saveEventsToStorage]);
 
   // Load events from localStorage
   const loadLocalEvents = useCallback(() => {
@@ -45,36 +75,7 @@ export const useLocalEvents = () => {
     } finally {
       setIsLoading(false);
     }
-  }, []);
-
-  // Initialize with sample events
-  const initializeWithSampleEvents = useCallback(() => {
-    const enhancedSampleEvents = sampleEvents.map((event, index) => ({
-      ...event,
-      id: event.id || (1000 + index),
-      calendarId: 'local_calendar',
-      calendarName: 'Family Calendar'
-    }));
-
-    setLocalEvents(enhancedSampleEvents);
-    saveEventsToStorage(enhancedSampleEvents);
-  }, []);
-
-  // Save events to localStorage
-  const saveEventsToStorage = useCallback((events: Event[]) => {
-    try {
-      const storageData: LocalEventStorage = {
-        events,
-        lastSync: new Date().toISOString(),
-        version: CURRENT_VERSION
-      };
-      
-      localStorage.setItem(LOCAL_EVENTS_KEY, JSON.stringify(storageData));
-      localStorage.setItem(EVENTS_VERSION_KEY, CURRENT_VERSION);
-    } catch (error) {
-      console.error('Error saving events to localStorage:', error);
-    }
-  }, []);
+  }, [initializeWithSampleEvents]);
 
   // Get all events (local + iCal)
   const allEvents = useMemo(() => {
@@ -156,7 +157,7 @@ export const useLocalEvents = () => {
           const importedEvents = JSON.parse(e.target?.result as string);
           
           // Validate and convert imported events
-          const validEvents = importedEvents.map((event: any, index: number) => ({
+          const validEvents = importedEvents.map((event: ImportedEvent, index: number) => ({
             ...event,
             id: event.id || (Date.now() + index),
             date: new Date(event.date),

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { CloudSun } from 'lucide-react';
@@ -8,6 +7,7 @@ import WeatherSettings from './weather/WeatherSettings';
 import WeatherConnectionTest from './weather/WeatherConnectionTest';
 import WeatherPreview from './weather/WeatherPreview';
 import WeatherInfo from './weather/WeatherInfo';
+import { WeatherTestResult } from '@/types/weather';
 
 interface WeatherTabProps {
   zipCode: string;
@@ -17,11 +17,7 @@ interface WeatherTabProps {
 }
 
 const WeatherTab = ({ zipCode, onZipCodeChange, weatherApiKey, onWeatherApiKeyChange }: WeatherTabProps) => {
-  const [testResult, setTestResult] = useState<{
-    success: boolean;
-    message: string;
-    data?: any;
-  } | null>(null);
+  const [testResult, setTestResult] = useState<WeatherTestResult | null>(null);
   const [showPreview, setShowPreview] = useState(false);
   const { isSecurityEnabled, hasLockedData } = useSecurity();
 
