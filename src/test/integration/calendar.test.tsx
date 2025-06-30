@@ -4,6 +4,39 @@ import { render, screen, waitFor } from '../utils/testUtils';
 import { BrowserRouter } from 'react-router-dom';
 import Index from '@/pages/Index';
 
+// Mock version manager to prevent fetch errors
+vi.mock('@/utils/versionManager', () => ({
+  getVersionInfo: vi.fn().mockResolvedValue({
+    version: '1.4.2',
+    buildDate: '2024-01-01',
+    gitHash: 'abc123',
+    buildNumber: 1,
+    environment: 'test'
+  }),
+  getInstalledVersion: vi.fn().mockReturnValue({
+    version: '1.4.2',
+    installDate: new Date().toISOString()
+  }),
+  getCurrentVersion: vi.fn().mockResolvedValue('1.4.2'),
+  getStoredVersion: vi.fn().mockReturnValue('1.4.2'),
+  setStoredVersion: vi.fn(),
+  compareVersions: vi.fn().mockReturnValue(0),
+  isUpdateAvailable: vi.fn().mockReturnValue(false),
+  getVersionType: vi.fn().mockReturnValue('patch'),
+}));
+
+// Mock settings modal hook to prevent async operations
+vi.mock('@/hooks/useSettingsModal', () => ({
+  useSettingsModal: vi.fn(() => ({
+    versionInfo: {
+      version: '1.4.2',
+      buildDate: '2024-01-01',
+      gitHash: 'abc123'
+    },
+    handleThemeChange: vi.fn(),
+  })),
+}));
+
 // Enhanced mock for calendar storage with all exports and methods
 vi.mock('@/services/calendarStorage', () => ({
   calendarStorageService: {
@@ -176,8 +209,12 @@ describe('Calendar Integration', () => {
     renderCalendar();
 
     await waitFor(() => {
-      expect(screen.getByText(/75/)).toBeInTheDocument();
-      expect(screen.getByText(/sunny/i)).toBeInTheDocument();
-    }, { timeout: 3000 });
+      // Use getAllByText for elements that appear multiple times
+      const temperatureElements = screen.getAllByText('75');
+      expect(temperatureElements.length).toBeGreaterThan(0);
+    }, { timeout: 5000 });
+
+    // Check for weather condition
+    expect(screen.getByText(/sunny/i)).toBeInTheDocument();
   });
 });

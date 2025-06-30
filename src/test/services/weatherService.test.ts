@@ -53,9 +53,9 @@ describe('weatherService', () => {
     const result = await fetchWeatherData('90210', 'test-api-key');
 
     expect(result).toEqual({
+      location: 'Beverly Hills, US',
       temperature: 75,
       condition: 'Clear',
-      location: 'Beverly Hills, US',
       forecast: expect.any(Array)
     });
   });

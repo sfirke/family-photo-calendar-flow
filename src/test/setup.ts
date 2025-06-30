@@ -1,13 +1,18 @@
+
 import '@testing-library/jest-dom';
 import 'fake-indexeddb/auto';
 import { beforeAll, afterEach, afterAll, vi } from 'vitest';
 import { server } from './mocks/server';
+import { act } from '@testing-library/react';
 
 // Start server before all tests
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 
 // Reset handlers after each test
-afterEach(() => server.resetHandlers());
+afterEach(() => {
+  server.resetHandlers();
+  vi.clearAllMocks();
+});
 
 // Clean up after all tests are done
 afterAll(() => server.close());
@@ -151,11 +156,36 @@ Object.defineProperty(window, 'localStorage', {
   writable: true,
 });
 
-// Mock console methods to reduce test noise
+// Wrap global console methods to reduce test noise while preserving important warnings
+const originalWarn = console.warn;
+const originalError = console.error;
+
 global.console = {
   ...console,
-  // Keep error and warn for debugging
   log: vi.fn(),
   info: vi.fn(),
   debug: vi.fn(),
+  warn: vi.fn((message, ...args) => {
+    // Only show React warnings that are not about act() wrapping since we handle those
+    if (typeof message === 'string' && 
+        !message.includes('Warning: An update to') && 
+        !message.includes('not wrapped in act')) {
+      originalWarn(message, ...args);
+    }
+  }),
+  error: vi.fn((message, ...args) => {
+    // Show actual errors but filter out known test-related noise
+    if (typeof message === 'string' && 
+        !message.includes('connect ECONNREFUSED') &&
+        !message.includes('Failed to get version info')) {
+      originalError(message, ...args);
+    }
+  }),
+};
+
+// Global act wrapper for async operations
+global.actAsync = async (callback: () => Promise<void>) => {
+  await act(async () => {
+    await callback();
+  });
 };

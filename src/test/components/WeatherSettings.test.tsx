@@ -16,16 +16,31 @@ vi.mock('@/contexts/SecurityContext', () => ({
     lockSecurity: vi.fn(),
     encryptData: vi.fn(),
     decryptData: vi.fn(),
+    getSecurityStatus: vi.fn(() => 'Disabled'),
   })),
 }));
 
-// Mock the SecurityUnlockBanner component
+// Mock the SecurityUnlockBanner component to conditionally render
 vi.mock('@/components/security/SecurityUnlockBanner', () => ({
-  default: ({ onUnlock }: { onUnlock?: () => void }) => (
-    <div data-testid="security-unlock-banner">
-      {onUnlock && <button onClick={onUnlock}>Unlock</button>}
-    </div>
-  ),
+  default: ({ onUnlock }: { onUnlock?: () => void }) => {
+    const { useSecurity } = vi.hoisted(() => ({
+      useSecurity: vi.fn(() => ({
+        hasLockedData: false,
+      })),
+    }));
+    
+    const { hasLockedData } = useSecurity();
+    
+    if (!hasLockedData) {
+      return null;
+    }
+    
+    return (
+      <div data-testid="security-unlock-banner">
+        {onUnlock && <button onClick={onUnlock}>Unlock</button>}
+      </div>
+    );
+  },
 }));
 
 describe('WeatherSettings', () => {
