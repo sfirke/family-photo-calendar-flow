@@ -4,26 +4,10 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { act } from '@testing-library/react';
 import WeatherSettings from '@/components/settings/weather/WeatherSettings';
 import { AllTheProviders } from '../utils/testProviders';
+import { mockSecurityContext } from '../utils/securityMocks';
 
-// Mock the security context with a simple implementation
-const mockUseSecurity = vi.fn(() => ({
-  isSecurityEnabled: false,
-  hasLockedData: false,
-  isInitialized: true,
-  enableSecurity: vi.fn(),
-  disableSecurity: vi.fn(),
-  unlockSecurity: vi.fn(),
-  lockSecurity: vi.fn(),
-  encryptData: vi.fn(),
-  decryptData: vi.fn(),
-  getSecurityStatus: vi.fn(() => 'Security Disabled - Data stored in plain text'),
-}));
-
-// Mock the SecurityContext module
-vi.mock('@/contexts/SecurityContext', () => ({
-  SecurityProvider: ({ children }: { children: React.ReactNode }) => children,
-  useSecurity: () => mockUseSecurity(),
-}));
+// Use the standardized SecurityContext mock
+mockSecurityContext();
 
 // Mock SecurityUnlockBanner to render nothing when hasLockedData is false
 vi.mock('@/components/security/SecurityUnlockBanner', () => ({
@@ -33,19 +17,6 @@ vi.mock('@/components/security/SecurityUnlockBanner', () => ({
 describe('WeatherSettings', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Reset the mock to default state before each test
-    mockUseSecurity.mockReturnValue({
-      isSecurityEnabled: false,
-      hasLockedData: false,
-      isInitialized: true,
-      enableSecurity: vi.fn(),
-      disableSecurity: vi.fn(),
-      unlockSecurity: vi.fn(),
-      lockSecurity: vi.fn(),
-      encryptData: vi.fn(),
-      decryptData: vi.fn(),
-      getSecurityStatus: vi.fn(() => 'Security Disabled - Data stored in plain text'),
-    });
   });
 
   const defaultProps = {

@@ -4,7 +4,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { SettingsProvider } from '@/contexts/SettingsContext';
 import { WeatherProvider } from '@/contexts/WeatherContext';
-import { SecurityContext } from '@/contexts/SecurityContext';
+
+// Create a test-specific SecurityContext instead of importing from the module
+const TestSecurityContext = React.createContext(undefined);
 
 // Test-specific SecurityProvider that provides a proper React Context
 const TestSecurityProvider = ({ children }: { children: React.ReactNode }) => {
@@ -19,9 +21,9 @@ const TestSecurityProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   return (
-    <SecurityContext.Provider value={mockSecurityContext}>
+    <TestSecurityContext.Provider value={mockSecurityContext}>
       {children}
-    </SecurityContext.Provider>
+    </TestSecurityContext.Provider>
   );
 };
 
