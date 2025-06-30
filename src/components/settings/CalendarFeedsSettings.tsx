@@ -4,37 +4,53 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { useICalCalendars } from '@/hooks/useICalCalendars';
+import { useNotionCalendars } from '@/hooks/useNotionCalendars';
 import { useCalendarSelection } from '@/hooks/useCalendarSelection';
-import { Calendar, Plus, RotateCcw, BarChart3, AlertCircle } from 'lucide-react';
+import { Calendar, Plus, RotateCcw, BarChart3, AlertCircle, GitFork, Globe } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import EditableCalendarCard from './EditableCalendarCard';
 import { ICalCalendar } from '@/types/ical';
+import { NotionCalendar } from '@/types/notion';
+import { NotionService } from '@/services/notionService';
 
 const CALENDAR_COLORS = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899'];
 
-const ICalSettings = () => {
+const CalendarFeedsSettings = () => {
   const {
-    calendars,
-    isLoading,
-    syncStatus,
-    addCalendar,
-    updateCalendar,
-    removeCalendar,
-    syncCalendar,
-    syncAllCalendars
+    calendars: icalCalendars,
+    isLoading: icalLoading,
+    syncStatus: icalSyncStatus,
+    addCalendar: addICalCalendar,
+    updateCalendar: updateICalCalendar,
+    removeCalendar: removeICalCalendar,
+    syncCalendar: syncICalCalendar,
+    syncAllCalendars: syncAllICalCalendars
   } = useICalCalendars();
+
+  const {
+    calendars: notionCalendars,
+    isLoading: notionLoading,
+    syncStatus: notionSyncStatus,
+    addCalendar: addNotionCalendar,
+    removeCalendar: removeNotionCalendar,
+    syncCalendar: syncNotionCalendar,
+    syncAllCalendars: syncAllNotionCalendars
+  } = useNotionCalendars();
+
   const {
     selectedCalendarIds,
     toggleCalendar,
     calendarsFromEvents,
     forceRefresh
   } = useCalendarSelection();
+  
   const { toast } = useToast();
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [feedType, setFeedType] = useState<'ical' | 'notion'>('ical');
   const [newCalendar, setNewCalendar] = useState({
     name: '',
     url: '',
@@ -42,45 +58,44 @@ const ICalSettings = () => {
     enabled: true
   });
 
-  // Debug logging for calendar state
-  useEffect(() => {
-    console.log('ICalSettings - Current calendars from hook:', calendars);
-    console.log('ICalSettings - Calendars from events:', calendarsFromEvents);
-    console.log('ICalSettings - Selected calendar IDs:', selectedCalendarIds);
-  }, [calendars, calendarsFromEvents, selectedCalendarIds]);
+  const isLoading = icalLoading || notionLoading;
 
-  // Combine calendars from hook and events
+  // Combine all calendars for display
   const allCalendars = React.useMemo(() => {
-    const calendarMap = new Map<string, ICalCalendar>();
+    const calendarMap = new Map();
 
-    // Add calendars from IndexedDB first (these have the complete configuration)
-    calendars.forEach(cal => {
-      console.log('Processing calendar from IndexedDB:', {
-        id: cal.id,
-        name: cal.name,
-        url: cal.url
-      });
+    // Add iCal calendars
+    icalCalendars.forEach(cal => {
       calendarMap.set(cal.id, {
         ...cal,
+        type: 'ical',
         source: 'config',
         hasEvents: calendarsFromEvents.some(eventCal => eventCal.id === cal.id && eventCal.hasEvents),
         eventCount: calendarsFromEvents.find(eventCal => eventCal.id === cal.id)?.eventCount || cal.eventCount || 0
       });
     });
 
-    // Add calendars from events that aren't in IndexedDB (orphaned calendars)
+    // Add Notion calendars
+    notionCalendars.forEach(cal => {
+      calendarMap.set(cal.id, {
+        ...cal,
+        type: 'notion',
+        source: 'config',
+        hasEvents: calendarsFromEvents.some(eventCal => eventCal.id === cal.id && eventCal.hasEvents),
+        eventCount: calendarsFromEvents.find(eventCal => eventCal.id === cal.id)?.eventCount || cal.eventCount || 0
+      });
+    });
+
+    // Add orphaned calendars from events
     calendarsFromEvents.forEach(eventCal => {
       if (!calendarMap.has(eventCal.id) && eventCal.id !== 'local_calendar') {
-        console.log('Processing orphaned calendar from events:', {
-          id: eventCal.id,
-          name: eventCal.summary
-        });
         calendarMap.set(eventCal.id, {
           id: eventCal.id,
           name: eventCal.summary,
           url: '',
           color: eventCal.color || '#3b82f6',
           enabled: true,
+          type: eventCal.id.startsWith('notion_') ? 'notion' : 'ical',
           source: 'events',
           hasEvents: eventCal.hasEvents,
           eventCount: eventCal.eventCount,
@@ -89,15 +104,8 @@ const ICalSettings = () => {
       }
     });
     
-    const result = Array.from(calendarMap.values()).sort((a, b) => a.name.localeCompare(b.name));
-    console.log('Combined calendars with URLs:', result.map(cal => ({
-      id: cal.id,
-      name: cal.name,
-      url: cal.url,
-      source: cal.source
-    })));
-    return result;
-  }, [calendars, calendarsFromEvents]);
+    return Array.from(calendarMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }, [icalCalendars, notionCalendars, calendarsFromEvents]);
 
   const handleAddCalendar = async () => {
     if (!newCalendar.name.trim() || !newCalendar.url.trim()) {
@@ -109,43 +117,71 @@ const ICalSettings = () => {
       return;
     }
 
-    // Basic URL validation
-    if (!newCalendar.url.includes('.ics') && !newCalendar.url.includes('ical')) {
-      toast({
-        title: "Invalid URL",
-        description: "Please enter a valid iCal URL (should contain '.ics' or 'ical').",
-        variant: "destructive"
-      });
-      return;
-    }
-    
     try {
-      console.log('Adding calendar with data:', newCalendar);
-      const calendar = await addCalendar({
-        name: newCalendar.name,
-        url: newCalendar.url,
-        color: newCalendar.color,
-        enabled: newCalendar.enabled
-      });
-      console.log('Calendar added successfully:', calendar);
+      if (feedType === 'ical') {
+        if (!newCalendar.url.includes('.ics') && !newCalendar.url.includes('ical')) {
+          toast({
+            title: "Invalid URL",
+            description: "Please enter a valid iCal URL (should contain '.ics' or 'ical').",
+            variant: "destructive"
+          });
+          return;
+        }
 
-      // Try to sync immediately to validate the URL
-      try {
-        await syncCalendar(calendar);
-        toast({
-          title: "Calendar added and synced",
-          description: `${newCalendar.name} has been added and synced successfully.`
+        const calendar = await addICalCalendar({
+          name: newCalendar.name,
+          url: newCalendar.url,
+          color: newCalendar.color,
+          enabled: newCalendar.enabled
         });
-      } catch (syncError) {
-        const errorMessage = syncError instanceof Error ? syncError.message : 'Unknown sync error';
-        toast({
-          title: "Calendar added",
-          description: `${newCalendar.name} was added but sync failed: ${errorMessage}`,
-          variant: "destructive"
+
+        try {
+          await syncICalCalendar(calendar);
+          toast({
+            title: "iCal calendar added and synced",
+            description: `${newCalendar.name} has been added and synced successfully.`
+          });
+        } catch (syncError) {
+          const errorMessage = syncError instanceof Error ? syncError.message : 'Unknown sync error';
+          toast({
+            title: "Calendar added",
+            description: `${newCalendar.name} was added but sync failed: ${errorMessage}`,
+            variant: "destructive"
+          });
+        }
+      } else {
+        if (!NotionService.isValidNotionUrl(newCalendar.url)) {
+          toast({
+            title: "Invalid URL",
+            description: "Please enter a valid Notion database sharing URL.",
+            variant: "destructive"
+          });
+          return;
+        }
+
+        const calendar = await addNotionCalendar({
+          name: newCalendar.name,
+          url: newCalendar.url,
+          color: newCalendar.color,
+          enabled: newCalendar.enabled
         });
+
+        try {
+          await syncNotionCalendar(calendar);
+          toast({
+            title: "Notion calendar added and synced",
+            description: `${newCalendar.name} has been added and synced successfully.`
+          });
+        } catch (syncError) {
+          const errorMessage = syncError instanceof Error ? syncError.message : 'Unknown sync error';
+          toast({
+            title: "Calendar added",
+            description: `${newCalendar.name} was added but sync failed: ${errorMessage}`,
+            variant: "destructive"
+          });
+        }
       }
 
-      // Force refresh the calendar selection to pick up new events
       forceRefresh();
       setNewCalendar({
         name: '',
@@ -164,19 +200,13 @@ const ICalSettings = () => {
     }
   };
 
-  const handleSync = async (calendar: ICalCalendar) => {
-    console.log('Attempting to sync calendar:', calendar);
-    if (!calendar.url || calendar.url.trim() === '') {
-      toast({
-        title: "Cannot sync",
-        description: "This calendar doesn't have a valid URL for syncing.",
-        variant: "destructive"
-      });
-      return;
-    }
-    
+  const handleSync = async (calendar: any) => {
     try {
-      await syncCalendar(calendar);
+      if (calendar.type === 'notion') {
+        await syncNotionCalendar(calendar);
+      } else {
+        await syncICalCalendar(calendar);
+      }
       toast({
         title: "Sync successful",
         description: `${calendar.name} has been synced successfully.`
@@ -193,7 +223,10 @@ const ICalSettings = () => {
 
   const handleSyncAll = async () => {
     try {
-      await syncAllCalendars();
+      await Promise.all([
+        syncAllICalCalendars(),
+        syncAllNotionCalendars()
+      ]);
       toast({
         title: "Sync completed",
         description: "All enabled calendars have been synced."
@@ -208,9 +241,13 @@ const ICalSettings = () => {
     }
   };
 
-  const handleRemove = async (calendar: ICalCalendar) => {
+  const handleRemove = async (calendar: any) => {
     try {
-      await removeCalendar(calendar.id);
+      if (calendar.type === 'notion') {
+        await removeNotionCalendar(calendar.id);
+      } else {
+        await removeICalCalendar(calendar.id);
+      }
       toast({
         title: "Calendar removed",
         description: `${calendar.name} and all its events have been removed.`
@@ -227,7 +264,7 @@ const ICalSettings = () => {
 
   const handleUpdateCalendar = async (id: string, updates: Partial<ICalCalendar>) => {
     try {
-      await updateCalendar(id, updates);
+      await updateICalCalendar(id, updates);
       toast({
         title: "Calendar updated",
         description: "Calendar has been updated successfully."
@@ -256,7 +293,7 @@ const ICalSettings = () => {
               Calendar Feeds
             </CardTitle>
             <CardDescription className="text-gray-600 dark:text-gray-400">
-              Add external calendar feeds using iCal/ICS URLs. Calendar data is stored locally in IndexedDB.
+              Add external calendar feeds using iCal/ICS URLs or Notion database sharing links.
             </CardDescription>
           </div>
           {allCalendars.length > 0 && (
@@ -310,10 +347,32 @@ const ICalSettings = () => {
             <DialogHeader>
               <DialogTitle className="text-gray-900 dark:text-gray-100">Add Calendar Feed</DialogTitle>
               <DialogDescription className="text-gray-600 dark:text-gray-400">
-                Enter the details for your calendar feed. Data will be stored locally in your browser.
+                Choose between iCal feeds or Notion databases to add calendar events.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
+              <div>
+                <Label className="text-gray-700 dark:text-gray-300">Feed Type</Label>
+                <Select value={feedType} onValueChange={(value: 'ical' | 'notion') => setFeedType(value)}>
+                  <SelectTrigger className="bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ical">
+                      <div className="flex items-center gap-2">
+                        <Globe className="h-4 w-4" />
+                        iCal Feed (.ics)
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="notion">
+                      <div className="flex items-center gap-2">
+                        <GitFork className="h-4 w-4" />
+                        Notion Database
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
               <div>
                 <Label htmlFor="calendar-name" className="text-gray-700 dark:text-gray-300">Calendar Name</Label>
                 <Input
@@ -325,10 +384,16 @@ const ICalSettings = () => {
                 />
               </div>
               <div>
-                <Label htmlFor="calendar-url" className="text-gray-700 dark:text-gray-300">iCal URL</Label>
+                <Label htmlFor="calendar-url" className="text-gray-700 dark:text-gray-300">
+                  {feedType === 'ical' ? 'iCal URL' : 'Notion Database URL'}
+                </Label>
                 <Input
                   id="calendar-url"
-                  placeholder="https://calendar.example.com/feed.ics"
+                  placeholder={
+                    feedType === 'ical' 
+                      ? "https://calendar.example.com/feed.ics"
+                      : "https://www.notion.so/database-id?v=view-id"
+                  }
                   value={newCalendar.url}
                   onChange={(e) => setNewCalendar(prev => ({ ...prev, url: e.target.value }))}
                   className="bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-gray-100"
@@ -377,7 +442,7 @@ const ICalSettings = () => {
                 key={calendar.id}
                 calendar={calendar}
                 isSelected={selectedCalendarIds.includes(calendar.id)}
-                syncStatus={syncStatus[calendar.id] || ''}
+                syncStatus={calendar.type === 'notion' ? notionSyncStatus[calendar.id] || '' : icalSyncStatus[calendar.id] || ''}
                 onUpdate={handleUpdateCalendar}
                 onSync={handleSync}
                 onRemove={handleRemove}
@@ -400,11 +465,11 @@ const ICalSettings = () => {
           <AlertCircle className="h-4 w-4 text-blue-600 dark:text-blue-400" />
           <AlertTitle className="text-blue-900 dark:text-blue-200">Tips for Calendar Feeds</AlertTitle>
           <AlertDescription className="text-sm space-y-2 text-blue-700 dark:text-blue-300">
+            <p>• <strong>iCal Feeds:</strong> Export calendar from Google, Outlook, or other services as .ics files</p>
+            <p>• <strong>Notion Databases:</strong> Share your database publicly and copy the sharing link</p>
             <p>• Calendar data is stored locally in your browser using IndexedDB</p>
             <p>• Click the edit icon to modify calendar name, URL, or color</p>
             <p>• Use the sync buttons to manually refresh calendar data</p>
-            <p>• Look for "Export" or "Share" options in your calendar application</p>
-            <p>• The URL should end with .ics or contain "ical" in the path</p>
           </AlertDescription>
         </Alert>
       </CardContent>
@@ -412,4 +477,4 @@ const ICalSettings = () => {
   );
 };
 
-export default ICalSettings;
+export default CalendarFeedsSettings;

@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Event, ImportedEvent } from '@/types/calendar';
 import { sampleEvents } from '@/data/sampleEvents';
 import { useICalCalendars } from './useICalCalendars';
+import { useNotionCalendars } from './useNotionCalendars';
 
 const LOCAL_EVENTS_KEY = 'family_calendar_events';
 const EVENTS_VERSION_KEY = 'family_calendar_events_version';
@@ -19,6 +20,7 @@ export const useLocalEvents = () => {
   const [localEvents, setLocalEvents] = useState<Event[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { getICalEvents } = useICalCalendars();
+  const { getNotionEvents } = useNotionCalendars();
 
   // Save events to localStorage
   const saveEventsToStorage = useCallback((events: Event[]) => {
@@ -77,11 +79,12 @@ export const useLocalEvents = () => {
     }
   }, [initializeWithSampleEvents]);
 
-  // Get all events (local + iCal)
+  // Get all events (local + iCal + Notion)
   const allEvents = useMemo(() => {
     const icalEvents = getICalEvents();
-    return [...localEvents, ...icalEvents];
-  }, [localEvents, getICalEvents]);
+    const notionEvents = getNotionEvents();
+    return [...localEvents, ...icalEvents, ...notionEvents];
+  }, [localEvents, getICalEvents, getNotionEvents]);
 
   // Add a new event
   const addEvent = useCallback((newEvent: Omit<Event, 'id'>) => {
