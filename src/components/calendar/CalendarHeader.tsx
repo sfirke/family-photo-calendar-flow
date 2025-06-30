@@ -1,5 +1,4 @@
 
-import React from 'react';
 import CalendarSelector from '../CalendarSelector';
 import ViewSwitcher from './ViewSwitcher';
 

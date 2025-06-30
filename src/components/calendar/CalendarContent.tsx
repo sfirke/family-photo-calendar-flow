@@ -1,9 +1,13 @@
 
-import React from 'react';
 import { Event } from '@/types/calendar';
 import TimelineView from '../TimelineView';
 import WeekView from '../WeekView';
 import MonthView from '../MonthView';
+
+interface WeatherInfo {
+  temp: number;
+  condition: string;
+}
 
 interface CalendarContentProps {
   view: 'timeline' | 'week' | 'month';
@@ -11,7 +15,7 @@ interface CalendarContentProps {
   weekOffset: number;
   onPreviousWeek: () => void;
   onNextWeek: () => void;
-  getWeatherForDate: (date: Date) => { temp: number; condition: string };
+  getWeatherForDate: (date: Date) => WeatherInfo;
 }
 
 const CalendarContent = ({ 

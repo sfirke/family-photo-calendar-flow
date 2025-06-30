@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,13 +9,31 @@ import { Edit2, Save, X, RefreshCw, Trash2, ExternalLink } from 'lucide-react';
 
 const CALENDAR_COLORS = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899'];
 
+interface CalendarData {
+  id: string;
+  name: string;
+  url: string;
+  color: string;
+  enabled: boolean;
+  lastSync?: string;
+  eventCount?: number;
+  hasEvents?: boolean;
+  source?: string;
+}
+
+interface EditData {
+  name: string;
+  url: string;
+  color: string;
+}
+
 interface EditableCalendarCardProps {
-  calendar: any;
+  calendar: CalendarData;
   isSelected: boolean;
   syncStatus: string;
-  onUpdate: (id: string, updates: any) => void;
-  onSync: (calendar: any) => void;
-  onRemove: (calendar: any) => void;
+  onUpdate: (id: string, updates: Partial<CalendarData>) => void;
+  onSync: (calendar: CalendarData) => void;
+  onRemove: (calendar: CalendarData) => void;
   onToggleSelection: (id: string, checked: boolean) => void;
 }
 
@@ -28,7 +47,7 @@ const EditableCalendarCard = ({
   onToggleSelection
 }: EditableCalendarCardProps) => {
   const [isEditing, setIsEditing] = useState(false);
-  const [editData, setEditData] = useState({
+  const [editData, setEditData] = useState<EditData>({
     name: calendar.name,
     url: calendar.url,
     color: calendar.color
