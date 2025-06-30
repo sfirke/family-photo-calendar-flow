@@ -63,7 +63,7 @@ export class InputValidator {
       .substring(0, 1000); // Limit length
   }
 
-  // Validate API key format
+  // Validate API key format with progressive validation
   static validateApiKey(apiKey: string): { isValid: boolean; error?: string } {
     if (!apiKey || typeof apiKey !== 'string') {
       return { isValid: false, error: 'API key is required' };
@@ -75,23 +75,24 @@ export class InputValidator {
       return { isValid: false, error: 'API key cannot be empty' };
     }
 
-    if (trimmed.length < 8) {
-      return { isValid: false, error: 'API key appears to be too short' };
+    // Relaxed validation - only check for dangerous content, not length
+    if (trimmed.includes('<') || trimmed.includes('>') || trimmed.includes('script')) {
+      return { isValid: false, error: 'API key contains invalid characters' };
     }
 
     if (trimmed.length > 256) {
       return { isValid: false, error: 'API key is too long' };
     }
 
-    // Check for suspicious patterns
-    if (trimmed.includes('<') || trimmed.includes('>') || trimmed.includes('script')) {
-      return { isValid: false, error: 'API key contains invalid characters' };
+    // Only warn about length if the key appears complete (no spaces, reasonable length)
+    if (trimmed.length < 8 && !trimmed.includes(' ') && trimmed.length > 3) {
+      return { isValid: false, error: 'API key appears to be too short' };
     }
 
     return { isValid: true };
   }
 
-  // Validate zip code
+  // Validate zip code format with progressive validation
   static validateZipCode(zipCode: string): { isValid: boolean; error?: string } {
     if (!zipCode || typeof zipCode !== 'string') {
       return { isValid: false, error: 'Zip code is required' };
@@ -103,11 +104,18 @@ export class InputValidator {
       return { isValid: false, error: 'Zip code cannot be empty' };
     }
 
-    // US ZIP code format (5 digits or 5+4)
+    // US ZIP code format (5 digits or 5+4) - allow partial input during typing
     const zipRegex = /^\d{5}(-\d{4})?$/;
+    const partialZipRegex = /^\d{1,5}(-\d{0,4})?$/;
     
-    if (!zipRegex.test(trimmed)) {
+    // For final validation, use strict regex
+    if (trimmed.length >= 5 && !zipRegex.test(trimmed)) {
       return { isValid: false, error: 'Invalid zip code format (use 12345 or 12345-6789)' };
+    }
+    
+    // For partial input, use relaxed regex
+    if (!partialZipRegex.test(trimmed)) {
+      return { isValid: false, error: 'Zip code should contain only numbers and an optional dash' };
     }
 
     return { isValid: true };

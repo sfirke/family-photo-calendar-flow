@@ -26,7 +26,23 @@ const WeatherSettings = ({
   // Determine if fields should be disabled due to locked encrypted data
   const fieldsDisabled = hasLockedData;
 
-  console.log('WeatherSettings - Security state:', { isSecurityEnabled, hasLockedData, fieldsDisabled });
+  console.log('WeatherSettings - Security state:', { 
+    isSecurityEnabled, 
+    hasLockedData, 
+    fieldsDisabled,
+    zipCode: zipCode ? `${zipCode.substring(0, 3)}...` : 'empty',
+    weatherApiKey: weatherApiKey ? `${weatherApiKey.substring(0, 8)}...` : 'empty'
+  });
+
+  const handleZipCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log('WeatherSettings - Zip code input change:', e.target.value);
+    onZipCodeChange(e.target.value);
+  };
+
+  const handleApiKeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log('WeatherSettings - API key input change:', e.target.value.substring(0, 8) + '...');
+    onWeatherApiKeyChange(e.target.value);
+  };
 
   return (
     <div className="space-y-4">
@@ -48,7 +64,7 @@ const WeatherSettings = ({
           type="password"
           placeholder={fieldsDisabled ? "Unlock security to edit API key" : "Enter your OpenWeatherMap API key"}
           value={fieldsDisabled ? "" : weatherApiKey}
-          onChange={(e) => onWeatherApiKeyChange(e.target.value)}
+          onChange={handleApiKeyChange}
           disabled={fieldsDisabled}
           className={`bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 ${
             fieldsDisabled ? 'opacity-50 cursor-not-allowed' : ''
@@ -88,7 +104,7 @@ const WeatherSettings = ({
           id="zipcode"
           placeholder={fieldsDisabled ? "Unlock security to edit zip code" : "Enter your zip code (e.g., 90210)"}
           value={fieldsDisabled ? "" : zipCode}
-          onChange={(e) => onZipCodeChange(e.target.value)}
+          onChange={handleZipCodeChange}
           disabled={fieldsDisabled}
           className={`bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 ${
             fieldsDisabled ? 'opacity-50 cursor-not-allowed' : ''

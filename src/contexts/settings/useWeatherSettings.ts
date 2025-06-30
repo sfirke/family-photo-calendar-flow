@@ -24,31 +24,36 @@ export const useWeatherSettings = () => {
   }, [weatherApiKey]);
 
   /**
-   * Enhanced zip code setter with input validation
+   * Enhanced zip code setter with progressive validation
+   * Allows typing but validates on completion
    */
   const setValidatedZipCode = (newZipCode: string) => {
-    const validation = InputValidator.validateZipCode(newZipCode);
-    if (validation.isValid || newZipCode === '') {
-      setZipCode(newZipCode);
-    } else {
-      console.warn('Invalid zip code:', validation.error);
+    // Always allow the input to be set for real-time typing
+    setZipCode(newZipCode);
+    
+    // Only log validation errors for non-empty invalid inputs
+    if (newZipCode.trim() !== '') {
+      const validation = InputValidator.validateZipCode(newZipCode);
+      if (!validation.isValid) {
+        console.warn('Invalid zip code format:', validation.error);
+      }
     }
   };
 
   /**
-   * Enhanced weather API key setter with input validation
+   * Enhanced weather API key setter with progressive validation
+   * Allows typing but validates on completion
    */
   const setValidatedWeatherApiKey = (apiKey: string) => {
-    if (apiKey === '') {
-      setWeatherApiKey(apiKey);
-      return;
-    }
+    // Always allow the input to be set for real-time typing
+    setWeatherApiKey(apiKey);
     
-    const validation = InputValidator.validateApiKey(apiKey);
-    if (validation.isValid) {
-      setWeatherApiKey(apiKey);
-    } else {
-      console.warn('Invalid API key:', validation.error);
+    // Only log validation errors for non-empty invalid inputs
+    if (apiKey.trim() !== '') {
+      const validation = InputValidator.validateApiKey(apiKey);
+      if (!validation.isValid) {
+        console.warn('Invalid API key format:', validation.error);
+      }
     }
   };
 
