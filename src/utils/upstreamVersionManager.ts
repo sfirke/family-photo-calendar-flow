@@ -1,23 +1,22 @@
 
-// Configuration - Update this with your actual GitHub repository
-const GITHUB_REPO = {
-  owner: 'cardner', // Replace with actual GitHub username/organization
-  repo: 'family-photo-calendar-flow'   // Replace with actual repository name
-};
+/**
+ * Upstream Version Manager - Refactored
+ * 
+ * Main orchestrator for upstream version management.
+ * Now uses focused modules for different responsibilities.
+ */
 
-const GITHUB_API_BASE = 'https://api.github.com';
-const UPSTREAM_VERSION_KEY = 'upstream_version_cache';
-const LAST_UPSTREAM_CHECK_KEY = 'last_upstream_check';
+import { fetchLatestRelease, GitHubRelease, GitHubRepo } from './github/gitHubApi';
+import { getGitHubRepoConfig, isGitHubRepoConfigured, getRepositoryDisplayName } from './github/repositoryConfig';
+import { 
+  cacheUpstreamVersion, 
+  getCachedUpstreamVersion, 
+  getLastUpstreamCheckTime, 
+  setLastUpstreamCheckTime, 
+  shouldCheckUpstream 
+} from './github/upstreamCache';
 
-interface GitHubRelease {
-  tag_name: string;
-  name: string;
-  body: string;
-  published_at: string;
-  html_url: string;
-}
-
-interface UpstreamVersionInfo {
+export interface UpstreamVersionInfo {
   version: string;
   name: string;
   releaseNotes: string;
@@ -26,33 +25,27 @@ interface UpstreamVersionInfo {
   fetchedAt: string;
 }
 
+// Re-export for backward compatibility
+export { getGitHubRepoConfig, isGitHubRepoConfigured, getRepositoryDisplayName };
+export { getLastUpstreamCheckTime, setLastUpstreamCheckTime, shouldCheckUpstream };
+
+/**
+ * Fetch GitHub releases using configured repository
+ */
 export const fetchGitHubReleases = async (): Promise<GitHubRelease | null> => {
-  try {
-    const response = await fetch(
-      `${GITHUB_API_BASE}/repos/${GITHUB_REPO.owner}/${GITHUB_REPO.repo}/releases/latest`,
-      {
-        headers: {
-          'Accept': 'application/vnd.github.v3+json',
-          'User-Agent': 'Family-Calendar-App'
-        }
-      }
-    );
-
-    if (!response.ok) {
-      if (response.status === 404) {
-        console.warn('No GitHub releases found for this repository');
-        return null;
-      }
-      throw new Error(`GitHub API error: ${response.status}`);
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error('Failed to fetch GitHub releases:', error);
+  const repoConfig = await getGitHubRepoConfig();
+  
+  if (!repoConfig) {
+    console.warn('No GitHub repository configured for update checks');
     return null;
   }
+
+  return await fetchLatestRelease(repoConfig);
 };
 
+/**
+ * Get latest upstream version information
+ */
 export const getLatestUpstreamVersion = async (): Promise<UpstreamVersionInfo | null> => {
   const release = await fetchGitHubReleases();
   
@@ -73,6 +66,9 @@ export const getLatestUpstreamVersion = async (): Promise<UpstreamVersionInfo | 
   };
 };
 
+/**
+ * Compare local version with upstream version
+ */
 export const compareWithUpstream = (localVersion: string, upstreamVersion: string): number => {
   const parseVersion = (version: string) => {
     return version.split('.').map(num => parseInt(num, 10));
@@ -92,6 +88,9 @@ export const compareWithUpstream = (localVersion: string, upstreamVersion: strin
   return 0; // Versions are equal
 };
 
+/**
+ * Check if upstream update is available
+ */
 export const isUpstreamUpdateAvailable = async (currentVersion: string): Promise<boolean> => {
   const upstreamInfo = await getLatestUpstreamVersion();
   
@@ -102,38 +101,9 @@ export const isUpstreamUpdateAvailable = async (currentVersion: string): Promise
   return compareWithUpstream(currentVersion, upstreamInfo.version) > 0;
 };
 
-export const cacheUpstreamVersion = (versionInfo: UpstreamVersionInfo): void => {
-  localStorage.setItem(UPSTREAM_VERSION_KEY, JSON.stringify(versionInfo));
-};
-
-export const getCachedUpstreamVersion = (): UpstreamVersionInfo | null => {
-  try {
-    const cached = localStorage.getItem(UPSTREAM_VERSION_KEY);
-    return cached ? JSON.parse(cached) : null;
-  } catch (error) {
-    console.error('Failed to parse cached upstream version:', error);
-    return null;
-  }
-};
-
-export const getLastUpstreamCheckTime = (): Date | null => {
-  const lastCheck = localStorage.getItem(LAST_UPSTREAM_CHECK_KEY);
-  return lastCheck ? new Date(lastCheck) : null;
-};
-
-export const setLastUpstreamCheckTime = (): void => {
-  localStorage.setItem(LAST_UPSTREAM_CHECK_KEY, new Date().toISOString());
-};
-
-export const shouldCheckUpstream = (): boolean => {
-  const lastCheck = getLastUpstreamCheckTime();
-  if (!lastCheck) return true;
-  
-  // Check for upstream updates every hour
-  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
-  return lastCheck < oneHourAgo;
-};
-
+/**
+ * Get upstream release information with caching
+ */
 export const getUpstreamReleaseInfo = async (): Promise<UpstreamVersionInfo | null> => {
   // First try to get fresh data
   const freshInfo = await getLatestUpstreamVersion();

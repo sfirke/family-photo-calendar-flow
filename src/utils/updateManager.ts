@@ -1,133 +1,73 @@
 
-import { getVersionInfo } from './versionManager';
+/**
+ * Update Manager - Manual Updates Only
+ * 
+ * Simplified update manager focused on manual GitHub release updates.
+ * Removed service worker update checking to focus on upstream releases only.
+ */
+
 import { 
-  getLatestUpstreamVersion, 
-  isUpstreamUpdateAvailable, 
-  shouldCheckUpstream,
-  getUpstreamReleaseInfo,
-  setLastUpstreamCheckTime,
-  cacheUpstreamVersion
-} from './upstreamVersionManager';
+  checkForManualUpdate, 
+  applyManualUpdate, 
+  UpdateStatus, 
+  UpdateProgress 
+} from './manualUpdateManager';
+import { getLatestUpstreamVersion } from './upstreamVersionManager';
+import { getInstalledVersion } from './versionManager';
 
-export const checkForUpdates = async (): Promise<boolean> => {
-  const hasServiceWorkerUpdate = await checkServiceWorkerUpdate();
-  const hasUpstreamUpdate = await checkUpstreamUpdate();
-  
-  return hasServiceWorkerUpdate || hasUpstreamUpdate;
+/**
+ * Check for available updates (manual only)
+ */
+export const checkForUpdates = async (): Promise<UpdateStatus> => {
+  return await checkForManualUpdate();
 };
 
-const checkServiceWorkerUpdate = async (): Promise<boolean> => {
-  if (!('serviceWorker' in navigator)) {
-    return false;
-  }
-
+/**
+ * Apply available update manually
+ */
+export const applyUpdate = async (
+  onProgress?: (progress: UpdateProgress) => void
+): Promise<boolean> => {
   try {
-    const registration = await navigator.serviceWorker.getRegistration();
-    if (!registration) {
+    const updateInfo = await getLatestUpstreamVersion();
+    
+    if (!updateInfo) {
+      onProgress?.({
+        stage: 'error',
+        message: 'No update information available'
+      });
       return false;
     }
 
-    // Check if there's a waiting service worker
-    if (registration.waiting) {
-      return true;
-    }
-
-    // Check for updates
-    await registration.update();
-    
-    return new Promise((resolve) => {
-      const handleUpdateFound = () => {
-        const newWorker = registration.installing;
-        if (newWorker) {
-          newWorker.addEventListener('statechange', () => {
-            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-              resolve(true);
-            }
-          });
-        }
-      };
-
-      registration.addEventListener('updatefound', handleUpdateFound);
-      
-      // Resolve false after 5 seconds if no update found
-      setTimeout(() => resolve(false), 5000);
+    return await applyManualUpdate(updateInfo, onProgress);
+  } catch (error) {
+    console.error('Failed to apply update:', error);
+    onProgress?.({
+      stage: 'error',
+      message: `Update failed: ${error instanceof Error ? error.message : 'Unknown error'}`
     });
-  } catch (error) {
-    console.error('Error checking for service worker updates:', error);
     return false;
   }
 };
 
-const checkUpstreamUpdate = async (): Promise<boolean> => {
-  try {
-    // Only check upstream if it's time to do so (hourly)
-    if (!shouldCheckUpstream()) {
-      return false;
-    }
-
-    const versionInfo = await getVersionInfo();
-    const hasUpdate = await isUpstreamUpdateAvailable(versionInfo.version);
-    
-    if (hasUpdate) {
-      // Cache the upstream version info
-      const upstreamInfo = await getLatestUpstreamVersion();
-      if (upstreamInfo) {
-        cacheUpstreamVersion(upstreamInfo);
-      }
-    }
-    
-    setLastUpstreamCheckTime();
-    return hasUpdate;
-  } catch (error) {
-    console.error('Error checking for upstream updates:', error);
-    return false;
-  }
-};
-
-export const applyUpdate = async (): Promise<void> => {
-  if (!('serviceWorker' in navigator)) {
-    return;
-  }
-
-  try {
-    const registration = await navigator.serviceWorker.getRegistration();
-    if (registration?.waiting) {
-      // Tell the waiting service worker to skip waiting and become active
-      registration.waiting.postMessage({ type: 'SKIP_WAITING' });
-      
-      // Reload the page to use the new service worker
-      window.location.reload();
-    }
-  } catch (error) {
-    console.error('Error applying update:', error);
-  }
-};
-
+/**
+ * Get current update information
+ */
 export const getUpdateInfo = async () => {
   try {
-    const versionInfo = await getVersionInfo();
-    const hasServiceWorkerUpdate = await checkServiceWorkerUpdate();
-    const hasUpstreamUpdate = await checkUpstreamUpdate();
+    const updateStatus = await checkForUpdates();
+    const installed = getInstalledVersion();
     
     return {
-      version: versionInfo.version,
-      buildDate: versionInfo.buildDate,
-      gitHash: versionInfo.gitHash,
-      hasServiceWorkerUpdate,
-      hasUpstreamUpdate,
-      hasUpdate: hasServiceWorkerUpdate || hasUpstreamUpdate
+      currentVersion: updateStatus.currentVersion,
+      installedDate: installed?.installDate,
+      isUpdateAvailable: updateStatus.isAvailable,
+      latestVersion: updateStatus.latestVersion,
+      updateInfo: updateStatus.updateInfo,
+      canUpdate: updateStatus.canUpdate
     };
   } catch (error) {
     console.error('Error getting update info:', error);
-    return null;
-  }
-};
-
-export const getUpstreamUpdateInfo = async () => {
-  try {
-    return await getUpstreamReleaseInfo();
-  } catch (error) {
-    console.error('Error getting upstream update info:', error);
     return null;
   }
 };

@@ -112,4 +112,63 @@ export class InputValidator {
 
     return { isValid: true };
   }
+
+  // Validate GitHub username
+  static validateGithubUsername(username: string): { isValid: boolean; error?: string } {
+    if (!username || typeof username !== 'string') {
+      return { isValid: false, error: 'GitHub username is required' };
+    }
+
+    const trimmed = username.trim();
+    
+    if (trimmed.length === 0) {
+      return { isValid: false, error: 'GitHub username cannot be empty' };
+    }
+
+    if (trimmed.length > 39) {
+      return { isValid: false, error: 'GitHub username is too long (max 39 characters)' };
+    }
+
+    // GitHub username rules: alphanumeric and hyphens only, cannot start/end with hyphen
+    const usernameRegex = /^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?$/;
+    
+    if (!usernameRegex.test(trimmed)) {
+      return { isValid: false, error: 'Invalid GitHub username format (alphanumeric and hyphens only, cannot start/end with hyphen)' };
+    }
+
+    return { isValid: true };
+  }
+
+  // Validate GitHub repository name
+  static validateGithubRepoName(repoName: string): { isValid: boolean; error?: string } {
+    if (!repoName || typeof repoName !== 'string') {
+      return { isValid: false, error: 'Repository name is required' };
+    }
+
+    const trimmed = repoName.trim();
+    
+    if (trimmed.length === 0) {
+      return { isValid: false, error: 'Repository name cannot be empty' };
+    }
+
+    if (trimmed.length > 100) {
+      return { isValid: false, error: 'Repository name is too long (max 100 characters)' };
+    }
+
+    // GitHub repository name rules: alphanumeric, hyphens, underscores, and dots
+    // Cannot start with dot or hyphen
+    const repoRegex = /^[a-zA-Z0-9_][a-zA-Z0-9._-]*$/;
+    
+    if (!repoRegex.test(trimmed)) {
+      return { isValid: false, error: 'Invalid repository name format (alphanumeric, hyphens, underscores, dots allowed; cannot start with dot or hyphen)' };
+    }
+
+    // Reserved names check
+    const reservedNames = ['git', 'www', 'ftp', 'mail', 'pop', 'pop3', 'imap', 'smtp', 'admin', 'api'];
+    if (reservedNames.includes(trimmed.toLowerCase())) {
+      return { isValid: false, error: 'Repository name is reserved' };
+    }
+
+    return { isValid: true };
+  }
 }

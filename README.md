@@ -231,7 +231,7 @@ npm run test:e2e
 - **API Keys**: Weather and calendar service keys encrypted
 - **Personal Data**: Zip codes and album URLs encrypted
 - **Session Security**: Encryption keys exist only in memory
-- **No Server Storage**: All data remains on user's device
+- **Local Storage**: All data remains on user's device
 
 ### Threat Model
 - **Protects Against**: Local storage inspection, device theft, XSS attacks, injection attacks

@@ -2,309 +2,56 @@
 /**
  * SettingsContext - Application Configuration Management
  * 
- * Centralized settings management for the Family Calendar application.
+ * Refactored centralized settings management for the Family Calendar application.
+ * Now uses smaller, focused hooks for different setting categories.
  * Handles both secure and non-secure settings with automatic encryption
- * when security is enabled. Provides real-time settings synchronization
- * across all components.
- * 
- * Settings Categories:
- * - Display: Theme, default view, appearance preferences
- * - Weather: API keys, location settings (encrypted when possible)
- * - Photos: Album URLs, background settings (encrypted when possible)
- * - Security: Encryption preferences and validation
- * 
- * Security Integration:
- * - Automatically encrypts sensitive data when security is enabled
- * - Graceful fallback to localStorage for non-encrypted storage
- * - Migration of existing plain-text data to encrypted storage
- * - Input validation for all user-provided data
+ * when security is enabled.
  */
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { SecureStorage } from '@/utils/security/secureStorage';
-import { InputValidator } from '@/utils/security/inputValidation';
-
-interface SettingsContextType {
-  // Display Settings
-  /** Current theme preference (light/dark/system) */
-  theme: 'light' | 'dark' | 'system';
-  /** Update theme setting and apply immediately */
-  setTheme: (theme: 'light' | 'dark' | 'system') => void;
-  /** Default calendar view on app load */
-  defaultView: 'month' | 'week' | 'timeline';
-  /** Update default view preference */
-  setDefaultView: (view: 'month' | 'week' | 'timeline') => void;
-  
-  // Weather Settings (Sensitive - encrypted when possible)
-  /** User's zip code for weather location */
-  zipCode: string;
-  /** Update zip code with validation */
-  setZipCode: (zipCode: string) => void;
-  /** Weather service API key */
-  weatherApiKey: string;
-  /** Update weather API key with validation */
-  setWeatherApiKey: (apiKey: string) => void;
-  
-  // Photo Settings (Sensitive - encrypted when possible)
-  /** Google Photos public album URL */
-  publicAlbumUrl: string;
-  /** Update album URL with validation */
-  setPublicAlbumUrl: (url: string) => void;
-  
-  // Background Settings
-  /** Photo background rotation duration in minutes */
-  backgroundDuration: number;
-  /** Update background rotation timing */
-  setBackgroundDuration: (duration: number) => void;
-  /** Currently selected photo album ID */
-  selectedAlbum: string | null;
-  /** Update selected album */
-  setSelectedAlbum: (albumId: string | null) => void;
-}
+import React, { createContext, useContext } from 'react';
+import { SettingsContextType } from './settings/types';
+import { useDisplaySettings } from './settings/useDisplaySettings';
+import { useWeatherSettings } from './settings/useWeatherSettings';
+import { usePhotoSettings } from './settings/usePhotoSettings';
+import { useGitHubSettings } from './settings/useGitHubSettings';
+import { useSettingsInitialization } from './settings/useSettingsInitialization';
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
 
 /**
  * Settings Provider Component
  * 
- * Manages all application settings with intelligent storage selection.
+ * Manages all application settings using focused hooks for different categories.
  * Automatically encrypts sensitive data when security is enabled and
  * provides seamless migration between storage modes.
  */
 export const SettingsProvider = ({ children }: { children: React.ReactNode }) => {
-  // Display preferences (non-sensitive)
-  const [theme, setTheme] = useState<'light' | 'dark' | 'system'>('system');
-  const [defaultView, setDefaultView] = useState<'month' | 'week' | 'timeline'>('month');
-  
-  // Location and API settings (sensitive - encrypted when possible)
-  const [zipCode, setZipCode] = useState('90210');
-  const [weatherApiKey, setWeatherApiKey] = useState('');
-  const [publicAlbumUrl, setPublicAlbumUrl] = useState('');
-  
-  // Background and UI settings (non-sensitive)
-  const [backgroundDuration, setBackgroundDuration] = useState(30); // Default 30 minutes
-  const [selectedAlbum, setSelectedAlbum] = useState<string | null>(null);
+  // Use category-specific hooks
+  const displaySettings = useDisplaySettings();
+  const weatherSettings = useWeatherSettings();
+  const photoSettings = usePhotoSettings();
+  const githubSettings = useGitHubSettings();
 
-  /**
-   * Load all settings from appropriate storage on app initialization
-   * 
-   * Handles both regular localStorage and secure encrypted storage.
-   * Includes automatic migration of existing unencrypted data to
-   * secure storage when encryption is enabled.
-   */
-  useEffect(() => {
-    const loadSettings = async () => {
-      try {
-        // Load non-sensitive settings from regular localStorage
-        const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | 'system' | null;
-        const savedView = localStorage.getItem('defaultView') as 'month' | 'week' | 'timeline' | null;
-        const savedDuration = localStorage.getItem('backgroundDuration');
-        const savedAlbum = localStorage.getItem('selectedAlbum');
-
-        // Apply loaded settings with fallback to defaults
-        if (savedTheme) setTheme(savedTheme);
-        if (savedView) setDefaultView(savedView);
-        if (savedDuration) setBackgroundDuration(parseInt(savedDuration));
-        if (savedAlbum) setSelectedAlbum(savedAlbum);
-
-        // Load sensitive settings from secure storage (with fallback to localStorage)
-        try {
-          const savedZipCode = await SecureStorage.getItem('zipCode') || localStorage.getItem('zipCode');
-          const savedApiKey = await SecureStorage.getItem('weatherApiKey') || localStorage.getItem('weatherApiKey');
-          const savedPublicAlbumUrl = await SecureStorage.getItem('publicAlbumUrl') || localStorage.getItem('publicAlbumUrl');
-
-          if (savedZipCode) setZipCode(savedZipCode);
-          if (savedApiKey) setWeatherApiKey(savedApiKey);
-          if (savedPublicAlbumUrl) setPublicAlbumUrl(savedPublicAlbumUrl);
-
-          // Automatic migration: Move unencrypted sensitive data to secure storage
-          if (SecureStorage.isEncryptionEnabled()) {
-            const oldZipCode = localStorage.getItem('zipCode');
-            const oldApiKey = localStorage.getItem('weatherApiKey');
-            const oldAlbumUrl = localStorage.getItem('publicAlbumUrl');
-
-            // Migrate and remove unencrypted versions
-            if (oldZipCode) {
-              await SecureStorage.setItem('zipCode', oldZipCode);
-              localStorage.removeItem('zipCode');
-            }
-            if (oldApiKey) {
-              await SecureStorage.setItem('weatherApiKey', oldApiKey);
-              localStorage.removeItem('weatherApiKey');
-            }
-            if (oldAlbumUrl) {
-              await SecureStorage.setItem('publicAlbumUrl', oldAlbumUrl);
-              localStorage.removeItem('publicAlbumUrl');
-            }
-          }
-        } catch (error) {
-          console.warn('Could not load secure settings:', error);
-          // Continue with regular localStorage fallback
-        }
-      } catch (error) {
-        console.error('Error loading settings:', error);
-      }
-    };
-
-    loadSettings();
-  }, []);
-
-  // Auto-save non-sensitive settings to localStorage
-  useEffect(() => {
-    localStorage.setItem('theme', theme);
-  }, [theme]);
-
-  useEffect(() => {
-    localStorage.setItem('defaultView', defaultView);
-  }, [defaultView]);
-
-  useEffect(() => {
-    localStorage.setItem('backgroundDuration', backgroundDuration.toString());
-  }, [backgroundDuration]);
-
-  useEffect(() => {
-    if (selectedAlbum) {
-      localStorage.setItem('selectedAlbum', selectedAlbum);
-    } else {
-      localStorage.removeItem('selectedAlbum');
-    }
-  }, [selectedAlbum]);
-
-  /**
-   * Auto-save zip code to appropriate storage (secure or regular)
-   * 
-   * Automatically chooses encrypted storage when available,
-   * falls back to localStorage when encryption is disabled.
-   */
-  useEffect(() => {
-    const saveZipCode = async () => {
-      try {
-        if (SecureStorage.isEncryptionEnabled()) {
-          await SecureStorage.setItem('zipCode', zipCode);
-          localStorage.removeItem('zipCode'); // Remove unencrypted version
-        } else {
-          localStorage.setItem('zipCode', zipCode);
-        }
-      } catch (error) {
-        console.warn('Failed to save zip code securely, using localStorage:', error);
-        localStorage.setItem('zipCode', zipCode);
-      }
-    };
-    saveZipCode();
-  }, [zipCode]);
-
-  /**
-   * Auto-save weather API key to appropriate storage (secure or regular)
-   */
-  useEffect(() => {
-    const saveApiKey = async () => {
-      try {
-        if (SecureStorage.isEncryptionEnabled()) {
-          await SecureStorage.setItem('weatherApiKey', weatherApiKey);
-          localStorage.removeItem('weatherApiKey'); // Remove unencrypted version
-        } else {
-          localStorage.setItem('weatherApiKey', weatherApiKey);
-        }
-      } catch (error) {
-        console.warn('Failed to save API key securely, using localStorage:', error);
-        localStorage.setItem('weatherApiKey', weatherApiKey);
-      }
-    };
-    saveApiKey();
-  }, [weatherApiKey]);
-
-  /**
-   * Auto-save public album URL to appropriate storage (secure or regular)
-   */
-  useEffect(() => {
-    const savePublicAlbumUrl = async () => {
-      try {
-        if (SecureStorage.isEncryptionEnabled()) {
-          await SecureStorage.setItem('publicAlbumUrl', publicAlbumUrl);
-          localStorage.removeItem('publicAlbumUrl'); // Remove unencrypted version
-        } else {
-          localStorage.setItem('publicAlbumUrl', publicAlbumUrl);
-        }
-      } catch (error) {
-        console.warn('Failed to save album URL securely, using localStorage:', error);
-        localStorage.setItem('publicAlbumUrl', publicAlbumUrl);
-      }
-    };
-    savePublicAlbumUrl();
-  }, [publicAlbumUrl]);
-
-  /**
-   * Enhanced zip code setter with input validation
-   * 
-   * Validates zip code format before accepting the value.
-   * Logs validation errors for debugging but allows empty strings.
-   */
-  const setValidatedZipCode = (newZipCode: string) => {
-    const validation = InputValidator.validateZipCode(newZipCode);
-    if (validation.isValid || newZipCode === '') {
-      setZipCode(newZipCode);
-    } else {
-      console.warn('Invalid zip code:', validation.error);
-    }
-  };
-
-  /**
-   * Enhanced weather API key setter with input validation
-   * 
-   * Validates API key format before accepting the value.
-   * Allows empty strings for disabling weather functionality.
-   */
-  const setValidatedWeatherApiKey = (apiKey: string) => {
-    if (apiKey === '') {
-      setWeatherApiKey(apiKey);
-      return;
-    }
-    
-    const validation = InputValidator.validateApiKey(apiKey);
-    if (validation.isValid) {
-      setWeatherApiKey(apiKey);
-    } else {
-      console.warn('Invalid API key:', validation.error);
-    }
-  };
-
-  /**
-   * Enhanced public album URL setter with input validation
-   * 
-   * Validates URL format before accepting the value.
-   * Allows empty strings for disabling photo backgrounds.
-   */
-  const setValidatedPublicAlbumUrl = (url: string) => {
-    if (url === '') {
-      setPublicAlbumUrl(url);
-      return;
-    }
-    
-    const validation = InputValidator.validateUrl(url);
-    if (validation.isValid) {
-      setPublicAlbumUrl(url);
-    } else {
-      console.warn('Invalid album URL:', validation.error);
-    }
-  };
+  // Initialize all settings from storage
+  useSettingsInitialization({
+    setTheme: displaySettings.setTheme,
+    setDefaultView: displaySettings.setDefaultView,
+    setZipCode: weatherSettings.setZipCode,
+    setWeatherApiKey: weatherSettings.setWeatherApiKey,
+    setPublicAlbumUrl: photoSettings.setPublicAlbumUrl,
+    setGithubOwner: githubSettings.setGithubOwner,
+    setGithubRepo: githubSettings.setGithubRepo,
+    setBackgroundDuration: photoSettings.setBackgroundDuration,
+    setSelectedAlbum: photoSettings.setSelectedAlbum,
+  });
 
   return (
     <SettingsContext.Provider
       value={{
-        theme,
-        setTheme,
-        defaultView,
-        setDefaultView,
-        zipCode,
-        setZipCode: setValidatedZipCode,
-        backgroundDuration,
-        setBackgroundDuration,
-        selectedAlbum,
-        setSelectedAlbum,
-        weatherApiKey,
-        setWeatherApiKey: setValidatedWeatherApiKey,
-        publicAlbumUrl,
-        setPublicAlbumUrl: setValidatedPublicAlbumUrl,
+        ...displaySettings,
+        ...weatherSettings,
+        ...photoSettings,
+        ...githubSettings,
       }}
     >
       {children}
