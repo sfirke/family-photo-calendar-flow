@@ -18,7 +18,7 @@ interface UseSettingsInitializationProps {
   setPublicAlbumUrl: (url: string) => void;
   setGithubOwner: (owner: string) => void;
   setGithubRepo: (repo: string) => void;
-  setBackgroundDuration: (duration: string) => void;
+  setBackgroundDuration: (duration: number) => void;
   setSelectedAlbum: (album: string) => void;
 }
 
@@ -40,14 +40,31 @@ export const useSettingsInitialization = (props: UseSettingsInitializationProps)
           props.setDefaultView(settings.defaultView);
         }
         if (settings.backgroundDuration) {
-          props.setBackgroundDuration(settings.backgroundDuration);
+          props.setBackgroundDuration(parseInt(settings.backgroundDuration));
         }
         if (settings.selectedAlbum) {
           props.setSelectedAlbum(settings.selectedAlbum);
         }
 
-        // Initialize sensitive settings only if not locked
-        if (!hasLockedData || isSecurityEnabled) {
+        // Initialize sensitive settings only if security is enabled and unlocked
+        if (isSecurityEnabled && !hasLockedData) {
+          if (settings.zipCode) {
+            props.setZipCode(settings.zipCode);
+          }
+          if (settings.weatherApiKey) {
+            props.setWeatherApiKey(settings.weatherApiKey);
+          }
+          if (settings.publicAlbumUrl) {
+            props.setPublicAlbumUrl(settings.publicAlbumUrl);
+          }
+          if (settings.githubOwner) {
+            props.setGithubOwner(settings.githubOwner);
+          }
+          if (settings.githubRepo) {
+            props.setGithubRepo(settings.githubRepo);
+          }
+        } else if (!isSecurityEnabled) {
+          // Load from regular storage if security is disabled
           if (settings.zipCode) {
             props.setZipCode(settings.zipCode);
           }
@@ -108,5 +125,5 @@ export const useSettingsInitialization = (props: UseSettingsInitializationProps)
     };
 
     reloadSensitiveSettings();
-  }, [isSecurityEnabled]);
+  }, [isSecurityEnabled, hasLockedData]);
 };
