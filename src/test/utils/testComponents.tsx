@@ -46,11 +46,6 @@ export const AllTheProviders = ({ children }: { children: React.ReactNode }) => 
       },
       mutations: { retry: false },
     },
-    logger: {
-      log: () => {},
-      warn: () => {},
-      error: () => {},
-    },
   });
 
   return (
