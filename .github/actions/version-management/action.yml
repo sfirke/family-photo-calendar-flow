@@ -1,0 +1,102 @@
+
+name: 'Version Management'
+description: 'Determine version bump type and update version files'
+inputs:
+  version_type:
+    description: 'Version bump type (auto, patch, minor, major)'
+    required: true
+    default: 'auto'
+outputs:
+  version_type:
+    description: 'Determined version bump type'
+    value: ${{ steps.version-type.outputs.version_type }}
+  new_version:
+    description: 'New version number'
+    value: ${{ steps.version.outputs.version }}
+  git_hash:
+    description: 'Git commit hash'
+    value: ${{ steps.version.outputs.git_hash }}
+  build_number:
+    description: 'Build number'
+    value: ${{ steps.version.outputs.build_number }}
+runs:
+  using: 'composite'
+  steps:
+    - name: Determine version bump type
+      id: version-type
+      shell: bash
+      run: |
+        if [ "${{ inputs.version_type }}" = "auto" ]; then
+          # Get commits since last tag
+          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          if [ -z "$LAST_TAG" ]; then
+            COMMITS=$(git log --pretty=format:"%s" HEAD)
+          else
+            COMMITS=$(git log --pretty=format:"%s" ${LAST_TAG}..HEAD)
+          fi
+          
+          # Determine version bump based on conventional commits
+          if echo "$COMMITS" | grep -q "BREAKING CHANGE\|!:"; then
+            VERSION_TYPE="major"
+          elif echo "$COMMITS" | grep -q "^feat"; then
+            VERSION_TYPE="minor"
+          elif echo "$COMMITS" | grep -q "^fix"; then
+            VERSION_TYPE="patch"
+          else
+            VERSION_TYPE="patch"
+          fi
+        else
+          VERSION_TYPE="${{ inputs.version_type }}"
+        fi
+        
+        echo "version_type=$VERSION_TYPE" >> $GITHUB_OUTPUT
+        echo "Determined version bump type: $VERSION_TYPE"
+
+    - name: Bump version
+      id: version
+      shell: bash
+      run: |
+        # Get current version from package.json
+        CURRENT_VERSION=$(node -p "require('./package.json').version")
+        echo "Current version: $CURRENT_VERSION"
+        
+        # Calculate new version based on bump type
+        BUMP_TYPE="${{ steps.version-type.outputs.version_type }}"
+        
+        if [ "$BUMP_TYPE" = "major" ]; then
+          NEW_VERSION=$(node -p "
+            const [major, minor, patch] = '$CURRENT_VERSION'.split('.').map(Number);
+            \`\${major + 1}.0.0\`
+          ")
+        elif [ "$BUMP_TYPE" = "minor" ]; then
+          NEW_VERSION=$(node -p "
+            const [major, minor, patch] = '$CURRENT_VERSION'.split('.').map(Number);
+            \`\${major}.\${minor + 1}.0\`
+          ")
+        else
+          NEW_VERSION=$(node -p "
+            const [major, minor, patch] = '$CURRENT_VERSION'.split('.').map(Number);
+            \`\${major}.\${minor}.\${patch + 1}\`
+          ")
+        fi
+        
+        echo "New version: $NEW_VERSION"
+        
+        # Update version.json
+        BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%S.%03dZ")
+        GIT_HASH=$(git rev-parse --short HEAD)
+        BUILD_NUMBER=$(($(cat public/version.json | grep -o '"buildNumber": [0-9]*' | grep -o '[0-9]*') + 1))
+        
+        cat > public/version.json << EOF
+        {
+          "version": "$NEW_VERSION",
+          "buildDate": "$BUILD_DATE",
+          "gitHash": "$GIT_HASH",
+          "buildNumber": $BUILD_NUMBER,
+          "environment": "production"
+        }
+        EOF
+        
+        echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+        echo "git_hash=$GIT_HASH" >> $GITHUB_OUTPUT
+        echo "build_number=$BUILD_NUMBER" >> $GITHUB_OUTPUT
