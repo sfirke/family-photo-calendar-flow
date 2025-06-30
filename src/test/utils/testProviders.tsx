@@ -4,8 +4,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { SettingsProvider } from '@/contexts/SettingsContext';
 import { WeatherProvider } from '@/contexts/WeatherContext';
+import { SecurityContext } from '@/contexts/SecurityContext';
 
-// Test-specific SecurityProvider that doesn't use real encryption
+// Test-specific SecurityProvider that provides a proper React Context
 const TestSecurityProvider = ({ children }: { children: React.ReactNode }) => {
   const mockSecurityContext = {
     isSecurityEnabled: false,
@@ -18,13 +19,13 @@ const TestSecurityProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   return (
-    <div data-testid="test-security-provider">
-      {React.cloneElement(children as React.ReactElement, { securityContext: mockSecurityContext })}
-    </div>
+    <SecurityContext.Provider value={mockSecurityContext}>
+      {children}
+    </SecurityContext.Provider>
   );
 };
 
-// Enhanced AllTheProviders with better error handling and test-specific defaults
+// Enhanced AllTheProviders with proper provider chain order
 export const AllTheProviders = ({ children }: { children: React.ReactNode }) => {
   const queryClient = new QueryClient({
     defaultOptions: {
