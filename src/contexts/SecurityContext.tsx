@@ -57,6 +57,8 @@ export const SecurityProvider = ({ children }: { children: React.ReactNode }) =>
    */
   const checkForLockedData = async () => {
     const hasSecuritySalt = localStorage.getItem('security_salt') !== null;
+    console.log('checkForLockedData - hasSecuritySalt:', hasSecuritySalt, 'isSecurityEnabled:', isSecurityEnabled);
+    
     if (!hasSecuritySalt) {
       setHasLockedData(false);
       return;
@@ -66,7 +68,11 @@ export const SecurityProvider = ({ children }: { children: React.ReactNode }) =>
     const encryptedKeys = ['secure_zipCode_encrypted', 'secure_weatherApiKey_encrypted', 'secure_publicAlbumUrl_encrypted'];
     const hasEncryptedData = encryptedKeys.some(key => localStorage.getItem(key) === 'true');
     
-    setHasLockedData(hasEncryptedData && !isSecurityEnabled);
+    // Data is locked if there's encrypted data but security is not enabled
+    const isLocked = hasEncryptedData && !isSecurityEnabled;
+    console.log('checkForLockedData - hasEncryptedData:', hasEncryptedData, 'isLocked:', isLocked);
+    
+    setHasLockedData(isLocked);
   };
 
   /**
@@ -118,8 +124,15 @@ export const SecurityProvider = ({ children }: { children: React.ReactNode }) =>
     const success = await SecureStorage.initialize(password);
     if (success) {
       // Update context state to reflect active encryption
-      setIsSecurityEnabled(SecureStorage.isEncryptionEnabled());
-      await checkForLockedData();
+      const newSecurityEnabled = SecureStorage.isEncryptionEnabled();
+      console.log('enableSecurity - success, newSecurityEnabled:', newSecurityEnabled);
+      setIsSecurityEnabled(newSecurityEnabled);
+      
+      // Force immediate update of locked data status
+      if (newSecurityEnabled) {
+        setHasLockedData(false);
+      }
+      
       return true;
     }
     

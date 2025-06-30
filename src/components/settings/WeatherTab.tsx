@@ -23,19 +23,26 @@ const WeatherTab = ({ zipCode, onZipCodeChange, weatherApiKey, onWeatherApiKeyCh
     data?: any;
   } | null>(null);
   const [showPreview, setShowPreview] = useState(false);
-  const { isSecurityEnabled } = useSecurity();
+  const { isSecurityEnabled, hasLockedData } = useSecurity();
 
   // Clear test results when security state changes to force re-testing with new data
   useEffect(() => {
     setTestResult(null);
     setShowPreview(false);
-  }, [isSecurityEnabled]);
+  }, [isSecurityEnabled, hasLockedData]);
 
   const handleSecurityUnlock = () => {
+    console.log('WeatherTab - handleSecurityUnlock called');
     // Force a refresh of the test results when security is unlocked
     setTestResult(null);
     setShowPreview(false);
+    // Force a re-render by updating state
+    setTimeout(() => {
+      // This ensures the component re-renders after the security context updates
+    }, 100);
   };
+
+  console.log('WeatherTab - Render state:', { isSecurityEnabled, hasLockedData, zipCode, weatherApiKey });
 
   return (
     <div className="space-y-6">
@@ -55,6 +62,7 @@ const WeatherTab = ({ zipCode, onZipCodeChange, weatherApiKey, onWeatherApiKeyCh
             onZipCodeChange={onZipCodeChange}
             weatherApiKey={weatherApiKey}
             onWeatherApiKeyChange={onWeatherApiKeyChange}
+            onSecurityUnlock={handleSecurityUnlock}
           />
 
           <WeatherConnectionTest

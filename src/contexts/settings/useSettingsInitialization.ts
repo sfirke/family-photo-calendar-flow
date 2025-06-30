@@ -29,6 +29,8 @@ export const useSettingsInitialization = (props: UseSettingsInitializationProps)
     const initializeSettings = async () => {
       if (!isInitialized) return;
 
+      console.log('initializeSettings - Security state:', { isSecurityEnabled, hasLockedData });
+
       try {
         const settings = await SettingsStorage.loadAllSettings();
 
@@ -46,47 +48,33 @@ export const useSettingsInitialization = (props: UseSettingsInitializationProps)
           props.setSelectedAlbum(settings.selectedAlbum);
         }
 
-        // Initialize sensitive settings only if security is enabled and unlocked
-        if (isSecurityEnabled && !hasLockedData) {
-          if (settings.zipCode) {
-            props.setZipCode(settings.zipCode);
-          }
-          if (settings.weatherApiKey) {
-            props.setWeatherApiKey(settings.weatherApiKey);
-          }
-          if (settings.publicAlbumUrl) {
-            props.setPublicAlbumUrl(settings.publicAlbumUrl);
-          }
-          if (settings.githubOwner) {
-            props.setGithubOwner(settings.githubOwner);
-          }
-          if (settings.githubRepo) {
-            props.setGithubRepo(settings.githubRepo);
-          }
-        } else if (!isSecurityEnabled) {
-          // Load from regular storage if security is disabled
-          if (settings.zipCode) {
-            props.setZipCode(settings.zipCode);
-          }
-          if (settings.weatherApiKey) {
-            props.setWeatherApiKey(settings.weatherApiKey);
-          }
-          if (settings.publicAlbumUrl) {
-            props.setPublicAlbumUrl(settings.publicAlbumUrl);
-          }
-          if (settings.githubOwner) {
-            props.setGithubOwner(settings.githubOwner);
-          }
-          if (settings.githubRepo) {
-            props.setGithubRepo(settings.githubRepo);
-          }
-        } else {
+        // Handle sensitive settings based on security state
+        if (hasLockedData) {
           // Clear sensitive settings when locked to show empty fields
+          console.log('initializeSettings - Clearing sensitive settings (locked)');
           props.setZipCode('');
           props.setWeatherApiKey('');
           props.setPublicAlbumUrl('');
           props.setGithubOwner('');
           props.setGithubRepo('');
+        } else if (isSecurityEnabled || !isSecurityEnabled) {
+          // Load sensitive settings when unlocked or when security is disabled
+          console.log('initializeSettings - Loading sensitive settings');
+          if (settings.zipCode) {
+            props.setZipCode(settings.zipCode);
+          }
+          if (settings.weatherApiKey) {
+            props.setWeatherApiKey(settings.weatherApiKey);
+          }
+          if (settings.publicAlbumUrl) {
+            props.setPublicAlbumUrl(settings.publicAlbumUrl);
+          }
+          if (settings.githubOwner) {
+            props.setGithubOwner(settings.githubOwner);
+          }
+          if (settings.githubRepo) {
+            props.setGithubRepo(settings.githubRepo);
+          }
         }
       } catch (error) {
         console.error('Failed to initialize settings:', error);
@@ -99,7 +87,9 @@ export const useSettingsInitialization = (props: UseSettingsInitializationProps)
   // Re-initialize sensitive settings when security is unlocked
   useEffect(() => {
     const reloadSensitiveSettings = async () => {
-      if (!isSecurityEnabled || hasLockedData) return;
+      if (hasLockedData || !isInitialized) return;
+
+      console.log('reloadSensitiveSettings - Reloading after unlock');
 
       try {
         const settings = await SettingsStorage.loadAllSettings();
@@ -125,5 +115,5 @@ export const useSettingsInitialization = (props: UseSettingsInitializationProps)
     };
 
     reloadSensitiveSettings();
-  }, [isSecurityEnabled, hasLockedData]);
+  }, [isSecurityEnabled, hasLockedData, isInitialized]);
 };

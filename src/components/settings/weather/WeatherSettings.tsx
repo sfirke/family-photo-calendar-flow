@@ -11,23 +11,27 @@ interface WeatherSettingsProps {
   onZipCodeChange: (zipCode: string) => void;
   weatherApiKey: string;
   onWeatherApiKeyChange: (apiKey: string) => void;
+  onSecurityUnlock?: () => void;
 }
 
 const WeatherSettings = ({
   zipCode,
   onZipCodeChange,
   weatherApiKey,
-  onWeatherApiKeyChange
+  onWeatherApiKeyChange,
+  onSecurityUnlock
 }: WeatherSettingsProps) => {
   const { isSecurityEnabled, hasLockedData } = useSecurity();
 
   // Determine if fields should be disabled due to locked encrypted data
-  const fieldsDisabled = hasLockedData && !isSecurityEnabled;
+  const fieldsDisabled = hasLockedData;
+
+  console.log('WeatherSettings - Security state:', { isSecurityEnabled, hasLockedData, fieldsDisabled });
 
   return (
     <div className="space-y-4">
       {/* Show unlock banner if data is locked */}
-      <SecurityUnlockBanner />
+      <SecurityUnlockBanner onUnlock={onSecurityUnlock} />
 
       <div className="space-y-2">
         <div className="flex items-center justify-between">
