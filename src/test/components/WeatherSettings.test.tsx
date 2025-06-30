@@ -1,13 +1,14 @@
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
-import { act } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import WeatherSettings from '@/components/settings/weather/WeatherSettings';
 import { AllTheProviders } from '../utils/testProviders';
 import { mockSecurityContext } from '../utils/securityMocks';
 
-// Use the standardized SecurityContext mock
-mockSecurityContext();
+// Apply the SecurityContext mock before any imports
+beforeAll(() => {
+  mockSecurityContext();
+});
 
 // Mock SecurityUnlockBanner to render nothing when hasLockedData is false
 vi.mock('@/components/security/SecurityUnlockBanner', () => ({
@@ -100,8 +101,6 @@ describe('WeatherSettings', () => {
   it('should render weather settings form', async () => {
     const result = await renderWithProviders(<WeatherSettings {...defaultProps} />);
     
-    console.log('WeatherSettings test - DOM content:', result.container.innerHTML);
-
     // Check for the actual label text that exists in the component
     expect(screen.getByLabelText(/OpenWeatherMap API Key/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/Zip Code/i)).toBeInTheDocument();

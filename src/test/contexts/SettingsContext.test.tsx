@@ -1,12 +1,13 @@
-
 import React from 'react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { SettingsProvider, useSettings } from '@/contexts/SettingsContext';
 import { mockSecurityContext, MockSecurityProvider } from '../utils/securityMocks';
 
-// Use the standardized SecurityContext mock
-mockSecurityContext();
+// Apply the SecurityContext mock before any imports
+beforeAll(() => {
+  mockSecurityContext();
+});
 
 // Mock all the individual hooks with complete exports
 vi.mock('@/contexts/settings/useDisplaySettings', () => ({

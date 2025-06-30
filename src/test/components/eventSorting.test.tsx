@@ -1,5 +1,4 @@
-
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeAll } from 'vitest';
 import { render } from '../utils/testUtils';
 import TimelineView from '@/components/TimelineView';
 import WeekView from '@/components/WeekView';
@@ -8,8 +7,10 @@ import { Event } from '@/types/calendar';
 import { compareTimeStrings } from '@/utils/timeUtils';
 import { mockSecurityContext } from '../utils/securityMocks';
 
-// Use the standardized SecurityContext mock
-mockSecurityContext();
+// Apply the SecurityContext mock before any imports
+beforeAll(() => {
+  mockSecurityContext();
+});
 
 // Mock weather function
 const mockGetWeatherForDate = vi.fn().mockReturnValue({ temp: 75, condition: 'Sunny' });

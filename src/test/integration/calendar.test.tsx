@@ -1,13 +1,14 @@
-
 import React from 'react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest';
 import { render, screen, waitFor, act } from '../utils/testUtils';
 import { BrowserRouter } from 'react-router-dom';
 import Index from '@/pages/Index';
 import { mockSecurityContext } from '../utils/securityMocks';
 
-// Use the standardized SecurityContext mock
-mockSecurityContext();
+// Apply the SecurityContext mock before any imports
+beforeAll(() => {
+  mockSecurityContext();
+});
 
 // Mock version manager to prevent fetch errors
 vi.mock('@/utils/versionManager', () => ({

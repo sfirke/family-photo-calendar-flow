@@ -1,8 +1,8 @@
 
-import React from 'react';
+import React, { createContext, useContext } from 'react';
 import { vi } from 'vitest';
 
-// Mock SecurityContext value
+// Mock SecurityContext value with all required properties
 const mockSecurityContextValue = {
   isSecurityEnabled: false,
   hasLockedData: false,
@@ -13,21 +13,32 @@ const mockSecurityContextValue = {
   isDataAvailable: vi.fn().mockResolvedValue(true),
 };
 
-// Mock SecurityProvider component that properly provides context
+// Create a real mock context
+const MockSecurityContext = createContext(mockSecurityContextValue);
+
+// Mock SecurityProvider that actually provides context
 const MockSecurityProvider = ({ children }: { children: React.ReactNode }) => {
-  return React.createElement(React.Fragment, {}, children);
+  return React.createElement(MockSecurityContext.Provider, { value: mockSecurityContextValue }, children);
 };
 
-// Mock useSecurity hook
-const mockUseSecurity = vi.fn(() => mockSecurityContextValue);
+// Mock useSecurity hook that uses the mock context
+const mockUseSecurity = () => {
+  const context = useContext(MockSecurityContext);
+  if (context === undefined) {
+    // Return mock values directly if context fails
+    return mockSecurityContextValue;
+  }
+  return context;
+};
 
 // Helper function to setup SecurityContext mock in tests
 export const mockSecurityContext = () => {
   vi.mock('@/contexts/SecurityContext', () => ({
     SecurityProvider: MockSecurityProvider,
     useSecurity: mockUseSecurity,
+    SecurityContext: MockSecurityContext,
   }));
 };
 
 // Export the mock values for direct use
-export { mockSecurityContextValue, MockSecurityProvider, mockUseSecurity };
+export { mockSecurityContextValue, MockSecurityProvider, mockUseSecurity, MockSecurityContext };
