@@ -1,7 +1,7 @@
 
 import '@testing-library/jest-dom';
 import 'fake-indexeddb/auto';
-import { beforeAll, afterEach, afterAll } from 'vitest';
+import { beforeAll, afterEach, afterAll, vi } from 'vitest';
 import { server } from './mocks/server';
 
 // Start server before all tests
