@@ -11,6 +11,7 @@ export interface Event {
   date: Date;
   calendarId?: string;
   calendarName?: string;
+  source?: 'ical' | 'notion' | 'local';
 }
 
 export type ViewMode = 'month' | 'timeline' | 'week';

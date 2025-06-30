@@ -1,7 +1,6 @@
-
 import React, { useState } from 'react';
 import { Event } from '@/types/calendar';
-import { Clock, MapPin, ChevronDown, ChevronUp } from 'lucide-react';
+import { Clock, MapPin, ChevronDown, ChevronUp, Fork } from 'lucide-react';
 
 interface EventCardProps {
   event: Event;
@@ -105,6 +104,35 @@ const EventCard = ({
     }
     
     return false; // Default to not passed if we can't parse the time
+  };
+
+  // New function to render the appropriate icon based on event source
+  const getEventIcon = () => {
+    const iconSize = isAllDay ? "h-2 w-2" : "h-3 w-3";
+    const iconColor = event.color || '#3b82f6';
+    
+    if (event.source === 'notion') {
+      return (
+        <Fork 
+          className={`${iconSize} flex-shrink-0`}
+          style={{ 
+            color: iconColor,
+            transform: 'rotate(35deg)'
+          }}
+          aria-label={`Notion calendar: ${event.calendarName || event.category}`}
+        />
+      );
+    }
+    
+    // Default colored dot for iCal and local events
+    return (
+      <div 
+        className={`${iconSize} rounded-full flex-shrink-0`}
+        style={{ backgroundColor: iconColor }}
+        aria-label={`Calendar: ${event.calendarName || event.category}`}
+        role="img"
+      />
+    );
   };
 
   const handleClick = () => {
@@ -232,13 +260,8 @@ const EventCard = ({
         aria-label={`All day event: ${event.title}`}
       >
         <div className="flex items-center gap-2">
-          {/* Color dot */}
-          <div 
-            className="w-2 h-2 rounded-full flex-shrink-0"
-            style={{ backgroundColor: event.color || '#3b82f6' }}
-            aria-label={`Calendar: ${event.calendarName || event.category}`}
-            role="img"
-          />
+          {/* Event icon (fork for Notion, dot for others) */}
+          {getEventIcon()}
           {/* Title */}
           <h3 className={`${textColors.title} ${fontSizes.title} truncate flex-1`}>
             {event.title}
@@ -270,14 +293,9 @@ const EventCard = ({
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between">
             <div className="flex-1 min-w-0">
-              {/* Title with inline color dot */}
+              {/* Title with inline event icon */}
               <div className="flex items-center gap-2 mb-1">
-                <div 
-                  className="w-3 h-3 rounded-full flex-shrink-0"
-                  style={{ backgroundColor: event.color || '#3b82f6' }}
-                  aria-label={`Calendar: ${event.calendarName || event.category}`}
-                  role="img"
-                />
+                {getEventIcon()}
                 <h3 className={`${textColors.title} ${fontSizes.title} leading-tight truncate`}>
                   {event.title}
                 </h3>
