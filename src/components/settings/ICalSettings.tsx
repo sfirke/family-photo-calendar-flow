@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,6 +12,8 @@ import { Calendar, Plus, RotateCcw, BarChart3, AlertCircle } from 'lucide-react'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import EditableCalendarCard from './EditableCalendarCard';
+import { ICalCalendar } from '@/types/ical';
+
 const CALENDAR_COLORS = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899'];
 
 const ICalSettings = () => {
@@ -30,9 +33,7 @@ const ICalSettings = () => {
     calendarsFromEvents,
     forceRefresh
   } = useCalendarSelection();
-  const {
-    toast
-  } = useToast();
+  const { toast } = useToast();
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [newCalendar, setNewCalendar] = useState({
     name: '',
@@ -50,7 +51,7 @@ const ICalSettings = () => {
 
   // Combine calendars from hook and events
   const allCalendars = React.useMemo(() => {
-    const calendarMap = new Map();
+    const calendarMap = new Map<string, ICalCalendar>();
 
     // Add calendars from IndexedDB first (these have the complete configuration)
     calendars.forEach(cal => {
@@ -87,6 +88,7 @@ const ICalSettings = () => {
         });
       }
     });
+    
     const result = Array.from(calendarMap.values()).sort((a, b) => a.name.localeCompare(b.name));
     console.log('Combined calendars with URLs:', result.map(cal => ({
       id: cal.id,
@@ -96,6 +98,7 @@ const ICalSettings = () => {
     })));
     return result;
   }, [calendars, calendarsFromEvents]);
+
   const handleAddCalendar = async () => {
     if (!newCalendar.name.trim() || !newCalendar.url.trim()) {
       toast({
@@ -115,6 +118,7 @@ const ICalSettings = () => {
       });
       return;
     }
+    
     try {
       console.log('Adding calendar with data:', newCalendar);
       const calendar = await addCalendar({
@@ -159,7 +163,8 @@ const ICalSettings = () => {
       });
     }
   };
-  const handleSync = async (calendar: any) => {
+
+  const handleSync = async (calendar: ICalCalendar) => {
     console.log('Attempting to sync calendar:', calendar);
     if (!calendar.url || calendar.url.trim() === '') {
       toast({
@@ -169,6 +174,7 @@ const ICalSettings = () => {
       });
       return;
     }
+    
     try {
       await syncCalendar(calendar);
       toast({
@@ -184,6 +190,7 @@ const ICalSettings = () => {
       });
     }
   };
+
   const handleSyncAll = async () => {
     try {
       await syncAllCalendars();
@@ -200,7 +207,8 @@ const ICalSettings = () => {
       });
     }
   };
-  const handleRemove = async (calendar: any) => {
+
+  const handleRemove = async (calendar: ICalCalendar) => {
     try {
       await removeCalendar(calendar.id);
       toast({
@@ -216,7 +224,8 @@ const ICalSettings = () => {
       });
     }
   };
-  const handleUpdateCalendar = async (id: string, updates: any) => {
+
+  const handleUpdateCalendar = async (id: string, updates: Partial<ICalCalendar>) => {
     try {
       await updateCalendar(id, updates);
       toast({
@@ -232,10 +241,13 @@ const ICalSettings = () => {
       });
     }
   };
+
   const enabledCalendarsCount = allCalendars.filter(cal => cal.enabled && cal.source === 'config').length;
   const totalEvents = calendarsFromEvents.reduce((sum, cal) => sum + cal.eventCount, 0);
   const calendarsWithEventsCount = calendarsFromEvents.filter(cal => cal.hasEvents).length;
-  return <Card className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+
+  return (
+    <Card className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
@@ -247,15 +259,24 @@ const ICalSettings = () => {
               Add external calendar feeds using iCal/ICS URLs. Calendar data is stored locally in IndexedDB.
             </CardDescription>
           </div>
-          {allCalendars.length > 0 && <Button onClick={handleSyncAll} disabled={isLoading || enabledCalendarsCount === 0} variant="outline" size="sm" className="ml-4 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600">
+          {allCalendars.length > 0 && (
+            <Button
+              onClick={handleSyncAll}
+              disabled={isLoading || enabledCalendarsCount === 0}
+              variant="outline"
+              size="sm"
+              className="ml-4 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600"
+            >
               <RotateCcw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
               Sync All ({enabledCalendarsCount})
-            </Button>}
+            </Button>
+          )}
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Event Summary */}
-        {totalEvents > 0 && <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+        {totalEvents > 0 && (
+          <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
             <div className="flex items-center gap-2 mb-2">
               <BarChart3 className="h-4 w-4 text-blue-600 dark:text-blue-400" />
               <span className="font-medium text-blue-900 dark:text-blue-200">Event Summary</span>
@@ -274,7 +295,8 @@ const ICalSettings = () => {
                 <div className="text-blue-700 dark:text-blue-300">Selected</div>
               </div>
             </div>
-          </div>}
+          </div>
+        )}
 
         {/* Add Calendar Button */}
         <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
@@ -294,34 +316,52 @@ const ICalSettings = () => {
             <div className="space-y-4">
               <div>
                 <Label htmlFor="calendar-name" className="text-gray-700 dark:text-gray-300">Calendar Name</Label>
-                <Input id="calendar-name" placeholder="My Calendar" value={newCalendar.name} onChange={e => setNewCalendar(prev => ({
-                ...prev,
-                name: e.target.value
-              }))} className="bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-gray-100" />
+                <Input
+                  id="calendar-name"
+                  placeholder="My Calendar"
+                  value={newCalendar.name}
+                  onChange={(e) => setNewCalendar(prev => ({ ...prev, name: e.target.value }))}
+                  className="bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-gray-100"
+                />
               </div>
               <div>
                 <Label htmlFor="calendar-url" className="text-gray-700 dark:text-gray-300">iCal URL</Label>
-                <Input id="calendar-url" placeholder="https://calendar.example.com/feed.ics" value={newCalendar.url} onChange={e => setNewCalendar(prev => ({
-                ...prev,
-                url: e.target.value
-              }))} className="bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-gray-100" />
+                <Input
+                  id="calendar-url"
+                  placeholder="https://calendar.example.com/feed.ics"
+                  value={newCalendar.url}
+                  onChange={(e) => setNewCalendar(prev => ({ ...prev, url: e.target.value }))}
+                  className="bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-gray-100"
+                />
               </div>
               <div>
                 <Label className="text-gray-700 dark:text-gray-300">Calendar Color</Label>
                 <div className="flex gap-2 mt-2">
-                  {CALENDAR_COLORS.map(color => <button key={color} className={`w-6 h-6 rounded-full border-2 ${newCalendar.color === color ? 'border-gray-900 dark:border-gray-100' : 'border-gray-300 dark:border-gray-600'}`} style={{
-                  backgroundColor: color
-                }} onClick={() => setNewCalendar(prev => ({
-                  ...prev,
-                  color
-                }))} />)}
+                  {CALENDAR_COLORS.map(color => (
+                    <button
+                      key={color}
+                      className={`w-6 h-6 rounded-full border-2 ${
+                        newCalendar.color === color ? 'border-gray-900 dark:border-gray-100' : 'border-gray-300 dark:border-gray-600'
+                      }`}
+                      style={{ backgroundColor: color }}
+                      onClick={() => setNewCalendar(prev => ({ ...prev, color }))}
+                    />
+                  ))}
                 </div>
               </div>
               <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setShowAddDialog(false)} className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowAddDialog(false)}
+                  className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600"
+                >
                   Cancel
                 </Button>
-                <Button onClick={handleAddCalendar} disabled={isLoading} className="bg-gray-600 hover:bg-gray-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white">
+                <Button
+                  onClick={handleAddCalendar}
+                  disabled={isLoading}
+                  className="bg-gray-600 hover:bg-gray-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white"
+                >
                   Add Calendar
                 </Button>
               </div>
@@ -330,15 +370,30 @@ const ICalSettings = () => {
         </Dialog>
 
         {/* Calendar List */}
-        {allCalendars.length > 0 && <div className="space-y-3">
-            {allCalendars.map(calendar => <EditableCalendarCard key={calendar.id} calendar={calendar} isSelected={selectedCalendarIds.includes(calendar.id)} syncStatus={syncStatus[calendar.id] || ''} onUpdate={handleUpdateCalendar} onSync={handleSync} onRemove={handleRemove} onToggleSelection={toggleCalendar} />)}
-          </div>}
+        {allCalendars.length > 0 && (
+          <div className="space-y-3">
+            {allCalendars.map(calendar => (
+              <EditableCalendarCard
+                key={calendar.id}
+                calendar={calendar}
+                isSelected={selectedCalendarIds.includes(calendar.id)}
+                syncStatus={syncStatus[calendar.id] || ''}
+                onUpdate={handleUpdateCalendar}
+                onSync={handleSync}
+                onRemove={handleRemove}
+                onToggleSelection={toggleCalendar}
+              />
+            ))}
+          </div>
+        )}
 
-        {allCalendars.length === 0 && <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+        {allCalendars.length === 0 && (
+          <div className="text-center py-8 text-gray-500 dark:text-gray-400">
             <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
             <p>No calendar feeds added yet.</p>
             <p className="text-sm">Add your first calendar feed to get started.</p>
-          </div>}
+          </div>
+        )}
 
         {/* Help and Tips */}
         <Alert className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800">
@@ -353,6 +408,8 @@ const ICalSettings = () => {
           </AlertDescription>
         </Alert>
       </CardContent>
-    </Card>;
+    </Card>
+  );
 };
+
 export default ICalSettings;

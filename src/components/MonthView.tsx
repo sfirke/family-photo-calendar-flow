@@ -14,10 +14,11 @@ interface MonthViewProps {
 }
 
 const MonthView = ({ events, getWeatherForDate }: MonthViewProps) => {
-  try {
-    const [currentDate, setCurrentDate] = useState(new Date());
-    const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  // Move useState calls to the top level, outside any conditional logic
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
 
+  try {
     const monthStart = startOfMonth(currentDate);
     const monthEnd = endOfMonth(currentDate);
     const calendarStart = new Date(monthStart);

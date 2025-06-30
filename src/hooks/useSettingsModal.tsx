@@ -2,9 +2,10 @@
 import { useState, useEffect } from 'react';
 import { useTheme } from '@/contexts/ThemeContext';
 import { getVersionInfo } from '@/utils/versionManager';
+import { VersionInfo } from '@/types/ical';
 
 export const useSettingsModal = () => {
-  const [versionInfo, setVersionInfo] = useState<any>(null);
+  const [versionInfo, setVersionInfo] = useState<VersionInfo | null>(null);
   const { setTheme: setActualTheme } = useTheme();
 
   useEffect(() => {

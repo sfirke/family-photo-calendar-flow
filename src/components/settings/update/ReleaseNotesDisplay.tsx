@@ -1,9 +1,10 @@
 
 import React from 'react';
+import { UpdateInfo } from '@/types/ical';
 
 interface ReleaseNotesDisplayProps {
   updateAvailable: boolean;
-  updateInfo: any;
+  updateInfo: UpdateInfo | null;
 }
 
 const ReleaseNotesDisplay = ({ updateAvailable, updateInfo }: ReleaseNotesDisplayProps) => {

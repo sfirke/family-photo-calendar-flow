@@ -8,10 +8,11 @@ import {
 import { Info } from 'lucide-react';
 import { useSecurity } from '@/contexts/SecurityContext';
 import { getInstalledVersion, getVersionInfo } from '@/utils/versionManager';
+import { VersionInfo } from '@/types/ical';
 import OfflineIndicator from '@/components/OfflineIndicator';
 
 const SettingsModalHeader = () => {
-  const [versionInfo, setVersionInfo] = useState<any>(null);
+  const [versionInfo, setVersionInfo] = useState<VersionInfo | null>(null);
   const [installedVersion, setInstalledVersion] = useState<string>('1.4.2');
   const { getSecurityStatus } = useSecurity();
 

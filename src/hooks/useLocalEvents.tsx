@@ -1,9 +1,8 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Event } from '@/types/calendar';
+import { Event, ImportedEvent } from '@/types/calendar';
 import { sampleEvents } from '@/data/sampleEvents';
 import { useICalCalendars } from './useICalCalendars';
-import { ImportedEvent } from '@/types/calendar';
 
 const LOCAL_EVENTS_KEY = 'family_calendar_events';
 const EVENTS_VERSION_KEY = 'family_calendar_events_version';
@@ -154,7 +153,7 @@ export const useLocalEvents = () => {
       const reader = new FileReader();
       reader.onload = (e) => {
         try {
-          const importedEvents = JSON.parse(e.target?.result as string);
+          const importedEvents: ImportedEvent[] = JSON.parse(e.target?.result as string);
           
           // Validate and convert imported events
           const validEvents = importedEvents.map((event: ImportedEvent, index: number) => ({

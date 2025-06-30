@@ -73,7 +73,7 @@ class LocalDataManager {
     try {
       let used = 0;
       for (const key in localStorage) {
-        if (localStorage.hasOwnProperty(key)) {
+        if (Object.hasOwn(localStorage, key)) {
           used += localStorage[key].length + key.length;
         }
       }

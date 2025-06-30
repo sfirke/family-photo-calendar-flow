@@ -1,5 +1,6 @@
 
 import { useState, useEffect, useMemo } from 'react';
+import { Event } from '@/types/calendar';
 
 interface LocalCalendar {
   id: string;
@@ -9,7 +10,7 @@ interface LocalCalendar {
   hasEvents: boolean;
 }
 
-export const useLocalCalendars = (events: any[] = []) => {
+export const useLocalCalendars = (events: Event[] = []) => {
   const [calendars, setCalendars] = useState<LocalCalendar[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 

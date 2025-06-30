@@ -6,20 +6,9 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Edit2, Save, X, RefreshCw, Trash2, ExternalLink } from 'lucide-react';
+import { ICalCalendar } from '@/types/ical';
 
 const CALENDAR_COLORS = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899'];
-
-interface CalendarData {
-  id: string;
-  name: string;
-  url: string;
-  color: string;
-  enabled: boolean;
-  lastSync?: string;
-  eventCount?: number;
-  hasEvents?: boolean;
-  source?: string;
-}
 
 interface EditData {
   name: string;
@@ -28,12 +17,12 @@ interface EditData {
 }
 
 interface EditableCalendarCardProps {
-  calendar: CalendarData;
+  calendar: ICalCalendar;
   isSelected: boolean;
   syncStatus: string;
-  onUpdate: (id: string, updates: Partial<CalendarData>) => void;
-  onSync: (calendar: CalendarData) => void;
-  onRemove: (calendar: CalendarData) => void;
+  onUpdate: (id: string, updates: Partial<ICalCalendar>) => void;
+  onSync: (calendar: ICalCalendar) => void;
+  onRemove: (calendar: ICalCalendar) => void;
   onToggleSelection: (id: string, checked: boolean) => void;
 }
 
@@ -84,6 +73,7 @@ const EditableCalendarCard = ({
   };
 
   const hasValidUrl = calendar.url && calendar.url.trim() !== '';
+
   return (
     <div className="border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800/50">
       <div className="flex items-center justify-between p-4">
@@ -100,19 +90,13 @@ const EditableCalendarCard = ({
               <div className="space-y-2">
                 <Input 
                   value={editData.name} 
-                  onChange={e => setEditData(prev => ({
-                    ...prev,
-                    name: e.target.value
-                  }))} 
+                  onChange={e => setEditData(prev => ({ ...prev, name: e.target.value }))} 
                   className="font-medium" 
                   placeholder="Calendar name" 
                 />
                 <Input 
                   value={editData.url} 
-                  onChange={e => setEditData(prev => ({
-                    ...prev,
-                    url: e.target.value
-                  }))} 
+                  onChange={e => setEditData(prev => ({ ...prev, url: e.target.value }))} 
                   className="text-sm" 
                   placeholder="Calendar URL" 
                 />
@@ -134,7 +118,7 @@ const EditableCalendarCard = ({
                 </h4>
                 <p className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-1">
                   <ExternalLink className="h-3 w-3" />
-                  {hasValidUrl ? calendar.url.length > 50 ? `${calendar.url.substring(0, 50)}...` : calendar.url : 'No URL available'}
+                  {hasValidUrl ? (calendar.url.length > 50 ? `${calendar.url.substring(0, 50)}...` : calendar.url) : 'No URL available'}
                 </p>
                 {calendar.lastSync && (
                   <p className="text-xs text-gray-400 dark:text-gray-500">
