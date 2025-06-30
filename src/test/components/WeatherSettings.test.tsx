@@ -19,6 +19,15 @@ vi.mock('@/contexts/SecurityContext', () => ({
   })),
 }));
 
+// Mock the SecurityUnlockBanner component
+vi.mock('@/components/security/SecurityUnlockBanner', () => ({
+  default: ({ onUnlock }: { onUnlock?: () => void }) => (
+    <div data-testid="security-unlock-banner">
+      {onUnlock && <button onClick={onUnlock}>Unlock</button>}
+    </div>
+  ),
+}));
+
 describe('WeatherSettings', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -34,8 +43,8 @@ describe('WeatherSettings', () => {
   it('should render weather settings form', () => {
     render(<WeatherSettings {...defaultProps} />);
 
+    expect(screen.getByLabelText(/openweathermap api key/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/zip code/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/api key/i)).toBeInTheDocument();
   });
 
   it('should call onZipCodeChange when zip code is updated', () => {
@@ -52,7 +61,7 @@ describe('WeatherSettings', () => {
     const onWeatherApiKeyChange = vi.fn();
     render(<WeatherSettings {...defaultProps} onWeatherApiKeyChange={onWeatherApiKeyChange} />);
 
-    const apiKeyInput = screen.getByLabelText(/api key/i);
+    const apiKeyInput = screen.getByLabelText(/openweathermap api key/i);
     fireEvent.change(apiKeyInput, { target: { value: 'new-key' } });
 
     expect(onWeatherApiKeyChange).toHaveBeenCalledWith('new-key');

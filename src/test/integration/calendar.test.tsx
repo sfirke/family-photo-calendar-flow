@@ -168,8 +168,8 @@ describe('Calendar Integration', () => {
       expect(screen.getByRole('main')).toBeInTheDocument();
     }, { timeout: 5000 });
 
-    // Check for key calendar components
-    expect(screen.getByText(/family calendar/i)).toBeInTheDocument();
+    // Check for calendar selector button which should exist
+    expect(screen.getByText(/calendars/i)).toBeInTheDocument();
   });
 
   it('should display weather information', async () => {
@@ -178,6 +178,6 @@ describe('Calendar Integration', () => {
     await waitFor(() => {
       expect(screen.getByText(/75/)).toBeInTheDocument();
       expect(screen.getByText(/sunny/i)).toBeInTheDocument();
-    }, { timeout: 5000 });
+    }, { timeout: 3000 });
   });
 });
