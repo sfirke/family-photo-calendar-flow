@@ -50,7 +50,7 @@ jobs:
 
       - name: Run tests
         if: ${{ !inputs.skip_tests }}
-        run: npm run test
+        run: npx vitest run
 
       - name: Security check (high/critical only)
         run: |

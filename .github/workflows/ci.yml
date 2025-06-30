@@ -50,10 +50,10 @@ jobs:
         run: npm ci
 
       - name: Run ESLint
-        run: npm run lint
+        run: npx eslint . --max-warnings 0
 
       - name: Run tests
-        run: npm run test
+        run: npx vitest run
 
       - name: Build project
         run: npm run build

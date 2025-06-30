@@ -39,7 +39,7 @@ jobs:
           npm audit fix --audit-level=high || echo "Some vulnerabilities couldn't be auto-fixed"
 
       - name: Run tests
-        run: npm run test
+        run: npx vitest run
 
       - name: Security check (high/critical only)
         run: |
