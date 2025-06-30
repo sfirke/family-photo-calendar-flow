@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { RefreshCw, Download, CheckCircle, Clock, Info, ExternalLink, GitBranch } from 'lucide-react';
 import { useUpdateManager } from '@/hooks/useUpdateManager';
+import GitHubRepositorySettings from './update/GitHubRepositorySettings';
 
 const UpdateTab = () => {
   const {
@@ -42,6 +43,9 @@ const UpdateTab = () => {
 
   return (
     <div className="space-y-4">
+      {/* GitHub Repository Configuration */}
+      <GitHubRepositorySettings />
+
       {/* Current Version Card */}
       <Card className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
         <CardHeader className="pb-3">
@@ -225,10 +229,10 @@ const UpdateTab = () => {
               <strong>App Updates:</strong> Immediate updates are installed automatically when available.
             </p>
             <p className="mb-1">
-              <strong>GitHub Updates:</strong> Major releases are checked hourly from the GitHub repository.
+              <strong>GitHub Updates:</strong> Major releases are checked hourly from the configured GitHub repository.
             </p>
             <p>
-              <strong>Note:</strong> Configure the GitHub repository in the code to enable release checking.
+              <strong>Note:</strong> Configure the GitHub repository above to enable release checking.
             </p>
           </div>
         </CardContent>

@@ -1,9 +1,5 @@
 
-// Configuration - Update this with your actual GitHub repository
-const GITHUB_REPO = {
-  owner: 'cardner', // Replace with actual GitHub username/organization
-  repo: 'family-photo-calendar-flow'   // Replace with actual repository name
-};
+import { SecureStorage } from '@/utils/security/secureStorage';
 
 const GITHUB_API_BASE = 'https://api.github.com';
 const UPSTREAM_VERSION_KEY = 'upstream_version_cache';
@@ -26,10 +22,56 @@ interface UpstreamVersionInfo {
   fetchedAt: string;
 }
 
+interface GitHubRepo {
+  owner: string;
+  repo: string;
+}
+
+/**
+ * Get GitHub repository configuration from settings
+ * Returns null if no repository is configured
+ */
+export const getGitHubRepoConfig = async (): Promise<GitHubRepo | null> => {
+  try {
+    let owner: string | null = null;
+    let repo: string | null = null;
+
+    // Try to get from secure storage first
+    try {
+      owner = await SecureStorage.getItem('githubOwner');
+      repo = await SecureStorage.getItem('githubRepo');
+    } catch (error) {
+      // Fallback to localStorage
+      owner = localStorage.getItem('githubOwner');
+      repo = localStorage.getItem('githubRepo');
+    }
+
+    // Both owner and repo must be configured
+    if (!owner || !repo || owner.trim() === '' || repo.trim() === '') {
+      return null;
+    }
+
+    return {
+      owner: owner.trim(),
+      repo: repo.trim()
+    };
+  } catch (error) {
+    console.error('Failed to get GitHub repository configuration:', error);
+    return null;
+  }
+};
+
 export const fetchGitHubReleases = async (): Promise<GitHubRelease | null> => {
+  const repoConfig = await getGitHubRepoConfig();
+  
+  if (!repoConfig) {
+    console.warn('No GitHub repository configured for update checks');
+    return null;
+  }
+
   try {
     const response = await fetch(
-      `${GITHUB_API_BASE}/repos/${GITHUB_REPO.owner}/${GITHUB_REPO.repo}/releases/latest`,
+      `${GITHUB_API_BASE}/repos/${repoConfig.owner}/${repoConfig.repo}/releases/latest`,
       {
         headers: {
           'Accept': 'application/vnd.github.v3+json',
@@ -40,7 +82,7 @@ export const fetchGitHubReleases = async (): Promise<GitHubRelease | null> => {
 
     if (!response.ok) {
       if (response.status === 404) {
-        console.warn('No GitHub releases found for this repository');
+        console.warn(`No GitHub releases found for repository ${repoConfig.owner}/${repoConfig.repo}`);
         return null;
       }
       throw new Error(`GitHub API error: ${response.status}`);
@@ -146,4 +188,20 @@ export const getUpstreamReleaseInfo = async (): Promise<UpstreamVersionInfo | nu
 
   // Fallback to cached data
   return getCachedUpstreamVersion();
+};
+
+/**
+ * Check if GitHub repository is configured
+ */
+export const isGitHubRepoConfigured = async (): Promise<boolean> => {
+  const repoConfig = await getGitHubRepoConfig();
+  return repoConfig !== null;
+};
+
+/**
+ * Get formatted repository string for display
+ */
+export const getRepositoryDisplayName = async (): Promise<string | null> => {
+  const repoConfig = await getGitHubRepoConfig();
+  return repoConfig ? `${repoConfig.owner}/${repoConfig.repo}` : null;
 };

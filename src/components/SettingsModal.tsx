@@ -8,7 +8,7 @@
  * - Photo backgrounds (Google Photos integration)
  * - Display preferences (theme, default view)
  * - Weather configuration (API keys, location)
- * - App updates (manual check and install)
+ * - App updates (manual check and install, GitHub repository configuration)
  * - Security settings (client-side encryption)
  * 
  * Features:
@@ -18,6 +18,7 @@
  * - Version information display
  * - Offline status indication
  * - Manual update management
+ * - GitHub repository configuration for release checking
  */
 
 import React from 'react';
