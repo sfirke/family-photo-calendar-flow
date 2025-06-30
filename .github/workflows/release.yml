@@ -41,11 +41,11 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install
 
       - name: Run tests
         if: ${{ !inputs.skip_tests }}
-        run: npm run test
+        run: npx vitest run
 
       - name: Build project
         run: npm run build
@@ -87,13 +87,30 @@ jobs:
       - name: Bump version
         id: version
         run: |
-          # Get current version
+          # Get current version from package.json
           CURRENT_VERSION=$(node -p "require('./package.json').version")
           echo "Current version: $CURRENT_VERSION"
           
-          # Bump version
-          NEW_VERSION=$(npm version ${{ steps.version-type.outputs.version_type }} --no-git-tag-version)
-          NEW_VERSION=${NEW_VERSION#v}
+          # Calculate new version based on bump type
+          BUMP_TYPE="${{ steps.version-type.outputs.version_type }}"
+          
+          if [ "$BUMP_TYPE" = "major" ]; then
+            NEW_VERSION=$(node -p "
+              const [major, minor, patch] = '$CURRENT_VERSION'.split('.').map(Number);
+              \`\${major + 1}.0.0\`
+            ")
+          elif [ "$BUMP_TYPE" = "minor" ]; then
+            NEW_VERSION=$(node -p "
+              const [major, minor, patch] = '$CURRENT_VERSION'.split('.').map(Number);
+              \`\${major}.\${minor + 1}.0\`
+            ")
+          else
+            NEW_VERSION=$(node -p "
+              const [major, minor, patch] = '$CURRENT_VERSION'.split('.').map(Number);
+              \`\${major}.\${minor}.\${patch + 1}\`
+            ")
+          fi
+          
           echo "New version: $NEW_VERSION"
           
           # Update version.json
@@ -179,7 +196,7 @@ jobs:
 
       - name: Commit version changes
         run: |
-          git add package.json package-lock.json public/version.json
+          git add public/version.json
           git commit -m "chore(release): bump version to ${{ steps.version.outputs.version }}"
           git tag "v${{ steps.version.outputs.version }}"
 

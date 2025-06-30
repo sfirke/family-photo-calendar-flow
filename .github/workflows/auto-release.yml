@@ -31,10 +31,10 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install
 
       - name: Run tests
-        run: npm run test
+        run: npx vitest run
 
       - name: Check if release needed
         id: check-release
@@ -74,9 +74,28 @@ jobs:
       - name: Bump version and create release
         if: steps.check-release.outputs.skip == 'false'
         run: |
-          # Bump version
-          NEW_VERSION=$(npm version ${{ steps.version-bump.outputs.type }} --no-git-tag-version)
-          NEW_VERSION=${NEW_VERSION#v}
+          # Get current version from package.json
+          CURRENT_VERSION=$(node -p "require('./package.json').version")
+          
+          # Calculate new version based on bump type
+          BUMP_TYPE="${{ steps.version-bump.outputs.type }}"
+          
+          if [ "$BUMP_TYPE" = "major" ]; then
+            NEW_VERSION=$(node -p "
+              const [major, minor, patch] = '$CURRENT_VERSION'.split('.').map(Number);
+              \`\${major + 1}.0.0\`
+            ")
+          elif [ "$BUMP_TYPE" = "minor" ]; then
+            NEW_VERSION=$(node -p "
+              const [major, minor, patch] = '$CURRENT_VERSION'.split('.').map(Number);
+              \`\${major}.\${minor + 1}.0\`
+            ")
+          else
+            NEW_VERSION=$(node -p "
+              const [major, minor, patch] = '$CURRENT_VERSION'.split('.').map(Number);
+              \`\${major}.\${minor}.\${patch + 1}\`
+            ")
+          fi
           
           # Update version.json
           BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%S.%03dZ")
@@ -94,7 +113,7 @@ jobs:
           EOF
           
           # Commit and tag
-          git add package.json package-lock.json public/version.json
+          git add public/version.json
           git commit -m "chore(release): bump version to $NEW_VERSION [skip-release]"
           git tag "v$NEW_VERSION"
           
