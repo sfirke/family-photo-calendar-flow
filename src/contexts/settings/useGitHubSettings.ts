@@ -27,16 +27,20 @@ export const useGitHubSettings = () => {
    * Enhanced GitHub owner setter with input validation
    */
   const setValidatedGithubOwner = (owner: string) => {
+    // Always allow empty string for clearing
     if (owner === '') {
       setGithubOwner(owner);
       return;
     }
     
+    // Validate non-empty input
     const validation = InputValidator.validateGithubUsername(owner);
     if (validation.isValid) {
       setGithubOwner(owner);
     } else {
       console.warn('Invalid GitHub owner:', validation.error);
+      // Still set the value to allow user to see their input and correct it
+      setGithubOwner(owner);
     }
   };
 
@@ -44,16 +48,20 @@ export const useGitHubSettings = () => {
    * Enhanced GitHub repo setter with input validation
    */
   const setValidatedGithubRepo = (repo: string) => {
+    // Always allow empty string for clearing
     if (repo === '') {
       setGithubRepo(repo);
       return;
     }
     
+    // Validate non-empty input
     const validation = InputValidator.validateGithubRepoName(repo);
     if (validation.isValid) {
       setGithubRepo(repo);
     } else {
       console.warn('Invalid GitHub repo:', validation.error);
+      // Still set the value to allow user to see their input and correct it
+      setGithubRepo(repo);
     }
   };
 
