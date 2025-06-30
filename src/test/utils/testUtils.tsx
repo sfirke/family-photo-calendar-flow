@@ -1,6 +1,7 @@
 
 import React from 'react';
-import { render, RenderOptions, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, RenderOptions, waitFor } from '@testing-library/react';
+import { screen, fireEvent } from '@testing-library/dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { SecurityProvider } from '@/contexts/SecurityContext';
