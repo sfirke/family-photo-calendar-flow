@@ -7,11 +7,12 @@ import {
 } from '@/components/ui/dialog';
 import { Info } from 'lucide-react';
 import { useSecurity } from '@/contexts/SecurityContext';
-import { getVersionInfo } from '@/utils/versionManager';
+import { getInstalledVersion, getVersionInfo } from '@/utils/versionManager';
 import OfflineIndicator from '@/components/OfflineIndicator';
 
 const SettingsModalHeader = () => {
   const [versionInfo, setVersionInfo] = useState<any>(null);
+  const [installedVersion, setInstalledVersion] = useState<string>('1.4.2');
   const { getSecurityStatus } = useSecurity();
 
   useEffect(() => {
@@ -19,6 +20,10 @@ const SettingsModalHeader = () => {
       try {
         const info = await getVersionInfo();
         setVersionInfo(info);
+        
+        // Get the installed version instead of current version
+        const installed = getInstalledVersion();
+        setInstalledVersion(installed?.version || '1.4.2');
       } catch (error) {
         console.error('Failed to load version info:', error);
       }
@@ -36,7 +41,7 @@ const SettingsModalHeader = () => {
             <div className="flex items-center gap-2">
               <Info className="h-4 w-4 text-gray-500 dark:text-gray-400" />
               <span className="text-sm text-gray-500 dark:text-gray-400">
-                Version {versionInfo?.version || '1.0.0'}
+                Version {installedVersion}
               </span>
             </div>
             {versionInfo?.buildDate && (
