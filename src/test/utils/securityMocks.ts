@@ -21,8 +21,8 @@ const MockSecurityProvider = ({ children }: { children: React.ReactNode }) => {
   return React.createElement(MockSecurityContext.Provider, { value: mockSecurityContextValue }, children);
 };
 
-// Mock useSecurity hook that uses the mock context
-const mockUseSecurity = () => {
+// Mock useSecurity hook that uses the mock context (renamed to follow hook naming convention)
+const useMockSecurity = () => {
   const context = useContext(MockSecurityContext);
   if (context === undefined) {
     // Return mock values directly if context fails
@@ -35,10 +35,10 @@ const mockUseSecurity = () => {
 export const mockSecurityContext = () => {
   vi.mock('@/contexts/SecurityContext', () => ({
     SecurityProvider: MockSecurityProvider,
-    useSecurity: mockUseSecurity,
+    useSecurity: useMockSecurity,
     SecurityContext: MockSecurityContext,
   }));
 };
 
 // Export the mock values for direct use
-export { mockSecurityContextValue, MockSecurityProvider, mockUseSecurity, MockSecurityContext };
+export { mockSecurityContextValue, MockSecurityProvider, useMockSecurity, MockSecurityContext };
