@@ -1,79 +1,75 @@
-// Read version from version.json instead of package.json for consistency
-export const getCurrentVersion = async () => {
+
+/**
+ * Version Manager - Upstream Release Focused
+ * 
+ * Manages application version based on installed GitHub releases only.
+ * Tracks the currently installed release version and compares against upstream.
+ */
+
+const INSTALLED_VERSION_KEY = 'installed_release_version';
+const INSTALL_DATE_KEY = 'installed_release_date';
+
+export interface InstalledVersionInfo {
+  version: string;
+  installDate: string;
+  releaseUrl?: string;
+  releaseNotes?: string;
+}
+
+/**
+ * Get the currently installed release version
+ */
+export const getInstalledVersion = (): InstalledVersionInfo | null => {
   try {
-    const response = await fetch('/version.json');
-    if (response.ok) {
-      const versionInfo = await response.json();
-      return versionInfo.version || '1.0.0';
+    const version = localStorage.getItem(INSTALLED_VERSION_KEY);
+    const installDate = localStorage.getItem(INSTALL_DATE_KEY);
+    
+    if (!version) {
+      // If no installed version is tracked, assume this is the initial version
+      return {
+        version: '1.4.2', // From current version.json as baseline
+        installDate: new Date().toISOString()
+      };
+    }
+    
+    return {
+      version,
+      installDate: installDate || new Date().toISOString()
+    };
+  } catch (error) {
+    console.error('Failed to get installed version:', error);
+    return {
+      version: '1.4.2',
+      installDate: new Date().toISOString()
+    };
+  }
+};
+
+/**
+ * Set the installed version after successful update
+ */
+export const setInstalledVersion = (versionInfo: Partial<InstalledVersionInfo>) => {
+  try {
+    localStorage.setItem(INSTALLED_VERSION_KEY, versionInfo.version!);
+    localStorage.setItem(INSTALL_DATE_KEY, versionInfo.installDate || new Date().toISOString());
+    
+    if (versionInfo.releaseUrl) {
+      localStorage.setItem('installed_release_url', versionInfo.releaseUrl);
+    }
+    if (versionInfo.releaseNotes) {
+      localStorage.setItem('installed_release_notes', versionInfo.releaseNotes);
     }
   } catch (error) {
-    console.warn('Could not fetch version from version.json:', error);
+    console.error('Failed to set installed version:', error);
   }
-  
-  // Fallback version
-  return '1.0.0';
 };
 
-export const getVersionInfo = async () => {
-  try {
-    const response = await fetch('/version.json');
-    if (response.ok) {
-      return await response.json();
-    }
-  } catch (error) {
-    console.warn('Could not fetch version info:', error);
-  }
-
-  // Fallback to basic version info
-  return {
-    version: '1.0.0',
-    buildDate: new Date().toISOString(),
-    gitHash: 'unknown',
-    buildNumber: 1,
-    environment: 'development'
-  };
-};
-
-const VERSION_KEY = 'app_version';
-const LAST_CHECK_KEY = 'last_update_check';
-
-export const getStoredVersion = () => {
-  return localStorage.getItem(VERSION_KEY);
-};
-
-export const setStoredVersion = (version: string) => {
-  localStorage.setItem(VERSION_KEY, version);
-};
-
-export const isNewVersion = async () => {
-  const storedVersion = getStoredVersion();
-  const currentVersion = await getCurrentVersion();
-  return !storedVersion || storedVersion !== currentVersion;
-};
-
-export const getLastCheckTime = () => {
-  const lastCheck = localStorage.getItem(LAST_CHECK_KEY);
-  return lastCheck ? new Date(lastCheck) : null;
-};
-
-export const setLastCheckTime = () => {
-  localStorage.setItem(LAST_CHECK_KEY, new Date().toISOString());
-};
-
-// Change the service worker check frequency to be more specific
-export const shouldCheckForUpdates = () => {
-  const lastCheck = getLastCheckTime();
-  if (!lastCheck) return true;
-  
-  // Check for service worker updates every 30 minutes
-  const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
-  return lastCheck < thirtyMinutesAgo;
-};
-
-// Semantic version comparison
+/**
+ * Compare two semantic versions
+ */
 export const compareVersions = (version1: string, version2: string): number => {
-  const v1parts = version1.split('.').map(Number);
-  const v2parts = version2.split('.').map(Number);
+  const v1parts = version1.replace(/^v/, '').split('.').map(Number);
+  const v2parts = version2.replace(/^v/, '').split('.').map(Number);
   
   for (let i = 0; i < Math.max(v1parts.length, v2parts.length); i++) {
     const v1part = v1parts[i] || 0;
@@ -86,9 +82,22 @@ export const compareVersions = (version1: string, version2: string): number => {
   return 0;
 };
 
+/**
+ * Check if an update is available by comparing installed vs upstream version
+ */
+export const isUpdateAvailable = (upstreamVersion: string): boolean => {
+  const installed = getInstalledVersion();
+  if (!installed) return true;
+  
+  return compareVersions(upstreamVersion, installed.version) > 0;
+};
+
+/**
+ * Get version type for update (major, minor, patch)
+ */
 export const getVersionType = (oldVersion: string, newVersion: string): 'major' | 'minor' | 'patch' => {
-  const oldParts = oldVersion.split('.').map(Number);
-  const newParts = newVersion.split('.').map(Number);
+  const oldParts = oldVersion.replace(/^v/, '').split('.').map(Number);
+  const newParts = newVersion.replace(/^v/, '').split('.').map(Number);
   
   if (newParts[0] > oldParts[0]) return 'major';
   if (newParts[1] > oldParts[1]) return 'minor';

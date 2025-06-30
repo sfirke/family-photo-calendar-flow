@@ -2,8 +2,9 @@
 import React, { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { RefreshCw, Download, CheckCircle, Clock, Info, ExternalLink, GitBranch } from 'lucide-react';
+import { RefreshCw, Download, CheckCircle, Clock, Info, ExternalLink, GitBranch, AlertCircle } from 'lucide-react';
 import { useUpdateManager } from '@/hooks/useUpdateManager';
+import { Progress } from '@/components/ui/progress';
 import GitHubRepositorySettings from './update/GitHubRepositorySettings';
 
 const UpdateTab = () => {
@@ -12,15 +13,13 @@ const UpdateTab = () => {
     isUpdating,
     updateAvailable,
     updateInfo,
-    upstreamUpdateAvailable,
-    upstreamUpdateInfo,
     currentVersion,
     lastCheckTime,
-    lastUpstreamCheckTime,
+    updateProgress,
     loadCurrentInfo,
     checkForUpdatesManually,
     installUpdate,
-    openUpstreamUpdate
+    openReleaseNotes
   } = useUpdateManager();
 
   useEffect(() => {
@@ -39,7 +38,10 @@ const UpdateTab = () => {
     return date.toLocaleDateString();
   };
 
-  const hasAnyUpdate = updateAvailable || upstreamUpdateAvailable;
+  const getProgressValue = () => {
+    if (!updateProgress?.progress) return 0;
+    return updateProgress.progress;
+  };
 
   return (
     <div className="space-y-4">
@@ -51,17 +53,17 @@ const UpdateTab = () => {
         <CardHeader className="pb-3">
           <CardTitle className="text-lg flex items-center gap-2 text-gray-900 dark:text-gray-100">
             <Info className="h-5 w-5" />
-            Current Version
+            Installed Version
           </CardTitle>
           <CardDescription className="text-gray-600 dark:text-gray-400">
-            Information about your current app version
+            Current version installed on this device
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Version:</span>
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Installed Version:</span>
             <span className="text-sm font-mono bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded text-gray-900 dark:text-gray-100">
-              {currentVersion || '1.0.0'}
+              v{currentVersion}
             </span>
           </div>
           <div className="flex items-center justify-between">
@@ -71,13 +73,6 @@ const UpdateTab = () => {
               {formatLastCheckTime(lastCheckTime)}
             </span>
           </div>
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">GitHub Check:</span>
-            <span className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-1">
-              <GitBranch className="h-4 w-4" />
-              {formatLastCheckTime(lastUpstreamCheckTime)}
-            </span>
-          </div>
         </CardContent>
       </Card>
 
@@ -85,77 +80,58 @@ const UpdateTab = () => {
       <Card className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
         <CardHeader className="pb-3">
           <CardTitle className="text-lg flex items-center gap-2 text-gray-900 dark:text-gray-100">
-            <RefreshCw className="h-5 w-5" />
+            <GitBranch className="h-5 w-5" />
             Update Status
           </CardTitle>
           <CardDescription className="text-gray-600 dark:text-gray-400">
-            Check for and install app updates
+            Check for and install updates from GitHub releases
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Status Display */}
-          <div className="space-y-3">
-            {/* Service Worker Update Status */}
-            <div className="flex items-center gap-2 p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50">
-              {updateAvailable ? (
-                <>
-                  <Download className="h-5 w-5 text-blue-500" />
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                      App Update Ready
-                    </p>
-                    <p className="text-xs text-gray-600 dark:text-gray-400">
-                      A new version is ready to install
-                    </p>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <CheckCircle className="h-5 w-5 text-green-500" />
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                      App Up to Date
-                    </p>
-                    <p className="text-xs text-gray-600 dark:text-gray-400">
-                      No immediate updates available
-                    </p>
-                  </div>
-                </>
-              )}
-            </div>
-
-            {/* Upstream Update Status */}
-            <div className="flex items-center gap-2 p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50">
-              {upstreamUpdateAvailable ? (
-                <>
-                  <GitBranch className="h-5 w-5 text-orange-500" />
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                      New Release Available
-                    </p>
-                    {upstreamUpdateInfo && (
-                      <div className="text-xs text-gray-600 dark:text-gray-400">
-                        <p>Version {upstreamUpdateInfo.version} - {upstreamUpdateInfo.name}</p>
-                        <p>Released: {new Date(upstreamUpdateInfo.publishedAt).toLocaleDateString()}</p>
-                      </div>
-                    )}
-                  </div>
-                </>
-              ) : (
-                <>
-                  <CheckCircle className="h-5 w-5 text-green-500" />
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                      Latest GitHub Release
-                    </p>
-                    <p className="text-xs text-gray-600 dark:text-gray-400">
-                      You have the latest released version
-                    </p>
-                  </div>
-                </>
-              )}
-            </div>
+          <div className="flex items-center gap-2 p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50">
+            {updateAvailable ? (
+              <>
+                <Download className="h-5 w-5 text-blue-500" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                    Update Available
+                  </p>
+                  {updateInfo && (
+                    <div className="text-xs text-gray-600 dark:text-gray-400">
+                      <p>Version {updateInfo.version} - {updateInfo.name}</p>
+                      <p>Released: {new Date(updateInfo.publishedAt).toLocaleDateString()}</p>
+                    </div>
+                  )}
+                </div>
+              </>
+            ) : (
+              <>
+                <CheckCircle className="h-5 w-5 text-green-500" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                    Up to Date
+                  </p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">
+                    You have the latest available version
+                  </p>
+                </div>
+              </>
+            )}
           </div>
+
+          {/* Update Progress */}
+          {isUpdating && updateProgress && (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <RefreshCw className="h-4 w-4 animate-spin text-blue-500" />
+                <span className="text-sm text-gray-700 dark:text-gray-300">
+                  {updateProgress.message}
+                </span>
+              </div>
+              <Progress value={getProgressValue()} className="w-full" />
+            </div>
+          )}
 
           {/* Action Buttons */}
           <div className="flex gap-3">
@@ -187,53 +163,54 @@ const UpdateTab = () => {
                 {isUpdating ? (
                   <>
                     <Download className="h-4 w-4 mr-2 animate-pulse" />
-                    Installing...
+                    Updating...
                   </>
                 ) : (
                   <>
                     <Download className="h-4 w-4 mr-2" />
-                    Install Update
+                    Update to v{updateInfo?.version}
                   </>
                 )}
               </Button>
             )}
 
-            {upstreamUpdateAvailable && (
+            {updateAvailable && updateInfo && (
               <Button
-                onClick={openUpstreamUpdate}
+                onClick={openReleaseNotes}
                 disabled={isChecking || isUpdating}
                 variant="outline"
-                className="flex-1 border-orange-300 dark:border-orange-600 text-orange-700 dark:text-orange-300 hover:bg-orange-50 dark:hover:bg-orange-900/20"
+                className="border-blue-300 dark:border-blue-600 text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20"
               >
                 <ExternalLink className="h-4 w-4 mr-2" />
-                View Release
+                Release Notes
               </Button>
             )}
           </div>
 
           {/* Release Notes */}
-          {upstreamUpdateAvailable && upstreamUpdateInfo?.releaseNotes && (
-            <div className="mt-4 p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800">
-              <h4 className="text-sm font-medium text-orange-900 dark:text-orange-100 mb-2">
-                What's New in {upstreamUpdateInfo.version}:
+          {updateAvailable && updateInfo?.releaseNotes && (
+            <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+              <h4 className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-2">
+                What's New in {updateInfo.version}:
               </h4>
-              <div className="text-xs text-orange-800 dark:text-orange-200 whitespace-pre-wrap max-h-32 overflow-y-auto">
-                {upstreamUpdateInfo.releaseNotes}
+              <div className="text-xs text-blue-800 dark:text-blue-200 whitespace-pre-wrap max-h-32 overflow-y-auto">
+                {updateInfo.releaseNotes}
               </div>
             </div>
           )}
 
-          {/* Additional Info */}
+          {/* Information */}
           <div className="text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/30 p-3 rounded-lg">
-            <p className="mb-1">
-              <strong>App Updates:</strong> Immediate updates are installed automatically when available.
-            </p>
-            <p className="mb-1">
-              <strong>GitHub Updates:</strong> Major releases are checked hourly from the configured GitHub repository.
-            </p>
-            <p>
-              <strong>Note:</strong> Configure the GitHub repository above to enable release checking.
-            </p>
+            <div className="flex items-start gap-2">
+              <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+              <div className="space-y-1">
+                <p className="font-medium">Manual Update System:</p>
+                <p>• Updates are checked against the configured GitHub repository</p>
+                <p>• You control when to install updates by clicking the update button</p>
+                <p>• Configure the GitHub repository above to enable update checking</p>
+                <p>• The page will refresh automatically after successful updates</p>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
