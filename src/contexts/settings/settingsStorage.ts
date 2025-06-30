@@ -8,11 +8,23 @@
 
 import { SecureStorage } from '@/utils/security/secureStorage';
 
+interface LoadedSettings {
+  theme?: 'light' | 'dark' | 'system' | null;
+  defaultView?: 'month' | 'week' | 'timeline' | null;
+  backgroundDuration?: string | null;
+  selectedAlbum?: string | null;
+  zipCode?: string | null;
+  weatherApiKey?: string | null;
+  publicAlbumUrl?: string | null;
+  githubOwner?: string | null;
+  githubRepo?: string | null;
+}
+
 export class SettingsStorage {
   /**
    * Load all settings from appropriate storage on app initialization
    */
-  static async loadAllSettings() {
+  static async loadAllSettings(): Promise<LoadedSettings> {
     try {
       // Load non-sensitive settings from regular localStorage
       const nonSensitiveSettings = {
@@ -23,7 +35,7 @@ export class SettingsStorage {
       };
 
       // Load sensitive settings from secure storage (with fallback to localStorage)
-      let sensitiveSettings = {};
+      let sensitiveSettings: Partial<LoadedSettings> = {};
       try {
         sensitiveSettings = {
           zipCode: await SecureStorage.getItem('zipCode') || localStorage.getItem('zipCode'),
