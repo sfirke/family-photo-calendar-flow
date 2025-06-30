@@ -74,3 +74,6 @@ const getMockWeatherData = (): WeatherData => ({
     { date: new Date(Date.now() + 172800000).toISOString(), temp: 71, condition: 'Rainy' }
   ]
 });
+
+// Export the WeatherData type
+export type { WeatherData };

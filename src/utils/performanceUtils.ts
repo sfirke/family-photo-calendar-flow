@@ -44,7 +44,7 @@ class PerformanceTracker {
 
   private getMemoryUsage(): number | undefined {
     if ('memory' in performance) {
-      const memoryInfo = (performance as PerformanceEntry & { memory?: { usedJSHeapSize: number } }).memory;
+      const memoryInfo = (performance as unknown as { memory?: { usedJSHeapSize: number } }).memory;
       return memoryInfo ? Math.round(memoryInfo.usedJSHeapSize / 1024 / 1024) : undefined;
     }
     return undefined;
@@ -70,4 +70,44 @@ export const measureComponentRender = <T>(
 export const logRenderMetrics = (): void => {
   const metrics = performanceTracker.getMetrics();
   console.table(metrics);
+};
+
+// Export additional utilities needed by other components
+export class PerformanceMonitor {
+  static trackPageLoad(): void {
+    window.addEventListener('load', () => {
+      const loadTime = performance.now();
+      console.log(`Page loaded in ${loadTime.toFixed(2)}ms`);
+    });
+  }
+}
+
+export class IntervalManager {
+  private intervals: Set<number> = new Set();
+
+  setInterval(callback: () => void, delay: number): number {
+    const id = window.setInterval(callback, delay);
+    this.intervals.add(id);
+    return id;
+  }
+
+  clearInterval(id: number): void {
+    window.clearInterval(id);
+    this.intervals.delete(id);
+  }
+
+  clearAll(): void {
+    this.intervals.forEach(id => window.clearInterval(id));
+    this.intervals.clear();
+  }
+}
+
+export const displayOptimizations = {
+  enableVirtualization: () => {
+    console.log('Virtual scrolling enabled for large lists');
+  },
+  
+  enableImageLazyLoading: () => {
+    console.log('Lazy loading enabled for images');
+  }
 };

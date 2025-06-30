@@ -21,7 +21,7 @@ import {
   setLastUpstreamCheckTime 
 } from '@/utils/upstreamVersionManager';
 import { toast } from '@/hooks/use-toast';
-import { UpdateInfo } from '@/types/update';
+import { UpdateInfo, convertToUpdateInfo } from '@/types/update';
 
 export const useUpdateManager = () => {
   const [isChecking, setIsChecking] = useState(false);
@@ -51,7 +51,8 @@ export const useUpdateManager = () => {
       const updateStatus = await checkForUpdates();
       
       if (updateStatus.isAvailable && updateStatus.updateInfo) {
-        setUpdateInfo(updateStatus.updateInfo);
+        const convertedInfo = convertToUpdateInfo(updateStatus.updateInfo);
+        setUpdateInfo(convertedInfo);
         setUpdateAvailable(true);
         
         toast({

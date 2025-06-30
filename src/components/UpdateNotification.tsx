@@ -6,7 +6,7 @@ import { checkForUpdates } from '@/utils/updateManager';
 import { getInstalledVersion, setInstalledVersion } from '@/utils/versionManager';
 import { shouldCheckUpstream, setLastUpstreamCheckTime } from '@/utils/upstreamVersionManager';
 import { toast } from '@/hooks/use-toast';
-import { UpdateInfo } from '@/types/update';
+import { UpdateInfo, convertToUpdateInfo } from '@/types/update';
 
 const UpdateNotification = () => {
   const [updateAvailable, setUpdateAvailable] = useState(false);
@@ -23,7 +23,8 @@ const UpdateNotification = () => {
         const updateStatus = await checkForUpdates();
         
         if (updateStatus.isAvailable && updateStatus.updateInfo) {
-          setUpdateInfo(updateStatus.updateInfo);
+          const convertedInfo = convertToUpdateInfo(updateStatus.updateInfo);
+          setUpdateInfo(convertedInfo);
           setUpdateAvailable(true);
           
           toast({

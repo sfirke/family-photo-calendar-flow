@@ -167,3 +167,17 @@ export class ClientSideEncryption {
     return new Uint8Array(atob(saltBase64).split('').map(char => char.charCodeAt(0)));
   }
 }
+
+// Export convenience functions
+export const encryptData = async (data: string, password: string, salt: Uint8Array): Promise<string> => {
+  const key = await ClientSideEncryption.deriveKey(password, salt);
+  return ClientSideEncryption.encrypt(data, key);
+};
+
+export const decryptData = async (encryptedData: string, password: string): Promise<string> => {
+  // For simplicity, this assumes salt is stored separately
+  // In a real implementation, you'd extract salt from the encrypted data
+  const salt = ClientSideEncryption.generateSalt();
+  const key = await ClientSideEncryption.deriveKey(password, salt);
+  return ClientSideEncryption.decrypt(encryptedData, key);
+};

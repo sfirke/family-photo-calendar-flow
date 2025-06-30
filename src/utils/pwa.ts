@@ -91,3 +91,12 @@ export const checkPWAInstallability = (): PWAInstallState => {
 export const triggerPWAInstall = (): Promise<boolean> => {
   return pwaManager.promptInstall();
 };
+
+// Additional exports needed by components
+export const showInstallPrompt = (): Promise<boolean> => {
+  return pwaManager.promptInstall();
+};
+
+export const isInstalled = (): boolean => {
+  return pwaManager.getInstallState().isInstalled;
+};

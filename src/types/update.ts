@@ -33,3 +33,20 @@ export interface UpdateProgress {
   message: string;
   progress?: number;
 }
+
+export interface UpstreamVersionInfo {
+  version: string;
+  publishedAt: string;
+  htmlUrl: string;
+  body?: string;  // Make body optional to match the actual upstream response
+  assets?: UpdateAsset[];
+}
+
+// Helper function to convert UpstreamVersionInfo to UpdateInfo
+export const convertToUpdateInfo = (upstream: UpstreamVersionInfo): UpdateInfo => ({
+  version: upstream.version,
+  publishedAt: upstream.publishedAt,
+  htmlUrl: upstream.htmlUrl,
+  body: upstream.body || '',  // Provide default empty string if body is missing
+  assets: upstream.assets
+});

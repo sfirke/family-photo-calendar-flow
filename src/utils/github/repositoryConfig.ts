@@ -5,7 +5,7 @@
  * Manages GitHub repository configuration with secure storage.
  */
 
-import { SecureStorage } from '@/utils/security/secureStorage';
+import { secureStorage } from '@/utils/security/secureStorage';
 import { GitHubRepo } from './gitHubApi';
 
 /**
@@ -19,8 +19,8 @@ export const getGitHubRepoConfig = async (): Promise<GitHubRepo | null> => {
 
     // Try to get from secure storage first
     try {
-      owner = await SecureStorage.getItem('githubOwner');
-      repo = await SecureStorage.getItem('githubRepo');
+      owner = await secureStorage.retrieve('githubOwner', 'defaultPassword');
+      repo = await secureStorage.retrieve('githubRepo', 'defaultPassword');
     } catch (error) {
       // Fallback to localStorage
       owner = localStorage.getItem('githubOwner');

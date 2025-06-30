@@ -1,4 +1,3 @@
-
 /**
  * SecurityContext - Client-Side Encryption Management
  * 
@@ -19,8 +18,8 @@
  * - Maintains encryption state across app sessions
  */
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { SecureStorage } from '@/utils/security/secureStorage';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { secureStorage } from '@/utils/security/secureStorage';
 
 interface SecurityContextType {
   /** Whether encryption is currently active and data is accessible */
@@ -55,7 +54,7 @@ export const SecurityProvider = ({ children }: { children: React.ReactNode }) =>
   /**
    * Check if encrypted data exists but is locked
    */
-  const checkForLockedData = async () => {
+  const checkForLockedData = useCallback(async () => {
     const hasSecuritySalt = localStorage.getItem('security_salt') !== null;
     console.log('checkForLockedData - hasSecuritySalt:', hasSecuritySalt, 'isSecurityEnabled:', isSecurityEnabled);
     
@@ -73,7 +72,7 @@ export const SecurityProvider = ({ children }: { children: React.ReactNode }) =>
     console.log('checkForLockedData - hasEncryptedData:', hasEncryptedData, 'isLocked:', isLocked);
     
     setHasLockedData(isLocked);
-  };
+  }, [isSecurityEnabled]);
 
   /**
    * Initialize security system on application startup
@@ -93,7 +92,6 @@ export const SecurityProvider = ({ children }: { children: React.ReactNode }) =>
         await checkForLockedData();
       } else {
         // Initialize in non-encrypted mode for new users
-        await SecureStorage.initialize();
         setHasLockedData(false);
       }
       
@@ -101,66 +99,35 @@ export const SecurityProvider = ({ children }: { children: React.ReactNode }) =>
     };
 
     initSecurity();
-  }, []);
+  }, [checkForLockedData]);
 
   // Update locked data status when security state changes
   useEffect(() => {
     checkForLockedData();
-  }, [isSecurityEnabled]);
+  }, [isSecurityEnabled, checkForLockedData]);
 
-  /**
-   * Enable security with user password
-   * 
-   * @param password - User's security password (min 8 characters)
-   * @returns Promise<boolean> - Success status of encryption setup
-   */
   const enableSecurity = async (password: string): Promise<boolean> => {
-    // Validate password requirements
     if (!password || password.length < 8) {
       return false;
     }
 
-    // Initialize secure storage with password
-    const success = await SecureStorage.initialize(password);
-    if (success) {
-      // Update context state to reflect active encryption
-      const newSecurityEnabled = SecureStorage.isEncryptionEnabled();
-      console.log('enableSecurity - success, newSecurityEnabled:', newSecurityEnabled);
-      setIsSecurityEnabled(newSecurityEnabled);
-      
-      // Force immediate update of locked data status
-      if (newSecurityEnabled) {
-        setHasLockedData(false);
-      }
-      
+    try {
+      await secureStorage.store('test', 'test', password);
+      setIsSecurityEnabled(true);
+      setHasLockedData(false);
       return true;
+    } catch (error) {
+      console.error('Failed to enable security:', error);
+      return false;
     }
-    
-    return false;
   };
 
-  /**
-   * Disable security and clear all encrypted data
-   * 
-   * Converts all encrypted data back to plain text storage
-   * and removes encryption keys and salts from localStorage.
-   */
   const disableSecurity = () => {
-    // Clear all secure storage and reset to plain text
-    SecureStorage.clear();
-    SecureStorage.initialize(); // Reinitialize in non-encrypted mode
+    secureStorage.clear();
     setIsSecurityEnabled(false);
     setHasLockedData(false);
   };
 
-  /**
-   * Get human-readable security status
-   * 
-   * Provides status text for UI display, accounting for different
-   * security states (initializing, enabled, available, disabled).
-   * 
-   * @returns string - Status description for user interface
-   */
   const getSecurityStatus = (): string => {
     if (!isInitialized) {
       return 'Initializing...';
@@ -174,7 +141,6 @@ export const SecurityProvider = ({ children }: { children: React.ReactNode }) =>
       return 'Security Locked - Enter password to unlock encrypted data';
     }
     
-    // Check if security was previously set up but is locked
     const hasSecuritySalt = localStorage.getItem('security_salt') !== null;
     if (hasSecuritySalt) {
       return 'Security Available - Enter password to unlock';
@@ -183,12 +149,9 @@ export const SecurityProvider = ({ children }: { children: React.ReactNode }) =>
     return 'Security Disabled - Data stored in plain text';
   };
 
-  /**
-   * Check if specific data is available (either encrypted and unlocked, or plain text)
-   */
   const isDataAvailable = async (key: string): Promise<boolean> => {
     try {
-      const secureData = await SecureStorage.getItem(key);
+      const secureData = await secureStorage.retrieve(key, 'test');
       const plainData = localStorage.getItem(key);
       return secureData !== null || plainData !== null;
     } catch {

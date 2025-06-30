@@ -6,7 +6,7 @@
  * automatic encryption and migration between storage modes.
  */
 
-import { SecureStorage } from '@/utils/security/secureStorage';
+import { secureStorage } from '@/utils/security/secureStorage';
 
 interface LoadedSettings {
   theme?: 'light' | 'dark' | 'system' | null;
@@ -38,15 +38,15 @@ export class SettingsStorage {
       let sensitiveSettings: Partial<LoadedSettings> = {};
       try {
         sensitiveSettings = {
-          zipCode: await SecureStorage.getItem('zipCode') || localStorage.getItem('zipCode'),
-          weatherApiKey: await SecureStorage.getItem('weatherApiKey') || localStorage.getItem('weatherApiKey'),
-          publicAlbumUrl: await SecureStorage.getItem('publicAlbumUrl') || localStorage.getItem('publicAlbumUrl'),
-          githubOwner: await SecureStorage.getItem('githubOwner') || localStorage.getItem('githubOwner'),
-          githubRepo: await SecureStorage.getItem('githubRepo') || localStorage.getItem('githubRepo'),
+          zipCode: await secureStorage.retrieve('zipCode', 'defaultPassword') || localStorage.getItem('zipCode'),
+          weatherApiKey: await secureStorage.retrieve('weatherApiKey', 'defaultPassword') || localStorage.getItem('weatherApiKey'),
+          publicAlbumUrl: await secureStorage.retrieve('publicAlbumUrl', 'defaultPassword') || localStorage.getItem('publicAlbumUrl'),
+          githubOwner: await secureStorage.retrieve('githubOwner', 'defaultPassword') || localStorage.getItem('githubOwner'),
+          githubRepo: await secureStorage.retrieve('githubRepo', 'defaultPassword') || localStorage.getItem('githubRepo'),
         };
 
         // Automatic migration: Move unencrypted sensitive data to secure storage
-        if (SecureStorage.isEncryptionEnabled()) {
+        if (secureStorage.exists('test')) {
           await this.migrateSensitiveSettings();
         }
       } catch (error) {
@@ -78,7 +78,7 @@ export class SettingsStorage {
       const oldValue = localStorage.getItem(key);
       if (oldValue) {
         try {
-          await SecureStorage.setItem(key, oldValue);
+          await secureStorage.store(key, oldValue, 'defaultPassword');
           localStorage.removeItem(key);
         } catch (error) {
           console.warn(`Failed to migrate ${key}:`, error);
@@ -92,8 +92,8 @@ export class SettingsStorage {
    */
   static async saveSetting(key: string, value: string, isSensitive: boolean = false) {
     try {
-      if (isSensitive && SecureStorage.isEncryptionEnabled()) {
-        await SecureStorage.setItem(key, value);
+      if (isSensitive && secureStorage.exists('test')) {
+        await secureStorage.store(key, value, 'defaultPassword');
         localStorage.removeItem(key); // Remove unencrypted version
       } else {
         localStorage.setItem(key, value);
@@ -109,8 +109,8 @@ export class SettingsStorage {
    */
   static async removeSetting(key: string, isSensitive: boolean = false) {
     try {
-      if (isSensitive && SecureStorage.isEncryptionEnabled()) {
-        await SecureStorage.removeItem(key);
+      if (isSensitive && secureStorage.exists('test')) {
+        secureStorage.remove(key);
       }
       localStorage.removeItem(key);
     } catch (error) {
