@@ -1,6 +1,9 @@
+
 import React, { useState } from 'react';
 import { Event } from '@/types/calendar';
-import { Clock, MapPin, ChevronDown, ChevronUp, GitFork } from 'lucide-react';
+import { isAllDayEvent } from './event/eventUtils';
+import CompactAllDayEvent from './event/CompactAllDayEvent';
+import RegularEvent from './event/RegularEvent';
 
 interface EventCardProps {
   event: Event;
@@ -18,334 +21,32 @@ const EventCard = ({
   isMultiDayDisplay = false 
 }: EventCardProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
+  const isAllDay = isAllDayEvent(event.time);
 
-  // Check if event has additional data that would make it expandable
-  const hasAdditionalData = () => {
-    return !!(event.location || event.description);
+  const handleToggleExpanded = () => {
+    setIsExpanded(!isExpanded);
   };
 
-  // Check if event is all-day (assuming all-day events have time as "All day" or similar)
-  const isAllDay = event.time.toLowerCase().includes('all day') || event.time === '00:00 - 23:59';
-
-  // Check if event has passed (for timeline and week views)
-  const hasEventPassed = () => {
-    if (viewMode === 'month') return false; // Don't apply transparency in month view
-    
-    // Exclude all-day events from transparency changes
-    if (isAllDay) {
-      return false;
-    }
-    
-    const now = new Date();
-    const eventDate = new Date(event.date);
-    
-    // If event is on a different day than today, check if it's in the past
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    eventDate.setHours(0, 0, 0, 0);
-    
-    if (eventDate < today) {
-      return true; // Past day
-    } else if (eventDate > today) {
-      return false; // Future day
-    }
-    
-    // Event is today, check the time
-    // Parse time string to get start and end times
-    const timeString = event.time.toLowerCase();
-    
-    // Handle multi-day events
-    if (timeString.includes('days')) {
-      return false; // Multi-day events don't get transparency
-    }
-    
-    // Parse time range (e.g., "2:00 PM - 4:00 PM" or "14:00 - 16:00")
-    const timeMatch = timeString.match(/(\d{1,2}):?(\d{0,2})\s*(am|pm)?\s*-\s*(\d{1,2}):?(\d{0,2})\s*(am|pm)?/);
-    
-    if (timeMatch) {
-      // Extract end time
-      let endHour = parseInt(timeMatch[4]);
-      const endMinute = parseInt(timeMatch[5]) || 0;
-      const endPeriod = timeMatch[6];
-      
-      // Convert to 24-hour format
-      if (endPeriod === 'pm' && endHour !== 12) {
-        endHour += 12;
-      } else if (endPeriod === 'am' && endHour === 12) {
-        endHour = 0;
-      }
-      
-      const endTime = new Date(event.date);
-      endTime.setHours(endHour, endMinute, 0, 0);
-      
-      return now > endTime;
-    } else {
-      // Try to parse single time (e.g., "2:00 PM" or "14:00")
-      const singleTimeMatch = timeString.match(/(\d{1,2}):?(\d{0,2})\s*(am|pm)?/);
-      
-      if (singleTimeMatch) {
-        let startHour = parseInt(singleTimeMatch[1]);
-        const startMinute = parseInt(singleTimeMatch[2]) || 0;
-        const startPeriod = singleTimeMatch[3];
-        
-        // Convert to 24-hour format
-        if (startPeriod === 'pm' && startHour !== 12) {
-          startHour += 12;
-        } else if (startPeriod === 'am' && startHour === 12) {
-          startHour = 0;
-        }
-        
-        // Add 20 minutes to start time as the default end time
-        const endTime = new Date(event.date);
-        endTime.setHours(startHour, startMinute + 20, 0, 0);
-        
-        return now > endTime;
-      }
-    }
-    
-    return false; // Default to not passed if we can't parse the time
-  };
-
-  // New function to render the appropriate icon based on event source
-  const getEventIcon = () => {
-    const iconSize = isAllDay ? "h-2 w-2" : "h-3 w-3";
-    const iconColor = event.color || '#3b82f6';
-    
-    if (event.source === 'notion') {
-      return (
-        <GitFork 
-          className={`${iconSize} flex-shrink-0`}
-          style={{ 
-            color: iconColor,
-            transform: 'rotate(35deg)'
-          }}
-          aria-label={`Notion calendar: ${event.calendarName || event.category}`}
-        />
-      );
-    }
-    
-    // Default colored dot for iCal and local events
-    return (
-      <div 
-        className={`${iconSize} rounded-full flex-shrink-0`}
-        style={{ backgroundColor: iconColor }}
-        aria-label={`Calendar: ${event.calendarName || event.category}`}
-        role="img"
-      />
-    );
-  };
-
-  const handleClick = () => {
-    if ((viewMode === 'timeline' || viewMode === 'week') && hasAdditionalData() && !isAllDay) {
-      setIsExpanded(!isExpanded);
-    }
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if ((e.key === 'Enter' || e.key === ' ') && (viewMode === 'timeline' || viewMode === 'week') && hasAdditionalData() && !isAllDay) {
-      e.preventDefault();
-      setIsExpanded(!isExpanded);
-    }
-  };
-
-  const getCalendarDotColor = () => {
-    if (event.calendarName) {
-      // Different colors for different calendars
-      const colors = [
-        'bg-blue-500',
-        'bg-green-500', 
-        'bg-purple-500',
-        'bg-orange-500',
-        'bg-red-500',
-        'bg-pink-500',
-        'bg-indigo-500'
-      ];
-      const hash = event.calendarName.split('').reduce((a, b) => {
-        a = ((a << 5) - a) + b.charCodeAt(0);
-        return a & a;
-      }, 0);
-      return colors[Math.abs(hash) % colors.length];
-    }
-    return event.color;
-  };
-
-  // Timeline view styling
-  const getTimelineStyles = () => {
-    if (viewMode !== 'timeline') return '';
-    
-    if (isAllDay) {
-      return 'w-auto min-w-fit max-w-[200px]'; // Flexible width for all-day events
-    }
-    
-    return 'w-[35%]'; // 35% width for regular events
-  };
-
-  // Get background opacity based on event status - improved for light mode
-  const getBackgroundOpacity = () => {
-    const isPast = hasEventPassed();
-    if (isPast && (viewMode === 'timeline' || viewMode === 'week')) {
-      return 'bg-white/40 dark:bg-gray-800/30';
-    }
-    return 'bg-white/90 dark:bg-gray-800/75';
-  };
-
-  // Get hover background opacity - improved for light mode
-  const getHoverBackgroundOpacity = () => {
-    const isPast = hasEventPassed();
-    if (isPast && (viewMode === 'timeline' || viewMode === 'week')) {
-      return 'hover:bg-white/50 dark:hover:bg-gray-800/40';
-    }
-    return 'hover:bg-white/95 dark:hover:bg-gray-800/85';
-  };
-
-  // Get text color classes based on event status - improved contrast for light mode
-  const getTextColorClasses = () => {
-    const isPast = hasEventPassed();
-    if (isPast && (viewMode === 'timeline' || viewMode === 'week')) {
-      return {
-        title: showBoldHeader ? 'font-bold text-gray-500 dark:text-gray-400' : 'font-medium text-gray-500 dark:text-gray-400',
-        time: 'text-gray-400 dark:text-gray-500',
-        location: 'text-gray-400 dark:text-gray-500',
-        description: 'text-gray-400 dark:text-gray-500',
-        category: 'text-gray-400 dark:text-gray-500 font-medium'
-      };
-    }
-    return {
-      title: showBoldHeader ? 'font-bold text-gray-800 dark:text-gray-100' : 'font-medium text-gray-800 dark:text-gray-100',
-      time: 'text-gray-600 dark:text-gray-300',
-      location: 'text-gray-600 dark:text-gray-300',
-      description: 'text-gray-600 dark:text-gray-300',
-      category: 'text-gray-600 dark:text-gray-300 font-medium'
-    };
-  };
-
-  // Get font size classes based on view mode - significantly larger fonts for timeline view
-  const getFontSizeClasses = () => {
-    if (viewMode === 'timeline') {
-      return {
-        title: isAllDay ? 'text-sm' : 'text-lg',
-        time: isAllDay ? 'text-xs' : 'text-base',
-        location: isAllDay ? 'text-xs' : 'text-base',
-        description: isAllDay ? 'text-xs' : 'text-base',
-        category: isAllDay ? 'text-xs' : 'text-base'
-      };
-    }
-    return {
-      title: isAllDay ? 'text-xs' : 'text-sm',
-      time: 'text-xs',
-      location: 'text-xs',
-      description: 'text-xs',
-      category: 'text-xs'
-    };
-  };
-
-  // Get padding class based on event type
-  const getPaddingClass = () => {
-    if (isAllDay) {
-      return 'px-2 py-1'; // Compact padding for all-day events
-    }
-    return 'p-3';
-  };
-
-  const isInteractive = (viewMode === 'timeline' || viewMode === 'week') && hasAdditionalData() && !isAllDay;
-  const textColors = getTextColorClasses();
-  const fontSizes = getFontSizeClasses();
-
-  // For all-day events (both single and multi-day), show compact format with inline calendar icon and "All Day"
+  // For all-day events (both single and multi-day), show compact format
   if (isAllDay && (viewMode === 'timeline' || viewMode === 'week')) {
     return (
-      <article 
-        className={`${getPaddingClass()} rounded-lg ${getBackgroundOpacity()} backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/30 ${getTimelineStyles()} ${className}`}
-        role="article"
-        aria-label={`All day event: ${event.title}`}
-      >
-        <div className="flex items-center gap-2">
-          {/* Event icon (fork for Notion, dot for others) */}
-          {getEventIcon()}
-          {/* Title */}
-          <h3 className={`${textColors.title} ${fontSizes.title} truncate flex-1`}>
-            {event.title}
-          </h3>
-          {/* Calendar icon and "All Day" text inline */}
-          <div className={`${fontSizes.time} ${textColors.time} flex items-center gap-1 flex-shrink-0`}>
-            <Clock className="h-3 w-3" aria-hidden="true" />
-            <span>All Day</span>
-          </div>
-        </div>
-      </article>
+      <CompactAllDayEvent 
+        event={event}
+        viewMode={viewMode}
+        className={className}
+      />
     );
   }
 
   return (
-    <article 
-      className={`${getPaddingClass()} rounded-lg ${getBackgroundOpacity()} backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/30 ${
-        isInteractive ? `cursor-pointer ${getHoverBackgroundOpacity()} transition-colors` : ''
-      } ${getTimelineStyles()} ${className} self-start`}
-      onClick={handleClick}
-      onKeyDown={handleKeyDown}
-      tabIndex={isInteractive ? 0 : undefined}
-      role={isInteractive ? 'button' : 'article'}
-      aria-expanded={isInteractive ? isExpanded : undefined}
-      aria-label={isInteractive ? `${isExpanded ? 'Collapse' : 'Expand'} event details for ${event.title}` : `Event: ${event.title}`}
-    >
-      <div className="flex items-start gap-3">
-        {/* Event Details Column */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-start justify-between">
-            <div className="flex-1 min-w-0">
-              {/* Title with inline event icon */}
-              <div className="flex items-center gap-2 mb-1">
-                {getEventIcon()}
-                <h3 className={`${textColors.title} ${fontSizes.title} leading-tight truncate`}>
-                  {event.title}
-                </h3>
-              </div>
-              
-              {/* Time display */}
-              <div className={`flex items-center gap-2 ${fontSizes.time} ${textColors.time} mb-2`}>
-                <Clock className="h-4 w-4 flex-shrink-0" aria-hidden="true" />
-                <time dateTime={isAllDay ? event.date.toISOString().split('T')[0] : undefined}>
-                  {event.time}
-                </time>
-              </div>
-              
-              {/* Show location only if provided and in expanded state for timeline/week, or always for other views */}
-              {event.location && ((viewMode !== 'timeline' && viewMode !== 'week') || isExpanded) && (
-                <div className={`flex items-center gap-2 ${fontSizes.location} ${textColors.location} mb-2`}>
-                  <MapPin className="h-4 w-4 flex-shrink-0" aria-hidden="true" />
-                  <address className="truncate not-italic">{event.location}</address>
-                </div>
-              )}
-
-              {/* Show description only in expanded timeline/week view */}
-              {(viewMode === 'timeline' || viewMode === 'week') && isExpanded && event.description && (
-                <div className={`${fontSizes.description} ${textColors.description} mb-2 line-clamp-3`}>
-                  {event.description}
-                </div>
-              )}
-
-              {/* Category text for month view */}
-              {viewMode === 'month' && (
-                <div className={`${fontSizes.category} ${textColors.category}`}>
-                  {event.category}
-                </div>
-              )}
-            </div>
-
-            {/* Expand/collapse icon for timeline and week view - only show if has additional data */}
-            {isInteractive && (
-              <div className="ml-2 flex-shrink-0">
-                {isExpanded ? (
-                  <ChevronUp className="h-4 w-4 text-gray-400 dark:text-gray-500" aria-hidden="true" />
-                ) : (
-                  <ChevronDown className="h-4 w-4 text-gray-400 dark:text-gray-500" aria-hidden="true" />
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    </article>
+    <RegularEvent
+      event={event}
+      viewMode={viewMode}
+      className={className}
+      showBoldHeader={showBoldHeader}
+      isExpanded={isExpanded}
+      onToggleExpanded={handleToggleExpanded}
+    />
   );
 };
 
