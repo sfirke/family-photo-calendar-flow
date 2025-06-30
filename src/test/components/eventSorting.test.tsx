@@ -99,15 +99,15 @@ const createTestEvents = (): Event[] => [
 
 describe('Event Sorting', () => {
   describe('TimelineView', () => {
-    it('should render all-day events first, sorted alphabetically', () => {
+    it('should render all-day events first, sorted alphabetically', async () => {
       const events = createTestEvents();
-      const { container } = render(
+      const { container } = await render(
         <TimelineView events={events} getWeatherForDate={mockGetWeatherForDate} />
       );
 
       // Get all event cards
       const eventCards = container.querySelectorAll('[data-testid], .rounded-lg');
-      const eventTexts = Array.from(eventCards).map(card => card.textContent).filter(Boolean);
+      const eventTexts = Array.from(eventCards).map(card => (card as HTMLElement).textContent).filter(Boolean);
 
       // Find all-day events in the rendered output
       const allDayEventTexts = eventTexts.filter(text => 
@@ -118,9 +118,9 @@ describe('Event Sorting', () => {
       expect(allDayEventTexts.length).toBeGreaterThan(0);
     });
 
-    it('should render timed events in chronological order', () => {
+    it('should render timed events in chronological order', async () => {
       const events = createTestEvents();
-      const { container } = render(
+      const { container } = await render(
         <TimelineView events={events} getWeatherForDate={mockGetWeatherForDate} />
       );
 
@@ -134,9 +134,9 @@ describe('Event Sorting', () => {
   });
 
   describe('WeekView', () => {
-    it('should render events in proper order within each day', () => {
+    it('should render events in proper order within each day', async () => {
       const events = createTestEvents();
-      const { container } = render(
+      const { container } = await render(
         <WeekView 
           events={events}
           weekOffset={0}
@@ -154,12 +154,12 @@ describe('Event Sorting', () => {
       expect(weekGrid).toBeInTheDocument();
     });
 
-    it('should handle week navigation', () => {
+    it('should handle week navigation', async () => {
       const events = createTestEvents();
       const onPreviousWeek = vi.fn();
       const onNextWeek = vi.fn();
       
-      const { container } = render(
+      const { container } = await render(
         <WeekView 
           events={events}
           weekOffset={0}
@@ -176,9 +176,9 @@ describe('Event Sorting', () => {
   });
 
   describe('MonthView', () => {
-    it('should render calendar grid correctly', () => {
+    it('should render calendar grid correctly', async () => {
       const events = createTestEvents();
-      const { container } = render(
+      const { container } = await render(
         <MonthView 
           events={events}
           getWeatherForDate={mockGetWeatherForDate}
@@ -193,9 +193,9 @@ describe('Event Sorting', () => {
       expect(calendarGrid).toBeInTheDocument();
     });
 
-    it('should display events within calendar days', () => {
+    it('should display events within calendar days', async () => {
       const events = createTestEvents();
-      const { container } = render(
+      const { container } = await render(
         <MonthView 
           events={events}
           getWeatherForDate={mockGetWeatherForDate}
