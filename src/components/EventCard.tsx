@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Event } from '@/types/calendar';
-import { Clock, MapPin, ChevronDown, ChevronUp, Fork } from 'lucide-react';
+import { Clock, MapPin, ChevronDown, ChevronUp, GitFork } from 'lucide-react';
 
 interface EventCardProps {
   event: Event;
@@ -113,7 +113,7 @@ const EventCard = ({
     
     if (event.source === 'notion') {
       return (
-        <Fork 
+        <GitFork 
           className={`${iconSize} flex-shrink-0`}
           style={{ 
             color: iconColor,
