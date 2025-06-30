@@ -4,9 +4,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { SettingsProvider } from '@/contexts/SettingsContext';
 import { WeatherProvider } from '@/contexts/WeatherContext';
+import { MockSecurityProvider } from './securityMocks';
 
-// Enhanced AllTheProviders with proper provider chain order
-// Note: SecurityProvider is now handled by the module mock, not a separate TestSecurityProvider
+// Enhanced AllTheProviders with proper provider chain order including SecurityProvider
 export const AllTheProviders = ({ children }: { children: React.ReactNode }) => {
   const queryClient = new QueryClient({
     defaultOptions: {
@@ -23,13 +23,15 @@ export const AllTheProviders = ({ children }: { children: React.ReactNode }) => 
 
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider>
-        <SettingsProvider>
-          <WeatherProvider>
-            {children}
-          </WeatherProvider>
-        </SettingsProvider>
-      </ThemeProvider>
+      <MockSecurityProvider>
+        <ThemeProvider>
+          <SettingsProvider>
+            <WeatherProvider>
+              {children}
+            </WeatherProvider>
+          </SettingsProvider>
+        </ThemeProvider>
+      </MockSecurityProvider>
     </QueryClientProvider>
   );
 };

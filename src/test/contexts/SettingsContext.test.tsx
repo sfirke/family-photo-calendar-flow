@@ -3,7 +3,7 @@ import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { SettingsProvider, useSettings } from '@/contexts/SettingsContext';
-import { mockSecurityContext } from '../utils/securityMocks';
+import { mockSecurityContext, MockSecurityProvider } from '../utils/securityMocks';
 
 // Use the standardized SecurityContext mock
 mockSecurityContext();
@@ -77,7 +77,9 @@ describe('SettingsContext', () => {
   });
 
   const wrapper = ({ children }: { children: React.ReactNode }) => (
-    <SettingsProvider>{children}</SettingsProvider>
+    <MockSecurityProvider>
+      <SettingsProvider>{children}</SettingsProvider>
+    </MockSecurityProvider>
   );
 
   it('should provide settings context', () => {

@@ -6,6 +6,10 @@ import WeekView from '@/components/WeekView';
 import MonthView from '@/components/MonthView';
 import { Event } from '@/types/calendar';
 import { compareTimeStrings } from '@/utils/timeUtils';
+import { mockSecurityContext } from '../utils/securityMocks';
+
+// Use the standardized SecurityContext mock
+mockSecurityContext();
 
 // Mock weather function
 const mockGetWeatherForDate = vi.fn().mockReturnValue({ temp: 75, condition: 'Sunny' });
