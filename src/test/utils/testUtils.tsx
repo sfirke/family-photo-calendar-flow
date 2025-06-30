@@ -1,7 +1,7 @@
-
 import React from 'react';
 import { render, RenderOptions } from '@testing-library/react';
 import { screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { vi } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { SecurityProvider } from '@/contexts/SecurityContext';
