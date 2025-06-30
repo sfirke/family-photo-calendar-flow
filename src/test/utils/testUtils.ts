@@ -5,7 +5,7 @@ import { act } from '@testing-library/react';
 import { vi } from 'vitest';
 import { AllTheProviders } from './testComponents';
 
-// Enhanced custom render with better async handling
+// Enhanced custom render with better async handling and error recovery
 export const customRender = async (
   ui: React.ReactElement,
   options?: Omit<RenderOptions, 'wrapper'>
@@ -31,7 +31,7 @@ export const customRender = async (
   }
 };
 
-// Enhanced mock utilities
+// Enhanced mock utilities with better defaults
 export const createMockEvent = (overrides = {}) => ({
   id: 1,
   title: 'Test Event',
@@ -43,6 +43,8 @@ export const createMockEvent = (overrides = {}) => ({
   organizer: 'Test User',
   attendees: 1,
   location: 'Test Location',
+  calendarId: 'test-calendar',
+  calendarName: 'Test Calendar',
   ...overrides,
 });
 
@@ -54,7 +56,7 @@ export const createMockWeatherData = (overrides = {}) => ({
   ...overrides,
 });
 
-// Mock function helpers
+// Mock function helpers with better cleanup
 export const mockConsoleWarn = () => {
   const originalWarn = console.warn;
   console.warn = vi.fn();
@@ -70,6 +72,35 @@ export const mockConsoleError = () => {
     console.error = originalError;
   };
 };
+
+// Enhanced mock for useLocalEvents that always returns arrays
+export const createMockUseLocalEvents = () => ({
+  googleEvents: [],
+  localEvents: [],
+  isLoading: false,
+  refreshEvents: vi.fn(),
+  addEvent: vi.fn(),
+  updateEvent: vi.fn(),
+  deleteEvent: vi.fn(),
+  resetToSampleEvents: vi.fn(),
+  exportEvents: vi.fn(),
+  importEvents: vi.fn(),
+  clearCache: vi.fn(),
+});
+
+// Enhanced mock for useCalendarSelection
+export const createMockUseCalendarSelection = () => ({
+  selectedCalendarIds: [],
+  calendarsFromEvents: [],
+  isLoading: false,
+  updateSelectedCalendars: vi.fn(),
+  toggleCalendar: vi.fn(),
+  selectAllCalendars: vi.fn(),
+  selectCalendarsWithEvents: vi.fn(),
+  clearAllCalendars: vi.fn(),
+  cleanupDeletedCalendar: vi.fn(),
+  forceRefresh: vi.fn(),
+});
 
 export * from '@testing-library/react';
 export { screen, fireEvent, waitFor, act } from '@testing-library/react';

@@ -1,5 +1,5 @@
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { SettingsProvider, useSettings } from '@/contexts/SettingsContext';
 
@@ -62,7 +62,31 @@ vi.mock('@/contexts/SecurityContext', () => ({
   })),
 }));
 
+// Mock ThemeContext
+vi.mock('@/contexts/ThemeContext', () => ({
+  ThemeProvider: ({ children }: { children: React.ReactNode }) => children,
+  useTheme: vi.fn(() => ({
+    theme: 'light',
+    setTheme: vi.fn(),
+  })),
+}));
+
+// Mock WeatherContext
+vi.mock('@/contexts/WeatherContext', () => ({
+  WeatherProvider: ({ children }: { children: React.ReactNode }) => children,
+  useWeather: vi.fn(() => ({
+    weatherData: null,
+    isLoading: false,
+    error: null,
+    refreshWeather: vi.fn(),
+  })),
+}));
+
 describe('SettingsContext', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   const wrapper = ({ children }: { children: React.ReactNode }) => (
     <SettingsProvider>{children}</SettingsProvider>
   );

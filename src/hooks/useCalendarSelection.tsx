@@ -17,10 +17,18 @@ export const useCalendarSelection = () => {
     setRefreshKey(prev => prev + 1);
   }, [iCalCalendars.length]);
 
-  // Get all events (local + iCal) - include refreshKey in dependency
+  // Get all events (local + iCal) with defensive programming - include refreshKey in dependency
   const allEvents = useMemo(() => {
-    const iCalEvents = getICalEvents();
-    return [...localEvents, ...iCalEvents];
+    try {
+      // Ensure localEvents is an array before spreading
+      const safeLocalEvents = Array.isArray(localEvents) ? localEvents : [];
+      const iCalEvents = getICalEvents();
+      const safeICalEvents = Array.isArray(iCalEvents) ? iCalEvents : [];
+      return [...safeLocalEvents, ...safeICalEvents];
+    } catch (error) {
+      console.warn('Error combining events in useCalendarSelection:', error);
+      return [];
+    }
   }, [localEvents, getICalEvents, refreshKey]);
 
   // Generate calendars from all events + iCal calendars (even if they don't have events yet)
@@ -29,52 +37,60 @@ export const useCalendarSelection = () => {
     
     // Count events by calendar
     const calendarEventCounts = new Map();
-    allEvents.forEach(event => {
-      const calendarId = event.calendarId || 'local_calendar';
-      calendarEventCounts.set(calendarId, (calendarEventCounts.get(calendarId) || 0) + 1);
-    });
+    
+    // Safely iterate over allEvents
+    if (Array.isArray(allEvents)) {
+      allEvents.forEach(event => {
+        const calendarId = event.calendarId || 'local_calendar';
+        calendarEventCounts.set(calendarId, (calendarEventCounts.get(calendarId) || 0) + 1);
+      });
+    }
 
     // Add ALL iCal calendars to always show them in the Calendar Feeds section
-    iCalCalendars.forEach(iCalCalendar => {
-      calendarMap.set(iCalCalendar.id, {
-        id: iCalCalendar.id,
-        summary: iCalCalendar.name,
-        primary: false,
-        eventCount: calendarEventCounts.get(iCalCalendar.id) || 0,
-        hasEvents: calendarEventCounts.has(iCalCalendar.id),
-        color: iCalCalendar.color,
-        enabled: iCalCalendar.enabled,
-        lastSync: iCalCalendar.lastSync,
-        url: iCalCalendar.url
+    if (Array.isArray(iCalCalendars)) {
+      iCalCalendars.forEach(iCalCalendar => {
+        calendarMap.set(iCalCalendar.id, {
+          id: iCalCalendar.id,
+          summary: iCalCalendar.name,
+          primary: false,
+          eventCount: calendarEventCounts.get(iCalCalendar.id) || 0,
+          hasEvents: calendarEventCounts.has(iCalCalendar.id),
+          color: iCalCalendar.color,
+          enabled: iCalCalendar.enabled,
+          lastSync: iCalCalendar.lastSync,
+          url: iCalCalendar.url
+        });
       });
-    });
+    }
 
     // Process events to add any additional calendars not already in the map
     // but skip local_calendar - don't include it in available calendars
-    allEvents.forEach(event => {
-      const calendarId = event.calendarId || 'local_calendar';
-      const calendarName = event.calendarName || 'Family Calendar';
-      
-      // Skip local calendar - don't include it in available calendars
-      if (calendarId === 'local_calendar') {
-        return;
-      }
-      
-      if (!calendarMap.has(calendarId)) {
-        calendarMap.set(calendarId, {
-          id: calendarId,
-          summary: calendarName,
-          primary: false,
-          eventCount: 0,
-          hasEvents: false,
-          color: event.color || '#3b82f6'
-        });
-      }
-      
-      const calendar = calendarMap.get(calendarId);
-      calendar.eventCount = calendarEventCounts.get(calendarId) || 0;
-      calendar.hasEvents = calendarEventCounts.has(calendarId);
-    });
+    if (Array.isArray(allEvents)) {
+      allEvents.forEach(event => {
+        const calendarId = event.calendarId || 'local_calendar';
+        const calendarName = event.calendarName || 'Family Calendar';
+        
+        // Skip local calendar - don't include it in available calendars
+        if (calendarId === 'local_calendar') {
+          return;
+        }
+        
+        if (!calendarMap.has(calendarId)) {
+          calendarMap.set(calendarId, {
+            id: calendarId,
+            summary: calendarName,
+            primary: false,
+            eventCount: 0,
+            hasEvents: false,
+            color: event.color || '#3b82f6'
+          });
+        }
+        
+        const calendar = calendarMap.get(calendarId);
+        calendar.eventCount = calendarEventCounts.get(calendarId) || 0;
+        calendar.hasEvents = calendarEventCounts.has(calendarId);
+      });
+    }
 
     return Array.from(calendarMap.values()).sort((a, b) => {
       if (a.eventCount !== b.eventCount) return b.eventCount - a.eventCount;

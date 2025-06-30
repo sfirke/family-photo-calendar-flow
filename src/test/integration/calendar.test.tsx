@@ -1,10 +1,10 @@
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '../utils/testUtils';
 import { BrowserRouter } from 'react-router-dom';
 import Index from '@/pages/Index';
 
-// Mock the calendar storage with all exports and methods
+// Enhanced mock for calendar storage with all exports and methods
 vi.mock('@/services/calendarStorage', () => ({
   calendarStorageService: {
     init: vi.fn().mockResolvedValue(undefined),
@@ -33,17 +33,39 @@ vi.mock('@/services/calendarStorage', () => ({
   CalendarFeed: vi.fn(),
 }));
 
-// Mock local events and calendars
+// Enhanced mock for local events with proper array return
 vi.mock('@/hooks/useLocalEvents', () => ({
   useLocalEvents: vi.fn(() => ({
-    events: [
+    googleEvents: [
       {
-        id: '1',
+        id: 1,
         title: 'Test Event',
-        start: new Date(),
-        end: new Date(Date.now() + 3600000),
-        allDay: false,
-        calendarId: 'test-calendar'
+        date: new Date(),
+        time: '10:00 AM',
+        location: 'Test Location',
+        description: 'Test Description',
+        attendees: 1,
+        category: 'Work',
+        color: '#3b82f6',
+        organizer: 'Test User',
+        calendarId: 'test-calendar',
+        calendarName: 'Test Calendar'
+      }
+    ],
+    localEvents: [
+      {
+        id: 1,
+        title: 'Test Event',
+        date: new Date(),
+        time: '10:00 AM',
+        location: 'Test Location',
+        description: 'Test Description',
+        attendees: 1,
+        category: 'Work',
+        color: '#3b82f6',
+        organizer: 'Test User',
+        calendarId: 'test-calendar',
+        calendarName: 'Test Calendar'
       }
     ],
     isLoading: false,
@@ -51,28 +73,64 @@ vi.mock('@/hooks/useLocalEvents', () => ({
     addEvent: vi.fn(),
     updateEvent: vi.fn(),
     deleteEvent: vi.fn(),
+    refreshEvents: vi.fn(),
+    resetToSampleEvents: vi.fn(),
+    exportEvents: vi.fn(),
+    importEvents: vi.fn(),
+    clearCache: vi.fn(),
   })),
 }));
 
-vi.mock('@/hooks/useLocalCalendars', () => ({
-  useLocalCalendars: vi.fn(() => ({
+// Enhanced mock for iCal calendars
+vi.mock('@/hooks/useICalCalendars', () => ({
+  useICalCalendars: vi.fn(() => ({
     calendars: [
       {
         id: 'test-calendar',
         name: 'Test Calendar',
         color: '#3B82F6',
-        visible: true,
-        type: 'local'
+        enabled: true,
+        url: 'https://example.com/calendar.ics',
+        lastSync: new Date().toISOString()
       }
     ],
+    getICalEvents: vi.fn(() => []),
     isLoading: false,
     addCalendar: vi.fn(),
     updateCalendar: vi.fn(),
     deleteCalendar: vi.fn(),
+    refreshCalendar: vi.fn(),
+    refreshAllCalendars: vi.fn(),
   })),
 }));
 
-// Mock the weather context with all exports
+// Enhanced mock for calendar selection
+vi.mock('@/hooks/useCalendarSelection', () => ({
+  useCalendarSelection: vi.fn(() => ({
+    selectedCalendarIds: ['test-calendar'],
+    calendarsFromEvents: [
+      {
+        id: 'test-calendar',
+        summary: 'Test Calendar',
+        primary: false,
+        eventCount: 1,
+        hasEvents: true,
+        color: '#3B82F6',
+        enabled: true,
+      }
+    ],
+    isLoading: false,
+    updateSelectedCalendars: vi.fn(),
+    toggleCalendar: vi.fn(),
+    selectAllCalendars: vi.fn(),
+    selectCalendarsWithEvents: vi.fn(),
+    clearAllCalendars: vi.fn(),
+    cleanupDeletedCalendar: vi.fn(),
+    forceRefresh: vi.fn(),
+  })),
+}));
+
+// Enhanced weather context mock
 vi.mock('@/contexts/WeatherContext', () => ({
   WeatherProvider: ({ children }: { children: React.ReactNode }) => children,
   useWeather: vi.fn(() => ({
@@ -91,6 +149,10 @@ vi.mock('@/contexts/WeatherContext', () => ({
 }));
 
 describe('Calendar Integration', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   const renderCalendar = () => {
     return render(
       <BrowserRouter>
@@ -104,7 +166,7 @@ describe('Calendar Integration', () => {
 
     await waitFor(() => {
       expect(screen.getByRole('main')).toBeInTheDocument();
-    });
+    }, { timeout: 5000 });
 
     // Check for key calendar components
     expect(screen.getByText(/family calendar/i)).toBeInTheDocument();
@@ -116,6 +178,6 @@ describe('Calendar Integration', () => {
     await waitFor(() => {
       expect(screen.getByText(/75/)).toBeInTheDocument();
       expect(screen.getByText(/sunny/i)).toBeInTheDocument();
-    });
+    }, { timeout: 5000 });
   });
 });

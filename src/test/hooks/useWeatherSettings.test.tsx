@@ -1,5 +1,5 @@
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useWeatherSettings } from '@/contexts/settings/useWeatherSettings';
 
@@ -23,7 +23,26 @@ vi.mock('@/utils/security/inputValidation', () => ({
   },
 }));
 
+// Mock SecurityContext
+vi.mock('@/contexts/SecurityContext', () => ({
+  useSecurity: vi.fn(() => ({
+    isSecurityEnabled: false,
+    hasLockedData: false,
+    isInitialized: true,
+    enableSecurity: vi.fn(),
+    disableSecurity: vi.fn(),
+    unlockSecurity: vi.fn(),
+    lockSecurity: vi.fn(),
+    encryptData: vi.fn(),
+    decryptData: vi.fn(),
+  })),
+}));
+
 describe('useWeatherSettings', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it('should initialize with default values', () => {
     const { result } = renderHook(() => useWeatherSettings());
 
