@@ -1,17 +1,20 @@
 
-import { SecureStorage } from '@/utils/security/secureStorage';
+/**
+ * Upstream Version Manager - Refactored
+ * 
+ * Main orchestrator for upstream version management.
+ * Now uses focused modules for different responsibilities.
+ */
 
-const GITHUB_API_BASE = 'https://api.github.com';
-const UPSTREAM_VERSION_KEY = 'upstream_version_cache';
-const LAST_UPSTREAM_CHECK_KEY = 'last_upstream_check';
-
-interface GitHubRelease {
-  tag_name: string;
-  name: string;
-  body: string;
-  published_at: string;
-  html_url: string;
-}
+import { fetchLatestRelease, GitHubRelease, GitHubRepo } from './github/gitHubApi';
+import { getGitHubRepoConfig, isGitHubRepoConfigured, getRepositoryDisplayName } from './github/repositoryConfig';
+import { 
+  cacheUpstreamVersion, 
+  getCachedUpstreamVersion, 
+  getLastUpstreamCheckTime, 
+  setLastUpstreamCheckTime, 
+  shouldCheckUpstream 
+} from './github/upstreamCache';
 
 export interface UpstreamVersionInfo {
   version: string;
@@ -22,45 +25,13 @@ export interface UpstreamVersionInfo {
   fetchedAt: string;
 }
 
-interface GitHubRepo {
-  owner: string;
-  repo: string;
-}
+// Re-export for backward compatibility
+export { getGitHubRepoConfig, isGitHubRepoConfigured, getRepositoryDisplayName };
+export { getLastUpstreamCheckTime, setLastUpstreamCheckTime, shouldCheckUpstream };
 
 /**
- * Get GitHub repository configuration from settings
- * Returns null if no repository is configured
+ * Fetch GitHub releases using configured repository
  */
-export const getGitHubRepoConfig = async (): Promise<GitHubRepo | null> => {
-  try {
-    let owner: string | null = null;
-    let repo: string | null = null;
-
-    // Try to get from secure storage first
-    try {
-      owner = await SecureStorage.getItem('githubOwner');
-      repo = await SecureStorage.getItem('githubRepo');
-    } catch (error) {
-      // Fallback to localStorage
-      owner = localStorage.getItem('githubOwner');
-      repo = localStorage.getItem('githubRepo');
-    }
-
-    // Both owner and repo must be configured
-    if (!owner || !repo || owner.trim() === '' || repo.trim() === '') {
-      return null;
-    }
-
-    return {
-      owner: owner.trim(),
-      repo: repo.trim()
-    };
-  } catch (error) {
-    console.error('Failed to get GitHub repository configuration:', error);
-    return null;
-  }
-};
-
 export const fetchGitHubReleases = async (): Promise<GitHubRelease | null> => {
   const repoConfig = await getGitHubRepoConfig();
   
@@ -69,32 +40,12 @@ export const fetchGitHubReleases = async (): Promise<GitHubRelease | null> => {
     return null;
   }
 
-  try {
-    const response = await fetch(
-      `${GITHUB_API_BASE}/repos/${repoConfig.owner}/${repoConfig.repo}/releases/latest`,
-      {
-        headers: {
-          'Accept': 'application/vnd.github.v3+json',
-          'User-Agent': 'Family-Calendar-App'
-        }
-      }
-    );
-
-    if (!response.ok) {
-      if (response.status === 404) {
-        console.warn(`No GitHub releases found for repository ${repoConfig.owner}/${repoConfig.repo}`);
-        return null;
-      }
-      throw new Error(`GitHub API error: ${response.status}`);
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error('Failed to fetch GitHub releases:', error);
-    return null;
-  }
+  return await fetchLatestRelease(repoConfig);
 };
 
+/**
+ * Get latest upstream version information
+ */
 export const getLatestUpstreamVersion = async (): Promise<UpstreamVersionInfo | null> => {
   const release = await fetchGitHubReleases();
   
@@ -115,6 +66,9 @@ export const getLatestUpstreamVersion = async (): Promise<UpstreamVersionInfo | 
   };
 };
 
+/**
+ * Compare local version with upstream version
+ */
 export const compareWithUpstream = (localVersion: string, upstreamVersion: string): number => {
   const parseVersion = (version: string) => {
     return version.split('.').map(num => parseInt(num, 10));
@@ -134,6 +88,9 @@ export const compareWithUpstream = (localVersion: string, upstreamVersion: strin
   return 0; // Versions are equal
 };
 
+/**
+ * Check if upstream update is available
+ */
 export const isUpstreamUpdateAvailable = async (currentVersion: string): Promise<boolean> => {
   const upstreamInfo = await getLatestUpstreamVersion();
   
@@ -144,38 +101,9 @@ export const isUpstreamUpdateAvailable = async (currentVersion: string): Promise
   return compareWithUpstream(currentVersion, upstreamInfo.version) > 0;
 };
 
-export const cacheUpstreamVersion = (versionInfo: UpstreamVersionInfo): void => {
-  localStorage.setItem(UPSTREAM_VERSION_KEY, JSON.stringify(versionInfo));
-};
-
-export const getCachedUpstreamVersion = (): UpstreamVersionInfo | null => {
-  try {
-    const cached = localStorage.getItem(UPSTREAM_VERSION_KEY);
-    return cached ? JSON.parse(cached) : null;
-  } catch (error) {
-    console.error('Failed to parse cached upstream version:', error);
-    return null;
-  }
-};
-
-export const getLastUpstreamCheckTime = (): Date | null => {
-  const lastCheck = localStorage.getItem(LAST_UPSTREAM_CHECK_KEY);
-  return lastCheck ? new Date(lastCheck) : null;
-};
-
-export const setLastUpstreamCheckTime = (): void => {
-  localStorage.setItem(LAST_UPSTREAM_CHECK_KEY, new Date().toISOString());
-};
-
-export const shouldCheckUpstream = (): boolean => {
-  const lastCheck = getLastUpstreamCheckTime();
-  if (!lastCheck) return true;
-  
-  // Check for upstream updates every hour
-  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
-  return lastCheck < oneHourAgo;
-};
-
+/**
+ * Get upstream release information with caching
+ */
 export const getUpstreamReleaseInfo = async (): Promise<UpstreamVersionInfo | null> => {
   // First try to get fresh data
   const freshInfo = await getLatestUpstreamVersion();
@@ -188,20 +116,4 @@ export const getUpstreamReleaseInfo = async (): Promise<UpstreamVersionInfo | nu
 
   // Fallback to cached data
   return getCachedUpstreamVersion();
-};
-
-/**
- * Check if GitHub repository is configured
- */
-export const isGitHubRepoConfigured = async (): Promise<boolean> => {
-  const repoConfig = await getGitHubRepoConfig();
-  return repoConfig !== null;
-};
-
-/**
- * Get formatted repository string for display
- */
-export const getRepositoryDisplayName = async (): Promise<string | null> => {
-  const repoConfig = await getGitHubRepoConfig();
-  return repoConfig ? `${repoConfig.owner}/${repoConfig.repo}` : null;
 };
