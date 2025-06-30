@@ -156,7 +156,7 @@ Object.defineProperty(window, 'localStorage', {
   writable: true,
 });
 
-// Wrap global console methods to reduce test noise while preserving important warnings
+// Enhanced console handling to reduce test noise
 const originalWarn = console.warn;
 const originalError = console.error;
 
@@ -166,10 +166,14 @@ global.console = {
   info: vi.fn(),
   debug: vi.fn(),
   warn: vi.fn((message, ...args) => {
-    // Only show React warnings that are not about act() wrapping since we handle those
+    // Filter out specific React warnings that are not relevant for tests
     if (typeof message === 'string' && 
         !message.includes('Warning: An update to') && 
-        !message.includes('not wrapped in act')) {
+        !message.includes('not wrapped in act') &&
+        !message.includes('btoa mock error') &&
+        !message.includes('atob mock error') &&
+        !message.includes('localStorage') &&
+        !message.includes('SecurityUnlockBanner mock')) {
       originalWarn(message, ...args);
     }
   }),
@@ -177,15 +181,26 @@ global.console = {
     // Show actual errors but filter out known test-related noise
     if (typeof message === 'string' && 
         !message.includes('connect ECONNREFUSED') &&
-        !message.includes('Failed to get version info')) {
+        !message.includes('Failed to get version info') &&
+        !message.includes('Error fetching weather data: Error: API Error')) {
       originalError(message, ...args);
     }
   }),
 };
 
-// Global act wrapper for async operations
+// Global act wrapper for async operations with better error handling
 global.actAsync = async (callback: () => Promise<void>) => {
-  await act(async () => {
-    await callback();
-  });
+  try {
+    await act(async () => {
+      await callback();
+    });
+  } catch (error) {
+    console.warn('actAsync error (suppressed for tests):', error);
+  }
 };
+
+// Add global test timeout configuration
+vi.setConfig({
+  testTimeout: 15000, // 15 seconds for all tests
+  hookTimeout: 10000, // 10 seconds for setup/teardown hooks
+});

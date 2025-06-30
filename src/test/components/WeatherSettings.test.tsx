@@ -20,16 +20,14 @@ vi.mock('@/contexts/SecurityContext', () => ({
   })),
 }));
 
-// Mock the SecurityUnlockBanner component to conditionally render
+// Mock the SecurityUnlockBanner component with proper conditional rendering
 vi.mock('@/components/security/SecurityUnlockBanner', () => ({
   default: ({ onUnlock }: { onUnlock?: () => void }) => {
-    const { useSecurity } = vi.hoisted(() => ({
-      useSecurity: vi.fn(() => ({
-        hasLockedData: false,
-      })),
-    }));
-    
+    // Import the security context mock here instead of using vi.hoisted
+    const { useSecurity } = require('@/contexts/SecurityContext');
     const { hasLockedData } = useSecurity();
+    
+    console.log('SecurityUnlockBanner mock - hasLockedData:', hasLockedData);
     
     if (!hasLockedData) {
       return null;
@@ -37,6 +35,8 @@ vi.mock('@/components/security/SecurityUnlockBanner', () => ({
     
     return (
       <div data-testid="security-unlock-banner">
+        <h3>Encrypted Data Locked</h3>
+        <p>Your encrypted data is locked</p>
         {onUnlock && <button onClick={onUnlock}>Unlock</button>}
       </div>
     );
@@ -55,16 +55,18 @@ describe('WeatherSettings', () => {
     onWeatherApiKeyChange: vi.fn(),
   };
 
-  it('should render weather settings form', () => {
-    render(<WeatherSettings {...defaultProps} />);
+  it('should render weather settings form', async () => {
+    const result = await render(<WeatherSettings {...defaultProps} />);
+    
+    console.log('WeatherSettings test - DOM content:', result.container.innerHTML);
 
     expect(screen.getByLabelText(/openweathermap api key/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/zip code/i)).toBeInTheDocument();
   });
 
-  it('should call onZipCodeChange when zip code is updated', () => {
+  it('should call onZipCodeChange when zip code is updated', async () => {
     const onZipCodeChange = vi.fn();
-    render(<WeatherSettings {...defaultProps} onZipCodeChange={onZipCodeChange} />);
+    await render(<WeatherSettings {...defaultProps} onZipCodeChange={onZipCodeChange} />);
 
     const zipInput = screen.getByLabelText(/zip code/i);
     fireEvent.change(zipInput, { target: { value: '12345' } });
@@ -72,9 +74,9 @@ describe('WeatherSettings', () => {
     expect(onZipCodeChange).toHaveBeenCalledWith('12345');
   });
 
-  it('should call onWeatherApiKeyChange when API key is updated', () => {
+  it('should call onWeatherApiKeyChange when API key is updated', async () => {
     const onWeatherApiKeyChange = vi.fn();
-    render(<WeatherSettings {...defaultProps} onWeatherApiKeyChange={onWeatherApiKeyChange} />);
+    await render(<WeatherSettings {...defaultProps} onWeatherApiKeyChange={onWeatherApiKeyChange} />);
 
     const apiKeyInput = screen.getByLabelText(/openweathermap api key/i);
     fireEvent.change(apiKeyInput, { target: { value: 'new-key' } });
@@ -82,8 +84,8 @@ describe('WeatherSettings', () => {
     expect(onWeatherApiKeyChange).toHaveBeenCalledWith('new-key');
   });
 
-  it('should display security notice when security is disabled', () => {
-    render(<WeatherSettings {...defaultProps} />);
+  it('should display security notice when security is disabled', async () => {
+    await render(<WeatherSettings {...defaultProps} />);
 
     expect(screen.getByText(/security notice/i)).toBeInTheDocument();
     expect(screen.getByText(/unencrypted/i)).toBeInTheDocument();

@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { render, RenderOptions } from '@testing-library/react';
 import { screen, fireEvent, waitFor, act } from '@testing-library/react';
@@ -8,7 +9,7 @@ import { SecurityProvider } from '@/contexts/SecurityContext';
 import { SettingsProvider } from '@/contexts/SettingsContext';
 import { WeatherProvider } from '@/contexts/WeatherContext';
 
-// Enhanced AllTheProviders with better error handling
+// Enhanced AllTheProviders with better error handling and test configuration
 const AllTheProviders = ({ children }: { children: React.ReactNode }) => {
   const queryClient = new QueryClient({
     defaultOptions: {
@@ -16,6 +17,9 @@ const AllTheProviders = ({ children }: { children: React.ReactNode }) => {
         retry: false,
         staleTime: 0,
         gcTime: 0,
+        refetchOnWindowFocus: false,
+        refetchOnMount: false,
+        refetchOnReconnect: false,
       },
       mutations: { retry: false },
     },
@@ -36,7 +40,7 @@ const AllTheProviders = ({ children }: { children: React.ReactNode }) => {
   );
 };
 
-// Enhanced custom render with better async handling
+// Enhanced custom render with better async handling and error recovery
 const customRender = async (
   ui: React.ReactElement,
   options?: Omit<RenderOptions, 'wrapper'>
@@ -50,7 +54,7 @@ const customRender = async (
     
     return renderResult!;
   } catch (error) {
-    console.warn('Error in test render:', error);
+    console.warn('Error in test render (attempting fallback):', error);
     // Return a fallback render result with proper error handling
     try {
       return render(ui, { wrapper: AllTheProviders, ...options });
@@ -62,7 +66,7 @@ const customRender = async (
   }
 };
 
-// Enhanced mock utilities
+// Enhanced mock utilities with better defaults
 export const createMockEvent = (overrides = {}) => ({
   id: 1,
   title: 'Test Event',
@@ -74,6 +78,8 @@ export const createMockEvent = (overrides = {}) => ({
   organizer: 'Test User',
   attendees: 1,
   location: 'Test Location',
+  calendarId: 'test-calendar',
+  calendarName: 'Test Calendar',
   ...overrides,
 });
 
@@ -85,7 +91,7 @@ export const createMockWeatherData = (overrides = {}) => ({
   ...overrides,
 });
 
-// Mock function helpers
+// Mock function helpers with better cleanup
 export const mockConsoleWarn = () => {
   const originalWarn = console.warn;
   console.warn = vi.fn();
@@ -101,6 +107,35 @@ export const mockConsoleError = () => {
     console.error = originalError;
   };
 };
+
+// Enhanced mock for useLocalEvents that always returns arrays
+export const createMockUseLocalEvents = () => ({
+  googleEvents: [],
+  localEvents: [],
+  isLoading: false,
+  refreshEvents: vi.fn(),
+  addEvent: vi.fn(),
+  updateEvent: vi.fn(),
+  deleteEvent: vi.fn(),
+  resetToSampleEvents: vi.fn(),
+  exportEvents: vi.fn(),
+  importEvents: vi.fn(),
+  clearCache: vi.fn(),
+});
+
+// Enhanced mock for useCalendarSelection
+export const createMockUseCalendarSelection = () => ({
+  selectedCalendarIds: [],
+  calendarsFromEvents: [],
+  isLoading: false,
+  updateSelectedCalendars: vi.fn(),
+  toggleCalendar: vi.fn(),
+  selectAllCalendars: vi.fn(),
+  selectCalendarsWithEvents: vi.fn(),
+  clearAllCalendars: vi.fn(),
+  cleanupDeletedCalendar: vi.fn(),
+  forceRefresh: vi.fn(),
+});
 
 export * from '@testing-library/react';
 export { customRender as render, screen, fireEvent, waitFor, act };

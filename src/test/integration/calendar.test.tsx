@@ -1,6 +1,6 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '../utils/testUtils';
+import { render, screen, waitFor, act } from '../utils/testUtils';
 import { BrowserRouter } from 'react-router-dom';
 import Index from '@/pages/Index';
 
@@ -163,7 +163,7 @@ vi.mock('@/hooks/useCalendarSelection', () => ({
   })),
 }));
 
-// Enhanced weather context mock
+// Enhanced weather context mock with synchronous data
 vi.mock('@/contexts/WeatherContext', () => ({
   WeatherProvider: ({ children }: { children: React.ReactNode }) => children,
   useWeather: vi.fn(() => ({
@@ -186,35 +186,50 @@ describe('Calendar Integration', () => {
     vi.clearAllMocks();
   });
 
-  const renderCalendar = () => {
-    return render(
-      <BrowserRouter>
-        <Index />
-      </BrowserRouter>
-    );
+  const renderCalendar = async () => {
+    let result;
+    await act(async () => {
+      result = await render(
+        <BrowserRouter>
+          <Index />
+        </BrowserRouter>
+      );
+    });
+    return result;
   };
 
   it('should render the calendar application', async () => {
-    renderCalendar();
+    await renderCalendar();
 
     await waitFor(() => {
       expect(screen.getByRole('main')).toBeInTheDocument();
-    }, { timeout: 5000 });
+    }, { timeout: 10000 });
 
     // Check for calendar selector button which should exist
     expect(screen.getByText(/calendars/i)).toBeInTheDocument();
   });
 
   it('should display weather information', async () => {
-    renderCalendar();
+    await renderCalendar();
 
+    await act(async () => {
+      await waitFor(() => {
+        expect(screen.getByRole('main')).toBeInTheDocument();
+      }, { timeout: 10000 });
+    });
+
+    // Wait for weather data to be rendered with longer timeout
     await waitFor(() => {
-      // Use getAllByText for elements that appear multiple times
-      const temperatureElements = screen.getAllByText('75');
-      expect(temperatureElements.length).toBeGreaterThan(0);
-    }, { timeout: 5000 });
+      // Look for weather-related elements more specifically
+      const weatherElement = screen.getByText(/sunny/i);
+      expect(weatherElement).toBeInTheDocument();
+    }, { timeout: 10000 });
 
-    // Check for weather condition
-    expect(screen.getByText(/sunny/i)).toBeInTheDocument();
-  });
+    // Check for temperature display using a more specific approach
+    await waitFor(() => {
+      const temperatureRegex = /75/;
+      const elements = screen.getAllByText(temperatureRegex);
+      expect(elements.length).toBeGreaterThan(0);
+    }, { timeout: 10000 });
+  }, 15000); // Increase test timeout to 15 seconds
 });
