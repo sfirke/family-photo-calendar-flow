@@ -1,0 +1,54 @@
+
+/**
+ * Settings Context Types
+ * 
+ * Type definitions for all application settings and context interfaces.
+ */
+
+export interface SettingsContextType {
+  // Display Settings
+  /** Current theme preference (light/dark/system) */
+  theme: 'light' | 'dark' | 'system';
+  /** Update theme setting and apply immediately */
+  setTheme: (theme: 'light' | 'dark' | 'system') => void;
+  /** Default calendar view on app load */
+  defaultView: 'month' | 'week' | 'timeline';
+  /** Update default view preference */
+  setDefaultView: (view: 'month' | 'week' | 'timeline') => void;
+  
+  // Weather Settings (Sensitive - encrypted when possible)
+  /** User's zip code for weather location */
+  zipCode: string;
+  /** Update zip code with validation */
+  setZipCode: (zipCode: string) => void;
+  /** Weather service API key */
+  weatherApiKey: string;
+  /** Update weather API key with validation */
+  setWeatherApiKey: (apiKey: string) => void;
+  
+  // Photo Settings (Sensitive - encrypted when possible)
+  /** Google Photos public album URL */
+  publicAlbumUrl: string;
+  /** Update album URL with validation */
+  setPublicAlbumUrl: (url: string) => void;
+  
+  // GitHub Settings (Sensitive - encrypted when possible)
+  /** GitHub repository owner/username */
+  githubOwner: string;
+  /** Update GitHub owner with validation */
+  setGithubOwner: (owner: string) => void;
+  /** GitHub repository name */
+  githubRepo: string;
+  /** Update GitHub repo with validation */
+  setGithubRepo: (repo: string) => void;
+  
+  // Background Settings
+  /** Photo background rotation duration in minutes */
+  backgroundDuration: number;
+  /** Update background rotation timing */
+  setBackgroundDuration: (duration: number) => void;
+  /** Currently selected photo album ID */
+  selectedAlbum: string | null;
+  /** Update selected album */
+  setSelectedAlbum: (albumId: string | null) => void;
+}
