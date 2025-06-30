@@ -52,9 +52,9 @@ describe('weatherService', () => {
 
     const result = await fetchWeatherData('90210', 'test-api-key');
 
-    // Fix the expected location to match actual service behavior
+    // Updated to match the actual service behavior - service returns just the city name
     expect(result).toEqual({
-      location: 'Beverly Hills', // Updated to match the actual service output
+      location: 'Beverly Hills', // Service returns currentData.name which is just the city
       temperature: 75,
       condition: 'Clear',
       forecast: expect.any(Array)

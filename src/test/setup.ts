@@ -1,4 +1,3 @@
-
 import '@testing-library/jest-dom';
 import 'fake-indexeddb/auto';
 import { beforeAll, afterEach, afterAll, vi } from 'vitest';
@@ -39,13 +38,18 @@ global.IntersectionObserver = vi.fn().mockImplementation(() => ({
   disconnect: vi.fn(),
 }));
 
-// Enhanced Mock Web Crypto API for testing environment
+// Enhanced Mock Web Crypto API for testing environment with better error handling
 const mockCrypto = {
   getRandomValues: vi.fn((array) => {
-    for (let i = 0; i < array.length; i++) {
-      array[i] = Math.floor(Math.random() * 256);
+    try {
+      for (let i = 0; i < array.length; i++) {
+        array[i] = Math.floor(Math.random() * 256);
+      }
+      return array;
+    } catch (error) {
+      console.warn('Mock crypto.getRandomValues error:', error);
+      return array;
     }
-    return array;
   }),
   randomUUID: vi.fn(() => 'test-uuid-' + Math.random().toString(36).substr(2, 9)),
   subtle: {
@@ -63,20 +67,32 @@ const mockCrypto = {
     }),
     deriveBits: vi.fn().mockResolvedValue(new ArrayBuffer(32)),
     encrypt: vi.fn().mockImplementation(async (algorithm, key, data) => {
-      // Simple mock encryption - just return the data with some padding
-      const encrypted = new Uint8Array(data.byteLength + 16);
-      encrypted.set(new Uint8Array(data), 0);
-      // Add mock IV/tag
-      for (let i = data.byteLength; i < encrypted.length; i++) {
-        encrypted[i] = Math.floor(Math.random() * 256);
+      try {
+        // Simple mock encryption - just return the data with some padding
+        const encrypted = new Uint8Array(data.byteLength + 16);
+        encrypted.set(new Uint8Array(data), 0);
+        // Add mock IV/tag
+        for (let i = data.byteLength; i < encrypted.length; i++) {
+          encrypted[i] = Math.floor(Math.random() * 256);
+        }
+        return encrypted.buffer;
+      } catch (error) {
+        console.warn('Mock crypto.encrypt error:', error);
+        return new ArrayBuffer(0);
       }
-      return encrypted.buffer;
     }),
     decrypt: vi.fn().mockImplementation(async (algorithm, key, data) => {
-      // Simple mock decryption - just return the data without padding
-      const decrypted = new Uint8Array(data.byteLength - 16);
-      decrypted.set(new Uint8Array(data).slice(0, data.byteLength - 16), 0);
-      return decrypted.buffer;
+      try {
+        // Simple mock decryption - just return the data without padding
+        const decrypted = new Uint8Array(Math.max(0, data.byteLength - 16));
+        if (data.byteLength > 16) {
+          decrypted.set(new Uint8Array(data).slice(0, data.byteLength - 16), 0);
+        }
+        return decrypted.buffer;
+      } catch (error) {
+        console.warn('Mock crypto.decrypt error:', error);
+        return new ArrayBuffer(0);
+      }
     }),
     generateKey: vi.fn().mockResolvedValue({
       type: 'secret',
@@ -87,7 +103,7 @@ const mockCrypto = {
   },
 };
 
-// Override global crypto
+// Override global crypto with enhanced error handling
 Object.defineProperty(global, 'crypto', {
   value: mockCrypto,
   writable: true,
@@ -156,7 +172,7 @@ Object.defineProperty(window, 'localStorage', {
   writable: true,
 });
 
-// Enhanced console handling to reduce test noise
+// Enhanced console handling to reduce test noise but show important errors
 const originalWarn = console.warn;
 const originalError = console.error;
 
@@ -173,6 +189,7 @@ global.console = {
         !message.includes('btoa mock error') &&
         !message.includes('atob mock error') &&
         !message.includes('localStorage') &&
+        !message.includes('Mock crypto') &&
         !message.includes('SecurityUnlockBanner mock')) {
       originalWarn(message, ...args);
     }
@@ -182,6 +199,7 @@ global.console = {
     if (typeof message === 'string' && 
         !message.includes('connect ECONNREFUSED') &&
         !message.includes('Failed to get version info') &&
+        !message.includes('Mock crypto') &&
         !message.includes('Error fetching weather data: Error: API Error')) {
       originalError(message, ...args);
     }

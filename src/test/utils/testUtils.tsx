@@ -3,42 +3,7 @@ import React from 'react';
 import { render, RenderOptions } from '@testing-library/react';
 import { screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { vi } from 'vitest';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { ThemeProvider } from '@/contexts/ThemeContext';
-import { SecurityProvider } from '@/contexts/SecurityContext';
-import { SettingsProvider } from '@/contexts/SettingsContext';
-import { WeatherProvider } from '@/contexts/WeatherContext';
-
-// Enhanced AllTheProviders with better error handling and test configuration
-const AllTheProviders = ({ children }: { children: React.ReactNode }) => {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: { 
-        retry: false,
-        staleTime: 0,
-        gcTime: 0,
-        refetchOnWindowFocus: false,
-        refetchOnMount: false,
-        refetchOnReconnect: false,
-      },
-      mutations: { retry: false },
-    },
-  });
-
-  return (
-    <QueryClientProvider client={queryClient}>
-      <ThemeProvider>
-        <SecurityProvider>
-          <SettingsProvider>
-            <WeatherProvider>
-              {children}
-            </WeatherProvider>
-          </SettingsProvider>
-        </SecurityProvider>
-      </ThemeProvider>
-    </QueryClientProvider>
-  );
-};
+import { AllTheProviders } from './testProviders';
 
 // Enhanced custom render with better async handling and error recovery
 const customRender = async (
