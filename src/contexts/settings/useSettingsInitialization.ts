@@ -2,13 +2,15 @@
 /**
  * Settings Initialization Hook
  * 
- * Handles loading and initializing all settings from storage on app startup.
+ * Handles the loading and initialization of all application settings
+ * from both secure and regular storage on app startup.
  */
 
 import { useEffect } from 'react';
 import { SettingsStorage } from './settingsStorage';
+import { useSecurity } from '../SecurityContext';
 
-interface SettingsSetters {
+interface UseSettingsInitializationProps {
   setTheme: (theme: 'light' | 'dark' | 'system') => void;
   setDefaultView: (view: 'month' | 'week' | 'timeline') => void;
   setZipCode: (zipCode: string) => void;
@@ -16,29 +18,95 @@ interface SettingsSetters {
   setPublicAlbumUrl: (url: string) => void;
   setGithubOwner: (owner: string) => void;
   setGithubRepo: (repo: string) => void;
-  setBackgroundDuration: (duration: number) => void;
-  setSelectedAlbum: (albumId: string | null) => void;
+  setBackgroundDuration: (duration: string) => void;
+  setSelectedAlbum: (album: string) => void;
 }
 
-export const useSettingsInitialization = (setters: SettingsSetters) => {
+export const useSettingsInitialization = (props: UseSettingsInitializationProps) => {
+  const { isSecurityEnabled, hasLockedData, isInitialized } = useSecurity();
+
   useEffect(() => {
-    const loadSettings = async () => {
-      const settings = await SettingsStorage.loadAllSettings();
+    const initializeSettings = async () => {
+      if (!isInitialized) return;
 
-      // Apply loaded settings with fallback to defaults
-      if (settings.theme) setters.setTheme(settings.theme);
-      if (settings.defaultView) setters.setDefaultView(settings.defaultView);
-      if (settings.backgroundDuration) setters.setBackgroundDuration(parseInt(settings.backgroundDuration));
-      if (settings.selectedAlbum) setters.setSelectedAlbum(settings.selectedAlbum);
+      try {
+        const settings = await SettingsStorage.loadAllSettings();
 
-      // Apply sensitive settings
-      if (settings.zipCode) setters.setZipCode(settings.zipCode);
-      if (settings.weatherApiKey) setters.setWeatherApiKey(settings.weatherApiKey);
-      if (settings.publicAlbumUrl) setters.setPublicAlbumUrl(settings.publicAlbumUrl);
-      if (settings.githubOwner) setters.setGithubOwner(settings.githubOwner);
-      if (settings.githubRepo) setters.setGithubRepo(settings.githubRepo);
+        // Initialize non-sensitive settings always
+        if (settings.theme) {
+          props.setTheme(settings.theme);
+        }
+        if (settings.defaultView) {
+          props.setDefaultView(settings.defaultView);
+        }
+        if (settings.backgroundDuration) {
+          props.setBackgroundDuration(settings.backgroundDuration);
+        }
+        if (settings.selectedAlbum) {
+          props.setSelectedAlbum(settings.selectedAlbum);
+        }
+
+        // Initialize sensitive settings only if not locked
+        if (!hasLockedData || isSecurityEnabled) {
+          if (settings.zipCode) {
+            props.setZipCode(settings.zipCode);
+          }
+          if (settings.weatherApiKey) {
+            props.setWeatherApiKey(settings.weatherApiKey);
+          }
+          if (settings.publicAlbumUrl) {
+            props.setPublicAlbumUrl(settings.publicAlbumUrl);
+          }
+          if (settings.githubOwner) {
+            props.setGithubOwner(settings.githubOwner);
+          }
+          if (settings.githubRepo) {
+            props.setGithubRepo(settings.githubRepo);
+          }
+        } else {
+          // Clear sensitive settings when locked to show empty fields
+          props.setZipCode('');
+          props.setWeatherApiKey('');
+          props.setPublicAlbumUrl('');
+          props.setGithubOwner('');
+          props.setGithubRepo('');
+        }
+      } catch (error) {
+        console.error('Failed to initialize settings:', error);
+      }
     };
 
-    loadSettings();
-  }, [setters]);
+    initializeSettings();
+  }, [isInitialized, isSecurityEnabled, hasLockedData]);
+
+  // Re-initialize sensitive settings when security is unlocked
+  useEffect(() => {
+    const reloadSensitiveSettings = async () => {
+      if (!isSecurityEnabled || hasLockedData) return;
+
+      try {
+        const settings = await SettingsStorage.loadAllSettings();
+        
+        if (settings.zipCode) {
+          props.setZipCode(settings.zipCode);
+        }
+        if (settings.weatherApiKey) {
+          props.setWeatherApiKey(settings.weatherApiKey);
+        }
+        if (settings.publicAlbumUrl) {
+          props.setPublicAlbumUrl(settings.publicAlbumUrl);
+        }
+        if (settings.githubOwner) {
+          props.setGithubOwner(settings.githubOwner);
+        }
+        if (settings.githubRepo) {
+          props.setGithubRepo(settings.githubRepo);
+        }
+      } catch (error) {
+        console.error('Failed to reload sensitive settings:', error);
+      }
+    };
+
+    reloadSensitiveSettings();
+  }, [isSecurityEnabled]);
 };

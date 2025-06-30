@@ -79,7 +79,7 @@ const SecurityUnlockBanner = ({ onUnlock }: SecurityUnlockBannerProps) => {
           </div>
           <p className="text-sm text-amber-700 dark:text-amber-300 mb-3">
             Your Google Photos URL, Weather API key, and location data are encrypted. 
-            Enter your security password to access them.
+            Enter your security password to access and edit them.
           </p>
           
           <div className="flex items-center gap-2">

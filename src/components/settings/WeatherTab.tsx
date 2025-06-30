@@ -1,7 +1,9 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { CloudSun } from 'lucide-react';
+import { useSecurity } from '@/contexts/SecurityContext';
+import { useSettings } from '@/contexts/SettingsContext';
 import WeatherSettings from './weather/WeatherSettings';
 import WeatherConnectionTest from './weather/WeatherConnectionTest';
 import WeatherPreview from './weather/WeatherPreview';
@@ -21,6 +23,19 @@ const WeatherTab = ({ zipCode, onZipCodeChange, weatherApiKey, onWeatherApiKeyCh
     data?: any;
   } | null>(null);
   const [showPreview, setShowPreview] = useState(false);
+  const { isSecurityEnabled } = useSecurity();
+
+  // Clear test results when security state changes to force re-testing with new data
+  useEffect(() => {
+    setTestResult(null);
+    setShowPreview(false);
+  }, [isSecurityEnabled]);
+
+  const handleSecurityUnlock = () => {
+    // Force a refresh of the test results when security is unlocked
+    setTestResult(null);
+    setShowPreview(false);
+  };
 
   return (
     <div className="space-y-6">
