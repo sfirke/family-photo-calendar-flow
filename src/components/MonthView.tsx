@@ -5,6 +5,7 @@ import { Event } from '@/types/calendar';
 import { Button } from '@/components/ui/button';
 import DayViewModal from './DayViewModal';
 import WeatherDisplay from './WeatherDisplay';
+import { compareTimeStrings } from '@/utils/timeUtils';
 
 interface MonthViewProps {
   events: Event[];
@@ -28,16 +29,17 @@ const MonthView = ({ events, getWeatherForDate }: MonthViewProps) => {
   const getDayEvents = (day: Date) => {
     const dayEvents = events.filter(event => isSameDay(event.date, day));
     
-    // Sort events: all-day events first, then by time
+    // Sort events: all-day events first (alphabetically), then timed events chronologically
     dayEvents.sort((a, b) => {
-      const aIsAllDay = a.time === 'All day';
-      const bIsAllDay = b.time === 'All day';
+      const aIsAllDay = a.time === 'All day' || a.time.toLowerCase().includes('all day');
+      const bIsAllDay = b.time === 'All day' || b.time.toLowerCase().includes('all day');
       
       if (aIsAllDay && !bIsAllDay) return -1;
       if (!aIsAllDay && bIsAllDay) return 1;
       if (aIsAllDay && bIsAllDay) return a.title.localeCompare(b.title);
       
-      return a.time.localeCompare(b.time);
+      // Both are timed events - sort chronologically
+      return compareTimeStrings(a.time, b.time);
     });
     
     return dayEvents;

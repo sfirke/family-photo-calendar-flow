@@ -5,6 +5,7 @@ import { Event } from '@/types/calendar';
 import { Button } from '@/components/ui/button';
 import EventCard from './EventCard';
 import WeatherDisplay from './WeatherDisplay';
+import { compareTimeStrings } from '@/utils/timeUtils';
 
 interface WeekViewProps {
   events: Event[];
@@ -58,11 +59,11 @@ const WeekView = ({ events, weekOffset, onPreviousWeek, onNextWeek, getWeatherFo
     const allDayEvents = dayEvents.filter(isAllDayEvent);
     const timedEvents = dayEvents.filter(event => !isAllDayEvent(event));
     
-    // Sort all-day events alphabetically
+    // Sort all-day events alphabetically by title
     allDayEvents.sort((a, b) => a.title.localeCompare(b.title));
     
-    // Sort timed events by time
-    timedEvents.sort((a, b) => a.time.localeCompare(b.time));
+    // Sort timed events chronologically by start time
+    timedEvents.sort((a, b) => compareTimeStrings(a.time, b.time));
     
     return { 
       day, 

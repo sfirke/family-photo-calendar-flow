@@ -1,9 +1,9 @@
-
 import React from 'react';
 import { format, isToday, isTomorrow, isYesterday, addDays, startOfDay, differenceInDays, isSameDay } from 'date-fns';
 import { Event } from '@/types/calendar';
 import EventCard from './EventCard';
 import WeatherDisplay from './WeatherDisplay';
+import { compareTimeStrings } from '@/utils/timeUtils';
 
 interface TimelineViewProps {
   events: Event[];
@@ -53,11 +53,11 @@ const TimelineView = ({ events, getWeatherForDate }: TimelineViewProps) => {
     const allDayEvents = dayEvents.filter(isAllDayEvent);
     const timedEvents = dayEvents.filter(event => !isAllDayEvent(event));
     
-    // Sort all-day events alphabetically
+    // Sort all-day events alphabetically by title
     allDayEvents.sort((a, b) => a.title.localeCompare(b.title));
     
-    // Sort timed events by time
-    timedEvents.sort((a, b) => a.time.localeCompare(b.time));
+    // Sort timed events chronologically by start time
+    timedEvents.sort((a, b) => compareTimeStrings(a.time, b.time));
     
     return {
       day,
