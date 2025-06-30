@@ -13,7 +13,7 @@ interface GitHubRelease {
   html_url: string;
 }
 
-interface UpstreamVersionInfo {
+export interface UpstreamVersionInfo {
   version: string;
   name: string;
   releaseNotes: string;

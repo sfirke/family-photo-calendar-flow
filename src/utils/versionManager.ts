@@ -8,12 +8,21 @@
 
 const INSTALLED_VERSION_KEY = 'installed_release_version';
 const INSTALL_DATE_KEY = 'installed_release_date';
+const STORED_VERSION_KEY = 'stored_app_version';
 
 export interface InstalledVersionInfo {
   version: string;
   installDate: string;
   releaseUrl?: string;
   releaseNotes?: string;
+}
+
+export interface VersionInfo {
+  version: string;
+  buildDate?: string;
+  gitHash?: string;
+  buildNumber?: number;
+  environment?: string;
 }
 
 /**
@@ -61,6 +70,71 @@ export const setInstalledVersion = (versionInfo: Partial<InstalledVersionInfo>) 
     }
   } catch (error) {
     console.error('Failed to set installed version:', error);
+  }
+};
+
+/**
+ * Get current version from version.json file
+ */
+export const getCurrentVersion = async (): Promise<string> => {
+  try {
+    const response = await fetch('/version.json');
+    if (!response.ok) {
+      throw new Error('Failed to load version.json');
+    }
+    const versionData = await response.json();
+    return versionData.version || '1.4.2';
+  } catch (error) {
+    console.error('Failed to get current version:', error);
+    return '1.4.2';
+  }
+};
+
+/**
+ * Get stored version from localStorage
+ */
+export const getStoredVersion = (): string | null => {
+  try {
+    return localStorage.getItem(STORED_VERSION_KEY);
+  } catch (error) {
+    console.error('Failed to get stored version:', error);
+    return null;
+  }
+};
+
+/**
+ * Set stored version in localStorage
+ */
+export const setStoredVersion = (version: string): void => {
+  try {
+    localStorage.setItem(STORED_VERSION_KEY, version);
+  } catch (error) {
+    console.error('Failed to set stored version:', error);
+  }
+};
+
+/**
+ * Get comprehensive version information
+ */
+export const getVersionInfo = async (): Promise<VersionInfo | null> => {
+  try {
+    const response = await fetch('/version.json');
+    if (!response.ok) {
+      throw new Error('Failed to load version.json');
+    }
+    const versionData = await response.json();
+    return {
+      version: versionData.version || '1.4.2',
+      buildDate: versionData.buildDate,
+      gitHash: versionData.gitHash,
+      buildNumber: versionData.buildNumber,
+      environment: versionData.environment
+    };
+  } catch (error) {
+    console.error('Failed to get version info:', error);
+    return {
+      version: '1.4.2'
+    };
   }
 };
 
