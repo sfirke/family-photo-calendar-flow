@@ -19,10 +19,41 @@ runs:
       run: |
         git add public/version.json
         git commit -m "chore(release): bump version to ${{ inputs.version }}"
-        git tag "v${{ inputs.version }}"
+        
+        # Create tag with error handling
+        if ! git tag "v${{ inputs.version }}"; then
+          echo "⚠️ Tag v${{ inputs.version }} already exists, checking if we need to create a new version..."
+          
+          # If tag exists, the version management should have handled this
+          # This is a fallback in case something went wrong
+          echo "❌ Tag creation failed - this should have been handled in version management"
+          exit 1
+        fi
 
     - name: Push changes
       shell: bash
       run: |
-        git push origin main
-        git push origin "v${{ inputs.version }}"
+        # Push changes with retry logic
+        MAX_RETRIES=3
+        RETRY_COUNT=0
+        
+        while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+          if git push origin main && git push origin "v${{ inputs.version }}"; then
+            echo "✅ Successfully pushed changes and tag"
+            break
+          else
+            RETRY_COUNT=$((RETRY_COUNT + 1))
+            echo "⚠️ Push failed, attempt $RETRY_COUNT of $MAX_RETRIES"
+            
+            if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
+              echo "🔄 Retrying in 5 seconds..."
+              sleep 5
+              
+              # Pull latest changes before retry
+              git pull origin main --rebase || true
+            else
+              echo "❌ Failed to push after $MAX_RETRIES attempts"
+              exit 1
+            fi
+          fi
+        done

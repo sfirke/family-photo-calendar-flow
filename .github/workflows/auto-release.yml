@@ -113,6 +113,22 @@ jobs:
             ")
           fi
           
+          # Check if tag already exists
+          if git rev-parse "v$NEW_VERSION" >/dev/null 2>&1; then
+            echo "⚠️ Tag v$NEW_VERSION already exists, finding next available version..."
+            
+            # Find next available patch version
+            PATCH_NUM=$(echo $NEW_VERSION | cut -d. -f3)
+            BASE_VERSION=$(echo $NEW_VERSION | cut -d. -f1-2)
+            
+            while git rev-parse "v$BASE_VERSION.$PATCH_NUM" >/dev/null 2>&1; do
+              PATCH_NUM=$((PATCH_NUM + 1))
+            done
+            
+            NEW_VERSION="$BASE_VERSION.$PATCH_NUM"
+            echo "📝 Using next available version: v$NEW_VERSION"
+          fi
+          
           # Update version.json
           BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%S.%03dZ")
           GIT_HASH=$(git rev-parse --short HEAD)
@@ -128,14 +144,40 @@ jobs:
           }
           EOF
           
-          # Commit and tag
+          # Commit and tag with error handling
           git add public/version.json
           git commit -m "chore(release): bump version to $NEW_VERSION [skip-release]"
-          git tag "v$NEW_VERSION"
           
-          # Push changes
-          git push origin main
-          git push origin "v$NEW_VERSION"
+          # Create tag with error handling
+          if ! git tag "v$NEW_VERSION"; then
+            echo "❌ Failed to create tag v$NEW_VERSION"
+            exit 1
+          fi
+          
+          # Push changes with retry logic
+          MAX_RETRIES=3
+          RETRY_COUNT=0
+          
+          while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+            if git push origin main && git push origin "v$NEW_VERSION"; then
+              echo "✅ Successfully pushed changes and tag"
+              break
+            else
+              RETRY_COUNT=$((RETRY_COUNT + 1))
+              echo "⚠️ Push failed, attempt $RETRY_COUNT of $MAX_RETRIES"
+              
+              if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
+                echo "🔄 Retrying in 5 seconds..."
+                sleep 5
+                
+                # Pull latest changes before retry
+                git pull origin main --rebase || true
+              else
+                echo "❌ Failed to push after $MAX_RETRIES attempts"
+                exit 1
+              fi
+            fi
+          done
           
           # Create simple release notes
           COMMIT_MSG="${{ github.event.head_commit.message }}"

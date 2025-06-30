@@ -80,6 +80,22 @@ runs:
           ")
         fi
         
+        # Check if tag already exists and find next available version
+        if git rev-parse "v$NEW_VERSION" >/dev/null 2>&1; then
+          echo "⚠️ Tag v$NEW_VERSION already exists, finding next available version..."
+          
+          # Find next available patch version
+          PATCH_NUM=$(echo $NEW_VERSION | cut -d. -f3)
+          BASE_VERSION=$(echo $NEW_VERSION | cut -d. -f1-2)
+          
+          while git rev-parse "v$BASE_VERSION.$PATCH_NUM" >/dev/null 2>&1; do
+            PATCH_NUM=$((PATCH_NUM + 1))
+          done
+          
+          NEW_VERSION="$BASE_VERSION.$PATCH_NUM"
+          echo "📝 Using next available version: v$NEW_VERSION"
+        fi
+        
         echo "New version: $NEW_VERSION"
         
         # Update version.json
