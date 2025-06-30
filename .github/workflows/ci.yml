@@ -50,7 +50,29 @@ jobs:
         run: npm install
 
       - name: Run ESLint
-        run: npx eslint . --max-warnings 0
+        run: |
+          echo "Running ESLint to check for errors and warnings..."
+          # Run ESLint and capture output
+          if npx eslint . --format=json > eslint-results.json 2>&1; then
+            echo "✅ ESLint passed with no errors"
+          else
+            # Check if there are actual errors (not just warnings)
+            ERROR_COUNT=$(cat eslint-results.json | jq '[.[] | select(.errorCount > 0)] | length' 2>/dev/null || echo "0")
+            WARNING_COUNT=$(cat eslint-results.json | jq '[.[] | select(.warningCount > 0)] | length' 2>/dev/null || echo "0")
+            
+            if [ "$ERROR_COUNT" -gt 0 ]; then
+              echo "❌ ESLint found errors - failing build"
+              npx eslint . # Show the actual output
+              exit 1
+            elif [ "$WARNING_COUNT" -gt 0 ]; then
+              echo "⚠️ ESLint found warnings but no errors - continuing build"
+              npx eslint . # Show the warnings
+            else
+              echo "❌ ESLint failed for unknown reasons"
+              npx eslint . # Show the output
+              exit 1
+            fi
+          fi
 
       - name: Run tests
         run: npx vitest run

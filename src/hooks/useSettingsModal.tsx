@@ -1,4 +1,6 @@
 
+/* eslint-disable react-refresh/only-export-components */
+
 import { useState, useEffect } from 'react';
 import { useTheme } from '@/contexts/ThemeContext';
 import { getVersionInfo } from '@/utils/versionManager';

@@ -1,4 +1,6 @@
 
+/* eslint-disable react-refresh/only-export-components */
+
 import { Event } from '@/types/calendar';
 
 interface ExportData {

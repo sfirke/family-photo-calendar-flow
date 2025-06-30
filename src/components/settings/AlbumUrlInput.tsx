@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -22,7 +21,7 @@ const AlbumUrlInput = ({ onTestConnection }: AlbumUrlInputProps) => {
   const [isTesting, setIsTesting] = useState(false);
   const [validationStatus, setValidationStatus] = useState<'idle' | 'valid' | 'invalid'>('idle');
 
-  const validateAlbumUrl = (url: string) => {
+  const validateAlbumUrl = useCallback((url: string) => {
     if (!url.trim()) {
       setValidationStatus('idle');
       return;
@@ -38,7 +37,7 @@ const AlbumUrlInput = ({ onTestConnection }: AlbumUrlInputProps) => {
         variant: "destructive"
       });
     }
-  };
+  }, [toast]);
 
   const testConnection = async () => {
     if (!albumUrl.trim() || validationStatus !== 'valid') return;
@@ -61,7 +60,7 @@ const AlbumUrlInput = ({ onTestConnection }: AlbumUrlInputProps) => {
   useEffect(() => {
     setAlbumUrl(publicAlbumUrl || '');
     validateAlbumUrl(publicAlbumUrl || '');
-  }, [publicAlbumUrl]);
+  }, [publicAlbumUrl, validateAlbumUrl]);
 
   useEffect(() => {
     const timeoutId = setTimeout(() => {
@@ -69,7 +68,7 @@ const AlbumUrlInput = ({ onTestConnection }: AlbumUrlInputProps) => {
     }, 500);
 
     return () => clearTimeout(timeoutId);
-  }, [albumUrl]);
+  }, [albumUrl, validateAlbumUrl]);
 
   return (
     <Card className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">

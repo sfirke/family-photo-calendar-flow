@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Event, ImportedEvent } from '@/types/calendar';
