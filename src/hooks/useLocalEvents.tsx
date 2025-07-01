@@ -28,6 +28,9 @@ export const useLocalEvents = () => {
   const icalEvents = getICalEvents();
   const notionEvents = getNotionEvents();
 
+  // Check if we have any events first
+  const hasAnyEvents = localEvents.length > 0 || icalEvents.length > 0 || notionEvents.length > 0;
+
   // Use event aggregation hook
   const {
     allEvents,
@@ -38,7 +41,7 @@ export const useLocalEvents = () => {
     localEvents,
     icalEvents,
     notionEvents,
-    useSampleData: !hasEvents
+    useSampleData: !hasAnyEvents
   });
 
   // Use import/export hook
