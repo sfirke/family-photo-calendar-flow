@@ -1,6 +1,4 @@
-
 import { NotionEvent } from '@/types/notion';
-import { supabase } from '@/integrations/supabase/client';
 
 interface NotionIntegrationInfo {
   type: string;
@@ -16,26 +14,72 @@ interface NotionIntegrationInfo {
 }
 
 class NotionService {
-  private async callNotionAPI(action: string, params: any = {}) {
+  private readonly baseURL = 'https://api.notion.com/v1';
+  private readonly headers = {
+    'Notion-Version': '2022-06-28',
+    'Content-Type': 'application/json',
+  };
+
+  private async makeNotionRequest(endpoint: string, token: string, options: RequestInit = {}) {
     try {
-      const { data, error } = await supabase.functions.invoke('notion-api', {
-        body: { action, ...params }
+      const response = await fetch(`${this.baseURL}${endpoint}`, {
+        ...options,
+        headers: {
+          ...this.headers,
+          'Authorization': `Bearer ${token}`,
+          ...options.headers,
+        },
       });
 
-      if (error) {
-        console.error('Edge function error:', error);
-        throw new Error(error.message || 'Failed to call Notion API');
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(this.classifyNotionError(error));
       }
 
-      if (data?.error) {
-        throw new Error(data.error);
-      }
-
-      return data;
+      return await response.json();
     } catch (error) {
-      console.error('Notion API call failed:', error);
+      console.error(`Notion API request failed for ${endpoint}:`, error);
       throw error;
     }
+  }
+
+  private classifyNotionError(error: any): string {
+    if (error?.code) {
+      switch (error.code) {
+        case 'unauthorized':
+          return 'Invalid Notion token. Please check your integration token and ensure it has the correct permissions.';
+        case 'restricted_resource':
+          return 'Access forbidden. Please ensure your integration has access to the requested page or database.';
+        case 'object_not_found':
+          return 'Page or database not found. Please check the URL and ensure the page/database exists and is shared with your integration.';
+        case 'rate_limited':
+          return 'Rate limit exceeded. Please wait a moment and try again.';
+        case 'invalid_json':
+          return 'Invalid request format. Please check your integration token format and try again.';
+        case 'invalid_request':
+          return 'Invalid request. Please check the page/database URL and try again.';
+        case 'validation_error':
+          return 'Validation error. Please check your request parameters.';
+        case 'conflict_error':
+          return 'Conflict error. The resource may have been modified by another process.';
+        default:
+          return `Notion API error: ${error.message || 'Unknown error'}`;
+      }
+    }
+
+    if (error?.message) {
+      if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+        return 'Network error: Unable to reach Notion API. Please check your internet connection and try again.';
+      }
+      
+      if (error.name === 'AbortError' || error.message.includes('timeout')) {
+        return 'Request timed out. The Notion API may be slow to respond. Please try again.';
+      }
+
+      return `Unexpected error: ${error.message}`;
+    }
+
+    return 'An unknown error occurred while connecting to Notion.';
   }
 
   private validateTokenFormat(token: string): boolean {
@@ -49,8 +93,20 @@ class NotionService {
 
     try {
       console.log('🔐 Getting Notion integration info...');
-      const result = await this.callNotionAPI('getIntegrationInfo', { token });
-      return result;
+      const userInfo = await this.makeNotionRequest('/users/me', token);
+      
+      return {
+        type: userInfo.type || 'bot',
+        name: userInfo.name || 'Unknown Integration',
+        capabilities: {
+          read_content: true,
+          read_user_info: true
+        },
+        workspace: userInfo.workspace ? {
+          name: userInfo.workspace.name || 'Unknown Workspace',
+          id: userInfo.workspace.id || ''
+        } : undefined
+      };
     } catch (error) {
       console.error('Failed to get integration info:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown validation error';
@@ -60,7 +116,7 @@ class NotionService {
 
   async testPageAccess(pageId: string, token: string): Promise<boolean> {
     try {
-      await this.callNotionAPI('getPage', { pageId, token });
+      await this.makeNotionRequest(`/pages/${pageId}`, token);
       return true;
     } catch (error) {
       console.warn(`No access to page ${pageId}:`, error);
@@ -70,7 +126,7 @@ class NotionService {
 
   async testDatabaseAccess(databaseId: string, token: string): Promise<boolean> {
     try {
-      await this.callNotionAPI('getDatabase', { databaseId, token });
+      await this.makeNotionRequest(`/databases/${databaseId}`, token);
       return true;
     } catch (error) {
       console.warn(`No access to database ${databaseId}:`, error);
@@ -80,7 +136,7 @@ class NotionService {
 
   async getPage(pageId: string, token: string): Promise<any> {
     try {
-      return await this.callNotionAPI('getPage', { pageId, token });
+      return await this.makeNotionRequest(`/pages/${pageId}`, token);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       throw new Error(errorMessage);
@@ -89,7 +145,7 @@ class NotionService {
 
   async getDatabase(databaseId: string, token: string): Promise<any> {
     try {
-      return await this.callNotionAPI('getDatabase', { databaseId, token });
+      return await this.makeNotionRequest(`/databases/${databaseId}`, token);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       throw new Error(errorMessage);
@@ -98,7 +154,18 @@ class NotionService {
 
   async queryDatabase(databaseId: string, token: string, filter?: any): Promise<any> {
     try {
-      return await this.callNotionAPI('queryDatabase', { databaseId, token, filter });
+      return await this.makeNotionRequest(`/databases/${databaseId}/query`, token, {
+        method: 'POST',
+        body: JSON.stringify({
+          filter,
+          sorts: [
+            {
+              property: 'Date',
+              direction: 'ascending'
+            }
+          ]
+        }),
+      });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       throw new Error(errorMessage);
@@ -123,6 +190,12 @@ class NotionService {
   }
 
   transformToEvents(pages: any[], calendarId: string, calendarName: string, color: string): NotionEvent[] {
+    // Ensure pages is an array
+    if (!Array.isArray(pages)) {
+      console.warn('Expected array of pages, got:', typeof pages);
+      return [];
+    }
+
     return pages.map(page => {
       const title = this.extractTitle(page);
       const date = this.extractDate(page);
@@ -241,9 +314,9 @@ class NotionService {
         return false;
       }
 
-      const result = await this.callNotionAPI('validate', { token });
+      await this.makeNotionRequest('/users/me', token);
       console.log('✅ Notion token validation successful');
-      return result === true;
+      return true;
     } catch (error) {
       console.error('❌ Notion token validation failed:', error);
       return false;
@@ -251,17 +324,32 @@ class NotionService {
   }
 
   async validateCalendarAccess(url: string, token: string): Promise<{ hasAccess: boolean; resourceType: 'page' | 'database' | null; error?: string }> {
-    try {
-      const result = await this.callNotionAPI('validateAccess', { url, token });
-      return result;
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      return { 
-        hasAccess: false, 
-        resourceType: null, 
-        error: errorMessage
-      };
+    const pageId = this.extractPageIdFromUrl(url);
+    if (!pageId) {
+      return { hasAccess: false, resourceType: null, error: 'Invalid Notion URL format' };
     }
+
+    // Try database first
+    try {
+      await this.makeNotionRequest(`/databases/${pageId}`, token);
+      return { hasAccess: true, resourceType: 'database' };
+    } catch (error) {
+      console.log('Database access failed, trying page...');
+    }
+
+    // Try page
+    try {
+      await this.makeNotionRequest(`/pages/${pageId}`, token);
+      return { hasAccess: true, resourceType: 'page' };
+    } catch (error) {
+      console.log('Page access failed');
+    }
+
+    return { 
+      hasAccess: false, 
+      resourceType: null, 
+      error: 'Page/database not shared with integration or does not exist' 
+    };
   }
 }
 
