@@ -2,6 +2,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useLocalEvents } from '@/hooks/useLocalEvents';
 import { useICalCalendars } from '@/hooks/useICalCalendars';
+import { useNotionCalendars } from '@/hooks/useNotionCalendars';
 
 const SELECTED_CALENDARS_KEY = 'family_calendar_selected_calendars';
 
@@ -10,28 +11,47 @@ export const useCalendarSelection = () => {
   const [refreshKey, setRefreshKey] = useState(0);
   const { localEvents } = useLocalEvents();
   const { getICalEvents, calendars: iCalCalendars } = useICalCalendars();
+  const { events: notionEvents, calendars: notionCalendars } = useNotionCalendars();
   const [isLoading, setIsLoading] = useState(false);
 
-  // Force refresh of calendar selection when iCal calendars change
+  // Force refresh of calendar selection when calendars change
   useEffect(() => {
     setRefreshKey(prev => prev + 1);
-  }, [iCalCalendars.length]);
+  }, [iCalCalendars.length, notionCalendars.length]);
 
-  // Get all events (local + iCal) with defensive programming - include refreshKey in dependency
+  // Get all events (local + iCal + Notion) with defensive programming
   const allEvents = useMemo(() => {
     try {
-      // Ensure localEvents is an array before spreading
       const safeLocalEvents = Array.isArray(localEvents) ? localEvents : [];
       const iCalEvents = getICalEvents();
       const safeICalEvents = Array.isArray(iCalEvents) ? iCalEvents : [];
-      return [...safeLocalEvents, ...safeICalEvents];
+      const safeNotionEvents = Array.isArray(notionEvents) ? notionEvents : [];
+      
+      // Convert Notion events to Event format for counting
+      const convertedNotionEvents = safeNotionEvents.map(notionEvent => ({
+        id: notionEvent.id,
+        title: notionEvent.title,
+        time: notionEvent.time,
+        location: notionEvent.location || '',
+        attendees: 0,
+        category: 'Personal' as const,
+        color: notionEvent.color,
+        description: notionEvent.description || '',
+        organizer: 'Notion',
+        date: notionEvent.date,
+        calendarId: notionEvent.calendarId,
+        calendarName: notionEvent.calendarName,
+        source: 'notion' as const
+      }));
+      
+      return [...safeLocalEvents, ...safeICalEvents, ...convertedNotionEvents];
     } catch (error) {
       console.warn('Error combining events in useCalendarSelection:', error);
       return [];
     }
-  }, [localEvents, getICalEvents, refreshKey]);
+  }, [localEvents, getICalEvents, notionEvents, refreshKey]);
 
-  // Generate calendars from all events + iCal calendars (even if they don't have events yet)
+  // Generate calendars from all events + iCal + Notion calendars
   const calendarsFromEvents = useMemo(() => {
     const calendarMap = new Map();
     
@@ -46,7 +66,7 @@ export const useCalendarSelection = () => {
       });
     }
 
-    // Add ALL iCal calendars to always show them in the Calendar Feeds section
+    // Add ALL iCal calendars
     if (Array.isArray(iCalCalendars)) {
       iCalCalendars.forEach(iCalCalendar => {
         calendarMap.set(iCalCalendar.id, {
@@ -59,6 +79,24 @@ export const useCalendarSelection = () => {
           enabled: iCalCalendar.enabled,
           lastSync: iCalCalendar.lastSync,
           url: iCalCalendar.url
+        });
+      });
+    }
+
+    // Add ALL Notion calendars
+    if (Array.isArray(notionCalendars)) {
+      notionCalendars.forEach(notionCalendar => {
+        calendarMap.set(notionCalendar.id, {
+          id: notionCalendar.id,
+          summary: notionCalendar.name,
+          primary: false,
+          eventCount: calendarEventCounts.get(notionCalendar.id) || 0,
+          hasEvents: calendarEventCounts.has(notionCalendar.id),
+          color: notionCalendar.color,
+          enabled: notionCalendar.enabled,
+          lastSync: notionCalendar.lastSync,
+          url: notionCalendar.url,
+          type: 'notion'
         });
       });
     }
@@ -96,7 +134,7 @@ export const useCalendarSelection = () => {
       if (a.eventCount !== b.eventCount) return b.eventCount - a.eventCount;
       return a.summary.localeCompare(b.summary);
     });
-  }, [allEvents, iCalCalendars, refreshKey]);
+  }, [allEvents, iCalCalendars, notionCalendars, refreshKey]);
 
   // Load selected calendars from localStorage
   useEffect(() => {
@@ -184,6 +222,8 @@ export const useCalendarSelection = () => {
     selectCalendarsWithEvents,
     clearAllCalendars,
     cleanupDeletedCalendar,
-    forceRefresh
+    forceRefresh,
+    // Include Notion events for the filtering hook
+    notionEvents
   };
 };
