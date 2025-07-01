@@ -1,16 +1,12 @@
 
-/**
- * Settings Initialization Hook
- * 
- * Handles the loading and initialization of all application settings
- * from both secure and regular storage on app startup.
- */
-
 import { useEffect } from 'react';
-import { SettingsStorage } from './settingsStorage';
-import { useSecurity } from '../SecurityContext';
+import { useDisplaySettings } from './useDisplaySettings';
+import { useWeatherSettings } from './useWeatherSettings';
+import { usePhotoSettings } from './usePhotoSettings';
+import { useGitHubSettings } from './useGitHubSettings';
+import { useNotionSettings } from './useNotionSettings';
 
-interface UseSettingsInitializationProps {
+interface SettingsInitializationProps {
   setTheme: (theme: 'light' | 'dark' | 'system') => void;
   setDefaultView: (view: 'month' | 'week' | 'timeline') => void;
   setZipCode: (zipCode: string) => void;
@@ -18,102 +14,35 @@ interface UseSettingsInitializationProps {
   setPublicAlbumUrl: (url: string) => void;
   setGithubOwner: (owner: string) => void;
   setGithubRepo: (repo: string) => void;
+  setNotionToken: (token: string) => void;
   setBackgroundDuration: (duration: number) => void;
-  setSelectedAlbum: (album: string) => void;
+  setSelectedAlbum: (albumId: string | null) => void;
 }
 
-export const useSettingsInitialization = (props: UseSettingsInitializationProps) => {
-  const { isSecurityEnabled, hasLockedData, isInitialized } = useSecurity();
+export const useSettingsInitialization = (props: SettingsInitializationProps) => {
+  const { initializeDisplaySettings } = useDisplaySettings();
+  const { initializeWeatherSettings } = useWeatherSettings();
+  const { initializePhotoSettings } = usePhotoSettings();
+  const { initializeGitHubSettings } = useGitHubSettings();
+  const { initializeNotionSettings } = useNotionSettings();
 
   useEffect(() => {
-    const initializeSettings = async () => {
-      if (!isInitialized) return;
-
-      console.log('initializeSettings - Security state:', { isSecurityEnabled, hasLockedData });
-
-      try {
-        const settings = await SettingsStorage.loadAllSettings();
-
-        // Initialize non-sensitive settings always
-        if (settings.theme) {
-          props.setTheme(settings.theme);
-        }
-        if (settings.defaultView) {
-          props.setDefaultView(settings.defaultView);
-        }
-        if (settings.backgroundDuration) {
-          props.setBackgroundDuration(parseInt(settings.backgroundDuration));
-        }
-        if (settings.selectedAlbum) {
-          props.setSelectedAlbum(settings.selectedAlbum);
-        }
-
-        // Handle sensitive settings based on security state
-        if (hasLockedData) {
-          // Clear sensitive settings when locked to show empty fields
-          console.log('initializeSettings - Clearing sensitive settings (locked)');
-          props.setZipCode('');
-          props.setWeatherApiKey('');
-          props.setPublicAlbumUrl('');
-          props.setGithubOwner('');
-          props.setGithubRepo('');
-        } else if (isSecurityEnabled || !isSecurityEnabled) {
-          // Load sensitive settings when unlocked or when security is disabled
-          console.log('initializeSettings - Loading sensitive settings');
-          if (settings.zipCode) {
-            props.setZipCode(settings.zipCode);
-          }
-          if (settings.weatherApiKey) {
-            props.setWeatherApiKey(settings.weatherApiKey);
-          }
-          if (settings.publicAlbumUrl) {
-            props.setPublicAlbumUrl(settings.publicAlbumUrl);
-          }
-          if (settings.githubOwner) {
-            props.setGithubOwner(settings.githubOwner);
-          }
-          if (settings.githubRepo) {
-            props.setGithubRepo(settings.githubRepo);
-          }
-        }
-      } catch (error) {
-        console.error('Failed to initialize settings:', error);
-      }
+    const initializeAllSettings = async () => {
+      await Promise.all([
+        initializeDisplaySettings(),
+        initializeWeatherSettings(),
+        initializePhotoSettings(),
+        initializeGitHubSettings(),
+        initializeNotionSettings()
+      ]);
     };
 
-    initializeSettings();
-  }, [isInitialized, isSecurityEnabled, hasLockedData]);
-
-  // Re-initialize sensitive settings when security is unlocked
-  useEffect(() => {
-    const reloadSensitiveSettings = async () => {
-      if (hasLockedData || !isInitialized) return;
-
-      console.log('reloadSensitiveSettings - Reloading after unlock');
-
-      try {
-        const settings = await SettingsStorage.loadAllSettings();
-        
-        if (settings.zipCode) {
-          props.setZipCode(settings.zipCode);
-        }
-        if (settings.weatherApiKey) {
-          props.setWeatherApiKey(settings.weatherApiKey);
-        }
-        if (settings.publicAlbumUrl) {
-          props.setPublicAlbumUrl(settings.publicAlbumUrl);
-        }
-        if (settings.githubOwner) {
-          props.setGithubOwner(settings.githubOwner);
-        }
-        if (settings.githubRepo) {
-          props.setGithubRepo(settings.githubRepo);
-        }
-      } catch (error) {
-        console.error('Failed to reload sensitive settings:', error);
-      }
-    };
-
-    reloadSensitiveSettings();
-  }, [isSecurityEnabled, hasLockedData, isInitialized]);
+    initializeAllSettings();
+  }, [
+    initializeDisplaySettings,
+    initializeWeatherSettings,
+    initializePhotoSettings,
+    initializeGitHubSettings,
+    initializeNotionSettings
+  ]);
 };
