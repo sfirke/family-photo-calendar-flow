@@ -9,7 +9,7 @@ import {
   APIResponseError,
   ClientErrorCode,
   isNotionClientError
-} from '@notionhq/client/build/src/api-types';
+} from '@notionhq/client/build/src/api-endpoints';
 import { NotionEvent } from '@/types/notion';
 
 interface NotionIntegrationInfo {
@@ -29,7 +29,7 @@ class NotionService {
   private createClient(token: string): Client {
     return new Client({
       auth: token,
-      notionVersion: '2022-02-22'
+      notionVersion: '2022-06-28'
     });
   }
 
@@ -84,7 +84,7 @@ class NotionService {
     try {
       console.log('🔐 Getting Notion integration info...');
       const notion = this.createClient(token);
-      const userInfo = await notion.users.me() as GetUserResponse;
+      const userInfo = await notion.users.me();
       
       return {
         type: userInfo.type || 'bot',
@@ -217,7 +217,7 @@ class NotionService {
     
     // Find title property
     for (const [key, property] of Object.entries(properties)) {
-      if (property.type === 'title' && property.title) {
+      if (property && typeof property === 'object' && 'type' in property && property.type === 'title' && 'title' in property && property.title) {
         const titleText = property.title
           .map(text => text.plain_text)
           .join('');
@@ -233,7 +233,7 @@ class NotionService {
     
     // Look for date properties
     for (const [key, property] of Object.entries(properties)) {
-      if (property.type === 'date' && property.date?.start) {
+      if (property && typeof property === 'object' && 'type' in property && property.type === 'date' && 'date' in property && property.date?.start) {
         return new Date(property.date.start);
       }
     }
@@ -246,7 +246,7 @@ class NotionService {
     
     // Look for date properties with time
     for (const [key, property] of Object.entries(properties)) {
-      if (property.type === 'date' && property.date?.start) {
+      if (property && typeof property === 'object' && 'type' in property && property.type === 'date' && 'date' in property && property.date?.start) {
         const dateString = property.date.start;
         const timeMatch = dateString.match(/T(\d{2}:\d{2})/);
         return timeMatch ? timeMatch[1] : null;
@@ -261,7 +261,7 @@ class NotionService {
     
     // Look for rich text properties that might contain description
     for (const [key, property] of Object.entries(properties)) {
-      if (property.type === 'rich_text' && property.rich_text) {
+      if (property && typeof property === 'object' && 'type' in property && property.type === 'rich_text' && 'rich_text' in property && property.rich_text) {
         const description = property.rich_text
           .map(text => text.plain_text)
           .join('');
@@ -280,14 +280,14 @@ class NotionService {
       const keyLower = key.toLowerCase();
       
       if (keyLower.includes('location')) {
-        if (property.type === 'rich_text' && property.rich_text) {
+        if (property && typeof property === 'object' && 'type' in property && property.type === 'rich_text' && 'rich_text' in property && property.rich_text) {
           const location = property.rich_text
             .map(text => text.plain_text)
             .join('');
           if (location) return location;
         }
         
-        if (property.type === 'select' && property.select) {
+        if (property && typeof property === 'object' && 'type' in property && property.type === 'select' && 'select' in property && property.select) {
           return property.select.name || '';
         }
       }

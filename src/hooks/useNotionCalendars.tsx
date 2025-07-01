@@ -1,9 +1,7 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { NotionCalendar, NotionEvent, NotionSyncStatus, NotionPage } from '@/types/notion';
 import { notionService } from '@/services/notionService';
 import { useSettings } from '@/contexts/SettingsContext';
-import { PageObjectResponse } from '@notionhq/client/build/src/api-types';
 
 const NOTION_CALENDARS_KEY = 'notion_calendars';
 const NOTION_EVENTS_KEY = 'notion_events';
@@ -110,13 +108,13 @@ export const useNotionCalendars = () => {
       }
 
       let notionEvents: NotionEvent[] = [];
-      let pages: PageObjectResponse[] = [];
+      let pages: NotionPage[] = [];
 
       try {
         // First try as database
         const database = await notionService.getDatabase(pageId, notionToken);
         const queryResult = await notionService.queryDatabase(pageId, notionToken);
-        pages = queryResult.results as PageObjectResponse[];
+        pages = queryResult.results as NotionPage[];
       } catch (dbError) {
         // If database fails, try as page
         const page = await notionService.getPage(pageId, notionToken);

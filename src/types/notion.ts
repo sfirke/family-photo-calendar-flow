@@ -3,7 +3,7 @@ import {
   PageObjectResponse, 
   DatabaseObjectResponse, 
   QueryDatabaseResponse 
-} from '@notionhq/client/build/src/api-types';
+} from '@notionhq/client/build/src/api-endpoints';
 
 export interface NotionIntegrationToken {
   token: string;
