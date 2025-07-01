@@ -1,4 +1,6 @@
+
 import { NotionPage, NotionDatabase, NotionApiResponse, NotionEvent } from '@/types/notion';
+import { notionCorsProxy } from '@/utils/notion/notionCorsProxy';
 
 interface RequestDebugInfo {
   url: string;
@@ -9,6 +11,7 @@ interface RequestDebugInfo {
   responseText: string;
   contentType: string | null;
   serviceWorkerResponse: boolean;
+  proxyUsed?: string;
 }
 
 interface NotionIntegrationInfo {
@@ -26,15 +29,13 @@ interface NotionIntegrationInfo {
 
 class NotionService {
   private baseUrl = 'https://api.notion.com/v1';
-  private version = '2022-02-22'; // Updated to latest stable version for internal integrations
+  private version = '2022-02-22';
 
   private validateTokenFormat(token: string): boolean {
-    // Notion integration tokens should start with "ntn_" and be at least 50 characters
     return token.startsWith('ntn_') && token.length >= 50;
   }
 
   private detectServiceWorkerResponse(response: Response, responseText: string): boolean {
-    // Detect if this response came from our service worker
     const contentType = response.headers.get('content-type');
     return (
       response.status === 200 && 
@@ -46,12 +47,10 @@ class NotionService {
   private normalizeHeaders(headers?: HeadersInit): Record<string, string> {
     if (!headers) return {};
     
-    // If it's already a plain object, return it
     if (headers.constructor === Object) {
       return headers as Record<string, string>;
     }
     
-    // If it's a Headers object
     if (headers instanceof Headers) {
       const normalized: Record<string, string> = {};
       headers.forEach((value, key) => {
@@ -60,7 +59,6 @@ class NotionService {
       return normalized;
     }
     
-    // If it's an array of arrays
     if (Array.isArray(headers)) {
       const normalized: Record<string, string> = {};
       headers.forEach(([key, value]) => {
@@ -69,27 +67,26 @@ class NotionService {
       return normalized;
     }
     
-    // Fallback: return empty object
     return {};
   }
 
   private classifyError(error: Error, response?: Response): string {
-    // Network connectivity errors
     if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
       return 'Network error: Unable to reach Notion API. Please check your internet connection and try again.';
     }
 
-    // Timeout errors
     if (error.name === 'AbortError' || error.message.includes('timeout')) {
       return 'Request timed out. The Notion API may be slow to respond. Please try again.';
     }
 
-    // Service worker interference
     if (error.message.includes('Service worker')) {
       return 'Service worker is interfering with API requests. Please refresh the page or disable the service worker.';
     }
 
-    // HTTP status errors
+    if (error.message.includes('CORS') || error.message.includes('cors')) {
+      return 'Network access blocked. Attempting to use proxy servers to connect to Notion API.';
+    }
+
     if (response) {
       switch (response.status) {
         case 400:
@@ -123,6 +120,7 @@ class NotionService {
     console.log('Status:', debugInfo.status, debugInfo.statusText);
     console.log('Content-Type:', debugInfo.contentType);
     console.log('Service Worker Response:', debugInfo.serviceWorkerResponse);
+    console.log('Proxy Used:', debugInfo.proxyUsed || 'None (direct request)');
     console.log('Response Text:', debugInfo.responseText);
     if (error) {
       console.error('Error:', error);
@@ -131,7 +129,6 @@ class NotionService {
   }
 
   private async makeRequest(endpoint: string, token: string, options: RequestInit = {}, bypassServiceWorker = false) {
-    // Validate token format first
     if (!this.validateTokenFormat(token)) {
       throw new Error('Invalid token format. Notion tokens should start with "ntn_" and be at least 50 characters long.');
     }
@@ -143,11 +140,9 @@ class NotionService {
       'Content-Type': 'application/json',
     };
     
-    // Normalize and merge headers
     const normalizedOptionHeaders = this.normalizeHeaders(options.headers);
     const headers = { ...baseHeaders, ...normalizedOptionHeaders };
 
-    // Add cache-busting for critical requests to bypass service worker
     if (bypassServiceWorker) {
       headers['Cache-Control'] = 'no-cache, no-store, must-revalidate';
       headers['Pragma'] = 'no-cache';
@@ -160,9 +155,8 @@ class NotionService {
     try {
       console.log(`🚀 Making Notion API request to: ${url}`);
       
-      // Add timeout to prevent hanging requests
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
 
       const requestOptions: RequestInit = {
         ...options,
@@ -175,7 +169,6 @@ class NotionService {
       response = await fetch(url, requestOptions);
       clearTimeout(timeoutId);
 
-      // Get response text for debugging
       responseText = await response.text();
       const contentType = response.headers.get('content-type');
       const serviceWorkerResponse = this.detectServiceWorkerResponse(response, responseText);
@@ -186,23 +179,20 @@ class NotionService {
         headers,
         status: response.status,
         statusText: response.statusText,
-        responseText: responseText.substring(0, 500), // Limit for logging
+        responseText: responseText.substring(0, 500),
         contentType,
         serviceWorkerResponse,
       };
 
-      // Check for service worker interference
       if (serviceWorkerResponse) {
         this.logRequestDebug(debugInfo);
         throw new Error('Service worker is interfering with API requests. The request was intercepted and returned an "Offline" response instead of reaching the Notion API. Please refresh the page or disable the service worker.');
       }
 
-      // Check if response is not ok
       if (!response.ok) {
         this.logRequestDebug(debugInfo);
         const errorMessage = this.classifyError(new Error(`HTTP ${response.status}`), response);
         
-        // Try to parse error as JSON for additional context
         if (contentType && contentType.includes('application/json')) {
           try {
             const errorData = JSON.parse(responseText);
@@ -217,13 +207,11 @@ class NotionService {
         throw new Error(errorMessage);
       }
 
-      // Check if response is JSON
       if (!contentType || !contentType.includes('application/json')) {
         this.logRequestDebug(debugInfo);
         throw new Error(`Unexpected response format. Expected JSON but received: ${contentType || 'unknown'}`);
       }
 
-      // Parse JSON response
       try {
         return JSON.parse(responseText);
       } catch (parseError) {
@@ -232,9 +220,41 @@ class NotionService {
       }
 
     } catch (error) {
-      // Handle fetch errors (network issues, timeouts, etc.)
+      // If we get a CORS error or network error, try the proxy
+      if (error instanceof Error && 
+          (error.message.includes('Failed to fetch') || 
+           error.message.includes('CORS') || 
+           error.message.includes('NetworkError'))) {
+        
+        console.log('🔄 Direct request failed with CORS/Network error, trying proxy...');
+        
+        try {
+          const proxyResponse = await this.makeProxiedRequest(endpoint, token, options);
+          
+          // Create debug info for proxy response
+          debugInfo = {
+            url,
+            method: options.method || 'GET',
+            headers,
+            status: 200,
+            statusText: 'OK',
+            responseText: JSON.stringify(proxyResponse.data).substring(0, 500),
+            contentType: 'application/json',
+            serviceWorkerResponse: false,
+            proxyUsed: proxyResponse.proxyUsed
+          };
+          
+          this.logRequestDebug(debugInfo);
+          return proxyResponse.data;
+          
+        } catch (proxyError) {
+          console.error('❌ Both direct and proxy requests failed:', proxyError);
+          throw new Error('Unable to connect to Notion API. Please check your internet connection and integration token.');
+        }
+      }
+
+      // Handle other types of errors
       if (error instanceof Error) {
-        // Re-throw our custom errors
         if (error.message.includes('Notion') || 
             error.message.includes('Invalid token') || 
             error.message.includes('Service worker') ||
@@ -244,12 +264,10 @@ class NotionService {
           throw error;
         }
 
-        // Classify and throw network/fetch errors
         const classifiedError = this.classifyError(error, response);
         throw new Error(classifiedError);
       }
 
-      // Log debug info for unexpected errors
       if (debugInfo!) {
         this.logRequestDebug(debugInfo!, error as Error);
       }
@@ -258,16 +276,53 @@ class NotionService {
     }
   }
 
+  private async makeProxiedRequest(endpoint: string, token: string, options: RequestInit = {}) {
+    const method = endpoint.includes('/users/me') ? 'validateToken' :
+                   endpoint.includes('/pages/') ? 'getPage' :
+                   endpoint.includes('/databases/') && options.method === 'POST' ? 'queryDatabase' :
+                   endpoint.includes('/databases/') ? 'getDatabase' : null;
+
+    if (!method) {
+      throw new Error('Unsupported endpoint for proxy request');
+    }
+
+    let result;
+    switch (method) {
+      case 'validateToken':
+        result = await notionCorsProxy.validateToken(token);
+        break;
+      case 'getPage':
+        const pageId = endpoint.split('/pages/')[1];
+        result = await notionCorsProxy.getPage(pageId, token);
+        break;
+      case 'getDatabase':
+        const databaseId = endpoint.split('/databases/')[1];
+        result = await notionCorsProxy.getDatabase(databaseId, token);
+        break;
+      case 'queryDatabase':
+        const queryDatabaseId = endpoint.split('/databases/')[1].split('/query')[0];
+        const body = options.body ? JSON.parse(options.body as string) : {};
+        result = await notionCorsProxy.queryDatabase(queryDatabaseId, token, body.filter);
+        break;
+    }
+
+    if (!result.success) {
+      throw new Error(result.error || 'Proxy request failed');
+    }
+
+    return result;
+  }
+
   async getIntegrationInfo(token: string): Promise<NotionIntegrationInfo> {
     try {
       console.log('🔐 Getting Notion integration info...');
-      const userInfo = await this.makeRequest('/users/me', token, {}, true); // Bypass service worker for critical requests
+      const userInfo = await this.makeRequest('/users/me', token, {}, true);
       
       return {
         type: userInfo.type || 'bot',
         name: userInfo.name || 'Unknown Integration',
         capabilities: {
-          read_content: true, // Assume true if we can call the API
+          read_content: true,
           read_user_info: true
         },
         workspace: userInfo.workspace ? {
@@ -325,7 +380,6 @@ class NotionService {
   }
 
   extractPageIdFromUrl(url: string): string | null {
-    // Handle various Notion URL formats
     const patterns = [
       /notion\.so\/([a-f0-9]{32})/,
       /notion\.so\/.*-([a-f0-9]{32})/,
@@ -335,7 +389,6 @@ class NotionService {
     for (const pattern of patterns) {
       const match = url.match(pattern);
       if (match) {
-        // Remove hyphens if present and ensure 32 character format
         return match[1].replace(/-/g, '');
       }
     }
@@ -382,7 +435,6 @@ class NotionService {
   }
 
   private extractDate(page: NotionPage): Date {
-    // Look for date properties
     const dateProperty = Object.values(page.properties).find(
       prop => prop.type === 'date'
     );
@@ -391,7 +443,6 @@ class NotionService {
       return new Date(dateProperty.date.start);
     }
     
-    // Fallback to creation date
     return new Date(page.created_time);
   }
 
@@ -410,7 +461,6 @@ class NotionService {
   }
 
   private extractDescription(page: NotionPage): string {
-    // Look for rich text properties that might contain description
     const textProperties = Object.values(page.properties).filter(
       prop => prop.type === 'rich_text'
     );
@@ -425,7 +475,6 @@ class NotionService {
   }
 
   private extractLocation(page: NotionPage): string {
-    // Look for location or place properties
     const locationProps = Object.values(page.properties).filter(
       prop => prop.type === 'rich_text' || prop.type === 'select'
     );
@@ -448,13 +497,11 @@ class NotionService {
     try {
       console.log('🔐 Validating Notion token...');
       
-      // First check token format
       if (!this.validateTokenFormat(token)) {
         console.error('❌ Invalid token format');
         return false;
       }
 
-      // Test the token by getting integration info directly (no reachability check)
       const integrationInfo = await this.getIntegrationInfo(token);
       console.log('✅ Notion token validation successful:', integrationInfo);
       return true;
@@ -470,7 +517,6 @@ class NotionService {
       return { hasAccess: false, resourceType: null, error: 'Invalid Notion URL format' };
     }
 
-    // Try database first, then page
     const databaseAccess = await this.testDatabaseAccess(pageId, token);
     if (databaseAccess) {
       return { hasAccess: true, resourceType: 'database' };
