@@ -1,3 +1,4 @@
+
 import { Client } from '@notionhq/client';
 import { 
   PageObjectResponse, 
@@ -80,7 +81,7 @@ class NotionService {
     try {
       console.log('🔐 Getting Notion integration info...');
       const notion = this.createClient(token);
-      const userInfo = await notion.users.me() as GetUserResponse;
+      const userInfo = await notion.users.me({}) as GetUserResponse;
       
       return {
         type: userInfo.type || 'bot',
