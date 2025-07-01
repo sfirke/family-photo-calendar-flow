@@ -1,17 +1,7 @@
 
 import { useState, useCallback } from 'react';
+import { ICalCalendar } from '@/types/ical';
 import { ICalCalendarService } from '@/services/ical/ICalCalendarService';
-
-export interface ICalCalendar {
-  id: string;
-  name: string;
-  url: string;
-  color: string;
-  enabled: boolean;
-  lastSync?: string;
-  syncStatus: 'idle' | 'syncing' | 'success' | 'error';
-  error?: string;
-}
 
 export const useICalCalendarManagement = () => {
   const [calendars, setCalendars] = useState<ICalCalendar[]>([]);

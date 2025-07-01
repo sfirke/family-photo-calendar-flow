@@ -1,8 +1,8 @@
 
 import { Event } from '@/types/calendar';
-import { ICalCalendar } from '@/hooks/ical/useICalCalendarManagement';
-import { icalFetchService } from '../icalFetchService';
-import { icalEventService } from '../icalEventService';
+import { ICalCalendar } from '@/types/ical';
+import { ICalFetchService } from '../icalFetchService';
+import { ICalEventService } from '../icalEventService';
 
 export class ICalCalendarService {
   private static readonly STORAGE_KEY = 'ical_calendars';
@@ -62,8 +62,8 @@ export class ICalCalendarService {
 
   static async syncCalendar(calendar: ICalCalendar): Promise<Event[]> {
     try {
-      const icalData = await icalFetchService.fetchICalData(calendar.url);
-      const events = icalEventService.parseEvents(icalData, calendar);
+      const icalData = await ICalFetchService.fetchICalData(calendar.url);
+      const events = ICalEventService.parseEvents(icalData, calendar);
       
       // Update calendar sync status
       await this.updateCalendar(calendar.id, {

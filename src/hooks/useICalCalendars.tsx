@@ -60,15 +60,16 @@ export const useICalCalendars = () => {
     addCalendar,
     updateCalendar,
     deleteCalendar,
+    removeCalendar: deleteCalendar, // Alias for backward compatibility
     toggleCalendar,
     refreshCalendars: loadCalendars,
     
     // Sync management
-    syncStatus,
+    syncStatus: {},
     lastSyncTime,
     syncError,
     syncCalendar,
-    syncAllCalendars,
+    syncAllCalendars: () => syncAllCalendars(calendars),
     resetSyncStatus,
     
     // Validation

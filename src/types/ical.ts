@@ -6,6 +6,8 @@ export interface ICalCalendar {
   color: string;
   enabled: boolean;
   lastSync?: string;
+  syncStatus: 'idle' | 'syncing' | 'success' | 'error';
+  error?: string;
   eventCount?: number;
   hasEvents?: boolean;
   source?: string;

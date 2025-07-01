@@ -1,7 +1,7 @@
 
 import { useState, useCallback } from 'react';
 import { Event } from '@/types/calendar';
-import { ICalCalendar } from './useICalCalendarManagement';
+import { ICalCalendar } from '@/types/ical';
 import { ICalCalendarService } from '@/services/ical/ICalCalendarService';
 
 export const useICalSyncCoordinator = () => {
