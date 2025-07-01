@@ -21,6 +21,10 @@ interface LoadedSettings {
   notionIntegrationToken?: string | null;
 }
 
+// Type-safe sensitive keys with const assertion
+const SENSITIVE_KEYS = ['zipCode', 'weatherApiKey', 'publicAlbumUrl', 'githubOwner', 'githubRepo', 'notionIntegrationToken'] as const;
+type SensitiveKey = typeof SENSITIVE_KEYS[number];
+
 export class SettingsStorage {
   /**
    * Load all settings from appropriate storage on app initialization
@@ -35,24 +39,21 @@ export class SettingsStorage {
         selectedAlbum: localStorage.getItem('selectedAlbum'),
       };
 
-      // Load sensitive settings with enhanced error handling
-      let sensitiveSettings: Partial<LoadedSettings> = {};
+      // Load sensitive settings with type-safe assignment
+      const sensitiveSettings: Partial<LoadedSettings> = {};
       
-      const sensitiveKeys = ['zipCode', 'weatherApiKey', 'publicAlbumUrl', 'githubOwner', 'githubRepo', 'notionIntegrationToken'];
-      
-      for (const key of sensitiveKeys) {
+      for (const key of SENSITIVE_KEYS) {
         try {
-          // Try secure storage first
           const secureValue = await this.retrieveWithFallback(key);
           if (secureValue) {
-            sensitiveSettings[key as keyof LoadedSettings] = secureValue;
+            this.assignSensitiveSetting(sensitiveSettings, key, secureValue);
           }
         } catch (error) {
           console.warn(`Failed to load ${key}:`, error);
           // Fallback to localStorage
           const fallbackValue = localStorage.getItem(key);
           if (fallbackValue) {
-            sensitiveSettings[key as keyof LoadedSettings] = fallbackValue;
+            this.assignSensitiveSetting(sensitiveSettings, key, fallbackValue);
           }
         }
       }
@@ -61,6 +62,38 @@ export class SettingsStorage {
     } catch (error) {
       console.error('Error loading settings:', error);
       return {};
+    }
+  }
+
+  /**
+   * Type-safe assignment of sensitive settings
+   */
+  private static assignSensitiveSetting(
+    settings: Partial<LoadedSettings>, 
+    key: SensitiveKey, 
+    value: string
+  ): void {
+    switch (key) {
+      case 'zipCode':
+        settings.zipCode = value;
+        break;
+      case 'weatherApiKey':
+        settings.weatherApiKey = value;
+        break;
+      case 'publicAlbumUrl':
+        settings.publicAlbumUrl = value;
+        break;
+      case 'githubOwner':
+        settings.githubOwner = value;
+        break;
+      case 'githubRepo':
+        settings.githubRepo = value;
+        break;
+      case 'notionIntegrationToken':
+        settings.notionIntegrationToken = value;
+        break;
+      default:
+        console.warn(`Unknown sensitive key: ${key}`);
     }
   }
 
@@ -100,9 +133,7 @@ export class SettingsStorage {
    * Migrate sensitive settings from localStorage to secure storage
    */
   private static async migrateSensitiveSettings() {
-    const sensitiveKeys = ['zipCode', 'weatherApiKey', 'publicAlbumUrl', 'githubOwner', 'githubRepo', 'notionIntegrationToken'];
-    
-    for (const key of sensitiveKeys) {
+    for (const key of SENSITIVE_KEYS) {
       const oldValue = localStorage.getItem(key);
       if (oldValue) {
         try {
@@ -151,9 +182,7 @@ export class SettingsStorage {
    * Clear corrupted data and reset to defaults
    */
   static async clearCorruptedData() {
-    const corruptedKeys = ['zipCode', 'weatherApiKey', 'publicAlbumUrl', 'githubOwner', 'githubRepo', 'notionIntegrationToken'];
-    
-    for (const key of corruptedKeys) {
+    for (const key of SENSITIVE_KEYS) {
       try {
         secureStorage.remove(key);
         localStorage.removeItem(key);
