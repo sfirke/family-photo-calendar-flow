@@ -1,4 +1,4 @@
-import { NotionEvent } from '@/types/notion';
+import { NotionEvent, NotionPage } from '@/types/notion';
 
 interface NotionIntegrationInfo {
   type: string;
@@ -189,17 +189,8 @@ class NotionService {
     return null;
   }
 
-  transformToEvents(pages: unknown, calendarId: string, calendarName: string, color: string): NotionEvent[] {
-    // Ensure pages is an array with proper type checking
-    if (!Array.isArray(pages)) {
-      console.warn('Expected array of pages, got:', typeof pages);
-      return [];
-    }
-
-    // Now TypeScript knows pages is an array
-    const pagesArray = pages as any[];
-
-    return pagesArray.map(page => {
+  transformToEvents(pages: NotionPage[], calendarId: string, calendarName: string, color: string): NotionEvent[] {
+    return pages.map(page => {
       const title = this.extractTitle(page);
       const date = this.extractDate(page);
       const time = this.extractTime(page) || 'All day';
