@@ -20,6 +20,39 @@ interface LoadedSettings {
   githubRepo?: string | null;
 }
 
+/**
+ * Get a storage value from appropriate storage (secure or regular)
+ */
+export const getStorageValue = async (key: string, isSensitive: boolean = false): Promise<string | null> => {
+  try {
+    if (isSensitive && secureStorage.exists('test')) {
+      return await secureStorage.retrieve(key, 'defaultPassword');
+    } else {
+      return localStorage.getItem(key);
+    }
+  } catch (error) {
+    console.warn(`Failed to get ${key}:`, error);
+    return localStorage.getItem(key);
+  }
+};
+
+/**
+ * Save a storage value to appropriate storage (secure or regular)
+ */
+export const saveStorageValue = async (key: string, value: string, isSensitive: boolean = false): Promise<void> => {
+  try {
+    if (isSensitive && secureStorage.exists('test')) {
+      await secureStorage.store(key, value, 'defaultPassword');
+      localStorage.removeItem(key); // Remove unencrypted version
+    } else {
+      localStorage.setItem(key, value);
+    }
+  } catch (error) {
+    console.warn(`Failed to save ${key} securely, using localStorage:`, error);
+    localStorage.setItem(key, value);
+  }
+};
+
 export class SettingsStorage {
   /**
    * Load all settings from appropriate storage on app initialization

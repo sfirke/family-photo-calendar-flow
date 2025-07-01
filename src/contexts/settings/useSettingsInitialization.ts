@@ -1,10 +1,5 @@
 
 import { useEffect } from 'react';
-import { useDisplaySettings } from './useDisplaySettings';
-import { useWeatherSettings } from './useWeatherSettings';
-import { usePhotoSettings } from './usePhotoSettings';
-import { useGitHubSettings } from './useGitHubSettings';
-import { useNotionSettings } from './useNotionSettings';
 
 interface SettingsInitializationProps {
   setTheme: (theme: 'light' | 'dark' | 'system') => void;
@@ -20,29 +15,9 @@ interface SettingsInitializationProps {
 }
 
 export const useSettingsInitialization = (props: SettingsInitializationProps) => {
-  const { initializeDisplaySettings } = useDisplaySettings();
-  const { initializeWeatherSettings } = useWeatherSettings();
-  const { initializePhotoSettings } = usePhotoSettings();
-  const { initializeGitHubSettings } = useGitHubSettings();
-  const { initializeNotionSettings } = useNotionSettings();
-
   useEffect(() => {
-    const initializeAllSettings = async () => {
-      await Promise.all([
-        initializeDisplaySettings(),
-        initializeWeatherSettings(),
-        initializePhotoSettings(),
-        initializeGitHubSettings(),
-        initializeNotionSettings()
-      ]);
-    };
-
-    initializeAllSettings();
-  }, [
-    initializeDisplaySettings,
-    initializeWeatherSettings,
-    initializePhotoSettings,
-    initializeGitHubSettings,
-    initializeNotionSettings
-  ]);
+    // Settings initialization is handled by individual hooks via their own useEffect
+    // This hook exists for future initialization logic that may span multiple settings
+    console.log('Settings context initialized');
+  }, []);
 };

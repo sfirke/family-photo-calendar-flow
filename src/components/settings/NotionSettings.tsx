@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -109,7 +108,8 @@ const NotionSettings = () => {
         name: newCalendar.name,
         url: newCalendar.url,
         color: newCalendar.color,
-        enabled: newCalendar.enabled
+        enabled: newCalendar.enabled,
+        type: 'notion'
       });
 
       // Try to sync immediately
