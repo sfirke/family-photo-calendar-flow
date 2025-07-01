@@ -221,10 +221,14 @@ class NotionService {
     // Find title property
     for (const [key, property] of Object.entries(properties)) {
       if (property && typeof property === 'object' && 'type' in property && property.type === 'title' && 'title' in property && property.title) {
-        const titleText = property.title
-          .map((text: any) => text.plain_text)
-          .join('');
-        return titleText || 'Untitled';
+        // Add proper type assertion and array check
+        const titleArray = property.title as any[];
+        if (Array.isArray(titleArray)) {
+          const titleText = titleArray
+            .map((text: any) => text.plain_text)
+            .join('');
+          return titleText || 'Untitled';
+        }
       }
     }
     
@@ -265,10 +269,14 @@ class NotionService {
     // Look for rich text properties that might contain description
     for (const [key, property] of Object.entries(properties)) {
       if (property && typeof property === 'object' && 'type' in property && property.type === 'rich_text' && 'rich_text' in property && (property as any).rich_text) {
-        const description = (property as any).rich_text
-          .map((text: any) => text.plain_text)
-          .join('');
-        if (description) return description;
+        // Add proper type assertion and array check
+        const richTextArray = (property as any).rich_text as any[];
+        if (Array.isArray(richTextArray)) {
+          const description = richTextArray
+            .map((text: any) => text.plain_text)
+            .join('');
+          if (description) return description;
+        }
       }
     }
     
@@ -284,10 +292,14 @@ class NotionService {
       
       if (keyLower.includes('location')) {
         if (property && typeof property === 'object' && 'type' in property && property.type === 'rich_text' && 'rich_text' in property && (property as any).rich_text) {
-          const location = (property as any).rich_text
-            .map((text: any) => text.plain_text)
-            .join('');
-          if (location) return location;
+          // Add proper type assertion and array check
+          const richTextArray = (property as any).rich_text as any[];
+          if (Array.isArray(richTextArray)) {
+            const location = richTextArray
+              .map((text: any) => text.plain_text)
+              .join('');
+            if (location) return location;
+          }
         }
         
         if (property && typeof property === 'object' && 'type' in property && property.type === 'select' && 'select' in property && (property as any).select) {
