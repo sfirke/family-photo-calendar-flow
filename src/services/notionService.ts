@@ -196,7 +196,10 @@ class NotionService {
       return [];
     }
 
-    return pages.map(page => {
+    // Now TypeScript knows pages is an array
+    const pagesArray = pages as any[];
+
+    return pagesArray.map(page => {
       const title = this.extractTitle(page);
       const date = this.extractDate(page);
       const time = this.extractTime(page) || 'All day';
