@@ -1,111 +1,213 @@
 
-import { useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Event, ImportedEvent } from '@/types/calendar';
-import { useLocalEventStorage } from './events/useLocalEventStorage';
-import { useEventAggregation } from './events/useEventAggregation';
-import { useEventImportExport } from './events/useEventImportExport';
+import { sampleEvents } from '@/data/sampleEvents';
 import { useICalCalendars } from './useICalCalendars';
 import { useNotionCalendars } from './useNotionCalendars';
-import { LocalEventService } from '@/services/events/LocalEventService';
+
+const LOCAL_EVENTS_KEY = 'family_calendar_events';
+const EVENTS_VERSION_KEY = 'family_calendar_events_version';
+const CURRENT_VERSION = '1.0';
+
+interface LocalEventStorage {
+  events: Event[];
+  lastSync: string;
+  version: string;
+}
 
 export const useLocalEvents = () => {
-  // Use the new modular hooks
-  const {
-    localEvents,
-    isLoading: localLoading,
-    addEvent,
-    updateEvent,
-    deleteEvent,
-    clearEvents,
-    refreshEvents: refreshLocalEvents,
-    saveEventsToStorage
-  } = useLocalEventStorage();
-
+  const [localEvents, setLocalEvents] = useState<Event[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const { getICalEvents } = useICalCalendars();
   const { getNotionEvents } = useNotionCalendars();
 
-  // Get events from other sources
-  const icalEvents = getICalEvents();
-  const notionEvents = getNotionEvents();
+  // Save events to localStorage
+  const saveEventsToStorage = useCallback((events: Event[]) => {
+    try {
+      const storageData: LocalEventStorage = {
+        events,
+        lastSync: new Date().toISOString(),
+        version: CURRENT_VERSION
+      };
+      
+      localStorage.setItem(LOCAL_EVENTS_KEY, JSON.stringify(storageData));
+      localStorage.setItem(EVENTS_VERSION_KEY, CURRENT_VERSION);
+    } catch (error) {
+      console.error('Error saving events to localStorage:', error);
+    }
+  }, []);
 
-  // Use event aggregation hook
-  const {
-    allEvents,
-    eventsBySource,
-    getEventsForDate,
-    hasEvents
-  } = useEventAggregation({
-    localEvents,
-    icalEvents,
-    notionEvents,
-    useSampleData: !hasEvents
-  });
+  // Initialize with sample events
+  const initializeWithSampleEvents = useCallback(() => {
+    const enhancedSampleEvents = sampleEvents.map((event, index) => ({
+      ...event,
+      id: event.id || (1000 + index),
+      calendarId: 'local_calendar',
+      calendarName: 'Family Calendar'
+    }));
 
-  // Use import/export hook
-  const {
-    exportEvents,
-    importEvents: importEventsFromFile,
-    validateImportFile
-  } = useEventImportExport();
+    setLocalEvents(enhancedSampleEvents);
+    saveEventsToStorage(enhancedSampleEvents);
+  }, [saveEventsToStorage]);
+
+  // Load events from localStorage
+  const loadLocalEvents = useCallback(() => {
+    try {
+      const storedData = localStorage.getItem(LOCAL_EVENTS_KEY);
+      const storedVersion = localStorage.getItem(EVENTS_VERSION_KEY);
+      
+      if (storedData && storedVersion === CURRENT_VERSION) {
+        const eventData: LocalEventStorage = JSON.parse(storedData);
+        
+        // Convert date strings back to Date objects
+        const eventsWithDates = eventData.events.map(event => ({
+          ...event,
+          date: new Date(event.date)
+        }));
+        
+        setLocalEvents(eventsWithDates);
+      } else {
+        // Initialize with sample events on first load or version mismatch
+        initializeWithSampleEvents();
+      }
+    } catch (error) {
+      console.error('Error loading local events:', error);
+      initializeWithSampleEvents();
+    } finally {
+      setIsLoading(false);
+    }
+  }, [initializeWithSampleEvents]);
+
+  // Get all events (local + iCal + Notion)
+  const allEvents = useMemo(() => {
+    const icalEvents = getICalEvents();
+    const notionEvents = getNotionEvents();
+    return [...localEvents, ...icalEvents, ...notionEvents];
+  }, [localEvents, getICalEvents, getNotionEvents]);
+
+  // Event management functions
+  const addEvent = useCallback((newEvent: Omit<Event, 'id'>) => {
+    const event: Event = {
+      ...newEvent,
+      id: Date.now(),
+      calendarId: 'local_calendar',
+      calendarName: 'Family Calendar'
+    };
+
+    setLocalEvents(prev => {
+      const updated = [...prev, event];
+      saveEventsToStorage(updated);
+      return updated;
+    });
+
+    return event;
+  }, [saveEventsToStorage]);
+
+  const updateEvent = useCallback((eventId: number, updates: Partial<Event>) => {
+    setLocalEvents(prev => {
+      const updated = prev.map(event => 
+        event.id === eventId ? { ...event, ...updates } : event
+      );
+      saveEventsToStorage(updated);
+      return updated;
+    });
+  }, [saveEventsToStorage]);
+
+  const deleteEvent = useCallback((eventId: number) => {
+    setLocalEvents(prev => {
+      const updated = prev.filter(event => event.id !== eventId);
+      saveEventsToStorage(updated);
+      return updated;
+    });
+  }, [saveEventsToStorage]);
 
   // Utility functions
-  const refreshEvents = () => {
-    refreshLocalEvents();
-  };
+  const refreshEvents = useCallback(() => {
+    setIsLoading(true);
+    loadLocalEvents();
+  }, [loadLocalEvents]);
 
-  const resetToSampleEvents = () => {
-    const sampleEvents = LocalEventService.initializeWithSampleEvents();
-    refreshLocalEvents();
-  };
+  const resetToSampleEvents = useCallback(() => {
+    localStorage.removeItem(LOCAL_EVENTS_KEY);
+    localStorage.removeItem(EVENTS_VERSION_KEY);
+    initializeWithSampleEvents();
+  }, [initializeWithSampleEvents]);
 
-  const exportEventsWrapper = () => {
-    exportEvents(allEvents);
-  };
+  const exportEvents = useCallback(() => {
+    const dataStr = JSON.stringify(allEvents, null, 2);
+    const dataBlob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(dataBlob);
+    
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `family-calendar-events-${new Date().toISOString().split('T')[0]}.json`;
+    link.click();
+    
+    URL.revokeObjectURL(url);
+  }, [allEvents]);
 
-  const importEvents = async (file: File): Promise<void> => {
-    if (!validateImportFile(file)) {
-      throw new Error('Invalid file format or size');
-    }
+  const importEvents = useCallback((file: File) => {
+    return new Promise<void>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const importedEvents: ImportedEvent[] = JSON.parse(e.target?.result as string);
+          
+          // Validate and convert imported events
+          const validEvents: Event[] = importedEvents.map((event: ImportedEvent, index: number) => ({
+            id: event.id || (Date.now() + index),
+            title: event.title,
+            date: new Date(event.date),
+            time: event.time || '12:00',
+            location: event.location || '',
+            description: event.description || '',
+            attendees: 0,
+            category: 'Personal' as const,
+            color: '#3b82f6',
+            organizer: 'User',
+            calendarId: event.calendarId || 'imported_calendar',
+            calendarName: event.calendarName || 'Imported Calendar'
+          }));
 
-    try {
-      const importedEvents = await importEventsFromFile(file);
-      saveEventsToStorage(importedEvents);
-      refreshLocalEvents();
-    } catch (error) {
-      throw error;
-    }
-  };
+          setLocalEvents(validEvents);
+          saveEventsToStorage(validEvents);
+          resolve();
+        } catch (error) {
+          reject(new Error('Invalid JSON file format'));
+        }
+      };
+      reader.onerror = () => reject(new Error('Failed to read file'));
+      reader.readAsText(file);
+    });
+  }, [saveEventsToStorage]);
 
-  const clearCache = () => {
-    clearEvents();
-  };
+  useEffect(() => {
+    loadLocalEvents();
+  }, [loadLocalEvents]);
 
-  // Return optimized for compatibility with existing components
+  // Return optimized for compatibility
   const memoizedValue = useMemo(() => ({
     googleEvents: allEvents, // Keep same interface name for compatibility
     localEvents: allEvents, // Return combined events
-    isLoading: localLoading,
+    isLoading,
     refreshEvents,
     addEvent,
     updateEvent,
     deleteEvent,
     resetToSampleEvents,
-    exportEvents: exportEventsWrapper,
+    exportEvents,
     importEvents,
-    clearCache,
-    // Additional utility functions
-    eventsBySource,
-    getEventsForDate,
-    hasEvents
+    clearCache: resetToSampleEvents
   }), [
     allEvents,
-    localLoading,
+    isLoading,
+    refreshEvents,
     addEvent,
     updateEvent,
     deleteEvent,
-    eventsBySource,
-    getEventsForDate,
-    hasEvents
+    resetToSampleEvents,
+    exportEvents,
+    importEvents
   ]);
 
   return memoizedValue;
