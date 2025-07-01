@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useBackgroundSync } from '@/hooks/useBackgroundSync';
 import { useICalCalendars } from '@/hooks/useICalCalendars';
-import { Wifi, WifiOff, RotateCcw, Clock, CheckCircle, AlertCircle, RefreshCw } from 'lucide-react';
+import { Wifi, WifiOff, RotateCcw, Clock, CheckCircle, AlertCircle } from 'lucide-react';
 import { format } from 'date-fns';
 
 const BackgroundSyncSettings = () => {
@@ -16,20 +16,12 @@ const BackgroundSyncSettings = () => {
     triggerBackgroundSync
   } = useBackgroundSync();
   
-  const { calendars, syncAllCalendars, isLoading } = useICalCalendars();
+  const { calendars } = useICalCalendars();
 
   const enabledCalendarsCount = calendars.filter(cal => cal.enabled).length;
 
   const handleManualBackgroundSync = async () => {
-    const success = await triggerBackgroundSync();
-    if (!success) {
-      // Fallback to manual sync
-      await syncAllCalendars();
-    }
-  };
-
-  const handleManualSync = async () => {
-    await syncAllCalendars();
+    await triggerBackgroundSync();
   };
 
   return (
@@ -42,35 +34,20 @@ const BackgroundSyncSettings = () => {
               Background Sync
             </CardTitle>
             <CardDescription className="text-gray-600 dark:text-gray-400">
-              Automatic calendar synchronization using service workers and manual sync options
+              Automatic calendar synchronization in the background using service workers
             </CardDescription>
           </div>
-          <div className="flex gap-2">
-            {isBackgroundSyncSupported && enabledCalendarsCount > 0 && (
-              <Button 
-                onClick={handleManualBackgroundSync}
-                variant="outline" 
-                size="sm"
-                disabled={isLoading}
-                className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600"
-              >
-                <Wifi className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-                Background Sync
-              </Button>
-            )}
-            {enabledCalendarsCount > 0 && (
-              <Button 
-                onClick={handleManualSync}
-                variant="outline" 
-                size="sm"
-                disabled={isLoading}
-                className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600"
-              >
-                <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-                Manual Sync
-              </Button>
-            )}
-          </div>
+          {isBackgroundSyncSupported && enabledCalendarsCount > 0 && (
+            <Button 
+              onClick={handleManualBackgroundSync}
+              variant="outline" 
+              size="sm"
+              className="ml-4 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600"
+            >
+              <RotateCcw className="h-4 w-4 mr-2" />
+              Trigger Sync
+            </Button>
+          )}
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -156,27 +133,27 @@ const BackgroundSyncSettings = () => {
             </div>
           </div>
           
-          <div className="flex items-start gap-2">
-            <div className="w-2 h-2 bg-green-500 rounded-full mt-2 flex-shrink-0" />
-            <div>
-              <strong>Manual Sync:</strong> Use the "Manual Sync" button to immediately sync all enabled calendars.
-            </div>
-          </div>
-          
           {isPeriodicSyncSupported && (
             <div className="flex items-start gap-2">
-              <div className="w-2 h-2 bg-purple-500 rounded-full mt-2 flex-shrink-0" />
+              <div className="w-2 h-2 bg-green-500 rounded-full mt-2 flex-shrink-0" />
               <div>
                 <strong>Periodic Sync:</strong> Automatically syncs calendars every 12 hours, even when the app is closed.
               </div>
             </div>
           )}
           
+          <div className="flex items-start gap-2">
+            <div className="w-2 h-2 bg-orange-500 rounded-full mt-2 flex-shrink-0" />
+            <div>
+              <strong>Manual Trigger:</strong> Use the "Trigger Sync" button to manually schedule a background sync.
+            </div>
+          </div>
+          
           {!isBackgroundSyncSupported && (
             <div className="flex items-start gap-2">
               <div className="w-2 h-2 bg-red-500 rounded-full mt-2 flex-shrink-0" />
               <div>
-                <strong>Browser Limitation:</strong> Your browser doesn't support background sync. Use manual sync to update calendars.
+                <strong>Browser Limitation:</strong> Your browser doesn't support background sync. Calendars will only sync when the app is open.
               </div>
             </div>
           )}
@@ -186,8 +163,7 @@ const BackgroundSyncSettings = () => {
         {enabledCalendarsCount > 0 && (
           <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
             <div className="text-sm text-gray-600 dark:text-gray-400">
-              Sync is configured for <strong>{enabledCalendarsCount}</strong> enabled calendar feed{enabledCalendarsCount !== 1 ? 's' : ''}.
-              {isLoading && <span className="ml-2 text-blue-600 dark:text-blue-400">Syncing...</span>}
+              Background sync is configured for <strong>{enabledCalendarsCount}</strong> enabled calendar feed{enabledCalendarsCount !== 1 ? 's' : ''}.
             </div>
           </div>
         )}

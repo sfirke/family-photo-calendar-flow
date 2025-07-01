@@ -42,12 +42,6 @@ export interface SettingsContextType {
   /** Update GitHub repo with validation */
   setGithubRepo: (repo: string) => void;
   
-  // Notion Settings (Sensitive - encrypted when possible)
-  /** Notion integration token for API access */
-  notionIntegrationToken: string;
-  /** Update Notion integration token with validation */
-  setNotionIntegrationToken: (token: string) => void;
-  
   // Background Settings
   /** Photo background rotation duration in minutes */
   backgroundDuration: number;

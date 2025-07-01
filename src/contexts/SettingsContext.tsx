@@ -14,7 +14,6 @@ import { useDisplaySettings } from './settings/useDisplaySettings';
 import { useWeatherSettings } from './settings/useWeatherSettings';
 import { usePhotoSettings } from './settings/usePhotoSettings';
 import { useGitHubSettings } from './settings/useGitHubSettings';
-import { useNotionSettings } from './settings/useNotionSettings';
 import { useSettingsInitialization } from './settings/useSettingsInitialization';
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
@@ -32,7 +31,6 @@ export const SettingsProvider = ({ children }: { children: React.ReactNode }) =>
   const weatherSettings = useWeatherSettings();
   const photoSettings = usePhotoSettings();
   const githubSettings = useGitHubSettings();
-  const notionSettings = useNotionSettings();
 
   // Initialize all settings from storage
   useSettingsInitialization({
@@ -43,7 +41,6 @@ export const SettingsProvider = ({ children }: { children: React.ReactNode }) =>
     setPublicAlbumUrl: photoSettings.setPublicAlbumUrl,
     setGithubOwner: githubSettings.setGithubOwner,
     setGithubRepo: githubSettings.setGithubRepo,
-    setNotionIntegrationToken: notionSettings.setNotionIntegrationToken,
     setBackgroundDuration: photoSettings.setBackgroundDuration,
     setSelectedAlbum: photoSettings.setSelectedAlbum,
   });
@@ -55,7 +52,6 @@ export const SettingsProvider = ({ children }: { children: React.ReactNode }) =>
         ...weatherSettings,
         ...photoSettings,
         ...githubSettings,
-        ...notionSettings,
       }}
     >
       {children}

@@ -8,7 +8,6 @@
  * - Photo backgrounds (Google Photos integration)
  * - Display preferences (theme, default view)
  * - Weather configuration (API keys, location)
- * - Notion integration (database access tokens)
  * - App updates (manual check and install, GitHub repository configuration)
  * - Security settings (client-side encryption)
  * 
@@ -20,7 +19,6 @@
  * - Offline status indication
  * - Manual update management
  * - GitHub repository configuration for release checking
- * - Notion workspace integration
  */
 
 import React from 'react';
@@ -38,7 +36,6 @@ import PhotosTab from './settings/PhotosTab';
 import DisplayTab from './settings/DisplayTab';
 import WeatherTab from './settings/WeatherTab';
 import CalendarsTab from './settings/CalendarsTab';
-import NotionTab from './settings/NotionTab';
 import UpdateTab from './settings/UpdateTab';
 
 interface SettingsModalProps {
@@ -115,11 +112,6 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
                   weatherApiKey={weatherApiKey}
                   onWeatherApiKeyChange={setWeatherApiKey}
                 />
-              </TabsContent>
-
-              {/* Notion integration content */}
-              <TabsContent value="notion" className="space-y-4 mt-0">
-                <NotionTab />
               </TabsContent>
 
               {/* App updates content */}

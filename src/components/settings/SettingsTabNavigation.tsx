@@ -1,65 +1,63 @@
 
 import React from 'react';
 import { TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Calendar, ImageIcon, Palette, Cloud, GitBranch, RotateCcw, Shield } from 'lucide-react';
+import { Camera, Monitor, CloudSun, Calendar, Shield, Download } from 'lucide-react';
 
 const SettingsTabNavigation = () => {
   return (
-    <TabsList className="grid w-full grid-cols-4 sm:grid-cols-7 h-auto p-1 bg-gray-100 dark:bg-gray-800 rounded-lg">
+    <TabsList className="grid w-full grid-cols-3 sm:grid-cols-6 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 h-auto p-1">
       <TabsTrigger 
         value="calendars" 
-        className="flex flex-col items-center gap-1 p-2 text-xs data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 data-[state=active]:text-gray-900 dark:data-[state=active]:text-gray-100"
+        className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 text-xs sm:text-sm text-gray-700 dark:text-gray-300 data-[state=active]:bg-white data-[state=active]:text-gray-900 dark:data-[state=active]:bg-gray-700 dark:data-[state=active]:text-gray-100 py-2 sm:py-3"
       >
         <Calendar className="h-4 w-4" />
         <span className="hidden sm:inline">Calendars</span>
+        <span className="sm:hidden">Cal</span>
       </TabsTrigger>
       
       <TabsTrigger 
         value="photos" 
-        className="flex flex-col items-center gap-1 p-2 text-xs data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 data-[state=active]:text-gray-900 dark:data-[state=active]:text-gray-100"
+        className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 text-xs sm:text-sm text-gray-700 dark:text-gray-300 data-[state=active]:bg-white data-[state=active]:text-gray-900 dark:data-[state=active]:bg-gray-700 dark:data-[state=active]:text-gray-100 py-2 sm:py-3"
       >
-        <ImageIcon className="h-4 w-4" />
+        <Camera className="h-4 w-4" />
         <span className="hidden sm:inline">Photos</span>
+        <span className="sm:hidden">Pic</span>
       </TabsTrigger>
       
       <TabsTrigger 
         value="display" 
-        className="flex flex-col items-center gap-1 p-2 text-xs data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 data-[state=active]:text-gray-900 dark:data-[state=active]:text-gray-100"
+        className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 text-xs sm:text-sm text-gray-700 dark:text-gray-300 data-[state=active]:bg-white data-[state=active]:text-gray-900 dark:data-[state=active]:bg-gray-700 dark:data-[state=active]:text-gray-100 py-2 sm:py-3"
       >
-        <Palette className="h-4 w-4" />
+        <Monitor className="h-4 w-4" />
         <span className="hidden sm:inline">Display</span>
+        <span className="sm:hidden">Disp</span>
       </TabsTrigger>
       
       <TabsTrigger 
         value="weather" 
-        className="flex flex-col items-center gap-1 p-2 text-xs data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 data-[state=active]:text-gray-900 dark:data-[state=active]:text-gray-100"
+        className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 text-xs sm:text-sm text-gray-700 dark:text-gray-300 data-[state=active]:bg-white data-[state=active]:text-gray-900 dark:data-[state=active]:bg-gray-700 dark:data-[state=active]:text-gray-100 py-2 sm:py-3"
       >
-        <Cloud className="h-4 w-4" />
+        <CloudSun className="h-4 w-4" />
         <span className="hidden sm:inline">Weather</span>
-      </TabsTrigger>
-
-      <TabsTrigger 
-        value="notion" 
-        className="flex flex-col items-center gap-1 p-2 text-xs data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 data-[state=active]:text-gray-900 dark:data-[state=active]:text-gray-100"
-      >
-        <GitBranch className="h-4 w-4" />
-        <span className="hidden sm:inline">Notion</span>
+        <span className="sm:hidden">Wthr</span>
       </TabsTrigger>
       
       <TabsTrigger 
         value="updates" 
-        className="flex flex-col items-center gap-1 p-2 text-xs data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 data-[state=active]:text-gray-900 dark:data-[state=active]:text-gray-100"
+        className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 text-xs sm:text-sm text-gray-700 dark:text-gray-300 data-[state=active]:bg-white data-[state=active]:text-gray-900 dark:data-[state=active]:bg-gray-700 dark:data-[state=active]:text-gray-100 py-2 sm:py-3"
       >
-        <RotateCcw className="h-4 w-4" />
+        <Download className="h-4 w-4" />
         <span className="hidden sm:inline">Updates</span>
+        <span className="sm:hidden">Upd</span>
       </TabsTrigger>
       
       <TabsTrigger 
         value="security" 
-        className="flex flex-col items-center gap-1 p-2 text-xs data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700 data-[state=active]:text-gray-900 dark:data-[state=active]:text-gray-100"
+        className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 text-xs sm:text-sm text-gray-700 dark:text-gray-300 data-[state=active]:bg-white data-[state=active]:text-gray-900 dark:data-[state=active]:bg-gray-700 dark:data-[state=active]:text-gray-100 py-2 sm:py-3"
       >
         <Shield className="h-4 w-4" />
         <span className="hidden sm:inline">Security</span>
+        <span className="sm:hidden">Sec</span>
       </TabsTrigger>
     </TabsList>
   );
