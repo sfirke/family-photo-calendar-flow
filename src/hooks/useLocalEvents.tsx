@@ -1,4 +1,3 @@
-/* eslint-disable react-refresh/only-export-components */
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Event, ImportedEvent } from '@/types/calendar';
@@ -86,11 +85,11 @@ export const useLocalEvents = () => {
     return [...localEvents, ...icalEvents, ...notionEvents];
   }, [localEvents, getICalEvents, getNotionEvents]);
 
-  // Add a new event
+  // Event management functions
   const addEvent = useCallback((newEvent: Omit<Event, 'id'>) => {
     const event: Event = {
       ...newEvent,
-      id: Date.now(), // Simple ID generation
+      id: Date.now(),
       calendarId: 'local_calendar',
       calendarName: 'Family Calendar'
     };
@@ -104,7 +103,6 @@ export const useLocalEvents = () => {
     return event;
   }, [saveEventsToStorage]);
 
-  // Update an existing event
   const updateEvent = useCallback((eventId: number, updates: Partial<Event>) => {
     setLocalEvents(prev => {
       const updated = prev.map(event => 
@@ -115,7 +113,6 @@ export const useLocalEvents = () => {
     });
   }, [saveEventsToStorage]);
 
-  // Delete an event
   const deleteEvent = useCallback((eventId: number) => {
     setLocalEvents(prev => {
       const updated = prev.filter(event => event.id !== eventId);
@@ -124,20 +121,18 @@ export const useLocalEvents = () => {
     });
   }, [saveEventsToStorage]);
 
-  // Refresh events (reload from storage)
+  // Utility functions
   const refreshEvents = useCallback(() => {
     setIsLoading(true);
     loadLocalEvents();
   }, [loadLocalEvents]);
 
-  // Clear all events and reset to sample data
   const resetToSampleEvents = useCallback(() => {
     localStorage.removeItem(LOCAL_EVENTS_KEY);
     localStorage.removeItem(EVENTS_VERSION_KEY);
     initializeWithSampleEvents();
   }, [initializeWithSampleEvents]);
 
-  // Export events as JSON
   const exportEvents = useCallback(() => {
     const dataStr = JSON.stringify(allEvents, null, 2);
     const dataBlob = new Blob([dataStr], { type: 'application/json' });
@@ -151,7 +146,6 @@ export const useLocalEvents = () => {
     URL.revokeObjectURL(url);
   }, [allEvents]);
 
-  // Import events from JSON
   const importEvents = useCallback((file: File) => {
     return new Promise<void>((resolve, reject) => {
       const reader = new FileReader();
@@ -159,7 +153,7 @@ export const useLocalEvents = () => {
         try {
           const importedEvents: ImportedEvent[] = JSON.parse(e.target?.result as string);
           
-          // Validate and convert imported events with all required Event properties
+          // Validate and convert imported events
           const validEvents: Event[] = importedEvents.map((event: ImportedEvent, index: number) => ({
             id: event.id || (Date.now() + index),
             title: event.title,
@@ -191,7 +185,7 @@ export const useLocalEvents = () => {
     loadLocalEvents();
   }, [loadLocalEvents]);
 
-  // Return value optimized for local-only usage
+  // Return optimized for compatibility
   const memoizedValue = useMemo(() => ({
     googleEvents: allEvents, // Keep same interface name for compatibility
     localEvents: allEvents, // Return combined events
