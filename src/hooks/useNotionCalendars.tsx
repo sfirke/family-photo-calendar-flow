@@ -1,8 +1,9 @@
 
 import { useState, useEffect, useCallback } from 'react';
-import { NotionCalendar, NotionEvent, NotionSyncStatus } from '@/types/notion';
+import { NotionCalendar, NotionEvent, NotionSyncStatus, NotionPage } from '@/types/notion';
 import { notionService } from '@/services/notionService';
 import { useSettings } from '@/contexts/SettingsContext';
+import { PageObjectResponse } from '@notionhq/client/build/src/api-types';
 
 const NOTION_CALENDARS_KEY = 'notion_calendars';
 const NOTION_EVENTS_KEY = 'notion_events';
@@ -108,30 +109,26 @@ export const useNotionCalendars = () => {
         throw new Error('Invalid Notion URL - could not extract page ID');
       }
 
-      // Try to get the page/database
-      let notionData;
       let notionEvents: NotionEvent[] = [];
+      let pages: PageObjectResponse[] = [];
 
       try {
         // First try as database
         const database = await notionService.getDatabase(pageId, notionToken);
         const queryResult = await notionService.queryDatabase(pageId, notionToken);
-        notionEvents = notionService.transformToEvents(
-          queryResult.results,
-          calendar.id,
-          calendar.name,
-          calendar.color
-        );
+        pages = queryResult.results as PageObjectResponse[];
       } catch (dbError) {
         // If database fails, try as page
         const page = await notionService.getPage(pageId, notionToken);
-        notionEvents = notionService.transformToEvents(
-          [page],
-          calendar.id,
-          calendar.name,
-          calendar.color
-        );
+        pages = [page];
       }
+
+      notionEvents = notionService.transformToEvents(
+        pages,
+        calendar.id,
+        calendar.name,
+        calendar.color
+      );
 
       // Update events - remove old events from this calendar and add new ones
       const otherEvents = events.filter(event => event.calendarId !== calendar.id);

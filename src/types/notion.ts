@@ -1,4 +1,10 @@
 
+import { 
+  PageObjectResponse, 
+  DatabaseObjectResponse, 
+  QueryDatabaseResponse 
+} from '@notionhq/client/build/src/api-types';
+
 export interface NotionIntegrationToken {
   token: string;
   workspaceName?: string;
@@ -33,35 +39,10 @@ export interface NotionCalendar {
   hasAccess?: boolean;
 }
 
-export interface NotionPage {
-  id: string;
-  title: string;
-  url: string;
-  properties: Record<string, any>;
-  created_time: string;
-  last_edited_time: string;
-}
-
-export interface NotionDatabase {
-  id: string;
-  title: string;
-  properties: Record<string, NotionProperty>;
-}
-
-export interface NotionProperty {
-  id: string;
-  name: string;
-  type: string;
-  title?: any[];
-  rich_text?: any[];
-  date?: {
-    start: string;
-    end?: string;
-  };
-  select?: {
-    name: string;
-  };
-}
+// Use official SDK types
+export type NotionPage = PageObjectResponse;
+export type NotionDatabase = DatabaseObjectResponse;
+export type NotionApiResponse = QueryDatabaseResponse;
 
 export interface NotionEvent {
   id: string;
@@ -77,12 +58,6 @@ export interface NotionEvent {
   properties?: Record<string, any>;
   notionPageId: string;
   notionUrl: string;
-}
-
-export interface NotionApiResponse {
-  results: NotionPage[];
-  next_cursor?: string;
-  has_more: boolean;
 }
 
 export interface NotionSyncStatus {

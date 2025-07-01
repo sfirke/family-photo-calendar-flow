@@ -1,4 +1,3 @@
-
 const CACHE_NAME = 'family-photo-calendar-v1.2.0';
 const urlsToCache = [
   '/',
@@ -10,9 +9,6 @@ const urlsToCache = [
 
 // External API domains that should bypass the service worker
 const EXTERNAL_API_DOMAINS = [
-  'api.notion.com',
-  'notion.so',
-  'www.notion.so',
   'api.codetabs.com',
   'cors-anywhere.herokuapp.com',
   'thingproxy.freeboard.io',
@@ -59,7 +55,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // IMPORTANT: Let external API calls bypass the service worker completely
+  // Let external API calls bypass the service worker completely
   if (shouldBypassServiceWorker(event.request.url)) {
     console.log('Bypassing service worker for external API:', event.request.url);
     return; // Don't intercept, let the request go through normally
