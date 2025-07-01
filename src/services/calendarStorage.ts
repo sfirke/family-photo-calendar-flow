@@ -1,3 +1,4 @@
+
 interface CalendarFeed {
   id: string;
   name: string;
@@ -6,19 +7,6 @@ interface CalendarFeed {
   enabled: boolean;
   lastSync?: string;
   eventCount?: number;
-  // iCal specific properties
-  syncStatus?: 'idle' | 'syncing' | 'success' | 'error';
-  error?: string;
-  hasEvents?: boolean;
-  source?: string;
-  // Notion specific properties
-  databaseId?: string;
-  propertyMappings?: {
-    title?: string;
-    date?: string;
-    description?: string;
-    location?: string;
-  };
 }
 
 class CalendarStorageService {
