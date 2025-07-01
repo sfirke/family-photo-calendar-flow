@@ -1,4 +1,3 @@
-
 import { NotionPage, NotionDatabase, NotionApiResponse, NotionEvent } from '@/types/notion';
 
 interface RequestDebugInfo {
@@ -44,21 +43,6 @@ class NotionService {
     );
   }
 
-  private async checkNotionApiReachability(): Promise<boolean> {
-    try {
-      // Make a simple HEAD request to Notion API
-      const response = await fetch('https://api.notion.com/v1/', {
-        method: 'HEAD',
-        mode: 'cors',
-        cache: 'no-cache'
-      });
-      return response.status === 401; // 401 is expected without auth token
-    } catch (error) {
-      console.warn('Notion API reachability check failed:', error);
-      return false;
-    }
-  }
-
   private normalizeHeaders(headers?: HeadersInit): Record<string, string> {
     if (!headers) return {};
     
@@ -89,6 +73,48 @@ class NotionService {
     return {};
   }
 
+  private classifyError(error: Error, response?: Response): string {
+    // Network connectivity errors
+    if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+      return 'Network error: Unable to reach Notion API. Please check your internet connection and try again.';
+    }
+
+    // Timeout errors
+    if (error.name === 'AbortError' || error.message.includes('timeout')) {
+      return 'Request timed out. The Notion API may be slow to respond. Please try again.';
+    }
+
+    // Service worker interference
+    if (error.message.includes('Service worker')) {
+      return 'Service worker is interfering with API requests. Please refresh the page or disable the service worker.';
+    }
+
+    // HTTP status errors
+    if (response) {
+      switch (response.status) {
+        case 400:
+          return 'Invalid request format. Please check your integration token format and try again.';
+        case 401:
+          return 'Invalid Notion token. Please check your integration token and ensure it has the correct permissions.';
+        case 403:
+          return 'Access forbidden. Please ensure your integration has access to the requested page or database. You may need to share the page/database with your integration.';
+        case 404:
+          return 'Page or database not found. Please check the URL and ensure the page/database exists and is shared with your integration.';
+        case 429:
+          return 'Rate limit exceeded. Please wait a moment and try again.';
+        case 500:
+        case 502:
+        case 503:
+        case 504:
+          return 'Notion server error. Please try again later.';
+        default:
+          return `Notion API error: ${response.status} - ${response.statusText}`;
+      }
+    }
+
+    return `Unexpected error: ${error.message}`;
+  }
+
   private logRequestDebug(debugInfo: RequestDebugInfo, error?: Error) {
     console.group('🔍 Notion API Request Debug');
     console.log('URL:', debugInfo.url);
@@ -108,12 +134,6 @@ class NotionService {
     // Validate token format first
     if (!this.validateTokenFormat(token)) {
       throw new Error('Invalid token format. Notion tokens should start with "ntn_" and be at least 50 characters long.');
-    }
-
-    // Check API reachability
-    const isReachable = await this.checkNotionApiReachability();
-    if (!isReachable) {
-      throw new Error('Notion API is not reachable. Please check your internet connection or try again later.');
     }
 
     const url = `${this.baseUrl}${endpoint}`;
@@ -180,34 +200,17 @@ class NotionService {
       // Check if response is not ok
       if (!response.ok) {
         this.logRequestDebug(debugInfo);
+        const errorMessage = this.classifyError(new Error(`HTTP ${response.status}`), response);
         
-        // Handle specific error codes for internal integrations
-        if (response.status === 401) {
-          throw new Error('Invalid Notion token. Please check your integration token and ensure it has the correct permissions.');
-        } else if (response.status === 403) {
-          throw new Error('Access forbidden. Please ensure your integration has access to the requested page or database. You may need to share the page/database with your integration.');
-        } else if (response.status === 404) {
-          throw new Error('Page or database not found. Please check the URL and ensure the page/database exists and is shared with your integration.');
-        } else if (response.status >= 500) {
-          throw new Error('Notion server error. Please try again later.');
-        }
-        
-        // Try to parse error as JSON if possible
-        let errorMessage = `Notion API error: ${response.status} - ${response.statusText}`;
-        
+        // Try to parse error as JSON for additional context
         if (contentType && contentType.includes('application/json')) {
           try {
             const errorData = JSON.parse(responseText);
-            errorMessage = `Notion API error: ${response.status} - ${errorData.message || response.statusText}`;
-            
-            // Provide specific guidance for common errors
-            if (errorData.code === 'object_not_found') {
-              errorMessage += '. Please ensure the page/database URL is correct and shared with your integration.';
-            } else if (errorData.code === 'unauthorized') {
-              errorMessage += '. Please check your integration token and permissions.';
+            if (errorData.message) {
+              throw new Error(`${errorMessage} (${errorData.message})`);
             }
           } catch (parseError) {
-            // Fallback to status text if JSON parsing fails
+            // Fallback to classified error message
           }
         }
         
@@ -231,18 +234,19 @@ class NotionService {
     } catch (error) {
       // Handle fetch errors (network issues, timeouts, etc.)
       if (error instanceof Error) {
-        if (error.name === 'AbortError') {
-          throw new Error('Request timed out. The Notion API may be slow to respond. Please try again.');
-        }
-        
-        if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
-          throw new Error('Network error: Unable to reach Notion API. Please check your internet connection and try again.');
-        }
-
         // Re-throw our custom errors
-        if (error.message.includes('Notion') || error.message.includes('Invalid token') || error.message.includes('Service worker')) {
+        if (error.message.includes('Notion') || 
+            error.message.includes('Invalid token') || 
+            error.message.includes('Service worker') ||
+            error.message.includes('Access forbidden') ||
+            error.message.includes('Rate limit') ||
+            error.message.includes('server error')) {
           throw error;
         }
+
+        // Classify and throw network/fetch errors
+        const classifiedError = this.classifyError(error, response);
+        throw new Error(classifiedError);
       }
 
       // Log debug info for unexpected errors
@@ -256,6 +260,7 @@ class NotionService {
 
   async getIntegrationInfo(token: string): Promise<NotionIntegrationInfo> {
     try {
+      console.log('🔐 Getting Notion integration info...');
       const userInfo = await this.makeRequest('/users/me', token, {}, true); // Bypass service worker for critical requests
       
       return {
@@ -272,7 +277,7 @@ class NotionService {
       };
     } catch (error) {
       console.error('Failed to get integration info:', error);
-      throw new Error('Failed to retrieve integration information. Please check your token.');
+      throw new Error('Failed to retrieve integration information. Please check your token and try again.');
     }
   }
 
@@ -449,7 +454,7 @@ class NotionService {
         return false;
       }
 
-      // Test the token by getting integration info with service worker bypass
+      // Test the token by getting integration info directly (no reachability check)
       const integrationInfo = await this.getIntegrationInfo(token);
       console.log('✅ Notion token validation successful:', integrationInfo);
       return true;
