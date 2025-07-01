@@ -15,6 +15,13 @@ export const useGooglePhotos = () => {
   const [error, setError] = useState<string | null>(null);
   const [lastFetch, setLastFetch] = useState<Date | null>(null);
 
+  // Add debug logging for publicAlbumUrl
+  useEffect(() => {
+    console.log('🖼️ useGooglePhotos - publicAlbumUrl changed:', publicAlbumUrl);
+    console.log('🖼️ useGooglePhotos - publicAlbumUrl type:', typeof publicAlbumUrl);
+    console.log('🖼️ useGooglePhotos - publicAlbumUrl length:', publicAlbumUrl?.length);
+  }, [publicAlbumUrl]);
+
   const loadPhotosFromCache = useCallback(() => {
     const cached = photosCache.get();
     if (cached && cached.albumUrl === publicAlbumUrl) {
@@ -26,7 +33,12 @@ export const useGooglePhotos = () => {
   }, [publicAlbumUrl]);
 
   const fetchPhotos = useCallback(async (albumUrl: string, forceRefresh: boolean = false) => {
-    if (!albumUrl) {
+    console.log('🖼️ fetchPhotos called with albumUrl:', albumUrl);
+    console.log('🖼️ fetchPhotos - albumUrl type:', typeof albumUrl);
+    console.log('🖼️ fetchPhotos - forceRefresh:', forceRefresh);
+    
+    if (!albumUrl || albumUrl.trim() === '') {
+      console.log('🖼️ No album URL provided, clearing images');
       setImages([]);
       setError(null);
       return;
@@ -43,10 +55,12 @@ export const useGooglePhotos = () => {
     setError(null);
 
     try {
+      console.log('🖼️ Validating Google Photos URL:', albumUrl);
       if (!validateGooglePhotosUrl(albumUrl)) {
         throw new Error('Invalid Google Photos album URL format');
       }
 
+      console.log('🖼️ URL validation passed, fetching images...');
       const fetchedImages = await fetchAlbumImages(albumUrl);
       
       if (fetchedImages.length > 0) {
@@ -72,7 +86,7 @@ export const useGooglePhotos = () => {
         });
       }
     } catch (err: any) {
-      console.error('Error fetching photos:', err);
+      console.error('🖼️ Error fetching photos:', err);
       setError(err.message || 'Failed to fetch photos from album');
       
       // Try to load from cache as fallback
@@ -91,13 +105,15 @@ export const useGooglePhotos = () => {
   }, [loadPhotosFromCache, toast]);
 
   const refreshPhotos = useCallback(() => {
-    if (publicAlbumUrl) {
+    console.log('🖼️ refreshPhotos called with publicAlbumUrl:', publicAlbumUrl);
+    if (publicAlbumUrl && publicAlbumUrl.trim() !== '') {
       fetchPhotos(publicAlbumUrl, true);
     }
   }, [publicAlbumUrl, fetchPhotos]);
 
   const testAlbumConnection = useCallback(async (testUrl: string): Promise<boolean> => {
     try {
+      console.log('🖼️ Testing album connection with URL:', testUrl);
       if (!validateGooglePhotosUrl(testUrl)) {
         throw new Error('Invalid Google Photos album URL format');
       }
@@ -120,7 +136,7 @@ export const useGooglePhotos = () => {
         return false;
       }
     } catch (err: any) {
-      console.error('Error testing album connection:', err);
+      console.error('🖼️ Error testing album connection:', err);
       toast({
         title: "Connection failed",
         description: err.message || 'Could not access the album.',
@@ -151,9 +167,11 @@ export const useGooglePhotos = () => {
 
   // Load photos on mount and when album URL changes
   useEffect(() => {
-    if (publicAlbumUrl) {
+    console.log('🖼️ useEffect triggered - publicAlbumUrl:', publicAlbumUrl);
+    if (publicAlbumUrl && publicAlbumUrl.trim() !== '') {
       fetchPhotos(publicAlbumUrl);
     } else {
+      console.log('🖼️ No valid publicAlbumUrl, clearing state');
       setImages([]);
       setError(null);
       setLastFetch(null);
@@ -162,7 +180,7 @@ export const useGooglePhotos = () => {
 
   // Set up daily refresh interval
   useEffect(() => {
-    if (!publicAlbumUrl) return;
+    if (!publicAlbumUrl || publicAlbumUrl.trim() === '') return;
 
     const checkForDailyRefresh = () => {
       if (photosCache.isExpired()) {
@@ -185,6 +203,6 @@ export const useGooglePhotos = () => {
     testAlbumConnection,
     clearCache,
     getRandomizedPhotos,
-    hasValidAlbumUrl: Boolean(publicAlbumUrl && validateGooglePhotosUrl(publicAlbumUrl))
+    hasValidAlbumUrl: Boolean(publicAlbumUrl && publicAlbumUrl.trim() !== '' && validateGooglePhotosUrl(publicAlbumUrl))
   };
 };

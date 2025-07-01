@@ -1,3 +1,4 @@
+
 import { NotionEvent, NotionPage } from '@/types/notion';
 
 interface NotionIntegrationInfo {
@@ -218,26 +219,6 @@ class NotionService {
       console.error('Failed to get integration info:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown validation error';
       throw new Error(`Failed to retrieve integration information: ${errorMessage}`);
-    }
-  }
-
-  async testPageAccess(pageId: string, token: string): Promise<boolean> {
-    try {
-      await this.makeNotionRequest(`/pages/${pageId}`, token);
-      return true;
-    } catch (error) {
-      console.warn(`No access to page ${pageId}:`, error);
-      return false;
-    }
-  }
-
-  async testDatabaseAccess(databaseId: string, token: string): Promise<boolean> {
-    try {
-      await this.makeNotionRequest(`/databases/${databaseId}`, token);
-      return true;
-    } catch (error) {
-      console.warn(`No access to database ${databaseId}:`, error);
-      return false;
     }
   }
 

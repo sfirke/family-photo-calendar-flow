@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import Calendar from '@/components/Calendar';
 import WeatherWidget from '@/components/WeatherWidget';
@@ -19,6 +18,12 @@ const Index = () => {
     backgroundDuration,
     publicAlbumUrl
   } = useSettings();
+
+  // Debug logging for publicAlbumUrl
+  useEffect(() => {
+    console.log('🖼️ Index.tsx - publicAlbumUrl changed:', publicAlbumUrl);
+    console.log('🖼️ Index.tsx - publicAlbumUrl type:', typeof publicAlbumUrl);
+  }, [publicAlbumUrl]);
 
   // Optimized clock update - only update minutes, not seconds
   useEffect(() => {
@@ -75,13 +80,17 @@ const Index = () => {
 
   // Background image loading with ALL cached photos
   const loadBackgroundImages = useCallback(async () => {
-    if (publicAlbumUrl) {
+    console.log('🖼️ Index.tsx - loadBackgroundImages called with publicAlbumUrl:', publicAlbumUrl);
+    
+    if (publicAlbumUrl && publicAlbumUrl.trim() !== '') {
       try {
         // First try to get ALL cached photos
         const {
           photosCache
         } = await import('@/utils/photosCache');
         const cachedPhotos = photosCache.getRandomizedPhotos(); // Get ALL photos, no limit
+        console.log('🖼️ Index.tsx - Cached photos found:', cachedPhotos.length);
+        
         if (cachedPhotos.length > 0) {
           setBackgroundImages(cachedPhotos);
           setCurrentBg(0);
@@ -89,19 +98,22 @@ const Index = () => {
         }
 
         // Fallback to fetching if no cache
+        console.log('🖼️ Index.tsx - No cached photos, fetching from album...');
         const albumImages = await getImagesFromAlbum(publicAlbumUrl);
         if (albumImages.length > 0) {
           const randomizedImages = [...albumImages].sort(() => Math.random() - 0.5);
           setBackgroundImages(randomizedImages);
           setCurrentBg(0);
         } else {
+          console.log('🖼️ Index.tsx - No album images found, using defaults');
           setBackgroundImages(getDefaultBackgroundImages());
         }
       } catch (error) {
-        console.warn('Failed to load album images, using defaults:', error);
+        console.warn('🖼️ Index.tsx - Failed to load album images, using defaults:', error);
         setBackgroundImages(getDefaultBackgroundImages());
       }
     } else {
+      console.log('🖼️ Index.tsx - No publicAlbumUrl, using defaults');
       setBackgroundImages(getDefaultBackgroundImages());
     }
   }, [publicAlbumUrl]);
