@@ -1,14 +1,9 @@
-
 import { Client } from '@notionhq/client';
 import { 
   PageObjectResponse, 
   DatabaseObjectResponse, 
   QueryDatabaseResponse,
-  GetUserResponse,
-  APIErrorCode,
-  APIResponseError,
-  ClientErrorCode,
-  isNotionClientError
+  GetUserResponse
 } from '@notionhq/client/build/src/api-endpoints';
 import { NotionEvent } from '@/types/notion';
 
@@ -38,26 +33,27 @@ class NotionService {
   }
 
   private classifyNotionError(error: unknown): string {
-    if (isNotionClientError(error)) {
-      switch (error.code) {
-        case ClientErrorCode.UnauthorizedUser:
+    if (error && typeof error === 'object' && 'code' in error) {
+      const errorCode = (error as any).code;
+      switch (errorCode) {
+        case 'unauthorized':
           return 'Invalid Notion token. Please check your integration token and ensure it has the correct permissions.';
-        case ClientErrorCode.RestrictedResource:
+        case 'restricted_resource':
           return 'Access forbidden. Please ensure your integration has access to the requested page or database. You may need to share the page/database with your integration.';
-        case ClientErrorCode.ObjectNotFound:
+        case 'object_not_found':
           return 'Page or database not found. Please check the URL and ensure the page/database exists and is shared with your integration.';
-        case ClientErrorCode.RateLimited:
+        case 'rate_limited':
           return 'Rate limit exceeded. Please wait a moment and try again.';
-        case ClientErrorCode.InvalidJSON:
+        case 'invalid_json':
           return 'Invalid request format. Please check your integration token format and try again.';
-        case ClientErrorCode.InvalidRequest:
+        case 'invalid_request':
           return 'Invalid request. Please check the page/database URL and try again.';
-        case ClientErrorCode.ValidationError:
+        case 'validation_error':
           return 'Validation error. Please check your request parameters.';
-        case ClientErrorCode.ConflictError:
+        case 'conflict_error':
           return 'Conflict error. The resource may have been modified by another process.';
         default:
-          return `Notion API error: ${error.message}`;
+          return `Notion API error: ${(error as any).message || 'Unknown error'}`;
       }
     }
 
@@ -84,25 +80,42 @@ class NotionService {
     try {
       console.log('🔐 Getting Notion integration info...');
       const notion = this.createClient(token);
-      const userInfo = await notion.users.me();
+      const userInfo = await notion.users.me() as GetUserResponse;
       
       return {
         type: userInfo.type || 'bot',
-        name: userInfo.name || 'Unknown Integration',
+        name: this.extractUserName(userInfo),
         capabilities: {
           read_content: true,
           read_user_info: true
         },
-        workspace: userInfo.type === 'bot' && 'workspace' in userInfo ? {
-          name: userInfo.workspace?.name || 'Unknown Workspace',
-          id: userInfo.workspace?.id || ''
-        } : undefined
+        workspace: this.extractWorkspaceInfo(userInfo)
       };
     } catch (error) {
       console.error('Failed to get integration info:', error);
       const errorMessage = this.classifyNotionError(error);
       throw new Error(`Failed to retrieve integration information: ${errorMessage}`);
     }
+  }
+
+  private extractUserName(userInfo: any): string {
+    if (userInfo && typeof userInfo === 'object' && 'name' in userInfo && typeof userInfo.name === 'string') {
+      return userInfo.name;
+    }
+    return 'Unknown Integration';
+  }
+
+  private extractWorkspaceInfo(userInfo: any): { name: string; id: string } | undefined {
+    if (userInfo && typeof userInfo === 'object' && userInfo.type === 'bot' && 'workspace' in userInfo && userInfo.workspace) {
+      const workspace = userInfo.workspace;
+      if (workspace && typeof workspace === 'object' && 'name' in workspace && 'id' in workspace) {
+        return {
+          name: workspace.name || 'Unknown Workspace',
+          id: workspace.id || ''
+        };
+      }
+    }
+    return undefined;
   }
 
   async testPageAccess(pageId: string, token: string): Promise<boolean> {
