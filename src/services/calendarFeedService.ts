@@ -5,25 +5,57 @@ import { calendarStorageService } from './calendarStorage';
 
 export type CalendarFeed = ICalCalendar | NotionCalendar;
 
+// Base interface for common properties
+interface CalendarBase {
+  name: string;
+  url: string;
+  color: string;
+  enabled: boolean;
+  lastSync?: string;
+  eventCount?: number;
+}
+
+// Discriminated union types for calendar creation
+export type CreateICalCalendar = CalendarBase & {
+  type: 'ical';
+  syncStatus?: 'idle' | 'syncing' | 'success' | 'error';
+  error?: string;
+  hasEvents?: boolean;
+  source?: string;
+};
+
+export type CreateNotionCalendar = CalendarBase & {
+  type: 'notion';
+  databaseId: string;
+  propertyMappings?: {
+    title?: string;
+    date?: string;
+    description?: string;
+    location?: string;
+  };
+};
+
+export type CreateCalendarInput = CreateICalCalendar | CreateNotionCalendar;
+
 export class CalendarFeedService {
-  static async addCalendar(calendar: Omit<CalendarFeed, 'id'> & { type: 'ical' | 'notion' }): Promise<CalendarFeed> {
+  static async addCalendar(calendar: CreateCalendarInput): Promise<CalendarFeed> {
     const id = `${calendar.type}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
     let newCalendar: CalendarFeed;
     
     if (calendar.type === 'notion') {
-      // Create Notion calendar with required databaseId
+      // TypeScript now knows this is CreateNotionCalendar, so databaseId is available
       newCalendar = {
         ...calendar,
         id,
-        databaseId: calendar.databaseId || '', // Ensure databaseId exists for Notion calendars
+        databaseId: calendar.databaseId,
       } as NotionCalendar;
     } else {
-      // Create iCal calendar with required syncStatus
+      // TypeScript knows this is CreateICalCalendar
       newCalendar = {
         ...calendar,
         id,
-        syncStatus: 'idle' as const,
+        syncStatus: calendar.syncStatus || 'idle',
       } as ICalCalendar;
     }
 

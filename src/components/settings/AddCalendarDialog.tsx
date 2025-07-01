@@ -6,17 +6,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Globe, GitFork } from 'lucide-react';
+import { CreateCalendarInput } from '@/services/calendarFeedService';
 
 const CALENDAR_COLORS = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899'];
 
 interface AddCalendarDialogProps {
-  onAdd: (calendar: {
-    name: string;
-    url: string;
-    color: string;
-    enabled: boolean;
-    type: 'ical' | 'notion';
-  }) => Promise<void>;
+  onAdd: (calendar: CreateCalendarInput) => Promise<void>;
   isLoading: boolean;
 }
 
@@ -27,20 +22,36 @@ const AddCalendarDialog = ({ onAdd, isLoading }: AddCalendarDialogProps) => {
     name: '',
     url: '',
     color: CALENDAR_COLORS[0],
-    enabled: true
+    enabled: true,
+    databaseId: '' // For Notion calendars
   });
 
   const handleAdd = async () => {
-    await onAdd({
-      ...newCalendar,
-      type: feedType
-    });
+    if (feedType === 'notion') {
+      await onAdd({
+        name: newCalendar.name,
+        url: newCalendar.url,
+        color: newCalendar.color,
+        enabled: newCalendar.enabled,
+        type: 'notion',
+        databaseId: newCalendar.databaseId,
+      });
+    } else {
+      await onAdd({
+        name: newCalendar.name,
+        url: newCalendar.url,
+        color: newCalendar.color,
+        enabled: newCalendar.enabled,
+        type: 'ical',
+      });
+    }
     
     setNewCalendar({
       name: '',
       url: '',
       color: CALENDAR_COLORS[0],
-      enabled: true
+      enabled: true,
+      databaseId: ''
     });
     setShowDialog(false);
   };
@@ -109,6 +120,18 @@ const AddCalendarDialog = ({ onAdd, isLoading }: AddCalendarDialogProps) => {
               className="bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-gray-100"
             />
           </div>
+          {feedType === 'notion' && (
+            <div>
+              <Label htmlFor="database-id" className="text-gray-700 dark:text-gray-300">Database ID</Label>
+              <Input
+                id="database-id"
+                placeholder="Enter Notion database ID"
+                value={newCalendar.databaseId}
+                onChange={(e) => setNewCalendar(prev => ({ ...prev, databaseId: e.target.value }))}
+                className="bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-gray-100"
+              />
+            </div>
+          )}
           <div>
             <Label className="text-gray-700 dark:text-gray-300">Calendar Color</Label>
             <div className="flex gap-2 mt-2">
@@ -134,7 +157,12 @@ const AddCalendarDialog = ({ onAdd, isLoading }: AddCalendarDialogProps) => {
             </Button>
             <Button
               onClick={handleAdd}
-              disabled={isLoading || !newCalendar.name.trim() || !newCalendar.url.trim()}
+              disabled={
+                isLoading || 
+                !newCalendar.name.trim() || 
+                !newCalendar.url.trim() ||
+                (feedType === 'notion' && !newCalendar.databaseId.trim())
+              }
               className="bg-gray-600 hover:bg-gray-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white"
             >
               Add Calendar
