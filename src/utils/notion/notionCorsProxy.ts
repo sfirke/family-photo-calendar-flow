@@ -14,6 +14,32 @@ interface NotionProxyResponse {
 }
 
 export class NotionCorsProxy {
+  private normalizeHeaders(headers?: HeadersInit): Record<string, string> {
+    if (!headers) return {};
+    
+    if (headers.constructor === Object) {
+      return headers as Record<string, string>;
+    }
+    
+    if (headers instanceof Headers) {
+      const normalized: Record<string, string> = {};
+      headers.forEach((value, key) => {
+        normalized[key] = value;
+      });
+      return normalized;
+    }
+    
+    if (Array.isArray(headers)) {
+      const normalized: Record<string, string> = {};
+      headers.forEach(([key, value]) => {
+        normalized[key] = value;
+      });
+      return normalized;
+    }
+    
+    return {};
+  }
+
   private async makeProxiedRequest(
     endpoint: string, 
     token: string, 
@@ -25,16 +51,19 @@ export class NotionCorsProxy {
     const notionHeaders = {
       'Authorization': `Bearer ${token}`,
       'Notion-Version': '2022-02-22',
-      'Content-Type': 'application/json',
-      ...options.headers
+      'Content-Type': 'application/json'
     };
+
+    // Normalize incoming headers
+    const normalizedOptionHeaders = this.normalizeHeaders(options.headers);
+    const allHeaders = { ...notionHeaders, ...normalizedOptionHeaders };
 
     // Try direct request first
     try {
       console.log('🔄 Attempting direct Notion API request...');
       const response = await fetch(fullUrl, {
         ...options,
-        headers: notionHeaders,
+        headers: allHeaders,
         mode: 'cors'
       });
 
@@ -58,7 +87,7 @@ export class NotionCorsProxy {
         const proxyHeaders = getProxyHeaders(proxy);
         
         // For proxies that support custom headers, try to include auth
-        let requestHeaders = { ...proxyHeaders };
+        let requestHeaders: Record<string, string> = { ...proxyHeaders };
         
         // Some proxies allow headers to be passed through query params or special headers
         if (proxy.url.includes('allorigins.win')) {
@@ -69,12 +98,12 @@ export class NotionCorsProxy {
         
         if (proxy.url.includes('codetabs.com')) {
           // codetabs may support headers
-          requestHeaders = { ...requestHeaders, ...notionHeaders };
+          requestHeaders = { ...requestHeaders, ...allHeaders };
         }
         
         if (proxy.url.includes('cors-anywhere') || proxy.url.includes('thingproxy')) {
           // These typically support header forwarding
-          requestHeaders = { ...requestHeaders, ...notionHeaders };
+          requestHeaders = { ...requestHeaders, ...allHeaders };
         }
 
         const response = await fetch(proxyUrl, {
