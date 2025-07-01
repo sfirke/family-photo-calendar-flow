@@ -33,6 +33,36 @@ class NotionService {
     }
   }
 
+  private normalizeHeaders(headers?: HeadersInit): Record<string, string> {
+    if (!headers) return {};
+    
+    // If it's already a plain object, return it
+    if (headers.constructor === Object) {
+      return headers as Record<string, string>;
+    }
+    
+    // If it's a Headers object
+    if (headers instanceof Headers) {
+      const normalized: Record<string, string> = {};
+      headers.forEach((value, key) => {
+        normalized[key] = value;
+      });
+      return normalized;
+    }
+    
+    // If it's an array of arrays
+    if (Array.isArray(headers)) {
+      const normalized: Record<string, string> = {};
+      headers.forEach(([key, value]) => {
+        normalized[key] = value;
+      });
+      return normalized;
+    }
+    
+    // Fallback: return empty object
+    return {};
+  }
+
   private logRequestDebug(debugInfo: RequestDebugInfo, error?: Error) {
     console.group('🔍 Notion API Request Debug');
     console.log('URL:', debugInfo.url);
@@ -60,12 +90,15 @@ class NotionService {
     }
 
     const url = `${this.baseUrl}${endpoint}`;
-    const headers = {
+    const baseHeaders = {
       'Authorization': `Bearer ${token}`,
       'Notion-Version': this.version,
       'Content-Type': 'application/json',
-      ...options.headers,
     };
+    
+    // Normalize and merge headers
+    const normalizedOptionHeaders = this.normalizeHeaders(options.headers);
+    const headers = { ...baseHeaders, ...normalizedOptionHeaders };
 
     let response: Response;
     let responseText: string = '';
