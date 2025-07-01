@@ -68,20 +68,40 @@ class SecureStorage {
       const stored = localStorage.getItem(key);
       if (!stored) return null;
 
+      // Check if it's a URL starting with http (plain text case)
+      if (stored.startsWith('http') || stored.startsWith('https')) {
+        console.warn(`Found plain text data for ${key}, attempting migration`);
+        return stored;
+      }
+
       // Try to parse as JSON first (encrypted format)
       try {
         const storageItem: SecureStorageItem = JSON.parse(stored);
-        return await decryptData(storageItem.data, password);
+        if (storageItem.data && storageItem.version) {
+          return await decryptData(storageItem.data, password);
+        } else {
+          // Malformed JSON but not a plain URL
+          console.warn(`Malformed storage item for ${key}, treating as plain text`);
+          return stored;
+        }
       } catch (parseError) {
-        // If JSON parsing fails, it might be plain text (test environment)
-        if (process.env.NODE_ENV === 'test') {
-          console.warn('Retrieved plain text data in test environment');
+        // If JSON parsing fails, check if it's plain text
+        if (typeof stored === 'string' && stored.length > 0) {
+          console.warn(`Retrieved plain text data for ${key} in non-test environment`);
           return stored;
         }
         throw parseError;
       }
     } catch (error) {
-      console.error('Failed to retrieve encrypted data:', error);
+      console.error(`Failed to retrieve data for ${key}:`, error);
+      
+      // If decryption fails, try to recover by checking if it's plain text
+      const stored = localStorage.getItem(key);
+      if (stored && typeof stored === 'string' && !stored.startsWith('{')) {
+        console.warn(`Decryption failed for ${key}, but found plain text data`);
+        return stored;
+      }
+      
       return null;
     }
   }

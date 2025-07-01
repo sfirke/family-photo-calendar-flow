@@ -35,33 +35,26 @@ export class SettingsStorage {
         selectedAlbum: localStorage.getItem('selectedAlbum'),
       };
 
-      // Load sensitive settings from secure storage (with fallback to localStorage)
+      // Load sensitive settings with enhanced error handling
       let sensitiveSettings: Partial<LoadedSettings> = {};
-      try {
-        sensitiveSettings = {
-          zipCode: await secureStorage.retrieve('zipCode', 'defaultPassword') || localStorage.getItem('zipCode'),
-          weatherApiKey: await secureStorage.retrieve('weatherApiKey', 'defaultPassword') || localStorage.getItem('weatherApiKey'),
-          publicAlbumUrl: await secureStorage.retrieve('publicAlbumUrl', 'defaultPassword') || localStorage.getItem('publicAlbumUrl'),
-          githubOwner: await secureStorage.retrieve('githubOwner', 'defaultPassword') || localStorage.getItem('githubOwner'),
-          githubRepo: await secureStorage.retrieve('githubRepo', 'defaultPassword') || localStorage.getItem('githubRepo'),
-          notionIntegrationToken: await secureStorage.retrieve('notionIntegrationToken', 'defaultPassword') || localStorage.getItem('notionIntegrationToken'),
-        };
-
-        // Automatic migration: Move unencrypted sensitive data to secure storage
-        if (secureStorage.exists('test')) {
-          await this.migrateSensitiveSettings();
+      
+      const sensitiveKeys = ['zipCode', 'weatherApiKey', 'publicAlbumUrl', 'githubOwner', 'githubRepo', 'notionIntegrationToken'];
+      
+      for (const key of sensitiveKeys) {
+        try {
+          // Try secure storage first
+          const secureValue = await this.retrieveWithFallback(key);
+          if (secureValue) {
+            sensitiveSettings[key as keyof LoadedSettings] = secureValue;
+          }
+        } catch (error) {
+          console.warn(`Failed to load ${key}:`, error);
+          // Fallback to localStorage
+          const fallbackValue = localStorage.getItem(key);
+          if (fallbackValue) {
+            sensitiveSettings[key as keyof LoadedSettings] = fallbackValue;
+          }
         }
-      } catch (error) {
-        console.warn('Could not load secure settings:', error);
-        // Fallback to localStorage
-        sensitiveSettings = {
-          zipCode: localStorage.getItem('zipCode'),
-          weatherApiKey: localStorage.getItem('weatherApiKey'),
-          publicAlbumUrl: localStorage.getItem('publicAlbumUrl'),
-          githubOwner: localStorage.getItem('githubOwner'),
-          githubRepo: localStorage.getItem('githubRepo'),
-          notionIntegrationToken: localStorage.getItem('notionIntegrationToken'),
-        };
       }
 
       return { ...nonSensitiveSettings, ...sensitiveSettings };
@@ -69,6 +62,38 @@ export class SettingsStorage {
       console.error('Error loading settings:', error);
       return {};
     }
+  }
+
+  /**
+   * Retrieve a setting with automatic fallback handling
+   */
+  private static async retrieveWithFallback(key: string): Promise<string | null> {
+    try {
+      // Try secure storage first
+      const secureValue = await secureStorage.retrieve(key, 'defaultPassword');
+      if (secureValue) {
+        return secureValue;
+      }
+    } catch (error) {
+      console.warn(`Secure storage failed for ${key}, trying localStorage:`, error);
+    }
+    
+    // Fallback to localStorage
+    const localValue = localStorage.getItem(key);
+    
+    // If we found a plain text value and secure storage is available, migrate it
+    if (localValue && secureStorage.exists('test')) {
+      try {
+        await secureStorage.store(key, localValue, 'defaultPassword');
+        console.log(`Migrated ${key} to secure storage`);
+        localStorage.removeItem(key);
+        return localValue;
+      } catch (migrationError) {
+        console.warn(`Failed to migrate ${key}:`, migrationError);
+      }
+    }
+    
+    return localValue;
   }
 
   /**
@@ -83,6 +108,7 @@ export class SettingsStorage {
         try {
           await secureStorage.store(key, oldValue, 'defaultPassword');
           localStorage.removeItem(key);
+          console.log(`Successfully migrated ${key}`);
         } catch (error) {
           console.warn(`Failed to migrate ${key}:`, error);
         }
@@ -119,5 +145,23 @@ export class SettingsStorage {
     } catch (error) {
       console.warn(`Failed to remove ${key}:`, error);
     }
+  }
+
+  /**
+   * Clear corrupted data and reset to defaults
+   */
+  static async clearCorruptedData() {
+    const corruptedKeys = ['zipCode', 'weatherApiKey', 'publicAlbumUrl', 'githubOwner', 'githubRepo', 'notionIntegrationToken'];
+    
+    for (const key of corruptedKeys) {
+      try {
+        secureStorage.remove(key);
+        localStorage.removeItem(key);
+      } catch (error) {
+        console.warn(`Failed to clear ${key}:`, error);
+      }
+    }
+    
+    console.log('Cleared potentially corrupted settings data');
   }
 }

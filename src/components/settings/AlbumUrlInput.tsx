@@ -1,12 +1,13 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Camera, RefreshCw, AlertCircle, CheckCircle, ExternalLink, TestTube } from 'lucide-react';
+import { Camera, RefreshCw, AlertCircle, CheckCircle, ExternalLink, TestTube, Info } from 'lucide-react';
 import { useSettings } from '@/contexts/SettingsContext';
 import { useToast } from '@/hooks/use-toast';
-import { validateGooglePhotosUrl } from '@/utils/googlePhotos/urlExtractor';
+import { validateGooglePhotosUrl, getUrlValidationError, getSuggestedUrlFormat } from '@/utils/googlePhotos/urlExtractor';
 
 interface AlbumUrlInputProps {
   onTestConnection: (url: string) => Promise<boolean>;
@@ -20,20 +21,30 @@ const AlbumUrlInput = ({ onTestConnection }: AlbumUrlInputProps) => {
   const [isValidating, setIsValidating] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
   const [validationStatus, setValidationStatus] = useState<'idle' | 'valid' | 'invalid'>('idle');
+  const [validationError, setValidationError] = useState<string>('');
 
   const validateAlbumUrl = useCallback((url: string) => {
     if (!url.trim()) {
       setValidationStatus('idle');
+      setValidationError('');
       return;
     }
 
+    console.log('Validating URL:', url);
+
     if (validateGooglePhotosUrl(url)) {
       setValidationStatus('valid');
+      setValidationError('');
+      console.log('URL validation passed');
     } else {
       setValidationStatus('invalid');
+      const error = getUrlValidationError(url);
+      setValidationError(error);
+      console.warn('URL validation failed:', error);
+      
       toast({
         title: "Invalid URL format",
-        description: "Please enter a valid Google Photos album share URL.",
+        description: error,
         variant: "destructive"
       });
     }
@@ -43,8 +54,24 @@ const AlbumUrlInput = ({ onTestConnection }: AlbumUrlInputProps) => {
     if (!albumUrl.trim() || validationStatus !== 'valid') return;
     
     setIsTesting(true);
-    await onTestConnection(albumUrl);
-    setIsTesting(false);
+    try {
+      const success = await onTestConnection(albumUrl);
+      if (success) {
+        toast({
+          title: "Connection successful",
+          description: "Album is accessible and contains photos.",
+        });
+      }
+    } catch (error) {
+      console.error('Test connection failed:', error);
+      toast({
+        title: "Connection failed",
+        description: "Could not access the album. Please check the URL and try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsTesting(false);
+    }
   };
 
   const saveAlbumUrl = () => {
@@ -69,6 +96,8 @@ const AlbumUrlInput = ({ onTestConnection }: AlbumUrlInputProps) => {
 
     return () => clearTimeout(timeoutId);
   }, [albumUrl, validateAlbumUrl]);
+
+  const suggestedFormats = getSuggestedUrlFormat();
 
   return (
     <Card className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
@@ -113,9 +142,25 @@ const AlbumUrlInput = ({ onTestConnection }: AlbumUrlInputProps) => {
             )}
             
             {validationStatus === 'invalid' && (
-              <div className="flex items-center gap-2 text-red-600 dark:text-red-400 text-sm">
-                <AlertCircle className="h-4 w-4" />
-                <span>Invalid album URL format</span>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-red-600 dark:text-red-400 text-sm">
+                  <AlertCircle className="h-4 w-4" />
+                  <span>{validationError}</span>
+                </div>
+                
+                <div className="p-3 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg">
+                  <div className="flex items-start gap-2">
+                    <Info className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+                    <div className="text-sm">
+                      <p className="font-medium text-blue-800 dark:text-blue-200">Supported URL formats:</p>
+                      <ul className="mt-2 text-blue-700 dark:text-blue-300 space-y-1">
+                        {suggestedFormats.map((format, index) => (
+                          <li key={index} className="font-mono text-xs">{format}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
           </div>
@@ -135,6 +180,7 @@ const AlbumUrlInput = ({ onTestConnection }: AlbumUrlInputProps) => {
                   setAlbumUrl('');
                   setPublicAlbumUrl('');
                   setValidationStatus('idle');
+                  setValidationError('');
                 }}
                 size="sm"
                 variant="outline"

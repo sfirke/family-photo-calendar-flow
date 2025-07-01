@@ -37,9 +37,9 @@ const App = () => {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider>
-        <SecurityProvider>
-          <SettingsProvider>
+      <SecurityProvider>
+        <SettingsProvider>
+          <ThemeProvider>
             <WeatherProvider>
               <TooltipProvider>
                 <Toaster />
@@ -58,9 +58,9 @@ const App = () => {
                 </BrowserRouter>
               </TooltipProvider>
             </WeatherProvider>
-          </SettingsProvider>
-        </SecurityProvider>
-      </ThemeProvider>
+          </ThemeProvider>
+        </SettingsProvider>
+      </SecurityProvider>
     </QueryClientProvider>
   );
 };
