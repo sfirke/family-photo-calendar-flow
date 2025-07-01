@@ -5,8 +5,7 @@ import CalendarContent from './calendar/CalendarContent';
 import { useSettings } from '@/contexts/SettingsContext';
 import { useWeather } from '@/contexts/WeatherContext';
 import { useLocalEvents } from '@/hooks/useLocalEvents';
-import { useCalendarSelection } from '@/hooks/useCalendarSelection';
-import { useEventFiltering } from '@/hooks/useEventFiltering';
+import { useIntegratedEvents } from '@/hooks/useIntegratedEvents';
 
 const Calendar = () => {
   const [view, setView] = useState<'timeline' | 'week' | 'month'>('month');
@@ -14,12 +13,8 @@ const Calendar = () => {
   const { defaultView } = useSettings();
   const { getWeatherForDate } = useWeather();
   const { googleEvents } = useLocalEvents(); // Use local events instead
-  const { selectedCalendarIds, updateSelectedCalendars } = useCalendarSelection();
   
-  const { filteredEvents, hasGoogleEvents } = useEventFiltering({
-    googleEvents,
-    selectedCalendarIds
-  });
+  const { filteredEvents, eventStats, selectedCalendarIds } = useIntegratedEvents(googleEvents);
 
   useEffect(() => {
     setView(defaultView);
@@ -28,9 +23,9 @@ const Calendar = () => {
   return (
     <div className="space-y-6">
       <CalendarHeader
-        hasGoogleEvents={hasGoogleEvents}
+        hasGoogleEvents={eventStats.hasGoogleEvents}
         selectedCalendarIds={selectedCalendarIds}
-        onCalendarChange={updateSelectedCalendars}
+        onCalendarChange={() => {}} // Calendar selection is now handled internally
         view={view}
         onViewChange={setView}
       />
