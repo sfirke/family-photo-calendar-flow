@@ -9,7 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useNotionCalendars } from '@/hooks/useNotionCalendars';
 import { useCalendarSelection } from '@/hooks/useCalendarSelection';
 import { useSettings } from '@/contexts/SettingsContext';
-import { GitFork, Plus, RotateCcw, BarChart3, AlertCircle, ExternalLink, CheckCircle, Loader2, TestTube } from 'lucide-react';
+import { GitFork, Plus, RotateCcw, BarChart3, AlertCircle, ExternalLink, CheckCircle, Loader2, TestTube, Shield, Users } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { notionService } from '@/services/notionService';
@@ -40,12 +40,19 @@ const NotionSettings = () => {
   const [isTestingToken, setIsTestingToken] = useState(false);
   const [tokenValidationStatus, setTokenValidationStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [validationError, setValidationError] = useState<string>('');
+  const [integrationInfo, setIntegrationInfo] = useState<any>(null);
   const [newCalendar, setNewCalendar] = useState({
     name: '',
     url: '',
     color: CALENDAR_COLORS[0],
     enabled: true
   });
+  const [calendarAccessStatus, setCalendarAccessStatus] = useState<{
+    checking: boolean;
+    hasAccess: boolean;
+    resourceType: string | null;
+    error?: string;
+  }>({ checking: false, hasAccess: false, resourceType: null });
 
   const hasToken = Boolean(notionToken);
   const enabledCalendarsCount = calendars.filter(cal => cal.enabled).length;
@@ -86,10 +93,13 @@ const NotionSettings = () => {
       const isValid = await notionService.validateToken(tokenInput);
       
       if (isValid) {
+        // Get integration information
+        const info = await notionService.getIntegrationInfo(tokenInput);
+        setIntegrationInfo(info);
         setTokenValidationStatus('success');
         toast({
           title: "Token test successful",
-          description: "The Notion integration token is valid and working.",
+          description: `Connected to ${info.workspace?.name || 'Notion workspace'} as ${info.name}`,
         });
       } else {
         setTokenValidationStatus('error');
@@ -134,6 +144,7 @@ const NotionSettings = () => {
         setShowTokenInput(false);
         setTokenInput('');
         setTokenValidationStatus('idle');
+        setIntegrationInfo(null);
         toast({
           title: "Token saved successfully",
           description: "Notion integration token has been validated and saved securely."
@@ -159,6 +170,38 @@ const NotionSettings = () => {
     }
   };
 
+  const checkCalendarAccess = async (url: string) => {
+    if (!notionToken || !url.trim()) return;
+
+    setCalendarAccessStatus({ checking: true, hasAccess: false, resourceType: null });
+
+    try {
+      const result = await notionService.validateCalendarAccess(url, notionToken);
+      setCalendarAccessStatus({
+        checking: false,
+        hasAccess: result.hasAccess,
+        resourceType: result.resourceType,
+        error: result.error
+      });
+    } catch (error) {
+      setCalendarAccessStatus({
+        checking: false,
+        hasAccess: false,
+        resourceType: null,
+        error: error instanceof Error ? error.message : 'Access check failed'
+      });
+    }
+  };
+
+  useEffect(() => {
+    if (newCalendar.url && notionToken) {
+      const timeoutId = setTimeout(() => {
+        checkCalendarAccess(newCalendar.url);
+      }, 500);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [newCalendar.url, notionToken]);
+
   const handleAddCalendar = async () => {
     if (!newCalendar.name.trim() || !newCalendar.url.trim()) {
       toast({
@@ -173,6 +216,15 @@ const NotionSettings = () => {
       toast({
         title: "Invalid URL",
         description: "Please enter a valid Notion page or database URL.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!calendarAccessStatus.hasAccess) {
+      toast({
+        title: "Access required",
+        description: "Please share this page/database with your integration before adding it.",
         variant: "destructive"
       });
       return;
@@ -209,6 +261,7 @@ const NotionSettings = () => {
         color: CALENDAR_COLORS[0],
         enabled: true
       });
+      setCalendarAccessStatus({ checking: false, hasAccess: false, resourceType: null });
       setShowAddDialog(false);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
@@ -268,19 +321,21 @@ const NotionSettings = () => {
         </CardHeader>
         <CardContent className="space-y-4">
           <Alert className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800">
-            <AlertCircle className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-            <AlertTitle className="text-blue-900 dark:text-blue-200">Integration Token Required</AlertTitle>
+            <Shield className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+            <AlertTitle className="text-blue-900 dark:text-blue-200">Internal Integration Required</AlertTitle>
             <AlertDescription className="text-sm space-y-2 text-blue-700 dark:text-blue-300">
-              <p>To connect Notion, you'll need to create an integration token:</p>
+              <p>To connect Notion, you'll need to create an internal integration:</p>
               <div className="space-y-1">
                 <p>1. Go to <Button variant="link" className="p-0 h-auto text-blue-600 dark:text-blue-400" asChild>
                   <a href="https://www.notion.so/my-integrations" target="_blank" rel="noopener noreferrer">
                     Notion Integrations <ExternalLink className="h-3 w-3 ml-1 inline" />
                   </a>
                 </Button></p>
-                <p>2. Create a new integration for your workspace</p>
-                <p>3. Copy the integration token</p>
-                <p>4. Share the Notion pages/databases you want to sync with your integration</p>
+                <p>2. Click "Create new integration"</p>
+                <p>3. Give it a name and select your workspace</p>
+                <p>4. Ensure "Read content" capability is enabled</p>
+                <p>5. Copy the integration token (starts with "ntn_")</p>
+                <p>6. Share specific pages/databases with your integration</p>
               </div>
             </AlertDescription>
           </Alert>
@@ -298,16 +353,29 @@ const NotionSettings = () => {
                     setTokenInput(e.target.value);
                     setTokenValidationStatus('idle');
                     setValidationError('');
+                    setIntegrationInfo(null);
                   }}
                   className="bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-gray-100"
                 />
                 {validationError && (
                   <p className="text-sm text-red-600 dark:text-red-400 mt-1">{validationError}</p>
                 )}
-                {tokenValidationStatus === 'success' && (
-                  <div className="flex items-center gap-2 mt-2">
-                    <CheckCircle className="h-4 w-4 text-green-600" />
-                    <span className="text-sm text-green-600 dark:text-green-400">Token is valid</span>
+                {tokenValidationStatus === 'success' && integrationInfo && (
+                  <div className="mt-2 p-3 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <CheckCircle className="h-4 w-4 text-green-600" />
+                      <span className="text-sm font-medium text-green-900 dark:text-green-200">Integration Connected</span>
+                    </div>
+                    <div className="text-sm text-green-700 dark:text-green-300 space-y-1">
+                      <p><strong>Name:</strong> {integrationInfo.name}</p>
+                      {integrationInfo.workspace && (
+                        <p><strong>Workspace:</strong> {integrationInfo.workspace.name}</p>
+                      )}
+                      <div className="flex items-center gap-1">
+                        <Users className="h-3 w-3" />
+                        <span>Type: {integrationInfo.type}</span>
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>
@@ -323,17 +391,17 @@ const NotionSettings = () => {
                   ) : (
                     <TestTube className="h-4 w-4 mr-2" />
                   )}
-                  Test Token
+                  Test Integration
                 </Button>
                 <Button 
                   onClick={handleTokenSave} 
-                  disabled={isValidatingToken || !tokenInput.trim()}
+                  disabled={isValidatingToken || !tokenInput.trim() || tokenValidationStatus !== 'success'}
                   className="bg-blue-600 hover:bg-blue-700 text-white"
                 >
                   {isValidatingToken ? (
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                   ) : null}
-                  Save Token
+                  Save Integration
                 </Button>
                 <Button 
                   variant="outline" 
@@ -342,6 +410,7 @@ const NotionSettings = () => {
                     setTokenInput('');
                     setTokenValidationStatus('idle');
                     setValidationError('');
+                    setIntegrationInfo(null);
                   }}
                   className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300"
                 >
@@ -408,7 +477,7 @@ const NotionSettings = () => {
           </div>
         )}
 
-        {/* Add Calendar Button */}
+        {/* Add Calendar Dialog */}
         <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
           <DialogTrigger asChild>
             <Button className="w-full bg-purple-600 hover:bg-purple-700 text-white">
@@ -420,7 +489,7 @@ const NotionSettings = () => {
             <DialogHeader>
               <DialogTitle className="text-gray-900 dark:text-gray-100">Add Notion Calendar</DialogTitle>
               <DialogDescription className="text-gray-600 dark:text-gray-400">
-                Add a Notion page or database to import as calendar events.
+                Add a Notion page or database to import as calendar events. Make sure to share it with your integration first.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
@@ -443,6 +512,29 @@ const NotionSettings = () => {
                   onChange={(e) => setNewCalendar(prev => ({ ...prev, url: e.target.value }))}
                   className="bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-gray-100"
                 />
+                {newCalendar.url && (
+                  <div className="mt-2">
+                    {calendarAccessStatus.checking ? (
+                      <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Checking access...
+                      </div>
+                    ) : calendarAccessStatus.hasAccess ? (
+                      <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
+                        <CheckCircle className="h-4 w-4" />
+                        Access confirmed ({calendarAccessStatus.resourceType})
+                      </div>
+                    ) : (
+                      <div className="text-sm text-red-600 dark:text-red-400">
+                        <div className="flex items-center gap-2">
+                          <AlertCircle className="h-4 w-4" />
+                          {calendarAccessStatus.error || 'No access to this resource'}
+                        </div>
+                        <p className="mt-1 text-xs">Please share this page/database with your integration in Notion.</p>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
               <div>
                 <Label className="text-gray-700 dark:text-gray-300">Calendar Color</Label>
@@ -462,14 +554,23 @@ const NotionSettings = () => {
               <div className="flex justify-end gap-2">
                 <Button
                   variant="outline"
-                  onClick={() => setShowAddDialog(false)}
+                  onClick={() => {
+                    setShowAddDialog(false);
+                    setNewCalendar({
+                      name: '',
+                      url: '',
+                      color: CALENDAR_COLORS[0],
+                      enabled: true
+                    });
+                    setCalendarAccessStatus({ checking: false, hasAccess: false, resourceType: null });
+                  }}
                   className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300"
                 >
                   Cancel
                 </Button>
                 <Button
                   onClick={handleAddCalendar}
-                  disabled={isLoading}
+                  disabled={isLoading || !calendarAccessStatus.hasAccess}
                   className="bg-purple-600 hover:bg-purple-700 text-white"
                 >
                   Add Calendar
@@ -545,14 +646,14 @@ const NotionSettings = () => {
 
         {/* Enhanced Help and Tips */}
         <Alert className="bg-purple-50 dark:bg-purple-900/30 border border-purple-200 dark:border-purple-800">
-          <AlertCircle className="h-4 w-4 text-purple-600 dark:text-purple-400" />
-          <AlertTitle className="text-purple-900 dark:text-purple-200">Tips for Notion Integration</AlertTitle>
+          <Shield className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+          <AlertTitle className="text-purple-900 dark:text-purple-200">Integration Setup Tips</AlertTitle>
           <AlertDescription className="text-sm space-y-2 text-purple-700 dark:text-purple-300">
-            <p>• Make sure to share your Notion pages/databases with your integration</p>
-            <p>• Pages and databases should have a "Date" property for calendar events</p>
-            <p>• Events display with a fork icon and appear after all-day events</p>
-            <p>• The integration will look for Title, Date, and Description properties</p>
-            <p>• If you encounter errors, try the "Test Token" button to diagnose connection issues</p>
+            <p>• <strong>Sharing is required:</strong> You must share each page/database with your integration in Notion</p>
+            <p>• <strong>Date properties:</strong> Pages/databases should have a "Date" property for calendar events</p>
+            <p>• <strong>Access verification:</strong> The URL field will check if your integration can access the resource</p>
+            <p>• <strong>Event sorting:</strong> Events display with a fork icon and appear after all-day events</p>
+            <p>• <strong>Troubleshooting:</strong> If sync fails, verify sharing permissions and page/database existence</p>
           </AlertDescription>
         </Alert>
       </CardContent>

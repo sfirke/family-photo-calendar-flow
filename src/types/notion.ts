@@ -5,6 +5,19 @@ export interface NotionIntegrationToken {
   createdAt: string;
 }
 
+export interface NotionIntegrationInfo {
+  type: string;
+  name: string;
+  capabilities: {
+    read_content: boolean;
+    read_user_info: boolean;
+  };
+  workspace?: {
+    name: string;
+    id: string;
+  };
+}
+
 export interface NotionCalendar {
   id: string;
   name: string;
@@ -16,6 +29,8 @@ export interface NotionCalendar {
   type: 'notion';
   databaseId?: string;
   pageId?: string;
+  resourceType?: 'page' | 'database';
+  hasAccess?: boolean;
 }
 
 export interface NotionPage {
@@ -37,6 +52,15 @@ export interface NotionProperty {
   id: string;
   name: string;
   type: string;
+  title?: any[];
+  rich_text?: any[];
+  date?: {
+    start: string;
+    end?: string;
+  };
+  select?: {
+    name: string;
+  };
 }
 
 export interface NotionEvent {
@@ -63,4 +87,10 @@ export interface NotionApiResponse {
 
 export interface NotionSyncStatus {
   [calendarId: string]: 'syncing' | 'success' | 'error' | '';
+}
+
+export interface NotionAccessValidation {
+  hasAccess: boolean;
+  resourceType: 'page' | 'database' | null;
+  error?: string;
 }
