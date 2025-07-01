@@ -9,6 +9,7 @@ interface RequestDebugInfo {
   statusText: string;
   responseText: string;
   contentType: string | null;
+  serviceWorkerResponse: boolean;
 }
 
 interface NotionIntegrationInfo {
@@ -33,16 +34,27 @@ class NotionService {
     return token.startsWith('ntn_') && token.length >= 50;
   }
 
-  private async checkNetworkConnectivity(): Promise<boolean> {
+  private detectServiceWorkerResponse(response: Response, responseText: string): boolean {
+    // Detect if this response came from our service worker
+    const contentType = response.headers.get('content-type');
+    return (
+      response.status === 200 && 
+      responseText === 'Offline' && 
+      contentType === 'text/plain'
+    );
+  }
+
+  private async checkNotionApiReachability(): Promise<boolean> {
     try {
-      // Simple connectivity check
-      const response = await fetch('https://api.notion.com', { 
+      // Make a simple HEAD request to Notion API
+      const response = await fetch('https://api.notion.com/v1/', {
         method: 'HEAD',
-        mode: 'no-cors'
+        mode: 'cors',
+        cache: 'no-cache'
       });
-      return true;
+      return response.status === 401; // 401 is expected without auth token
     } catch (error) {
-      console.warn('Network connectivity check failed:', error);
+      console.warn('Notion API reachability check failed:', error);
       return false;
     }
   }
@@ -84,6 +96,7 @@ class NotionService {
     console.log('Headers:', debugInfo.headers);
     console.log('Status:', debugInfo.status, debugInfo.statusText);
     console.log('Content-Type:', debugInfo.contentType);
+    console.log('Service Worker Response:', debugInfo.serviceWorkerResponse);
     console.log('Response Text:', debugInfo.responseText);
     if (error) {
       console.error('Error:', error);
@@ -91,16 +104,16 @@ class NotionService {
     console.groupEnd();
   }
 
-  private async makeRequest(endpoint: string, token: string, options: RequestInit = {}) {
+  private async makeRequest(endpoint: string, token: string, options: RequestInit = {}, bypassServiceWorker = false) {
     // Validate token format first
     if (!this.validateTokenFormat(token)) {
       throw new Error('Invalid token format. Notion tokens should start with "ntn_" and be at least 50 characters long.');
     }
 
-    // Check network connectivity
-    const isOnline = await this.checkNetworkConnectivity();
-    if (!isOnline) {
-      throw new Error('Network connectivity issue detected. Please check your internet connection.');
+    // Check API reachability
+    const isReachable = await this.checkNotionApiReachability();
+    if (!isReachable) {
+      throw new Error('Notion API is not reachable. Please check your internet connection or try again later.');
     }
 
     const url = `${this.baseUrl}${endpoint}`;
@@ -114,6 +127,12 @@ class NotionService {
     const normalizedOptionHeaders = this.normalizeHeaders(options.headers);
     const headers = { ...baseHeaders, ...normalizedOptionHeaders };
 
+    // Add cache-busting for critical requests to bypass service worker
+    if (bypassServiceWorker) {
+      headers['Cache-Control'] = 'no-cache, no-store, must-revalidate';
+      headers['Pragma'] = 'no-cache';
+    }
+
     let response: Response;
     let responseText: string = '';
     let debugInfo: RequestDebugInfo;
@@ -125,17 +144,21 @@ class NotionService {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
 
-      response = await fetch(url, {
+      const requestOptions: RequestInit = {
         ...options,
         headers,
         signal: controller.signal,
-      });
+        mode: 'cors',
+        cache: bypassServiceWorker ? 'no-cache' : 'default'
+      };
 
+      response = await fetch(url, requestOptions);
       clearTimeout(timeoutId);
 
       // Get response text for debugging
       responseText = await response.text();
       const contentType = response.headers.get('content-type');
+      const serviceWorkerResponse = this.detectServiceWorkerResponse(response, responseText);
 
       debugInfo = {
         url,
@@ -145,7 +168,14 @@ class NotionService {
         statusText: response.statusText,
         responseText: responseText.substring(0, 500), // Limit for logging
         contentType,
+        serviceWorkerResponse,
       };
+
+      // Check for service worker interference
+      if (serviceWorkerResponse) {
+        this.logRequestDebug(debugInfo);
+        throw new Error('Service worker is interfering with API requests. The request was intercepted and returned an "Offline" response instead of reaching the Notion API. Please refresh the page or disable the service worker.');
+      }
 
       // Check if response is not ok
       if (!response.ok) {
@@ -210,7 +240,7 @@ class NotionService {
         }
 
         // Re-throw our custom errors
-        if (error.message.includes('Notion') || error.message.includes('Invalid token')) {
+        if (error.message.includes('Notion') || error.message.includes('Invalid token') || error.message.includes('Service worker')) {
           throw error;
         }
       }
@@ -226,7 +256,7 @@ class NotionService {
 
   async getIntegrationInfo(token: string): Promise<NotionIntegrationInfo> {
     try {
-      const userInfo = await this.makeRequest('/users/me', token);
+      const userInfo = await this.makeRequest('/users/me', token, {}, true); // Bypass service worker for critical requests
       
       return {
         type: userInfo.type || 'bot',
@@ -248,7 +278,7 @@ class NotionService {
 
   async testPageAccess(pageId: string, token: string): Promise<boolean> {
     try {
-      await this.makeRequest(`/pages/${pageId}`, token);
+      await this.makeRequest(`/pages/${pageId}`, token, {}, true);
       return true;
     } catch (error) {
       console.warn(`No access to page ${pageId}:`, error);
@@ -258,7 +288,7 @@ class NotionService {
 
   async testDatabaseAccess(databaseId: string, token: string): Promise<boolean> {
     try {
-      await this.makeRequest(`/databases/${databaseId}`, token);
+      await this.makeRequest(`/databases/${databaseId}`, token, {}, true);
       return true;
     } catch (error) {
       console.warn(`No access to database ${databaseId}:`, error);
@@ -419,7 +449,7 @@ class NotionService {
         return false;
       }
 
-      // Test the token by getting integration info
+      // Test the token by getting integration info with service worker bypass
       const integrationInfo = await this.getIntegrationInfo(token);
       console.log('✅ Notion token validation successful:', integrationInfo);
       return true;

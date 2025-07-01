@@ -1,3 +1,4 @@
+
 const CACHE_NAME = 'family-photo-calendar-v1.2.0';
 const urlsToCache = [
   '/',
@@ -6,6 +7,29 @@ const urlsToCache = [
   '/manifest.json',
   '/version.json'
 ];
+
+// External API domains that should bypass the service worker
+const EXTERNAL_API_DOMAINS = [
+  'api.notion.com',
+  'notion.so',
+  'www.notion.so',
+  'api.codetabs.com',
+  'cors-anywhere.herokuapp.com',
+  'thingproxy.freeboard.io',
+  'cors.bridged.cc'
+];
+
+// Check if a URL should bypass the service worker
+function shouldBypassServiceWorker(url) {
+  try {
+    const urlObj = new URL(url);
+    return EXTERNAL_API_DOMAINS.some(domain => 
+      urlObj.hostname === domain || urlObj.hostname.endsWith('.' + domain)
+    );
+  } catch (error) {
+    return false;
+  }
+}
 
 // Install event - cache resources with error handling
 self.addEventListener('install', (event) => {
@@ -28,11 +52,17 @@ self.addEventListener('install', (event) => {
   );
 });
 
-// Fetch event - serve from cache when offline
+// Fetch event - serve from cache when offline, but bypass external APIs
 self.addEventListener('fetch', (event) => {
   // Skip non-GET requests and chrome-extension requests
   if (event.request.method !== 'GET' || event.request.url.startsWith('chrome-extension://')) {
     return;
+  }
+
+  // IMPORTANT: Let external API calls bypass the service worker completely
+  if (shouldBypassServiceWorker(event.request.url)) {
+    console.log('Bypassing service worker for external API:', event.request.url);
+    return; // Don't intercept, let the request go through normally
   }
 
   event.respondWith(
@@ -47,8 +77,8 @@ self.addEventListener('fetch', (event) => {
         const fetchRequest = event.request.clone();
         
         return fetch(fetchRequest).catch(err => {
-          console.warn('Fetch failed:', err);
-          // Return a basic offline page or empty response
+          console.warn('Fetch failed for internal resource:', err);
+          // Only return offline response for internal resources
           return new Response('Offline', { 
             status: 200, 
             statusText: 'OK',
