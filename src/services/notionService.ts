@@ -103,7 +103,7 @@ class NotionService {
     return token.startsWith('ntn_') && token.length >= 50;
   }
 
-  // New method: Validate database ID format
+  // Validate database ID format
   validateDatabaseId(input: string): { isValid: boolean; id: string; type: 'id' | 'url' | 'invalid' } {
     // Remove any whitespace
     const cleanInput = input.trim();
@@ -123,7 +123,7 @@ class NotionService {
     return { isValid: false, id: '', type: 'invalid' };
   }
 
-  // New method: Test database access and get properties
+  // Test database access and get properties
   async testDatabaseAccess(databaseId: string, token: string): Promise<DatabaseTestResult> {
     try {
       console.log(`🧪 Testing database access for ID: ${databaseId}`);
@@ -166,7 +166,7 @@ class NotionService {
     }
   }
 
-  // Enhanced method: Get database with full query capability
+  // Get database with full query capability
   async queryDatabaseFull(databaseId: string, token: string, options: {
     filter?: any;
     sorts?: any[];

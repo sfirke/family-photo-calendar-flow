@@ -121,12 +121,30 @@ export class SettingsStorage {
   }
 
   /**
-   * Save a setting to appropriate storage (secure or regular)
+   * Get a setting from appropriate storage (secure or regular)
    */
-  static async saveSetting(key: string, value: string, isSensitive: boolean = false) {
+  static getSetting(key: string, isSensitive: boolean = false): string | null {
     try {
       if (isSensitive && secureStorage.exists('test')) {
-        await secureStorage.store(key, value, 'defaultPassword');
+        // For sensitive settings, we need to use async retrieval
+        // This is a synchronous fallback that tries localStorage first
+        return localStorage.getItem(key);
+      } else {
+        return localStorage.getItem(key);
+      }
+    } catch (error) {
+      console.warn(`Failed to get ${key}:`, error);
+      return localStorage.getItem(key);
+    }
+  }
+
+  /**
+   * Save a setting to appropriate storage (secure or regular)
+   */
+  static saveSetting(key: string, value: string, isSensitive: boolean = false) {
+    try {
+      if (isSensitive && secureStorage.exists('test')) {
+        secureStorage.store(key, value, 'defaultPassword');
         localStorage.removeItem(key); // Remove unencrypted version
       } else {
         localStorage.setItem(key, value);
