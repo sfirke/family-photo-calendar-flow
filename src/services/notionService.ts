@@ -1,12 +1,6 @@
 
-import { Client } from '@notionhq/client';
-import { 
-  PageObjectResponse, 
-  DatabaseObjectResponse, 
-  QueryDatabaseResponse,
-  GetUserResponse
-} from '@notionhq/client/build/src/api-endpoints';
 import { NotionEvent } from '@/types/notion';
+import { supabase } from '@/integrations/supabase/client';
 
 interface NotionIntegrationInfo {
   type: string;
@@ -22,55 +16,30 @@ interface NotionIntegrationInfo {
 }
 
 class NotionService {
-  private createClient(token: string): Client {
-    return new Client({
-      auth: token,
-      notionVersion: '2022-06-28'
-    });
+  private async callNotionAPI(action: string, params: any = {}) {
+    try {
+      const { data, error } = await supabase.functions.invoke('notion-api', {
+        body: { action, ...params }
+      });
+
+      if (error) {
+        console.error('Edge function error:', error);
+        throw new Error(error.message || 'Failed to call Notion API');
+      }
+
+      if (data?.error) {
+        throw new Error(data.error);
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Notion API call failed:', error);
+      throw error;
+    }
   }
 
   private validateTokenFormat(token: string): boolean {
     return token.startsWith('ntn_') && token.length >= 50;
-  }
-
-  private classifyNotionError(error: unknown): string {
-    if (error && typeof error === 'object' && 'code' in error) {
-      const errorCode = (error as any).code;
-      switch (errorCode) {
-        case 'unauthorized':
-          return 'Invalid Notion token. Please check your integration token and ensure it has the correct permissions.';
-        case 'restricted_resource':
-          return 'Access forbidden. Please ensure your integration has access to the requested page or database. You may need to share the page/database with your integration.';
-        case 'object_not_found':
-          return 'Page or database not found. Please check the URL and ensure the page/database exists and is shared with your integration.';
-        case 'rate_limited':
-          return 'Rate limit exceeded. Please wait a moment and try again.';
-        case 'invalid_json':
-          return 'Invalid request format. Please check your integration token format and try again.';
-        case 'invalid_request':
-          return 'Invalid request. Please check the page/database URL and try again.';
-        case 'validation_error':
-          return 'Validation error. Please check your request parameters.';
-        case 'conflict_error':
-          return 'Conflict error. The resource may have been modified by another process.';
-        default:
-          return `Notion API error: ${(error as any).message || 'Unknown error'}`;
-      }
-    }
-
-    if (error instanceof Error) {
-      if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
-        return 'Network error: Unable to reach Notion API. Please check your internet connection and try again.';
-      }
-      
-      if (error.name === 'AbortError' || error.message.includes('timeout')) {
-        return 'Request timed out. The Notion API may be slow to respond. Please try again.';
-      }
-
-      return `Unexpected error: ${error.message}`;
-    }
-
-    return 'An unknown error occurred while connecting to Notion.';
   }
 
   async getIntegrationInfo(token: string): Promise<NotionIntegrationInfo> {
@@ -80,49 +49,18 @@ class NotionService {
 
     try {
       console.log('🔐 Getting Notion integration info...');
-      const notion = this.createClient(token);
-      const userInfo = await notion.users.me({}) as GetUserResponse;
-      
-      return {
-        type: userInfo.type || 'bot',
-        name: this.extractUserName(userInfo),
-        capabilities: {
-          read_content: true,
-          read_user_info: true
-        },
-        workspace: this.extractWorkspaceInfo(userInfo)
-      };
+      const result = await this.callNotionAPI('getIntegrationInfo', { token });
+      return result;
     } catch (error) {
       console.error('Failed to get integration info:', error);
-      const errorMessage = this.classifyNotionError(error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown validation error';
       throw new Error(`Failed to retrieve integration information: ${errorMessage}`);
     }
   }
 
-  private extractUserName(userInfo: any): string {
-    if (userInfo && typeof userInfo === 'object' && 'name' in userInfo && typeof userInfo.name === 'string') {
-      return userInfo.name;
-    }
-    return 'Unknown Integration';
-  }
-
-  private extractWorkspaceInfo(userInfo: any): { name: string; id: string } | undefined {
-    if (userInfo && typeof userInfo === 'object' && userInfo.type === 'bot' && 'workspace' in userInfo && userInfo.workspace) {
-      const workspace = userInfo.workspace;
-      if (workspace && typeof workspace === 'object' && 'name' in workspace && 'id' in workspace) {
-        return {
-          name: workspace.name || 'Unknown Workspace',
-          id: workspace.id || ''
-        };
-      }
-    }
-    return undefined;
-  }
-
   async testPageAccess(pageId: string, token: string): Promise<boolean> {
     try {
-      const notion = this.createClient(token);
-      await notion.pages.retrieve({ page_id: pageId });
+      await this.callNotionAPI('getPage', { pageId, token });
       return true;
     } catch (error) {
       console.warn(`No access to page ${pageId}:`, error);
@@ -132,8 +70,7 @@ class NotionService {
 
   async testDatabaseAccess(databaseId: string, token: string): Promise<boolean> {
     try {
-      const notion = this.createClient(token);
-      await notion.databases.retrieve({ database_id: databaseId });
+      await this.callNotionAPI('getDatabase', { databaseId, token });
       return true;
     } catch (error) {
       console.warn(`No access to database ${databaseId}:`, error);
@@ -141,44 +78,29 @@ class NotionService {
     }
   }
 
-  async getPage(pageId: string, token: string): Promise<PageObjectResponse> {
-    const notion = this.createClient(token);
+  async getPage(pageId: string, token: string): Promise<any> {
     try {
-      const response = await notion.pages.retrieve({ page_id: pageId });
-      return response as PageObjectResponse;
+      return await this.callNotionAPI('getPage', { pageId, token });
     } catch (error) {
-      const errorMessage = this.classifyNotionError(error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       throw new Error(errorMessage);
     }
   }
 
-  async getDatabase(databaseId: string, token: string): Promise<DatabaseObjectResponse> {
-    const notion = this.createClient(token);
+  async getDatabase(databaseId: string, token: string): Promise<any> {
     try {
-      const response = await notion.databases.retrieve({ database_id: databaseId });
-      return response as DatabaseObjectResponse;
+      return await this.callNotionAPI('getDatabase', { databaseId, token });
     } catch (error) {
-      const errorMessage = this.classifyNotionError(error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       throw new Error(errorMessage);
     }
   }
 
-  async queryDatabase(databaseId: string, token: string, filter?: any): Promise<QueryDatabaseResponse> {
-    const notion = this.createClient(token);
+  async queryDatabase(databaseId: string, token: string, filter?: any): Promise<any> {
     try {
-      const response = await notion.databases.query({
-        database_id: databaseId,
-        filter,
-        sorts: [
-          {
-            property: 'Date',
-            direction: 'ascending'
-          }
-        ]
-      });
-      return response;
+      return await this.callNotionAPI('queryDatabase', { databaseId, token, filter });
     } catch (error) {
-      const errorMessage = this.classifyNotionError(error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       throw new Error(errorMessage);
     }
   }
@@ -200,7 +122,7 @@ class NotionService {
     return null;
   }
 
-  transformToEvents(pages: PageObjectResponse[], calendarId: string, calendarName: string, color: string): NotionEvent[] {
+  transformToEvents(pages: any[], calendarId: string, calendarName: string, color: string): NotionEvent[] {
     return pages.map(page => {
       const title = this.extractTitle(page);
       const date = this.extractDate(page);
@@ -226,14 +148,14 @@ class NotionService {
     });
   }
 
-  private extractTitle(page: PageObjectResponse): string {
+  private extractTitle(page: any): string {
     const properties = page.properties;
     
     // Find title property
     for (const [key, property] of Object.entries(properties)) {
       if (property && typeof property === 'object' && 'type' in property && property.type === 'title' && 'title' in property && property.title) {
         const titleText = property.title
-          .map(text => text.plain_text)
+          .map((text: any) => text.plain_text)
           .join('');
         return titleText || 'Untitled';
       }
@@ -242,26 +164,26 @@ class NotionService {
     return 'Untitled';
   }
 
-  private extractDate(page: PageObjectResponse): Date {
+  private extractDate(page: any): Date {
     const properties = page.properties;
     
     // Look for date properties
     for (const [key, property] of Object.entries(properties)) {
-      if (property && typeof property === 'object' && 'type' in property && property.type === 'date' && 'date' in property && property.date?.start) {
-        return new Date(property.date.start);
+      if (property && typeof property === 'object' && 'type' in property && property.type === 'date' && 'date' in property && (property as any).date?.start) {
+        return new Date((property as any).date.start);
       }
     }
     
     return new Date(page.created_time);
   }
 
-  private extractTime(page: PageObjectResponse): string | null {
+  private extractTime(page: any): string | null {
     const properties = page.properties;
     
     // Look for date properties with time
     for (const [key, property] of Object.entries(properties)) {
-      if (property && typeof property === 'object' && 'type' in property && property.type === 'date' && 'date' in property && property.date?.start) {
-        const dateString = property.date.start;
+      if (property && typeof property === 'object' && 'type' in property && property.type === 'date' && 'date' in property && (property as any).date?.start) {
+        const dateString = (property as any).date.start;
         const timeMatch = dateString.match(/T(\d{2}:\d{2})/);
         return timeMatch ? timeMatch[1] : null;
       }
@@ -270,14 +192,14 @@ class NotionService {
     return null;
   }
 
-  private extractDescription(page: PageObjectResponse): string {
+  private extractDescription(page: any): string {
     const properties = page.properties;
     
     // Look for rich text properties that might contain description
     for (const [key, property] of Object.entries(properties)) {
-      if (property && typeof property === 'object' && 'type' in property && property.type === 'rich_text' && 'rich_text' in property && property.rich_text) {
-        const description = property.rich_text
-          .map(text => text.plain_text)
+      if (property && typeof property === 'object' && 'type' in property && property.type === 'rich_text' && 'rich_text' in property && (property as any).rich_text) {
+        const description = (property as any).rich_text
+          .map((text: any) => text.plain_text)
           .join('');
         if (description) return description;
       }
@@ -286,7 +208,7 @@ class NotionService {
     return '';
   }
 
-  private extractLocation(page: PageObjectResponse): string {
+  private extractLocation(page: any): string {
     const properties = page.properties;
     
     // Look for properties that might contain location info
@@ -294,15 +216,15 @@ class NotionService {
       const keyLower = key.toLowerCase();
       
       if (keyLower.includes('location')) {
-        if (property && typeof property === 'object' && 'type' in property && property.type === 'rich_text' && 'rich_text' in property && property.rich_text) {
-          const location = property.rich_text
-            .map(text => text.plain_text)
+        if (property && typeof property === 'object' && 'type' in property && property.type === 'rich_text' && 'rich_text' in property && (property as any).rich_text) {
+          const location = (property as any).rich_text
+            .map((text: any) => text.plain_text)
             .join('');
           if (location) return location;
         }
         
-        if (property && typeof property === 'object' && 'type' in property && property.type === 'select' && 'select' in property && property.select) {
-          return property.select.name || '';
+        if (property && typeof property === 'object' && 'type' in property && property.type === 'select' && 'select' in property && (property as any).select) {
+          return (property as any).select.name || '';
         }
       }
     }
@@ -319,9 +241,9 @@ class NotionService {
         return false;
       }
 
-      const integrationInfo = await this.getIntegrationInfo(token);
-      console.log('✅ Notion token validation successful:', integrationInfo);
-      return true;
+      const result = await this.callNotionAPI('validate', { token });
+      console.log('✅ Notion token validation successful');
+      return result === true;
     } catch (error) {
       console.error('❌ Notion token validation failed:', error);
       return false;
@@ -329,26 +251,17 @@ class NotionService {
   }
 
   async validateCalendarAccess(url: string, token: string): Promise<{ hasAccess: boolean; resourceType: 'page' | 'database' | null; error?: string }> {
-    const pageId = this.extractPageIdFromUrl(url);
-    if (!pageId) {
-      return { hasAccess: false, resourceType: null, error: 'Invalid Notion URL format' };
+    try {
+      const result = await this.callNotionAPI('validateAccess', { url, token });
+      return result;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      return { 
+        hasAccess: false, 
+        resourceType: null, 
+        error: errorMessage
+      };
     }
-
-    const databaseAccess = await this.testDatabaseAccess(pageId, token);
-    if (databaseAccess) {
-      return { hasAccess: true, resourceType: 'database' };
-    }
-
-    const pageAccess = await this.testPageAccess(pageId, token);
-    if (pageAccess) {
-      return { hasAccess: true, resourceType: 'page' };
-    }
-
-    return { 
-      hasAccess: false, 
-      resourceType: null, 
-      error: 'Page/database not shared with integration or does not exist' 
-    };
   }
 }
 
