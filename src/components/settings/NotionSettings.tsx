@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,7 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useNotionCalendars } from '@/hooks/useNotionCalendars';
 import { useCalendarSelection } from '@/hooks/useCalendarSelection';
 import { useSettings } from '@/contexts/SettingsContext';
-import { GitFork, Plus, RotateCcw, BarChart3, AlertCircle, ExternalLink } from 'lucide-react';
+import { GitFork, Plus, RotateCcw, BarChart3, AlertCircle, ExternalLink, CheckCircle, Loader2, TestTube } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { notionService } from '@/services/notionService';
@@ -35,6 +36,10 @@ const NotionSettings = () => {
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showTokenInput, setShowTokenInput] = useState(false);
   const [tokenInput, setTokenInput] = useState('');
+  const [isValidatingToken, setIsValidatingToken] = useState(false);
+  const [isTestingToken, setIsTestingToken] = useState(false);
+  const [tokenValidationStatus, setTokenValidationStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [validationError, setValidationError] = useState<string>('');
   const [newCalendar, setNewCalendar] = useState({
     name: '',
     url: '',
@@ -48,25 +53,90 @@ const NotionSettings = () => {
     .filter(cal => cal.id.startsWith('notion_'))
     .reduce((sum, cal) => sum + cal.eventCount, 0);
 
-  const handleTokenSave = async () => {
-    if (!tokenInput.trim()) {
+  const validateTokenFormat = (token: string): { valid: boolean; error?: string } => {
+    if (!token.trim()) {
+      return { valid: false, error: 'Token cannot be empty' };
+    }
+    
+    if (!token.startsWith('secret_')) {
+      return { valid: false, error: 'Notion integration tokens must start with "secret_"' };
+    }
+    
+    if (token.length < 50) {
+      return { valid: false, error: 'Token appears to be too short. Notion tokens are typically 50+ characters' };
+    }
+    
+    return { valid: true };
+  };
+
+  const handleTestToken = async () => {
+    const formatValidation = validateTokenFormat(tokenInput);
+    if (!formatValidation.valid) {
+      setValidationError(formatValidation.error!);
+      setTokenValidationStatus('error');
+      return;
+    }
+
+    setIsTestingToken(true);
+    setValidationError('');
+    setTokenValidationStatus('idle');
+
+    try {
+      console.log('🧪 Testing Notion token...');
+      const isValid = await notionService.validateToken(tokenInput);
+      
+      if (isValid) {
+        setTokenValidationStatus('success');
+        toast({
+          title: "Token test successful",
+          description: "The Notion integration token is valid and working.",
+        });
+      } else {
+        setTokenValidationStatus('error');
+        setValidationError('Token validation failed. Please check the token and try again.');
+      }
+    } catch (error) {
+      console.error('Token test error:', error);
+      setTokenValidationStatus('error');
+      const errorMessage = error instanceof Error ? error.message : 'Unknown validation error';
+      setValidationError(errorMessage);
+      
       toast({
-        title: "Token required",
-        description: "Please enter your Notion integration token.",
+        title: "Token test failed",
+        description: errorMessage,
+        variant: "destructive"
+      });
+    } finally {
+      setIsTestingToken(false);
+    }
+  };
+
+  const handleTokenSave = async () => {
+    const formatValidation = validateTokenFormat(tokenInput);
+    if (!formatValidation.valid) {
+      toast({
+        title: "Invalid token format",
+        description: formatValidation.error,
         variant: "destructive"
       });
       return;
     }
 
+    setIsValidatingToken(true);
+    setValidationError('');
+
     try {
+      console.log('💾 Validating and saving Notion token...');
       const isValid = await notionService.validateToken(tokenInput);
+      
       if (isValid) {
         setNotionToken(tokenInput);
         setShowTokenInput(false);
         setTokenInput('');
+        setTokenValidationStatus('idle');
         toast({
-          title: "Token saved",
-          description: "Notion integration token has been validated and saved."
+          title: "Token saved successfully",
+          description: "Notion integration token has been validated and saved securely."
         });
       } else {
         toast({
@@ -76,11 +146,16 @@ const NotionSettings = () => {
         });
       }
     } catch (error) {
+      console.error('Token save error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown validation error';
+      
       toast({
-        title: "Validation failed",
-        description: "Could not validate the token. Please check your connection and try again.",
+        title: "Token validation failed",
+        description: errorMessage,
         variant: "destructive"
       });
+    } finally {
+      setIsValidatingToken(false);
     }
   };
 
@@ -219,12 +294,45 @@ const NotionSettings = () => {
                   type="password"
                   placeholder="secret_..."
                   value={tokenInput}
-                  onChange={(e) => setTokenInput(e.target.value)}
+                  onChange={(e) => {
+                    setTokenInput(e.target.value);
+                    setTokenValidationStatus('idle');
+                    setValidationError('');
+                  }}
                   className="bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-gray-100"
                 />
+                {validationError && (
+                  <p className="text-sm text-red-600 dark:text-red-400 mt-1">{validationError}</p>
+                )}
+                {tokenValidationStatus === 'success' && (
+                  <div className="flex items-center gap-2 mt-2">
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                    <span className="text-sm text-green-600 dark:text-green-400">Token is valid</span>
+                  </div>
+                )}
               </div>
               <div className="flex gap-2">
-                <Button onClick={handleTokenSave} className="bg-blue-600 hover:bg-blue-700 text-white">
+                <Button 
+                  onClick={handleTestToken}
+                  disabled={isTestingToken || !tokenInput.trim()}
+                  variant="outline"
+                  className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300"
+                >
+                  {isTestingToken ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <TestTube className="h-4 w-4 mr-2" />
+                  )}
+                  Test Token
+                </Button>
+                <Button 
+                  onClick={handleTokenSave} 
+                  disabled={isValidatingToken || !tokenInput.trim()}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  {isValidatingToken ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : null}
                   Save Token
                 </Button>
                 <Button 
@@ -232,6 +340,8 @@ const NotionSettings = () => {
                   onClick={() => {
                     setShowTokenInput(false);
                     setTokenInput('');
+                    setTokenValidationStatus('idle');
+                    setValidationError('');
                   }}
                   className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300"
                 >
@@ -433,7 +543,7 @@ const NotionSettings = () => {
           </div>
         )}
 
-        {/* Help and Tips */}
+        {/* Enhanced Help and Tips */}
         <Alert className="bg-purple-50 dark:bg-purple-900/30 border border-purple-200 dark:border-purple-800">
           <AlertCircle className="h-4 w-4 text-purple-600 dark:text-purple-400" />
           <AlertTitle className="text-purple-900 dark:text-purple-200">Tips for Notion Integration</AlertTitle>
@@ -442,6 +552,7 @@ const NotionSettings = () => {
             <p>• Pages and databases should have a "Date" property for calendar events</p>
             <p>• Events display with a fork icon and appear after all-day events</p>
             <p>• The integration will look for Title, Date, and Description properties</p>
+            <p>• If you encounter errors, try the "Test Token" button to diagnose connection issues</p>
           </AlertDescription>
         </Alert>
       </CardContent>

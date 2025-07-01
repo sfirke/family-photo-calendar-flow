@@ -1,27 +1,178 @@
-
 import { NotionPage, NotionDatabase, NotionApiResponse, NotionEvent } from '@/types/notion';
+
+interface RequestDebugInfo {
+  url: string;
+  method: string;
+  headers: Record<string, string>;
+  status: number;
+  statusText: string;
+  responseText: string;
+  contentType: string | null;
+}
 
 class NotionService {
   private baseUrl = 'https://api.notion.com/v1';
   private version = '2022-06-28';
 
-  private async makeRequest(endpoint: string, token: string, options: RequestInit = {}) {
-    const response = await fetch(`${this.baseUrl}${endpoint}`, {
-      ...options,
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Notion-Version': this.version,
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
-    });
+  private validateTokenFormat(token: string): boolean {
+    // Notion integration tokens should start with "secret_" and be at least 50 characters
+    return token.startsWith('secret_') && token.length >= 50;
+  }
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(`Notion API error: ${response.status} - ${errorData.message || response.statusText}`);
+  private async checkNetworkConnectivity(): Promise<boolean> {
+    try {
+      // Simple connectivity check
+      const response = await fetch('https://api.notion.com', { 
+        method: 'HEAD',
+        mode: 'no-cors'
+      });
+      return true;
+    } catch (error) {
+      console.warn('Network connectivity check failed:', error);
+      return false;
+    }
+  }
+
+  private logRequestDebug(debugInfo: RequestDebugInfo, error?: Error) {
+    console.group('🔍 Notion API Request Debug');
+    console.log('URL:', debugInfo.url);
+    console.log('Method:', debugInfo.method);
+    console.log('Headers:', debugInfo.headers);
+    console.log('Status:', debugInfo.status, debugInfo.statusText);
+    console.log('Content-Type:', debugInfo.contentType);
+    console.log('Response Text:', debugInfo.responseText);
+    if (error) {
+      console.error('Error:', error);
+    }
+    console.groupEnd();
+  }
+
+  private async makeRequest(endpoint: string, token: string, options: RequestInit = {}) {
+    // Validate token format first
+    if (!this.validateTokenFormat(token)) {
+      throw new Error('Invalid token format. Notion tokens should start with "secret_" and be at least 50 characters long.');
     }
 
-    return response.json();
+    // Check network connectivity
+    const isOnline = await this.checkNetworkConnectivity();
+    if (!isOnline) {
+      throw new Error('Network connectivity issue detected. Please check your internet connection.');
+    }
+
+    const url = `${this.baseUrl}${endpoint}`;
+    const headers = {
+      'Authorization': `Bearer ${token}`,
+      'Notion-Version': this.version,
+      'Content-Type': 'application/json',
+      ...options.headers,
+    };
+
+    let response: Response;
+    let responseText: string = '';
+    let debugInfo: RequestDebugInfo;
+
+    try {
+      console.log(`🚀 Making Notion API request to: ${url}`);
+      
+      // Add timeout to prevent hanging requests
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+
+      response = await fetch(url, {
+        ...options,
+        headers,
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      // Get response text for debugging
+      responseText = await response.text();
+      const contentType = response.headers.get('content-type');
+
+      debugInfo = {
+        url,
+        method: options.method || 'GET',
+        headers,
+        status: response.status,
+        statusText: response.statusText,
+        responseText: responseText.substring(0, 500), // Limit for logging
+        contentType,
+      };
+
+      // Check if response is not ok
+      if (!response.ok) {
+        this.logRequestDebug(debugInfo);
+        
+        // Try to parse error as JSON if possible
+        let errorMessage = `Notion API error: ${response.status} - ${response.statusText}`;
+        
+        if (contentType && contentType.includes('application/json')) {
+          try {
+            const errorData = JSON.parse(responseText);
+            errorMessage = `Notion API error: ${response.status} - ${errorData.message || response.statusText}`;
+          } catch (parseError) {
+            // Fallback to status text if JSON parsing fails
+          }
+        } else {
+          // Handle non-JSON error responses
+          if (responseText.includes('Offline') || responseText.includes('offline')) {
+            errorMessage = 'Notion API appears to be offline or unreachable. Please try again later.';
+          } else if (responseText.includes('Unauthorized') || response.status === 401) {
+            errorMessage = 'Invalid Notion token. Please check your integration token and ensure it has the correct permissions.';
+          } else if (responseText.includes('Forbidden') || response.status === 403) {
+            errorMessage = 'Access forbidden. Please ensure your integration has access to the requested page or database.';
+          } else if (response.status >= 500) {
+            errorMessage = 'Notion server error. Please try again later.';
+          }
+        }
+        
+        throw new Error(errorMessage);
+      }
+
+      // Check if response is JSON
+      if (!contentType || !contentType.includes('application/json')) {
+        this.logRequestDebug(debugInfo);
+        
+        if (responseText.includes('Offline') || responseText.includes('offline')) {
+          throw new Error('Notion API is currently offline or unreachable. Please try again later.');
+        }
+        
+        throw new Error(`Unexpected response format. Expected JSON but received: ${contentType || 'unknown'}`);
+      }
+
+      // Parse JSON response
+      try {
+        return JSON.parse(responseText);
+      } catch (parseError) {
+        this.logRequestDebug(debugInfo, parseError as Error);
+        throw new Error(`Failed to parse Notion API response as JSON. Response: ${responseText.substring(0, 100)}...`);
+      }
+
+    } catch (error) {
+      // Handle fetch errors (network issues, timeouts, etc.)
+      if (error instanceof Error) {
+        if (error.name === 'AbortError') {
+          throw new Error('Request timed out. The Notion API may be slow to respond. Please try again.');
+        }
+        
+        if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+          throw new Error('Network error: Unable to reach Notion API. Please check your internet connection and try again.');
+        }
+
+        // Re-throw our custom errors
+        if (error.message.includes('Notion') || error.message.includes('Invalid token')) {
+          throw error;
+        }
+      }
+
+      // Log debug info for unexpected errors
+      if (debugInfo!) {
+        this.logRequestDebug(debugInfo!, error as Error);
+      }
+
+      throw new Error(`Unexpected error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 
   async getPage(pageId: string, token: string): Promise<NotionPage> {
@@ -169,10 +320,20 @@ class NotionService {
 
   async validateToken(token: string): Promise<boolean> {
     try {
+      console.log('🔐 Validating Notion token...');
+      
+      // First check token format
+      if (!this.validateTokenFormat(token)) {
+        console.error('❌ Invalid token format');
+        return false;
+      }
+
+      // Test the token by calling the users/me endpoint
       await this.makeRequest('/users/me', token);
+      console.log('✅ Notion token validation successful');
       return true;
     } catch (error) {
-      console.error('Notion token validation failed:', error);
+      console.error('❌ Notion token validation failed:', error);
       return false;
     }
   }
