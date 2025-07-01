@@ -58,8 +58,8 @@ const NotionSettings = () => {
       return { valid: false, error: 'Token cannot be empty' };
     }
     
-    if (!token.startsWith('secret_')) {
-      return { valid: false, error: 'Notion integration tokens must start with "secret_"' };
+    if (!token.startsWith('ntn_')) {
+      return { valid: false, error: 'Notion integration tokens must start with "ntn_"' };
     }
     
     if (token.length < 50) {
@@ -292,7 +292,7 @@ const NotionSettings = () => {
                 <Input
                   id="notion-token"
                   type="password"
-                  placeholder="secret_..."
+                  placeholder="ntn_..."
                   value={tokenInput}
                   onChange={(e) => {
                     setTokenInput(e.target.value);

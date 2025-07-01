@@ -15,8 +15,8 @@ class NotionService {
   private version = '2022-06-28';
 
   private validateTokenFormat(token: string): boolean {
-    // Notion integration tokens should start with "secret_" and be at least 50 characters
-    return token.startsWith('secret_') && token.length >= 50;
+    // Notion integration tokens should start with "ntn_" and be at least 50 characters
+    return token.startsWith('ntn_') && token.length >= 50;
   }
 
   private async checkNetworkConnectivity(): Promise<boolean> {
@@ -80,7 +80,7 @@ class NotionService {
   private async makeRequest(endpoint: string, token: string, options: RequestInit = {}) {
     // Validate token format first
     if (!this.validateTokenFormat(token)) {
-      throw new Error('Invalid token format. Notion tokens should start with "secret_" and be at least 50 characters long.');
+      throw new Error('Invalid token format. Notion tokens should start with "ntn_" and be at least 50 characters long.');
     }
 
     // Check network connectivity
