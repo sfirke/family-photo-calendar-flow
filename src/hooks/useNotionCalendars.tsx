@@ -4,6 +4,7 @@ import { NotionCalendar } from '@/types/notion';
 import { NotionService } from '@/services/notionService';
 import { calendarStorageService } from '@/services/calendarStorage';
 import { useBackgroundSync } from './useBackgroundSync';
+import { useSettings } from '@/contexts/SettingsContext';
 
 const NOTION_EVENTS_KEY = 'family_calendar_notion_events';
 
@@ -11,6 +12,7 @@ export const useNotionCalendars = () => {
   const [calendars, setCalendars] = useState<NotionCalendar[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [syncStatus, setSyncStatus] = useState<{ [key: string]: string }>({});
+  const { notionIntegrationToken } = useSettings();
   const { 
     registerBackgroundSync, 
     triggerBackgroundSync,
@@ -50,6 +52,10 @@ export const useNotionCalendars = () => {
   const addCalendar = useCallback(async (calendar: Omit<NotionCalendar, 'id' | 'databaseId'>) => {
     console.log('Adding new Notion calendar with URL:', calendar.url);
     
+    if (!notionIntegrationToken.trim()) {
+      throw new Error('Notion integration token is required. Please configure it in Settings → Notion tab.');
+    }
+    
     if (!calendar.name || !calendar.url) {
       throw new Error('Calendar name and URL are required');
     }
@@ -63,10 +69,10 @@ export const useNotionCalendars = () => {
       throw new Error('Could not extract database ID from URL');
     }
 
-    // Test the database access
-    const database = await NotionService.fetchDatabase(databaseId);
+    // Test the database access with the token
+    const database = await NotionService.fetchDatabase(databaseId, notionIntegrationToken);
     if (!database) {
-      throw new Error('Could not access the Notion database. Please ensure it is shared publicly.');
+      throw new Error('Could not access the Notion database. Please ensure it is shared with your integration.');
     }
     
     // Check for duplicates
@@ -106,10 +112,14 @@ export const useNotionCalendars = () => {
       console.error('Error saving Notion calendar:', error);
       throw new Error('Failed to save calendar to database');
     }
-  }, [loadCalendars, isBackgroundSyncSupported, triggerBackgroundSync]);
+  }, [loadCalendars, isBackgroundSyncSupported, triggerBackgroundSync, notionIntegrationToken]);
 
   // Sync a Notion calendar
   const syncCalendar = useCallback(async (calendar: NotionCalendar) => {
+    if (!notionIntegrationToken.trim()) {
+      throw new Error('Notion integration token is required. Please configure it in Settings → Notion tab.');
+    }
+
     setIsLoading(true);
     setSyncStatus(prev => ({ ...prev, [calendar.id]: 'syncing' }));
 
@@ -126,7 +136,7 @@ export const useNotionCalendars = () => {
       let hasMore = true;
 
       while (hasMore) {
-        const response = await NotionService.fetchDatabaseEntries(calendar.databaseId, cursor);
+        const response = await NotionService.fetchDatabaseEntries(calendar.databaseId, notionIntegrationToken, cursor);
         if (!response) {
           throw new Error('Failed to fetch database entries');
         }
@@ -184,7 +194,7 @@ export const useNotionCalendars = () => {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [notionIntegrationToken]);
 
   // Remove a Notion calendar
   const removeCalendar = useCallback(async (id: string) => {

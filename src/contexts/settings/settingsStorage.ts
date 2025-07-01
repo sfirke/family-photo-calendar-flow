@@ -18,6 +18,7 @@ interface LoadedSettings {
   publicAlbumUrl?: string | null;
   githubOwner?: string | null;
   githubRepo?: string | null;
+  notionIntegrationToken?: string | null;
 }
 
 export class SettingsStorage {
@@ -43,6 +44,7 @@ export class SettingsStorage {
           publicAlbumUrl: await secureStorage.retrieve('publicAlbumUrl', 'defaultPassword') || localStorage.getItem('publicAlbumUrl'),
           githubOwner: await secureStorage.retrieve('githubOwner', 'defaultPassword') || localStorage.getItem('githubOwner'),
           githubRepo: await secureStorage.retrieve('githubRepo', 'defaultPassword') || localStorage.getItem('githubRepo'),
+          notionIntegrationToken: await secureStorage.retrieve('notionIntegrationToken', 'defaultPassword') || localStorage.getItem('notionIntegrationToken'),
         };
 
         // Automatic migration: Move unencrypted sensitive data to secure storage
@@ -58,6 +60,7 @@ export class SettingsStorage {
           publicAlbumUrl: localStorage.getItem('publicAlbumUrl'),
           githubOwner: localStorage.getItem('githubOwner'),
           githubRepo: localStorage.getItem('githubRepo'),
+          notionIntegrationToken: localStorage.getItem('notionIntegrationToken'),
         };
       }
 
@@ -72,7 +75,7 @@ export class SettingsStorage {
    * Migrate sensitive settings from localStorage to secure storage
    */
   private static async migrateSensitiveSettings() {
-    const sensitiveKeys = ['zipCode', 'weatherApiKey', 'publicAlbumUrl', 'githubOwner', 'githubRepo'];
+    const sensitiveKeys = ['zipCode', 'weatherApiKey', 'publicAlbumUrl', 'githubOwner', 'githubRepo', 'notionIntegrationToken'];
     
     for (const key of sensitiveKeys) {
       const oldValue = localStorage.getItem(key);

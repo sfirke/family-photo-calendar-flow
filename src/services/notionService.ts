@@ -6,6 +6,26 @@ const NOTION_VERSION = '2022-06-28';
 
 export class NotionService {
   /**
+   * Test if a Notion integration token is valid
+   */
+  static async testToken(token: string): Promise<boolean> {
+    try {
+      const response = await fetch(`${NOTION_API_BASE}/users/me`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Notion-Version': NOTION_VERSION,
+          'Content-Type': 'application/json',
+        }
+      });
+
+      return response.ok;
+    } catch (error) {
+      console.error('Token test failed:', error);
+      return false;
+    }
+  }
+
+  /**
    * Extract database ID from various Notion URL formats
    */
   static extractDatabaseId(url: string): string | null {
@@ -49,22 +69,31 @@ export class NotionService {
   }
 
   /**
-   * Fetch database schema from Notion API
+   * Fetch database schema from Notion API with authentication
    */
-  static async fetchDatabase(databaseId: string): Promise<NotionDatabase | null> {
+  static async fetchDatabase(databaseId: string, token: string): Promise<NotionDatabase | null> {
     try {
-      // Use CORS proxy to access Notion API
-      const proxyUrl = `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(`${NOTION_API_BASE}/databases/${databaseId}`)}`;
-      
-      const response = await fetch(proxyUrl, {
+      const response = await fetch(`${NOTION_API_BASE}/databases/${databaseId}`, {
         headers: {
+          'Authorization': `Bearer ${token}`,
           'Notion-Version': NOTION_VERSION,
           'Content-Type': 'application/json',
         }
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to fetch database: ${response.status}`);
+        const errorText = await response.text();
+        console.error(`Failed to fetch database: ${response.status} - ${errorText}`);
+        
+        if (response.status === 401) {
+          throw new Error('Invalid or expired integration token');
+        } else if (response.status === 403) {
+          throw new Error('Integration does not have access to this database');
+        } else if (response.status === 404) {
+          throw new Error('Database not found or not shared with integration');
+        } else {
+          throw new Error(`Failed to fetch database: ${response.status}`);
+        }
       }
 
       const data = await response.json();
@@ -77,18 +106,18 @@ export class NotionService {
       };
     } catch (error) {
       console.error('Error fetching Notion database:', error);
-      return null;
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Failed to connect to Notion API');
     }
   }
 
   /**
-   * Fetch database entries from Notion API
+   * Fetch database entries from Notion API with authentication
    */
-  static async fetchDatabaseEntries(databaseId: string, cursor?: string): Promise<NotionDatabaseResponse | null> {
+  static async fetchDatabaseEntries(databaseId: string, token: string, cursor?: string): Promise<NotionDatabaseResponse | null> {
     try {
-      const url = `${NOTION_API_BASE}/databases/${databaseId}/query`;
-      const proxyUrl = `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`;
-      
       const body: any = {
         page_size: 100
       };
@@ -97,9 +126,10 @@ export class NotionService {
         body.start_cursor = cursor;
       }
 
-      const response = await fetch(proxyUrl, {
+      const response = await fetch(`${NOTION_API_BASE}/databases/${databaseId}/query`, {
         method: 'POST',
         headers: {
+          'Authorization': `Bearer ${token}`,
           'Notion-Version': NOTION_VERSION,
           'Content-Type': 'application/json',
         },
@@ -107,7 +137,18 @@ export class NotionService {
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to fetch database entries: ${response.status}`);
+        const errorText = await response.text();
+        console.error(`Failed to fetch database entries: ${response.status} - ${errorText}`);
+        
+        if (response.status === 401) {
+          throw new Error('Invalid or expired integration token');
+        } else if (response.status === 403) {
+          throw new Error('Integration does not have access to this database');
+        } else if (response.status === 404) {
+          throw new Error('Database not found or not shared with integration');
+        } else {
+          throw new Error(`Failed to fetch database entries: ${response.status}`);
+        }
       }
 
       const data = await response.json();
@@ -119,7 +160,10 @@ export class NotionService {
       };
     } catch (error) {
       console.error('Error fetching Notion database entries:', error);
-      return null;
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Failed to connect to Notion API');
     }
   }
 

@@ -2,11 +2,13 @@
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 import { useICalCalendars } from '@/hooks/useICalCalendars';
 import { useNotionCalendars } from '@/hooks/useNotionCalendars';
 import { useCalendarSelection } from '@/hooks/useCalendarSelection';
-import { Calendar, RotateCcw } from 'lucide-react';
+import { useSettings } from '@/contexts/SettingsContext';
+import { Calendar, RotateCcw, Key, AlertTriangle } from 'lucide-react';
 import EditableCalendarCard from './EditableCalendarCard';
 import AddCalendarDialog from './AddCalendarDialog';
 import CalendarEventsSummary from './CalendarEventsSummary';
@@ -16,6 +18,7 @@ import { NotionCalendar } from '@/types/notion';
 import { NotionService } from '@/services/notionService';
 
 const CalendarFeedsSettings = () => {
+  const { notionIntegrationToken } = useSettings();
   const {
     calendars: icalCalendars,
     isLoading: icalLoading,
@@ -105,6 +108,16 @@ const CalendarFeedsSettings = () => {
       toast({
         title: "Missing information",
         description: "Please provide both a name and URL for the calendar.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Check Notion token requirement
+    if (calendarData.type === 'notion' && !notionIntegrationToken.trim()) {
+      toast({
+        title: "Notion integration required",
+        description: "Please configure your Notion integration token in Settings → Notion tab first.",
         variant: "destructive"
       });
       return;
@@ -268,6 +281,7 @@ const CalendarFeedsSettings = () => {
   const enabledCalendarsCount = allCalendars.filter(cal => cal.enabled && cal.source === 'config').length;
   const totalEvents = calendarsFromEvents.reduce((sum, cal) => sum + cal.eventCount, 0);
   const calendarsWithEventsCount = calendarsFromEvents.filter(cal => cal.hasEvents).length;
+  const notionCalendarsCount = allCalendars.filter(cal => cal.type === 'notion').length;
 
   return (
     <Card className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
@@ -302,6 +316,26 @@ const CalendarFeedsSettings = () => {
           calendarsWithEventsCount={calendarsWithEventsCount}
           selectedCalendarIds={selectedCalendarIds}
         />
+
+        {notionCalendarsCount > 0 && !notionIntegrationToken.trim() && (
+          <Alert className="bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800">
+            <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+            <AlertDescription className="text-amber-700 dark:text-amber-300">
+              <div className="flex items-center justify-between">
+                <span>Notion calendars require an integration token to sync.</span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="ml-2 border-amber-300 dark:border-amber-600 text-amber-700 dark:text-amber-300"
+                  onClick={() => window.location.hash = '#notion-settings'}
+                >
+                  <Key className="h-4 w-4 mr-1" />
+                  Configure
+                </Button>
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
 
         <AddCalendarDialog onAdd={handleAddCalendar} isLoading={isLoading} />
 
