@@ -9,13 +9,26 @@ export class CalendarFeedService {
   static async addCalendar(calendar: Omit<CalendarFeed, 'id'> & { type: 'ical' | 'notion' }): Promise<CalendarFeed> {
     const id = `${calendar.type}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
-    const newCalendar = {
-      ...calendar,
-      id,
-    };
+    let newCalendar: CalendarFeed;
+    
+    if (calendar.type === 'notion') {
+      // Create Notion calendar with required databaseId
+      newCalendar = {
+        ...calendar,
+        id,
+        databaseId: calendar.databaseId || '', // Ensure databaseId exists for Notion calendars
+      } as NotionCalendar;
+    } else {
+      // Create iCal calendar with required syncStatus
+      newCalendar = {
+        ...calendar,
+        id,
+        syncStatus: 'idle' as const,
+      } as ICalCalendar;
+    }
 
     await calendarStorageService.addCalendar(newCalendar);
-    return newCalendar as CalendarFeed;
+    return newCalendar;
   }
 
   static async updateCalendar(id: string, updates: Partial<CalendarFeed>): Promise<void> {
@@ -27,7 +40,18 @@ export class CalendarFeedService {
   }
 
   static async getAllCalendars(): Promise<CalendarFeed[]> {
-    return await calendarStorageService.getAllCalendars();
+    const stored = await calendarStorageService.getAllCalendars();
+    // Convert stored calendars to proper types based on their properties
+    return stored.map(cal => {
+      if (cal.databaseId !== undefined) {
+        return cal as NotionCalendar;
+      } else {
+        return {
+          ...cal,
+          syncStatus: cal.syncStatus || 'idle'
+        } as ICalCalendar;
+      }
+    });
   }
 
   static isICalCalendar(calendar: CalendarFeed): calendar is ICalCalendar {

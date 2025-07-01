@@ -63,7 +63,7 @@ export class ICalCalendarService {
   static async syncCalendar(calendar: ICalCalendar): Promise<Event[]> {
     try {
       const icalData = await ICalFetchService.fetchICalData(calendar.url);
-      const events = ICalEventService.parseEvents(icalData, calendar);
+      const events = ICalEventService.parseICalData(icalData, calendar);
       
       // Update calendar sync status
       await this.updateCalendar(calendar.id, {
