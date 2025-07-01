@@ -189,8 +189,8 @@ class NotionService {
     return null;
   }
 
-  transformToEvents(pages: any[], calendarId: string, calendarName: string, color: string): NotionEvent[] {
-    // Ensure pages is an array
+  transformToEvents(pages: unknown, calendarId: string, calendarName: string, color: string): NotionEvent[] {
+    // Ensure pages is an array with proper type checking
     if (!Array.isArray(pages)) {
       console.warn('Expected array of pages, got:', typeof pages);
       return [];
