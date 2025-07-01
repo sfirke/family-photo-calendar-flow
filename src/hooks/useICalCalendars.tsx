@@ -5,6 +5,7 @@ import { ICalEventService } from '@/services/icalEventService';
 import { ICalFetchService } from '@/services/icalFetchService';
 import { useCalendarSync } from './useCalendarSync';
 import { useBackgroundSync } from './useBackgroundSync';
+import { useToast } from '@/hooks/use-toast';
 
 export interface ICalCalendar {
   id: string;
@@ -26,6 +27,7 @@ export const useICalCalendars = () => {
     isBackgroundSyncSupported,
     processSyncQueue
   } = useBackgroundSync();
+  const { toast } = useToast();
 
   // Load calendars from storage
   const loadCalendars = useCallback(async () => {
@@ -33,6 +35,7 @@ export const useICalCalendars = () => {
       const storedCalendars = await CalendarFeedService.getAllCalendars();
       const icalCalendars = storedCalendars.filter(cal => CalendarFeedService.isICalCalendar(cal)) as ICalCalendar[];
       setCalendars(icalCalendars);
+      console.log('Loaded iCal calendars:', icalCalendars.length);
       return icalCalendars;
     } catch (error) {
       console.error('Error loading iCal calendars:', error);
@@ -41,15 +44,23 @@ export const useICalCalendars = () => {
     }
   }, []);
 
-  // Initialize background sync
+  // Initialize background sync with fallback handling
   useEffect(() => {
-    if (calendars.length > 0 && isBackgroundSyncSupported) {
+    if (calendars.length > 0) {
       const initBackgroundSync = async () => {
-        try {
-          await registerBackgroundSync();
-          await registerPeriodicSync();
-        } catch (error) {
-          console.error('Failed to initialize background sync:', error);
+        if (isBackgroundSyncSupported) {
+          try {
+            const bgSyncRegistered = await registerBackgroundSync();
+            const periodicSyncRegistered = await registerPeriodicSync();
+            
+            if (!bgSyncRegistered && !periodicSyncRegistered) {
+              console.log('Background sync not available, manual sync only');
+            }
+          } catch (error) {
+            console.error('Failed to initialize background sync:', error);
+          }
+        } else {
+          console.log('Background sync not supported by browser');
         }
       };
       
@@ -57,7 +68,7 @@ export const useICalCalendars = () => {
     }
   }, [calendars.length, isBackgroundSyncSupported, registerBackgroundSync, registerPeriodicSync]);
 
-  // Add a new iCal calendar
+  // Add a new iCal calendar with enhanced validation
   const addCalendar = useCallback(async (calendar: Omit<ICalCalendar, 'id'>) => {
     if (!calendar.name || !calendar.url) {
       throw new Error('Calendar name and URL are required');
@@ -66,6 +77,13 @@ export const useICalCalendars = () => {
     const trimmedUrl = calendar.url.trim();
     if (!trimmedUrl) {
       throw new Error('Calendar URL cannot be empty');
+    }
+    
+    // Enhanced URL validation
+    try {
+      new URL(trimmedUrl);
+    } catch {
+      throw new Error('Please enter a valid URL');
     }
     
     // Check for duplicates
@@ -92,9 +110,16 @@ export const useICalCalendars = () => {
     
     await loadCalendars();
     
-    // Schedule background sync
+    // Try background sync first, then fallback to manual
     if (isBackgroundSyncSupported) {
-      await triggerBackgroundSync();
+      try {
+        const success = await triggerBackgroundSync();
+        if (!success) {
+          console.log('Background sync failed, will sync manually');
+        }
+      } catch (error) {
+        console.error('Background sync trigger failed:', error);
+      }
     }
     
     return newCalendar;
@@ -115,12 +140,13 @@ export const useICalCalendars = () => {
     await loadCalendars();
   }, [loadCalendars, clearSyncStatus]);
 
-  // Sync a single calendar
+  // Sync a single calendar with enhanced error handling
   const syncCalendar = useCallback(async (calendar: ICalCalendar) => {
     if (!calendar.url || calendar.url.trim() === '') {
       throw new Error('Calendar does not have a valid URL for syncing.');
     }
 
+    console.log(`Starting sync for calendar: ${calendar.name}`);
     startSync(calendar.id);
 
     try {
@@ -142,18 +168,44 @@ export const useICalCalendars = () => {
         eventCount: events.length
       });
 
+      console.log(`Successfully synced ${events.length} events for ${calendar.name}`);
       completeSync(calendar.id, true);
+      
+      toast({
+        title: "Calendar synced",
+        description: `${calendar.name}: ${events.length} events synced`,
+      });
+      
       return events;
 
     } catch (error) {
+      console.error(`Sync failed for ${calendar.name}:`, error);
       completeSync(calendar.id, false);
+      
+      const errorMessage = error instanceof Error ? error.message : 'Unknown sync error';
+      toast({
+        title: "Sync failed",
+        description: `${calendar.name}: ${errorMessage}`,
+        variant: "destructive"
+      });
+      
       throw error;
     }
-  }, [startSync, completeSync, updateCalendar]);
+  }, [startSync, completeSync, updateCalendar, toast]);
 
-  // Sync all enabled calendars
+  // Sync all enabled calendars with better error handling
   const syncAllCalendars = useCallback(async () => {
     const enabledCalendars = calendars.filter(cal => cal.enabled);
+    
+    if (enabledCalendars.length === 0) {
+      toast({
+        title: "No calendars to sync",
+        description: "Enable some calendars first",
+      });
+      return;
+    }
+    
+    console.log(`Syncing ${enabledCalendars.length} enabled calendars`);
     
     // Try background sync first if supported
     if (isBackgroundSyncSupported && enabledCalendars.length > 0) {
@@ -168,14 +220,28 @@ export const useICalCalendars = () => {
     }
     
     // Fallback to foreground sync
+    let successCount = 0;
+    let errorCount = 0;
+    
     for (const calendar of enabledCalendars) {
       try {
         await syncCalendar(calendar);
+        successCount++;
       } catch (error) {
+        errorCount++;
         console.error(`Failed to sync calendar ${calendar.name}:`, error);
       }
     }
-  }, [calendars, syncCalendar, isBackgroundSyncSupported, triggerBackgroundSync]);
+    
+    // Show summary toast
+    if (successCount > 0 || errorCount > 0) {
+      toast({
+        title: "Sync completed",
+        description: `${successCount} succeeded, ${errorCount} failed`,
+        variant: errorCount > 0 ? "destructive" : "default"
+      });
+    }
+  }, [calendars, syncCalendar, isBackgroundSyncSupported, triggerBackgroundSync, toast]);
 
   // Get events from storage
   const getICalEvents = useCallback(() => {
@@ -183,6 +249,7 @@ export const useICalCalendars = () => {
   }, []);
 
   const forceRefresh = useCallback(() => {
+    console.log('Force refreshing iCal calendars and events');
     loadCalendars();
     processSyncQueue();
   }, [loadCalendars, processSyncQueue]);

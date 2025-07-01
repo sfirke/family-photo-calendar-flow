@@ -16,18 +16,24 @@ export const useBackgroundSync = () => {
   const [syncQueue, setSyncQueue] = useState<any[]>([]);
   const { toast } = useToast();
 
-  // Check for background sync support
+  // Check for background sync support with better error handling
   useEffect(() => {
-    if ('serviceWorker' in navigator && 'sync' in window.ServiceWorkerRegistration.prototype) {
-      setIsBackgroundSyncSupported(true);
-    }
-    
-    if ('serviceWorker' in navigator && 'periodicSync' in window.ServiceWorkerRegistration.prototype) {
-      setIsPeriodicSyncSupported(true);
+    try {
+      if ('serviceWorker' in navigator && 'sync' in window.ServiceWorkerRegistration.prototype) {
+        setIsBackgroundSyncSupported(true);
+      }
+      
+      if ('serviceWorker' in navigator && 'periodicSync' in window.ServiceWorkerRegistration.prototype) {
+        setIsPeriodicSyncSupported(true);
+      }
+    } catch (error) {
+      console.warn('Background sync support detection failed:', error);
+      setIsBackgroundSyncSupported(false);
+      setIsPeriodicSyncSupported(false);
     }
   }, []);
 
-  // Listen for background sync messages
+  // Listen for background sync messages with enhanced error handling
   useEffect(() => {
     if ('serviceWorker' in navigator) {
       const handleMessage = (event: MessageEvent) => {
@@ -35,7 +41,6 @@ export const useBackgroundSync = () => {
           const result = event.data.result as BackgroundSyncResult;
           setLastSyncResult(result);
           
-          // Show success toast
           if (result.syncedCount > 0) {
             toast({
               title: "Background sync completed",
@@ -51,7 +56,6 @@ export const useBackgroundSync = () => {
             });
           }
 
-          // Process any queued sync data
           processSyncQueue();
         }
       };
@@ -72,10 +76,8 @@ export const useBackgroundSync = () => {
         const queue = JSON.parse(queueData);
         setSyncQueue(queue);
         
-        // Clear the queue after processing
         localStorage.removeItem('calendar_sync_queue');
         
-        // Trigger a refresh of calendar data in the main application
         window.dispatchEvent(new CustomEvent('background-sync-data-available', { 
           detail: { syncQueue: queue } 
         }));
@@ -85,10 +87,10 @@ export const useBackgroundSync = () => {
     }
   }, []);
 
-  // Register for background sync
+  // Register for background sync with proper error handling
   const registerBackgroundSync = useCallback(async (): Promise<boolean> => {
     if (!isBackgroundSyncSupported) {
-      console.log('Background sync not supported');
+      console.log('Background sync not supported, using fallback');
       return false;
     }
 
@@ -101,6 +103,11 @@ export const useBackgroundSync = () => {
           resolve(event.data.success);
         };
         
+        // Add timeout to prevent hanging
+        setTimeout(() => {
+          resolve(false);
+        }, 5000);
+        
         registration.active?.postMessage(
           { type: 'REGISTER_BACKGROUND_SYNC' },
           [messageChannel.port2]
@@ -112,7 +119,7 @@ export const useBackgroundSync = () => {
     }
   }, [isBackgroundSyncSupported]);
 
-  // Register for periodic background sync
+  // Register for periodic background sync with timeout
   const registerPeriodicSync = useCallback(async (): Promise<boolean> => {
     if (!isPeriodicSyncSupported) {
       console.log('Periodic sync not supported');
@@ -128,6 +135,10 @@ export const useBackgroundSync = () => {
           resolve(event.data.success);
         };
         
+        setTimeout(() => {
+          resolve(false);
+        }, 5000);
+        
         registration.active?.postMessage(
           { type: 'REGISTER_PERIODIC_SYNC' },
           [messageChannel.port2]
@@ -139,16 +150,21 @@ export const useBackgroundSync = () => {
     }
   }, [isPeriodicSyncSupported]);
 
-  // Manually trigger background sync - Fixed TypeScript error
+  // Improved background sync trigger with fallback
   const triggerBackgroundSync = useCallback(async (): Promise<boolean> => {
     if (!isBackgroundSyncSupported) {
+      console.log('Background sync not supported, manual sync required');
+      toast({
+        title: "Manual sync required",
+        description: "Background sync not available, please use manual sync",
+        variant: "default"
+      });
       return false;
     }
 
     try {
       const registration = await navigator.serviceWorker.ready;
       
-      // Check if sync property exists before using it
       if ('sync' in registration) {
         await (registration as any).sync.register('calendar-sync');
         
@@ -159,11 +175,18 @@ export const useBackgroundSync = () => {
         
         return true;
       } else {
-        console.warn('Background sync not available on this registration');
+        console.warn('Background sync registration not available');
         return false;
       }
     } catch (error) {
       console.error('Failed to trigger background sync:', error);
+      
+      toast({
+        title: "Sync scheduling failed",
+        description: "Please try manual sync instead",
+        variant: "destructive"
+      });
+      
       return false;
     }
   }, [isBackgroundSyncSupported, toast]);
