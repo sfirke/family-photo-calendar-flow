@@ -13,6 +13,22 @@ interface NotionIntegrationInfo {
   };
 }
 
+interface DatabaseProperties {
+  [key: string]: {
+    id: string;
+    name: string;
+    type: string;
+  };
+}
+
+interface DatabaseTestResult {
+  success: boolean;
+  database?: any;
+  properties?: DatabaseProperties;
+  samplePages?: any[];
+  error?: string;
+}
+
 class NotionService {
   private readonly baseURL = 'https://api.notion.com/v1';
   private readonly headers = {
@@ -84,6 +100,97 @@ class NotionService {
 
   private validateTokenFormat(token: string): boolean {
     return token.startsWith('ntn_') && token.length >= 50;
+  }
+
+  // New method: Validate database ID format
+  validateDatabaseId(input: string): { isValid: boolean; id: string; type: 'id' | 'url' | 'invalid' } {
+    // Remove any whitespace
+    const cleanInput = input.trim();
+    
+    // Check if it's a direct database ID (32 character hex string)
+    const directIdPattern = /^[a-f0-9]{32}$/i;
+    if (directIdPattern.test(cleanInput)) {
+      return { isValid: true, id: cleanInput, type: 'id' };
+    }
+
+    // Check if it's a URL and extract ID
+    const extractedId = this.extractPageIdFromUrl(cleanInput);
+    if (extractedId) {
+      return { isValid: true, id: extractedId, type: 'url' };
+    }
+
+    return { isValid: false, id: '', type: 'invalid' };
+  }
+
+  // New method: Test database access and get properties
+  async testDatabaseAccess(databaseId: string, token: string): Promise<DatabaseTestResult> {
+    try {
+      console.log(`🧪 Testing database access for ID: ${databaseId}`);
+      
+      // Get database metadata
+      const database = await this.makeNotionRequest(`/databases/${databaseId}`, token);
+      
+      // Extract properties
+      const properties: DatabaseProperties = {};
+      for (const [key, prop] of Object.entries(database.properties || {})) {
+        if (prop && typeof prop === 'object' && 'type' in prop) {
+          properties[key] = {
+            id: (prop as any).id || key,
+            name: key,
+            type: (prop as any).type
+          };
+        }
+      }
+
+      // Query for sample pages (limit to 3 for preview)
+      const queryResult = await this.makeNotionRequest(`/databases/${databaseId}/query`, token, {
+        method: 'POST',
+        body: JSON.stringify({
+          page_size: 3
+        }),
+      });
+
+      return {
+        success: true,
+        database,
+        properties,
+        samplePages: queryResult.results || [],
+      };
+    } catch (error) {
+      console.error('Database test failed:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
+      };
+    }
+  }
+
+  // Enhanced method: Get database with full query capability
+  async queryDatabaseFull(databaseId: string, token: string, options: {
+    filter?: any;
+    sorts?: any[];
+    pageSize?: number;
+  } = {}): Promise<any> {
+    try {
+      const { filter, sorts, pageSize = 100 } = options;
+      
+      return await this.makeNotionRequest(`/databases/${databaseId}/query`, token, {
+        method: 'POST',
+        body: JSON.stringify({
+          filter,
+          sorts: sorts || [
+            {
+              property: 'Date',
+              direction: 'ascending'
+            }
+          ],
+          page_size: pageSize
+        }),
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      throw new Error(errorMessage);
+    }
   }
 
   async getIntegrationInfo(token: string): Promise<NotionIntegrationInfo> {

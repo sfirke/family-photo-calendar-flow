@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,11 +8,12 @@ import { useToast } from '@/hooks/use-toast';
 import { useNotionCalendars } from '@/hooks/useNotionCalendars';
 import { useCalendarSelection } from '@/hooks/useCalendarSelection';
 import { useSettings } from '@/contexts/SettingsContext';
-import { GitFork, Plus, RotateCcw, BarChart3, AlertCircle, ExternalLink, CheckCircle, Loader2, TestTube, Shield, Users } from 'lucide-react';
+import { GitFork, Plus, RotateCcw, BarChart3, AlertCircle, ExternalLink, CheckCircle, Loader2, TestTube, Shield, Users, Database, Hash } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { notionService } from '@/services/notionService';
 import { NotionCalendar } from '@/types/notion';
+import DatabaseTestModal from './DatabaseTestModal';
 
 const CALENDAR_COLORS = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899'];
 
@@ -34,6 +34,7 @@ const NotionSettings = () => {
   const { toast } = useToast();
   
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [showDatabaseTestModal, setShowDatabaseTestModal] = useState(false);
   const [showTokenInput, setShowTokenInput] = useState(false);
   const [tokenInput, setTokenInput] = useState('');
   const [isValidatingToken, setIsValidatingToken] = useState(false);
@@ -44,15 +45,11 @@ const NotionSettings = () => {
   const [newCalendar, setNewCalendar] = useState({
     name: '',
     url: '',
+    databaseId: '',
     color: CALENDAR_COLORS[0],
     enabled: true
   });
-  const [calendarAccessStatus, setCalendarAccessStatus] = useState<{
-    checking: boolean;
-    hasAccess: boolean;
-    resourceType: string | null;
-    error?: string;
-  }>({ checking: false, hasAccess: false, resourceType: null });
+  const [inputValidation, setInputValidation] = useState<any>(null);
 
   const hasToken = Boolean(notionToken);
   const enabledCalendarsCount = calendars.filter(cal => cal.enabled).length;
@@ -170,61 +167,48 @@ const NotionSettings = () => {
     }
   };
 
-  const checkCalendarAccess = async (url: string) => {
-    if (!notionToken || !url.trim()) return;
+  const handleDatabaseConfirm = (databaseId: string, databaseName: string) => {
+    setNewCalendar(prev => ({
+      ...prev,
+      name: databaseName,
+      databaseId: databaseId,
+      url: `https://notion.so/${databaseId}`
+    }));
+    setShowAddDialog(true);
+  };
 
-    setCalendarAccessStatus({ checking: true, hasAccess: false, resourceType: null });
+  const validateCalendarInput = (input: string) => {
+    if (!input.trim()) {
+      setInputValidation(null);
+      return;
+    }
 
-    try {
-      const result = await notionService.validateCalendarAccess(url, notionToken);
-      setCalendarAccessStatus({
-        checking: false,
-        hasAccess: result.hasAccess,
-        resourceType: result.resourceType,
-        error: result.error
-      });
-    } catch (error) {
-      setCalendarAccessStatus({
-        checking: false,
-        hasAccess: false,
-        resourceType: null,
-        error: error instanceof Error ? error.message : 'Access check failed'
-      });
+    const validation = notionService.validateDatabaseId(input);
+    setInputValidation(validation);
+    
+    if (validation.isValid) {
+      setNewCalendar(prev => ({
+        ...prev,
+        url: validation.type === 'url' ? input : `https://notion.so/${validation.id}`,
+        databaseId: validation.id
+      }));
     }
   };
 
-  useEffect(() => {
-    if (newCalendar.url && notionToken) {
-      const timeoutId = setTimeout(() => {
-        checkCalendarAccess(newCalendar.url);
-      }, 500);
-      return () => clearTimeout(timeoutId);
-    }
-  }, [newCalendar.url, notionToken]);
-
   const handleAddCalendar = async () => {
-    if (!newCalendar.name.trim() || !newCalendar.url.trim()) {
+    if (!newCalendar.name.trim()) {
       toast({
         title: "Missing information",
-        description: "Please provide both a name and URL for the calendar.",
+        description: "Please provide a name for the calendar.",
         variant: "destructive"
       });
       return;
     }
 
-    if (!newCalendar.url.includes('notion.so')) {
+    if (!newCalendar.databaseId) {
       toast({
-        title: "Invalid URL",
-        description: "Please enter a valid Notion page or database URL.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    if (!calendarAccessStatus.hasAccess) {
-      toast({
-        title: "Access required",
-        description: "Please share this page/database with your integration before adding it.",
+        title: "Missing database ID",
+        description: "Please test a database first to get the database ID.",
         variant: "destructive"
       });
       return;
@@ -239,7 +223,6 @@ const NotionSettings = () => {
         type: 'notion'
       });
 
-      // Try to sync immediately
       try {
         await syncCalendar(calendar);
         toast({
@@ -258,10 +241,11 @@ const NotionSettings = () => {
       setNewCalendar({
         name: '',
         url: '',
+        databaseId: '',
         color: CALENDAR_COLORS[0],
         enabled: true
       });
-      setCalendarAccessStatus({ checking: false, hasAccess: false, resourceType: null });
+      setInputValidation(null);
       setShowAddDialog(false);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
@@ -477,19 +461,37 @@ const NotionSettings = () => {
           </div>
         )}
 
-        {/* Add Calendar Dialog */}
+        <div className="flex gap-2">
+          <Button 
+            onClick={() => setShowDatabaseTestModal(true)}
+            className="flex-1 bg-purple-600 hover:bg-purple-700 text-white"
+          >
+            <Database className="h-4 w-4 mr-2" />
+            Test Database Access
+          </Button>
+          <Button 
+            onClick={() => setShowAddDialog(true)}
+            variant="outline"
+            className="border-purple-300 dark:border-purple-600 text-purple-700 dark:text-purple-300"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Add Manual
+          </Button>
+        </div>
+
+        <DatabaseTestModal
+          open={showDatabaseTestModal}
+          onOpenChange={setShowDatabaseTestModal}
+          token={notionToken}
+          onConfirm={handleDatabaseConfirm}
+        />
+
         <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-          <DialogTrigger asChild>
-            <Button className="w-full bg-purple-600 hover:bg-purple-700 text-white">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Notion Calendar
-            </Button>
-          </DialogTrigger>
           <DialogContent className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
             <DialogHeader>
               <DialogTitle className="text-gray-900 dark:text-gray-100">Add Notion Calendar</DialogTitle>
               <DialogDescription className="text-gray-600 dark:text-gray-400">
-                Add a Notion page or database to import as calendar events. Make sure to share it with your integration first.
+                Add a Notion database as a calendar. You can enter a database ID, share URL, or test access first.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
@@ -504,33 +506,31 @@ const NotionSettings = () => {
                 />
               </div>
               <div>
-                <Label htmlFor="calendar-url" className="text-gray-700 dark:text-gray-300">Notion Page/Database URL</Label>
+                <Label htmlFor="calendar-input" className="text-gray-700 dark:text-gray-300">
+                  Database ID or Share URL
+                </Label>
                 <Input
-                  id="calendar-url"
-                  placeholder="https://notion.so/..."
+                  id="calendar-input"
+                  placeholder="9fc8a972a9a6489f91f9e71d7443189d or https://notion.so/..."
                   value={newCalendar.url}
-                  onChange={(e) => setNewCalendar(prev => ({ ...prev, url: e.target.value }))}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setNewCalendar(prev => ({ ...prev, url: value }));
+                    validateCalendarInput(value);
+                  }}
                   className="bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-900 dark:text-gray-100"
                 />
-                {newCalendar.url && (
+                {inputValidation && (
                   <div className="mt-2">
-                    {calendarAccessStatus.checking ? (
-                      <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Checking access...
-                      </div>
-                    ) : calendarAccessStatus.hasAccess ? (
+                    {inputValidation.isValid ? (
                       <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
                         <CheckCircle className="h-4 w-4" />
-                        Access confirmed ({calendarAccessStatus.resourceType})
+                        Valid {inputValidation.type === 'id' ? 'database ID' : 'URL'} detected
                       </div>
                     ) : (
-                      <div className="text-sm text-red-600 dark:text-red-400">
-                        <div className="flex items-center gap-2">
-                          <AlertCircle className="h-4 w-4" />
-                          {calendarAccessStatus.error || 'No access to this resource'}
-                        </div>
-                        <p className="mt-1 text-xs">Please share this page/database with your integration in Notion.</p>
+                      <div className="flex items-center gap-2 text-sm text-red-600 dark:text-red-400">
+                        <AlertCircle className="h-4 w-4" />
+                        Please enter a valid database ID or share URL
                       </div>
                     )}
                   </div>
@@ -559,10 +559,11 @@ const NotionSettings = () => {
                     setNewCalendar({
                       name: '',
                       url: '',
+                      databaseId: '',
                       color: CALENDAR_COLORS[0],
                       enabled: true
                     });
-                    setCalendarAccessStatus({ checking: false, hasAccess: false, resourceType: null });
+                    setInputValidation(null);
                   }}
                   className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300"
                 >
@@ -570,7 +571,7 @@ const NotionSettings = () => {
                 </Button>
                 <Button
                   onClick={handleAddCalendar}
-                  disabled={isLoading || !calendarAccessStatus.hasAccess}
+                  disabled={isLoading}
                   className="bg-purple-600 hover:bg-purple-700 text-white"
                 >
                   Add Calendar
@@ -580,7 +581,6 @@ const NotionSettings = () => {
           </DialogContent>
         </Dialog>
 
-        {/* Calendar List */}
         {calendars.length > 0 && (
           <div className="space-y-3">
             {calendars.map(calendar => (
@@ -638,22 +638,21 @@ const NotionSettings = () => {
 
         {calendars.length === 0 && (
           <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-            <GitFork className="h-12 w-12 mx-auto mb-4 opacity-50" />
+            <Database className="h-12 w-12 mx-auto mb-4 opacity-50" />
             <p>No Notion calendars added yet.</p>
-            <p className="text-sm">Add your first Notion calendar to get started.</p>
+            <p className="text-sm">Test database access or add your first calendar to get started.</p>
           </div>
         )}
 
-        {/* Enhanced Help and Tips */}
         <Alert className="bg-purple-50 dark:bg-purple-900/30 border border-purple-200 dark:border-purple-800">
-          <Shield className="h-4 w-4 text-purple-600 dark:text-purple-400" />
-          <AlertTitle className="text-purple-900 dark:text-purple-200">Integration Setup Tips</AlertTitle>
+          <Hash className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+          <AlertTitle className="text-purple-900 dark:text-purple-200">Enhanced Integration Features</AlertTitle>
           <AlertDescription className="text-sm space-y-2 text-purple-700 dark:text-purple-300">
-            <p>• <strong>Sharing is required:</strong> You must share each page/database with your integration in Notion</p>
-            <p>• <strong>Date properties:</strong> Pages/databases should have a "Date" property for calendar events</p>
-            <p>• <strong>Access verification:</strong> The URL field will check if your integration can access the resource</p>
-            <p>• <strong>Event sorting:</strong> Events display with a fork icon and appear after all-day events</p>
-            <p>• <strong>Troubleshooting:</strong> If sync fails, verify sharing permissions and page/database existence</p>
+            <p>• <strong>Database ID Support:</strong> Enter database IDs directly (32 hex characters)</p>
+            <p>• <strong>Live Testing:</strong> Test database access before adding to calendars</p>
+            <p>• <strong>Auto-detection:</strong> Automatically detects URLs vs database IDs</p>
+            <p>• <strong>Property Preview:</strong> See database structure and sample data</p>
+            <p>• <strong>Share Requirements:</strong> Database must be shared with your integration</p>
           </AlertDescription>
         </Alert>
       </CardContent>

@@ -69,3 +69,26 @@ export interface NotionAccessValidation {
   resourceType: 'page' | 'database' | null;
   error?: string;
 }
+
+// New interfaces for enhanced functionality
+export interface DatabaseProperties {
+  [key: string]: {
+    id: string;
+    name: string;
+    type: string;
+  };
+}
+
+export interface DatabaseTestResult {
+  success: boolean;
+  database?: any;
+  properties?: DatabaseProperties;
+  samplePages?: any[];
+  error?: string;
+}
+
+export interface DatabaseValidationResult {
+  isValid: boolean;
+  id: string;
+  type: 'id' | 'url' | 'invalid';
+}
