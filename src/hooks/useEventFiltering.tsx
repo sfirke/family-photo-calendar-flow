@@ -19,8 +19,8 @@ const convertNotionEventToEvent = (notionEvent: NotionEvent): Event => {
     title: notionEvent.title,
     time: notionEvent.time,
     location: notionEvent.location || '',
-    attendees: 0, // Notion events don't have attendee count
-    category: 'Personal', // Default category for Notion events
+    attendees: 0,
+    category: 'Personal',
     color: notionEvent.color,
     description: notionEvent.description || '',
     organizer: 'Notion',
@@ -67,14 +67,14 @@ export const useEventFiltering = ({ googleEvents = [], notionEvents = [], scrape
     );
     
     // Combine all event sources
-    const hasGoogleEvents = safeGoogleEvents.length > 0;
+    const hasICalEvents = safeGoogleEvents.length > 0; // googleEvents now contains iCal events
     const hasNotionEvents = convertedNotionEvents.length > 0;
     const hasScrapedEvents = convertedScrapedEvents.length > 0;
     
     let baseEvents: Event[] = [];
     
-    // Add Google events if available
-    if (hasGoogleEvents) {
+    // Add iCal events (passed through googleEvents parameter)
+    if (hasICalEvents) {
       baseEvents = [...baseEvents, ...safeGoogleEvents];
     }
     
@@ -89,14 +89,14 @@ export const useEventFiltering = ({ googleEvents = [], notionEvents = [], scrape
     }
     
     // Use sample events only if no real events are available
-    if (!hasGoogleEvents && !hasNotionEvents && !hasScrapedEvents) {
+    if (!hasICalEvents && !hasNotionEvents && !hasScrapedEvents) {
       baseEvents = sampleEvents;
     }
 
     // Filter events by selected calendar IDs
     const filtered = baseEvents.filter(event => {
       // For sample events, show all when no real events are available
-      if (!hasGoogleEvents && !hasNotionEvents && !hasScrapedEvents) {
+      if (!hasICalEvents && !hasNotionEvents && !hasScrapedEvents) {
         return true;
       }
       
@@ -109,20 +109,7 @@ export const useEventFiltering = ({ googleEvents = [], notionEvents = [], scrape
       return safeSelectedCalendarIds.includes(eventCalendarId);
     });
 
-    // Process events to ensure single-day all-day events only appear on their specific date
-    const processedEvents = filtered.map(event => {
-      // If it's an all-day event that is NOT multi-day, ensure it only appears on its specific date
-      if (event.time === 'All day' && ('isMultiDay' in event ? event.isMultiDay === false : true)) {
-        return {
-          ...event,
-          date: new Date(event.date) // Ensure date is a proper Date object
-        };
-      }
-      
-      return event;
-    });
-
-    return processedEvents;
+    return filtered;
   }, [googleEvents, notionEvents, scrapedEvents, selectedCalendarIds]);
 
   return {

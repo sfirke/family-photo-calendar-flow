@@ -3,7 +3,6 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useICalCalendars } from './useICalCalendars';
 import { useNotionCalendars } from './useNotionCalendars';
 import { useNotionScrapedCalendars } from './useNotionScrapedCalendars';
-import { Event } from '@/types/calendar';
 
 export interface CalendarFromEvents {
   id: string;
@@ -43,46 +42,48 @@ export const useCalendarSelection = () => {
     return allCalendars.filter(cal => cal && cal.enabled);
   }, [allCalendars]);
 
-  // Create calendarsFromEvents (mock data for now - this would be populated from actual events)
+  // Create calendarsFromEvents based on actual calendar data
   const calendarsFromEvents = useMemo((): CalendarFromEvents[] => {
     if (!Array.isArray(allCalendars)) return [];
     
-    // Convert all calendars to CalendarFromEvents format
-    const calendarList: CalendarFromEvents[] = allCalendars.map(cal => ({
-      id: cal?.id || '',
-      summary: cal?.name || 'Unnamed Calendar',
-      color: cal?.color || '#3b82f6',
-      primary: false,
-      hasEvents: (cal?.eventCount || 0) > 0,
-      eventCount: cal?.eventCount || 0,
-      lastSync: cal?.lastSync
-    }));
+    // Convert all calendars to CalendarFromEvents format with proper event counting
+    const calendarList: CalendarFromEvents[] = allCalendars.map(cal => {
+      let eventCount = 0;
+      let hasEvents = false;
+
+      // Count events from iCal calendars
+      if (cal.events && Array.isArray(cal.events)) {
+        eventCount = cal.events.length;
+        hasEvents = eventCount > 0;
+      }
+
+      return {
+        id: cal?.id || '',
+        summary: cal?.name || 'Unnamed Calendar',
+        color: cal?.color || '#3b82f6',
+        primary: cal?.id === 'primary',
+        hasEvents,
+        eventCount,
+        lastSync: cal?.lastSync
+      };
+    });
 
     return calendarList;
   }, [allCalendars, refreshKey]);
 
-  // Initialize selected calendars with all enabled calendars
+  // Initialize selected calendars with enabled calendars that have events
   useEffect(() => {
     if (!Array.isArray(enabledCalendars)) return;
     
-    const enabledIds = enabledCalendars.map(cal => cal?.id).filter(Boolean);
-    if (enabledIds.length > 0 && selectedCalendarIds.length === 0) {
-      setSelectedCalendarIds(enabledIds);
+    const enabledWithEventsIds = enabledCalendars
+      .filter(cal => cal?.eventCount && cal.eventCount > 0)
+      .map(cal => cal?.id)
+      .filter(Boolean);
+    
+    if (enabledWithEventsIds.length > 0 && selectedCalendarIds.length === 0) {
+      setSelectedCalendarIds(enabledWithEventsIds);
     }
   }, [enabledCalendars, selectedCalendarIds.length]);
-
-  // Update selected calendars when calendars change
-  useEffect(() => {
-    if (!Array.isArray(enabledCalendars)) return;
-    
-    const enabledIds = enabledCalendars.map(cal => cal?.id).filter(Boolean);
-    const safeSelectedIds = Array.isArray(selectedCalendarIds) ? selectedCalendarIds : [];
-    const validSelectedIds = safeSelectedIds.filter(id => enabledIds.includes(id));
-    
-    if (validSelectedIds.length !== safeSelectedIds.length) {
-      setSelectedCalendarIds(validSelectedIds);
-    }
-  }, [enabledCalendars, selectedCalendarIds]);
 
   // Toggle calendar (support both 1 and 2 parameter versions)
   const toggleCalendar = useCallback((calendarId: string, checked?: boolean) => {
@@ -113,15 +114,6 @@ export const useCalendarSelection = () => {
     setSelectedCalendarIds(enabledIds);
   }, [enabledCalendars]);
 
-  const deselectAllCalendars = useCallback(() => {
-    setSelectedCalendarIds([]);
-  }, []);
-
-  // Additional methods needed by components
-  const clearAllCalendars = useCallback(() => {
-    setSelectedCalendarIds([]);
-  }, []);
-
   const selectCalendarsWithEvents = useCallback(() => {
     if (!Array.isArray(calendarsFromEvents)) return;
     const calendarsWithEventsIds = calendarsFromEvents
@@ -130,6 +122,10 @@ export const useCalendarSelection = () => {
       .filter(Boolean);
     setSelectedCalendarIds(calendarsWithEventsIds);
   }, [calendarsFromEvents]);
+
+  const clearAllCalendars = useCallback(() => {
+    setSelectedCalendarIds([]);
+  }, []);
 
   const updateSelectedCalendars = useCallback((newSelectedIds: string[]) => {
     const safeNewSelectedIds = Array.isArray(newSelectedIds) ? newSelectedIds : [];
@@ -164,7 +160,7 @@ export const useCalendarSelection = () => {
     isLoading,
     toggleCalendar,
     selectAllCalendars,
-    deselectAllCalendars,
+    deselectAllCalendars: clearAllCalendars,
     setSelectedCalendarIds,
     clearAllCalendars,
     selectCalendarsWithEvents,

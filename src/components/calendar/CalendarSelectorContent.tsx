@@ -54,8 +54,12 @@ const CalendarSelectorContent = ({
   };
 
   return (
-    <PopoverContent className="w-80 p-0 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700" side="bottom" align="start">
-      <div className="p-4">
+    <PopoverContent 
+      className="w-80 p-0 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg z-50" 
+      side="bottom" 
+      align="start"
+    >
+      <div className="p-4 bg-white dark:bg-gray-800">
         <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">Select Calendars</h3>
         
         {/* Quick Actions */}

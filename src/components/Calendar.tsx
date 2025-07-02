@@ -12,7 +12,7 @@ const Calendar = () => {
   const [weekOffset, setWeekOffset] = useState(0);
   const { defaultView } = useSettings();
   const { getWeatherForDate } = useWeather();
-  const { googleEvents } = useLocalEvents(); // Use local events instead
+  const { googleEvents } = useLocalEvents(); // Now contains iCal events
   
   const { filteredEvents, eventStats, selectedCalendarIds } = useIntegratedEvents(googleEvents);
 
@@ -20,10 +20,13 @@ const Calendar = () => {
     setView(defaultView);
   }, [defaultView]);
 
+  // Check if we have any real events (iCal, Notion, or scraped)
+  const hasRealEvents = eventStats.hasGoogleEvents || eventStats.hasNotionEvents || eventStats.hasScrapedEvents;
+
   return (
     <div className="space-y-6">
       <CalendarHeader
-        hasGoogleEvents={eventStats.hasGoogleEvents}
+        hasGoogleEvents={hasRealEvents} // Show selector if we have any real events
         selectedCalendarIds={selectedCalendarIds}
         onCalendarChange={() => {}} // Calendar selection is now handled internally
         view={view}
