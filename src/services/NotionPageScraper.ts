@@ -141,12 +141,28 @@ class NotionPageScraper {
     try {
       const urlParts = url.split('?')[0].split('/');
       const lastPart = urlParts[urlParts.length - 1];
-      const blockId = lastPart.split('-').pop() as string;
+      let blockId = lastPart.split('-').pop() as string;
 
-      // Check if blockId is a valid UUIDv4
-      const uuidRegex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$/;
+      console.log('Parsing Notion URL:', url);
+      console.log('Extracted blockId:', blockId);
+
+      // Handle both UUID formats: with dashes and without dashes
+      if (blockId.length === 32 && /^[0-9a-fA-F]{32}$/.test(blockId)) {
+        // Convert 32-character hex string to UUID format with dashes
+        blockId = [
+          blockId.substring(0, 8),
+          blockId.substring(8, 12),
+          blockId.substring(12, 16),
+          blockId.substring(16, 20),
+          blockId.substring(20, 32)
+        ].join('-');
+        console.log('Normalized blockId to UUID format:', blockId);
+      }
+
+      // Validate UUID format (with dashes)
+      const uuidRegex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/i;
       if (!uuidRegex.test(blockId)) {
-        console.warn('Invalid block ID format:', blockId);
+        console.warn('Invalid block ID format after normalization:', blockId);
         return null;
       }
 
@@ -154,6 +170,7 @@ class NotionPageScraper {
       const viewIdMatch = url.match(/v=([a-f0-9]+)/i);
       const viewId = viewIdMatch ? viewIdMatch[1] : undefined;
 
+      console.log('Successfully parsed Notion URL - blockId:', blockId, 'viewId:', viewId);
       return { blockId, viewId };
     } catch (error) {
       console.error('Error parsing Notion URL:', error);
