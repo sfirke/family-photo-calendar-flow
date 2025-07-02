@@ -16,6 +16,53 @@ interface TableParseResult {
   };
 }
 
+export interface NotionDebugInfo {
+  foundElements: {
+    totalBlockElements: number;
+    elementsWithColumns: number;
+    sampleElements: Array<{
+      blockId: string;
+      columnCount: number;
+      cellData: string[];
+    }>;
+  };
+  extractedData: {
+    headers: string[];
+    allRows: Array<{
+      rowIndex: number;
+      cellData: string[];
+      isEmpty: boolean;
+      isHeader: boolean;
+    }>;
+  };
+  columnAnalysis: {
+    detectedMappings: NotionColumnMapping;
+    mappingReasons: Record<string, string>;
+  };
+  eventCreation: {
+    validEvents: Array<{
+      rowIndex: number;
+      title: string;
+      date: string;
+      reason: string;
+    }>;
+    skippedRows: Array<{
+      rowIndex: number;
+      cellData: string[];
+      reason: string;
+    }>;
+  };
+  parsingStrategy: {
+    strategy: 'modern-data-attributes' | 'legacy-css-classes' | 'fallback';
+    elementsFound: number;
+    successRate: number;
+  };
+}
+
+export interface NotionDebugResult extends TableParseResult {
+  debugInfo: NotionDebugInfo;
+}
+
 export class NotionTableParser {
   private readonly modernSelectors = {
     // Modern Notion selectors using data attributes
@@ -26,6 +73,9 @@ export class NotionTableParser {
     fallbackRows: '.notion-table-row',
     fallbackCells: '.notion-table-cell, .notion-selectable'
   };
+
+  private debugMode = false;
+  private debugInfo: NotionDebugInfo | null = null;
 
   parseTableStructure(doc: Document, sourceUrl: string): TableParseResult {
     console.log('🔍 Starting enhanced table structure parsing with modern data selectors');
@@ -50,12 +100,53 @@ export class NotionTableParser {
     };
   }
 
+  parseWithDebug(doc: Document, sourceUrl: string): NotionDebugResult {
+    this.debugMode = true;
+    this.debugInfo = {
+      foundElements: { totalBlockElements: 0, elementsWithColumns: 0, sampleElements: [] },
+      extractedData: { headers: [], allRows: [] },
+      columnAnalysis: { detectedMappings: {}, mappingReasons: {} },
+      eventCreation: { validEvents: [], skippedRows: [] },
+      parsingStrategy: { strategy: 'modern-data-attributes', elementsFound: 0, successRate: 0 }
+    };
+
+    console.log('🐛 DEBUG MODE: Starting enhanced table structure parsing');
+    
+    const parseResult = this.parseTableStructure(doc, sourceUrl);
+    
+    // Calculate success rate
+    if (this.debugInfo) {
+      const totalProcessed = this.debugInfo.extractedData.allRows.length;
+      const successfulEvents = parseResult.events.length;
+      this.debugInfo.parsingStrategy.successRate = totalProcessed > 0 ? (successfulEvents / totalProcessed) * 100 : 0;
+    }
+
+    this.debugMode = false;
+    
+    return {
+      ...parseResult,
+      debugInfo: this.debugInfo!
+    };
+  }
+
+  private logDebug(message: string, data?: any) {
+    if (this.debugMode) {
+      console.log(`🐛 DEBUG: ${message}`, data || '');
+    }
+  }
+
   private parseModernNotionStructure(doc: Document, sourceUrl: string): TableParseResult | null {
     console.log('🔬 Attempting modern data-attribute parsing');
     
     // Find all elements with data-block-id (these are rows)
     const rowElements = doc.querySelectorAll(this.modernSelectors.dataBlockRows);
     console.log(`📊 Found ${rowElements.length} elements with data-block-id`);
+
+    if (this.debugMode && this.debugInfo) {
+      this.debugInfo.foundElements.totalBlockElements = rowElements.length;
+      this.debugInfo.parsingStrategy.strategy = 'modern-data-attributes';
+      this.debugInfo.parsingStrategy.elementsFound = rowElements.length;
+    }
 
     if (rowElements.length === 0) {
       return null;
@@ -72,7 +163,17 @@ export class NotionTableParser {
       
       if (cellElements.length === 0) {
         console.log(`⚠️  Row ${rowIndex} has no column cells, skipping`);
+        this.logDebug(`Row ${rowIndex} has no column cells, skipping`);
         return;
+      }
+
+      if (this.debugMode && this.debugInfo && rowIndex < 5) {
+        // Store sample elements for debugging
+        this.debugInfo.foundElements.sampleElements.push({
+          blockId: row.getAttribute('data-block-id') || 'unknown',
+          columnCount: cellElements.length,
+          cellData: Array.from(cellElements).map(cell => (cell.textContent || '').trim())
+        });
       }
 
       // Sort cells by column index to maintain proper order
@@ -85,18 +186,45 @@ export class NotionTableParser {
       const cellData = sortedCells.map(cell => (cell.textContent || '').trim());
       
       console.log(`📋 Row ${rowIndex}: Found ${cellData.length} cells:`, cellData);
+      this.logDebug(`Row ${rowIndex}: Found ${cellData.length} cells`, cellData);
+
+      // Track all rows in debug mode
+      if (this.debugMode && this.debugInfo) {
+        const isEmpty = cellData.every(cell => cell.length === 0);
+        this.debugInfo.extractedData.allRows.push({
+          rowIndex,
+          cellData,
+          isEmpty,
+          isHeader: isFirstRow && cellData.some(cell => cell.length > 0)
+        });
+        this.debugInfo.foundElements.elementsWithColumns++;
+      }
 
       // Use first non-empty row as headers
       if (isFirstRow && cellData.some(cell => cell.length > 0)) {
         headers = cellData.map((cell, index) => cell || `Column ${index + 1}`);
         columnMappings = this.createColumnMappings(headers);
         console.log('📋 Headers identified:', headers);
+        this.logDebug('Headers identified', headers);
+        
+        if (this.debugMode && this.debugInfo) {
+          this.debugInfo.extractedData.headers = headers;
+          this.debugInfo.columnAnalysis.detectedMappings = columnMappings;
+        }
+        
         isFirstRow = false;
         return;
       }
 
       // Skip empty rows
       if (cellData.every(cell => cell.length === 0)) {
+        if (this.debugMode && this.debugInfo) {
+          this.debugInfo.eventCreation.skippedRows.push({
+            rowIndex,
+            cellData,
+            reason: 'Empty row - all cells are empty'
+          });
+        }
         return;
       }
 
@@ -106,6 +234,24 @@ export class NotionTableParser {
         if (event) {
           events.push(event);
           console.log(`✅ Created event from row ${rowIndex}:`, event.title);
+          this.logDebug(`Created event from row ${rowIndex}`, { title: event.title, date: event.date });
+          
+          if (this.debugMode && this.debugInfo) {
+            this.debugInfo.eventCreation.validEvents.push({
+              rowIndex,
+              title: event.title,
+              date: event.date.toISOString(),
+              reason: 'Valid event - has required title and date'
+            });
+          }
+        } else {
+          if (this.debugMode && this.debugInfo) {
+            this.debugInfo.eventCreation.skippedRows.push({
+              rowIndex,
+              cellData,
+              reason: 'Invalid event - missing required title or date'
+            });
+          }
         }
       }
     });
@@ -182,26 +328,41 @@ export class NotionTableParser {
 
     headers.forEach((header, index) => {
       const lowerHeader = header.toLowerCase();
+      let mappingReason = '';
       
       // Map common column names to types
       if (this.isDateColumn(lowerHeader)) {
         mappings[header] = { type: 'date', propertyName: 'date' };
+        mappingReason = 'Detected as date column based on header keywords';
       } else if (this.isTitleColumn(lowerHeader)) {
         mappings[header] = { type: 'title', propertyName: 'title' };
+        mappingReason = 'Detected as title column based on header keywords';
       } else if (this.isStatusColumn(lowerHeader)) {
         mappings[header] = { type: 'status', propertyName: 'status' };
+        mappingReason = 'Detected as status column based on header keywords';
       } else if (this.isLocationColumn(lowerHeader)) {
         mappings[header] = { type: 'location', propertyName: 'location' };
+        mappingReason = 'Detected as location column based on header keywords';
       } else if (this.isCategoryColumn(lowerHeader)) {
         mappings[header] = { type: 'category', propertyName: 'categories' };
+        mappingReason = 'Detected as category column based on header keywords';
       } else if (this.isDescriptionColumn(lowerHeader)) {
         mappings[header] = { type: 'description', propertyName: 'description' };
+        mappingReason = 'Detected as description column based on header keywords';
       } else if (this.isTimeColumn(lowerHeader)) {
         mappings[header] = { type: 'time', propertyName: 'time' };
+        mappingReason = 'Detected as time column based on header keywords';
       } else if (this.isPriorityColumn(lowerHeader)) {
         mappings[header] = { type: 'priority', propertyName: 'priority' };
+        mappingReason = 'Detected as priority column based on header keywords';
       } else {
         mappings[header] = { type: 'custom', propertyName: `custom_${index}` };
+        mappingReason = 'No specific type detected, marked as custom column';
+      }
+
+      // Store mapping reason for debug
+      if (this.debugMode && this.debugInfo) {
+        this.debugInfo.columnAnalysis.mappingReasons[header] = mappingReason;
       }
     });
 

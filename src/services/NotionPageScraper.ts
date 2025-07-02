@@ -1,5 +1,5 @@
 import { NotionScrapedEvent, NotionPageMetadata } from '@/types/notion';
-import { notionTableParser } from './NotionTableParser';
+import { notionTableParser, NotionDebugResult } from './NotionTableParser';
 
 interface ScrapeResult {
   success: boolean;
@@ -8,11 +8,23 @@ interface ScrapeResult {
   error?: string;
 }
 
+interface DebugScrapeResult extends ScrapeResult {
+  debugInfo?: any;
+}
+
 class NotionPageScraper {
   private readonly corsProxy = 'https://api.allorigins.win/get';
   private readonly DOM_LOAD_DELAY = 20000; // 20 seconds
 
   async scrapePage(pageUrl: string): Promise<ScrapeResult> {
+    return this.scrapeWithOptions(pageUrl, { debug: false });
+  }
+
+  async scrapePageWithDebug(pageUrl: string): Promise<DebugScrapeResult> {
+    return this.scrapeWithOptions(pageUrl, { debug: true });
+  }
+
+  private async scrapeWithOptions(pageUrl: string, options: { debug: boolean }): Promise<DebugScrapeResult> {
     try {
       const urlInfo = this.parseNotionUrl(pageUrl);
       if (!urlInfo) {
@@ -56,12 +68,16 @@ class NotionPageScraper {
       // Wait for DOM to fully load before parsing
       await this.waitForDOMLoad();
 
-      console.log('📊 DOM loading complete, parsing with enhanced table parser...');
+      if (options.debug) {
+        console.log('🐛 DEBUG MODE: Parsing with enhanced debug information...');
+      } else {
+        console.log('📊 DOM loading complete, parsing with enhanced table parser...');
+      }
 
-      // Use enhanced table parser
-      const parseResult = this.parseHtmlForStructuredEvents(htmlContent, pageUrl);
+      // Use enhanced table parser with or without debug
+      const parseResult = this.parseHtmlForStructuredEvents(htmlContent, pageUrl, options.debug);
       
-      return {
+      const result: DebugScrapeResult = {
         success: true,
         events: parseResult.events,
         metadata: {
@@ -75,6 +91,13 @@ class NotionPageScraper {
           viewType: parseResult.metadata.viewType
         }
       };
+
+      if (options.debug && 'debugInfo' in parseResult) {
+        result.debugInfo = (parseResult as NotionDebugResult).debugInfo;
+        console.log('🐛 DEBUG INFO:', result.debugInfo);
+      }
+
+      return result;
 
     } catch (error: any) {
       console.error('❌ Error scraping Notion page:', error);
@@ -112,12 +135,7 @@ class NotionPageScraper {
     return new Promise(resolve => setTimeout(resolve, this.DOM_LOAD_DELAY));
   }
 
-  private parseHtmlForStructuredEvents(htmlContent: string, sourceUrl: string): {
-    events: NotionScrapedEvent[];
-    title: string;
-    columnMappings: any;
-    metadata: any;
-  } {
+  private parseHtmlForStructuredEvents(htmlContent: string, sourceUrl: string, debug: boolean = false): any {
     let pageTitle = 'Notion Page';
 
     try {
@@ -133,10 +151,16 @@ class NotionPageScraper {
 
       console.log('📊 Parsing structured table data for page:', pageTitle);
 
-      // Use enhanced table parser with modern selectors
-      const parseResult = notionTableParser.parseTableStructure(doc, sourceUrl);
+      // Use enhanced table parser with debug mode if requested
+      let parseResult;
+      if (debug) {
+        parseResult = notionTableParser.parseWithDebug(doc, sourceUrl);
+        console.log(`🐛 DEBUG: Successfully parsed ${parseResult.events.length} events from ${parseResult.metadata.viewType} view`);
+      } else {
+        parseResult = notionTableParser.parseTableStructure(doc, sourceUrl);
+        console.log(`✅ Successfully parsed ${parseResult.events.length} events from ${parseResult.metadata.viewType} view`);
+      }
       
-      console.log(`✅ Successfully parsed ${parseResult.events.length} events from ${parseResult.metadata.viewType} view`);
       console.log(`📋 Column mappings:`, parseResult.columnMappings);
 
       // Fallback to legacy parsing if no structured events found
@@ -150,7 +174,8 @@ class NotionPageScraper {
         events: parseResult.events,
         title: pageTitle,
         columnMappings: parseResult.columnMappings,
-        metadata: parseResult.metadata
+        metadata: parseResult.metadata,
+        ...(debug && 'debugInfo' in parseResult ? { debugInfo: parseResult.debugInfo } : {})
       };
 
     } catch (parseError) {

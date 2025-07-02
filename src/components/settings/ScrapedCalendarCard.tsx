@@ -1,43 +1,54 @@
 import React, { useState } from 'react';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
-import { Card, CardContent } from '@/components/ui/card';
-import { RefreshCw, Trash2, Edit, ExternalLink, Save, X, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { 
+  Calendar,
+  ExternalLink,
+  Sync,
+  Trash2,
+  Edit2,
+  Save,
+  X,
+  Loader2,
+  CheckCircle,
+  AlertCircle,
+  Bug
+} from 'lucide-react';
 import { NotionScrapedCalendar } from '@/services/notionScrapedEventsStorage';
-import { NotionScrapedSyncStatus } from '@/hooks/useNotionScrapedCalendars';
-import { formatDistanceToNow } from 'date-fns';
 
 interface ScrapedCalendarCardProps {
   calendar: NotionScrapedCalendar;
-  syncStatus: NotionScrapedSyncStatus[string];
-  onSync: () => Promise<void>;
+  syncStatus: 'syncing' | 'success' | 'error' | '';
   onUpdate: (id: string, updates: Partial<NotionScrapedCalendar>) => Promise<void>;
   onRemove: (id: string) => Promise<void>;
+  onSync: (calendar: NotionScrapedCalendar) => Promise<void>;
+  onDebugPreview?: (url: string) => void;
 }
 
-const ScrapedCalendarCard = ({ 
-  calendar, 
-  syncStatus, 
-  onSync, 
-  onUpdate, 
-  onRemove 
-}: ScrapedCalendarCardProps) => {
+export const ScrapedCalendarCard: React.FC<ScrapedCalendarCardProps> = ({
+  calendar,
+  syncStatus,
+  onUpdate,
+  onRemove,
+  onSync,
+  onDebugPreview
+}) => {
   const [isEditing, setIsEditing] = useState(false);
-  const [editName, setEditName] = useState(calendar.name);
+  const [editData, setEditData] = useState({
+    name: calendar.name,
+    color: calendar.color
+  });
   const [isUpdating, setIsUpdating] = useState(false);
   const [isRemoving, setIsRemoving] = useState(false);
 
   const handleSave = async () => {
-    if (editName.trim() === calendar.name) {
-      setIsEditing(false);
-      return;
-    }
-
     setIsUpdating(true);
     try {
-      await onUpdate(calendar.id, { name: editName.trim() });
+      await onUpdate(calendar.id, editData);
       setIsEditing(false);
     } catch (error) {
       console.error('Failed to update calendar:', error);
@@ -47,16 +58,11 @@ const ScrapedCalendarCard = ({
   };
 
   const handleCancel = () => {
-    setEditName(calendar.name);
+    setEditData({
+      name: calendar.name,
+      color: calendar.color
+    });
     setIsEditing(false);
-  };
-
-  const handleToggleEnabled = async (enabled: boolean) => {
-    try {
-      await onUpdate(calendar.id, { enabled });
-    } catch (error) {
-      console.error('Failed to toggle calendar:', error);
-    }
   };
 
   const handleRemove = async () => {
@@ -69,153 +75,231 @@ const ScrapedCalendarCard = ({
     }
   };
 
-  const getSyncStatusBadge = () => {
-    switch (syncStatus) {
-      case 'syncing':
-        return (
-          <Badge variant="outline" className="text-yellow-700 border-yellow-300 bg-yellow-50">
-            <RefreshCw className="h-3 w-3 mr-1 animate-spin" />
-            Syncing
-          </Badge>
-        );
-      case 'success':
-        return (
-          <Badge variant="outline" className="text-green-700 border-green-300 bg-green-50">
-            <CheckCircle className="h-3 w-3 mr-1" />
-            Success
-          </Badge>
-        );
-      case 'error':
-        return (
-          <Badge variant="outline" className="text-red-700 border-red-300 bg-red-50">
-            <XCircle className="h-3 w-3 mr-1" />
-            Error
-          </Badge>
-        );
-      default:
-        return (
-          <Badge variant="outline" className="text-gray-700 border-gray-300 bg-gray-50">
-            <Clock className="h-3 w-3 mr-1" />
-            Ready
-          </Badge>
-        );
+  const handleSync = async () => {
+    try {
+      await onSync(calendar);
+    } catch (error) {
+      console.error('Failed to sync calendar:', error);
     }
   };
 
-  const getLastSyncText = () => {
-    if (!calendar.lastSync) return 'Never synced';
+  const handleToggleEnabled = async (enabled: boolean) => {
     try {
-      return `${formatDistanceToNow(new Date(calendar.lastSync))} ago`;
-    } catch {
-      return 'Unknown';
+      await onUpdate(calendar.id, { enabled });
+    } catch (error) {
+      console.error('Failed to toggle calendar:', error);
+    }
+  };
+
+  const handleDebugPreview = () => {
+    if (onDebugPreview) {
+      onDebugPreview(calendar.url);
+    }
+  };
+
+  const getSyncStatusIcon = () => {
+    switch (syncStatus) {
+      case 'syncing':
+        return <Loader2 className="h-4 w-4 animate-spin text-blue-500" />;
+      case 'success':
+        return <CheckCircle className="h-4 w-4 text-green-500" />;
+      case 'error':
+        return <AlertCircle className="h-4 w-4 text-red-500" />;
+      default:
+        return null;
+    }
+  };
+
+  const getSyncStatusText = () => {
+    switch (syncStatus) {
+      case 'syncing':
+        return 'Syncing...';
+      case 'success':
+        return 'Synced';
+      case 'error':
+        return 'Error';
+      default:
+        return 'Ready';
     }
   };
 
   return (
-    <Card className="border border-gray-200 dark:border-gray-700">
-      <CardContent className="p-4">
-        <div className="flex items-start justify-between">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-3 mb-2">
-              <div
-                className="w-4 h-4 rounded-full flex-shrink-0"
-                style={{ backgroundColor: calendar.color }}
-              />
-              
+    <Card className={`transition-all ${calendar.enabled ? 'border-primary/20' : 'border-muted'}`}>
+      <CardContent className="pt-6">
+        <div className="flex items-start justify-between mb-4">
+          <div className="flex items-center gap-3 flex-1">
+            {/* Color indicator */}
+            <div 
+              className="w-4 h-4 rounded-full border-2 border-white shadow-sm"
+              style={{ backgroundColor: calendar.color }}
+            />
+            
+            {/* Calendar info */}
+            <div className="flex-1">
               {isEditing ? (
-                <div className="flex items-center gap-2 flex-1">
-                  <Input
-                    value={editName}
-                    onChange={(e) => setEditName(e.target.value)}
-                    className="text-sm"
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') handleSave();
-                      if (e.key === 'Escape') handleCancel();
-                    }}
-                  />
-                  <Button
-                    onClick={handleSave}
-                    disabled={isUpdating}
-                    size="sm"
-                    variant="outline"
-                  >
-                    <Save className="h-3 w-3" />
-                  </Button>
-                  <Button
-                    onClick={handleCancel}
-                    size="sm"
-                    variant="outline"
-                  >
-                    <X className="h-3 w-3" />
-                  </Button>
+                <div className="space-y-2">
+                  <div>
+                    <Label htmlFor="edit-name" className="text-sm">Name</Label>
+                    <Input
+                      id="edit-name"
+                      value={editData.name}
+                      onChange={(e) => setEditData(prev => ({ ...prev, name: e.target.value }))}
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="edit-color" className="text-sm">Color</Label>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Input
+                        id="edit-color"
+                        type="color"
+                        value={editData.color}
+                        onChange={(e) => setEditData(prev => ({ ...prev, color: e.target.value }))}
+                        className="w-16 h-8"
+                      />
+                      <span className="text-sm text-muted-foreground">{editData.color}</span>
+                    </div>
+                  </div>
                 </div>
               ) : (
                 <>
-                  <h3 className="font-medium text-gray-900 dark:text-gray-100 truncate">
-                    {calendar.name}
-                  </h3>
-                  <div className="flex items-center gap-2">
-                    {getSyncStatusBadge()}
-                    {calendar.eventCount !== undefined && (
-                      <Badge variant="outline" className="text-xs">
-                        {calendar.eventCount} events
-                      </Badge>
+                  <h4 className="font-medium">{calendar.name}</h4>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Calendar className="h-3 w-3 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">
+                      {calendar.eventCount || 0} events
+                    </span>
+                    {calendar.lastSync && (
+                      <>
+                        <span className="text-muted-foreground">•</span>
+                        <span className="text-sm text-muted-foreground">
+                          Last sync: {new Date(calendar.lastSync).toLocaleDateString()}
+                        </span>
+                      </>
                     )}
                   </div>
                 </>
               )}
             </div>
-
-            <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
-              <p className="truncate">
-                <ExternalLink className="h-3 w-3 inline mr-1" />
-                {calendar.url}
-              </p>
-              <p>Last sync: {getLastSyncText()}</p>
+            
+            {/* Status indicator */}
+            <div className="flex items-center gap-2">
+              {getSyncStatusIcon()}
+              <span className="text-sm text-muted-foreground">
+                {getSyncStatusText()}
+              </span>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 ml-4">
-            <Switch
-              checked={calendar.enabled}
-              onCheckedChange={handleToggleEnabled}
-            />
-            
-            <Button
-              onClick={onSync}
-              disabled={syncStatus === 'syncing'}
-              size="sm"
-              variant="outline"
-              title="Sync calendar"
-            >
-              <RefreshCw className={`h-4 w-4 ${syncStatus === 'syncing' ? 'animate-spin' : ''}`} />
-            </Button>
-            
-            <Button
-              onClick={() => setIsEditing(true)}
-              disabled={isEditing}
-              size="sm"
-              variant="outline"
-              title="Edit calendar"
-            >
-              <Edit className="h-4 w-4" />
-            </Button>
-            
-            <Button
-              onClick={handleRemove}
-              disabled={isRemoving}
-              size="sm"
-              variant="outline"
-              title="Delete calendar"
-              className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
+          {/* Enable/Disable toggle */}
+          <Switch
+            checked={calendar.enabled}
+            onCheckedChange={handleToggleEnabled}
+            disabled={syncStatus === 'syncing'}
+          />
+        </div>
+
+        {/* URL display */}
+        <div className="mb-4 p-2 bg-muted rounded text-sm font-mono break-all">
+          {calendar.url}
+        </div>
+
+        {/* Metadata */}
+        {calendar.metadata && (
+          <div className="mb-4 flex flex-wrap gap-2">
+            {calendar.metadata.viewType && (
+              <Badge variant="outline" className="text-xs">
+                {calendar.metadata.viewType}
+              </Badge>
+            )}
+            {calendar.metadata.databaseId && (
+              <Badge variant="outline" className="text-xs">
+                DB: {calendar.metadata.databaseId.slice(-8)}
+              </Badge>
+            )}
           </div>
+        )}
+
+        {/* Actions */}
+        <div className="flex items-center gap-2">
+          {isEditing ? (
+            <>
+              <Button
+                size="sm"
+                onClick={handleSave}
+                disabled={isUpdating || !editData.name.trim()}
+              >
+                {isUpdating ? (
+                  <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                ) : (
+                  <Save className="h-3 w-3 mr-1" />
+                )}
+                Save
+              </Button>
+              <Button size="sm" variant="outline" onClick={handleCancel}>
+                <X className="h-3 w-3 mr-1" />
+                Cancel
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleSync}
+                disabled={syncStatus === 'syncing'}
+              >
+                {syncStatus === 'syncing' ? (
+                  <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                ) : (
+                  <Sync className="h-3 w-3 mr-1" />
+                )}
+                Sync
+              </Button>
+              
+              {onDebugPreview && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleDebugPreview}
+                  className="flex items-center gap-1"
+                >
+                  <Bug className="h-3 w-3" />
+                  Debug
+                </Button>
+              )}
+              
+              <Button size="sm" variant="outline" onClick={() => setIsEditing(true)}>
+                <Edit2 className="h-3 w-3 mr-1" />
+                Edit
+              </Button>
+              
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => window.open(calendar.url, '_blank')}
+              >
+                <ExternalLink className="h-3 w-3 mr-1" />
+                Open
+              </Button>
+              
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={handleRemove}
+                disabled={isRemoving}
+              >
+                {isRemoving ? (
+                  <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                ) : (
+                  <Trash2 className="h-3 w-3 mr-1" />
+                )}
+                Remove
+              </Button>
+            </>
+          )}
         </div>
       </CardContent>
     </Card>
   );
 };
-
-export default ScrapedCalendarCard;

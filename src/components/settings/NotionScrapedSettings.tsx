@@ -1,21 +1,31 @@
 
 import React, { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { RefreshCw, Trash2, Plus, ExternalLink, AlertCircle } from 'lucide-react';
+import { Separator } from '@/components/ui/separator';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { 
+  Plus, 
+  Sync, 
+  Loader2, 
+  Calendar, 
+  ExternalLink,
+  Bug,
+  Eye
+} from 'lucide-react';
 import { useNotionScrapedCalendars } from '@/hooks/useNotionScrapedCalendars';
-import { NotionScrapedCalendar } from '@/services/notionScrapedEventsStorage';
-import { useToast } from '@/hooks/use-toast';
-import NotionUrlForm from './NotionUrlForm';
-import ScrapedCalendarCard from './ScrapedCalendarCard';
+import { NotionUrlForm } from './NotionUrlForm';
+import { ScrapedCalendarCard } from './ScrapedCalendarCard';
+import { NotionDebugPreview } from './NotionDebugPreview';
 
-const NotionScrapedSettings = () => {
+export const NotionScrapedSettings: React.FC = () => {
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [debugUrl, setDebugUrl] = useState<string | null>(null);
+  
   const {
     calendars,
+    events,
     isLoading,
     syncStatus,
     addCalendar,
@@ -26,156 +36,198 @@ const NotionScrapedSettings = () => {
     validateNotionUrl
   } = useNotionScrapedCalendars();
 
-  const { toast } = useToast();
-  const [showAddForm, setShowAddForm] = useState(false);
-
-  const handleSyncAll = async () => {
+  const handleAddCalendar = async (formData: { name: string; url: string; color: string }) => {
     try {
-      await syncAllCalendars();
-      toast({
-        title: "Sync Complete",
-        description: "All scraped calendars have been synced successfully.",
+      await addCalendar({
+        name: formData.name,
+        url: formData.url,
+        color: formData.color,
+        enabled: true,
+        eventCount: 0
       });
+      setShowAddForm(false);
     } catch (error) {
-      toast({
-        title: "Sync Failed",
-        description: "Some calendars failed to sync. Check individual calendar status for details.",
-        variant: "destructive"
-      });
+      console.error('Failed to add calendar:', error);
     }
   };
 
+  const handleDebugPreview = (url: string) => {
+    setDebugUrl(url);
+  };
+
+  const totalEvents = events.length;
   const enabledCalendars = calendars.filter(cal => cal.enabled);
-  const totalEvents = calendars.reduce((sum, cal) => sum + (cal.eventCount || 0), 0);
 
   return (
-    <Card className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-gray-100">
-              <ExternalLink className="h-5 w-5" />
-              Public Notion Pages
-            </CardTitle>
-            <CardDescription className="text-gray-600 dark:text-gray-400">
-              Scrape events from public Notion database pages. No API access required.
-            </CardDescription>
-          </div>
-          <div className="flex items-center gap-2">
-            <Badge variant="outline" className="text-xs">
-              {calendars.length} configured
-            </Badge>
-            <Badge variant="outline" className="text-xs">
-              {totalEvents} events
-            </Badge>
-          </div>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-lg font-semibold">Scraped Notion Pages</h3>
+          <p className="text-sm text-muted-foreground">
+            Import events from public Notion database pages
+          </p>
         </div>
-      </CardHeader>
-
-      <CardContent className="space-y-6">
-        {/* Quick Actions */}
-        <div className="flex items-center justify-between">
-          <div className="flex gap-2">
-            <Button
-              onClick={() => setShowAddForm(true)}
-              size="sm"
-              className="bg-blue-600 hover:bg-blue-700 text-white"
-            >
-              <Plus className="h-4 w-4 mr-1" />
-              Add Page
-            </Button>
-            {enabledCalendars.length > 0 && (
-              <Button
-                onClick={handleSyncAll}
-                disabled={isLoading}
-                size="sm"
-                variant="outline"
-              >
-                <RefreshCw className={`h-4 w-4 mr-1 ${isLoading ? 'animate-spin' : ''}`} />
-                Sync All
-              </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={syncAllCalendars}
+            disabled={isLoading || enabledCalendars.length === 0}
+          >
+            {isLoading ? (
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            ) : (
+              <Sync className="h-4 w-4 mr-2" />
             )}
-          </div>
-          
-          {enabledCalendars.length > 0 && (
-            <div className="text-xs text-gray-500 dark:text-gray-400">
-              {enabledCalendars.length} active calendar{enabledCalendars.length !== 1 ? 's' : ''}
-            </div>
-          )}
+            Sync All
+          </Button>
+          <Button onClick={() => setShowAddForm(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Page
+          </Button>
         </div>
+      </div>
 
-        {/* Add Form */}
-        {showAddForm && (
-          <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-800/50">
+      {/* Stats */}
+      {calendars.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center">
+                <Calendar className="h-4 w-4 text-muted-foreground" />
+                <div className="ml-2">
+                  <p className="text-sm font-medium">Total Pages</p>
+                  <p className="text-2xl font-bold">{calendars.length}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center">
+                <Calendar className="h-4 w-4 text-muted-foreground" />
+                <div className="ml-2">
+                  <p className="text-sm font-medium">Enabled</p>
+                  <p className="text-2xl font-bold">{enabledCalendars.length}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center">
+                <Calendar className="h-4 w-4 text-muted-foreground" />
+                <div className="ml-2">
+                  <p className="text-sm font-medium">Total Events</p>
+                  <p className="text-2xl font-bold">{totalEvents}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Add Form */}
+      {showAddForm && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Add Notion Page</CardTitle>
+          </CardHeader>
+          <CardContent>
             <NotionUrlForm
+              onSubmit={handleAddCalendar}
               onCancel={() => setShowAddForm(false)}
-              onSuccess={() => {
-                setShowAddForm(false);
-                toast({
-                  title: "Calendar Added",
-                  description: "Public Notion page has been added successfully.",
-                });
-              }}
-              addCalendar={addCalendar}
-              validateNotionUrl={validateNotionUrl}
+              validateUrl={validateNotionUrl}
+              showDebugButton={true}
+              onDebugPreview={handleDebugPreview}
             />
-          </div>
-        )}
+          </CardContent>
+        </Card>
+      )}
 
-        <Separator />
+      {/* Calendars List */}
+      {calendars.length > 0 ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Configured Pages</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ScrollArea className="h-[400px]">
+              <div className="space-y-4">
+                {calendars.map((calendar) => (
+                  <ScrapedCalendarCard
+                    key={calendar.id}
+                    calendar={calendar}
+                    syncStatus={syncStatus[calendar.id] || ''}
+                    onUpdate={updateCalendar}
+                    onRemove={removeCalendar}
+                    onSync={syncCalendar}
+                    onDebugPreview={handleDebugPreview}
+                  />
+                ))}
+              </div>
+            </ScrollArea>
+          </CardContent>
+        </Card>
+      ) : (
+        !showAddForm && (
+          <Card>
+            <CardContent className="pt-6">
+              <div className="text-center py-8">
+                <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-medium mb-2">No Notion Pages Added</h3>
+                <p className="text-muted-foreground mb-4">
+                  Add your first public Notion database page to start importing events
+                </p>
+                <Button onClick={() => setShowAddForm(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Your First Page
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )
+      )}
 
-        {/* Calendar List */}
-        {calendars.length === 0 ? (
-          <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-            <ExternalLink className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <h3 className="text-lg font-medium mb-2">No Public Notion Pages</h3>
-            <p className="text-sm mb-4">
-              Add public Notion database pages to automatically scrape calendar events.
-            </p>
-            <Button
-              onClick={() => setShowAddForm(true)}
-              size="sm"
-              variant="outline"
-            >
-              <Plus className="h-4 w-4 mr-1" />
-              Add Your First Page
-            </Button>
+      {/* Help Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <ExternalLink className="h-4 w-4" />
+            How to Use Scraped Notion Pages
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3 text-sm text-muted-foreground">
+          <div className="flex items-start gap-2">
+            <Badge variant="outline" className="mt-0.5">1</Badge>
+            <span>Make sure your Notion database page is shared publicly</span>
           </div>
-        ) : (
-          <div className="space-y-4">
-            {calendars.map((calendar) => (
-              <ScrapedCalendarCard
-                key={calendar.id}
-                calendar={calendar}
-                syncStatus={syncStatus[calendar.id]}
-                onSync={() => syncCalendar(calendar)}
-                onUpdate={updateCalendar}
-                onRemove={removeCalendar}
-              />
-            ))}
+          <div className="flex items-start gap-2">
+            <Badge variant="outline" className="mt-0.5">2</Badge>
+            <span>Your database should have at least a title column and a date column</span>
           </div>
-        )}
+          <div className="flex items-start gap-2">
+            <Badge variant="outline" className="mt-0.5">3</Badge>
+            <span>Copy the full URL from your browser when viewing the database</span>
+          </div>
+          <div className="flex items-start gap-2">
+            <Badge variant="outline" className="mt-0.5">4</Badge>
+            <span>Use the debug preview to see how your data will be parsed before adding</span>
+          </div>
+          <Separator className="my-3" />
+          <p className="text-xs">
+            <strong>Supported column types:</strong> Title, Date, Time, Location, Description, Status, Categories, Priority
+          </p>
+        </CardContent>
+      </Card>
 
-        {/* Help Section */}
-        <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-          <div className="flex items-start gap-3">
-            <AlertCircle className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
-            <div className="text-sm">
-              <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-1">
-                How to use Public Notion Pages
-              </h4>
-              <ul className="text-blue-700 dark:text-blue-300 space-y-1 text-xs">
-                <li>• Only public Notion database pages are supported</li>
-                <li>• Pages must be accessible without authentication</li>
-                <li>• Events are detected based on date properties in the database</li>
-                <li>• Sync manually or calendars update automatically on app refresh</li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+      {/* Debug Preview Modal */}
+      {debugUrl && (
+        <NotionDebugPreview
+          url={debugUrl}
+          onClose={() => setDebugUrl(null)}
+        />
+      )}
+    </div>
   );
 };
-
-export default NotionScrapedSettings;
