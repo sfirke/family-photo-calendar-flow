@@ -12,7 +12,8 @@ import {
   Calendar, 
   ExternalLink,
   Bug,
-  Eye
+  Database,
+  Key
 } from 'lucide-react';
 import { useNotionScrapedCalendars } from '@/hooks/useNotionScrapedCalendars';
 import { NotionUrlForm } from './NotionUrlForm';
@@ -22,6 +23,7 @@ import { NotionDebugPreview } from './NotionDebugPreview';
 export const NotionScrapedSettings: React.FC = () => {
   const [showAddForm, setShowAddForm] = useState(false);
   const [debugUrl, setDebugUrl] = useState<string | null>(null);
+  const [debugToken, setDebugToken] = useState<string | null>(null);
   
   const {
     calendars,
@@ -33,17 +35,33 @@ export const NotionScrapedSettings: React.FC = () => {
     removeCalendar,
     syncCalendar,
     syncAllCalendars,
-    validateNotionUrl
+    validateNotionUrl,
+    testDatabaseAccess
   } = useNotionScrapedCalendars();
 
-  const handleAddCalendar = async (formData: { name: string; url: string; color: string }) => {
+  const handleAddCalendar = async (formData: { 
+    name: string; 
+    url: string; 
+    color: string; 
+    token: string; 
+    databaseId: string;
+  }) => {
     try {
       await addCalendar({
         name: formData.name,
         url: formData.url,
         color: formData.color,
         enabled: true,
-        eventCount: 0
+        eventCount: 0,
+        metadata: {
+          url: formData.url,
+          title: formData.name,
+          lastScraped: new Date(),
+          eventCount: 0,
+          databaseId: formData.databaseId,
+          token: formData.token, // Store token securely in metadata
+          viewType: 'database'
+        }
       });
       setShowAddForm(false);
     } catch (error) {
@@ -51,8 +69,9 @@ export const NotionScrapedSettings: React.FC = () => {
     }
   };
 
-  const handleDebugPreview = (url: string) => {
+  const handleDebugPreview = (url: string, token?: string) => {
     setDebugUrl(url);
+    setDebugToken(token || null);
   };
 
   const totalEvents = events.length;
@@ -63,9 +82,12 @@ export const NotionScrapedSettings: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-lg font-semibold">Scraped Notion Pages</h3>
+          <h3 className="text-lg font-semibold flex items-center gap-2">
+            <Database className="h-5 w-5" />
+            Notion Databases
+          </h3>
           <p className="text-sm text-muted-foreground">
-            Import events from public Notion database pages
+            Import events from Notion databases using the official API
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -83,7 +105,7 @@ export const NotionScrapedSettings: React.FC = () => {
           </Button>
           <Button onClick={() => setShowAddForm(true)}>
             <Plus className="h-4 w-4 mr-2" />
-            Add Page
+            Add Database
           </Button>
         </div>
       </div>
@@ -94,9 +116,9 @@ export const NotionScrapedSettings: React.FC = () => {
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center">
-                <Calendar className="h-4 w-4 text-muted-foreground" />
+                <Database className="h-4 w-4 text-muted-foreground" />
                 <div className="ml-2">
-                  <p className="text-sm font-medium">Total Pages</p>
+                  <p className="text-sm font-medium">Total Databases</p>
                   <p className="text-2xl font-bold">{calendars.length}</p>
                 </div>
               </div>
@@ -131,7 +153,10 @@ export const NotionScrapedSettings: React.FC = () => {
       {showAddForm && (
         <Card>
           <CardHeader>
-            <CardTitle>Add Notion Page</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <Key className="h-4 w-4" />
+              Add Notion Database
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <NotionUrlForm
@@ -149,7 +174,7 @@ export const NotionScrapedSettings: React.FC = () => {
       {calendars.length > 0 ? (
         <Card>
           <CardHeader>
-            <CardTitle>Configured Pages</CardTitle>
+            <CardTitle>Configured Databases</CardTitle>
           </CardHeader>
           <CardContent>
             <ScrollArea className="h-[400px]">
@@ -162,7 +187,7 @@ export const NotionScrapedSettings: React.FC = () => {
                     onUpdate={updateCalendar}
                     onRemove={removeCalendar}
                     onSync={syncCalendar}
-                    onDebugPreview={handleDebugPreview}
+                    onDebugPreview={(url) => handleDebugPreview(url, calendar.metadata?.token)}
                   />
                 ))}
               </div>
@@ -174,14 +199,14 @@ export const NotionScrapedSettings: React.FC = () => {
           <Card>
             <CardContent className="pt-6">
               <div className="text-center py-8">
-                <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-medium mb-2">No Notion Pages Added</h3>
+                <Database className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-medium mb-2">No Notion Databases Added</h3>
                 <p className="text-muted-foreground mb-4">
-                  Add your first public Notion database page to start importing events
+                  Connect your first Notion database to start importing events using the official API
                 </p>
                 <Button onClick={() => setShowAddForm(true)}>
                   <Plus className="h-4 w-4 mr-2" />
-                  Add Your First Page
+                  Add Your First Database
                 </Button>
               </div>
             </CardContent>
@@ -194,29 +219,34 @@ export const NotionScrapedSettings: React.FC = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <ExternalLink className="h-4 w-4" />
-            How to Use Scraped Notion Pages
+            How to Connect Notion Databases
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 text-sm text-muted-foreground">
           <div className="flex items-start gap-2">
             <Badge variant="outline" className="mt-0.5">1</Badge>
-            <span>Make sure your Notion database page is shared publicly</span>
+            <span>Create an integration at <a href="https://www.notion.so/my-integrations" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">notion.so/my-integrations</a></span>
           </div>
           <div className="flex items-start gap-2">
             <Badge variant="outline" className="mt-0.5">2</Badge>
-            <span>Your database should have at least a title column and a date column</span>
+            <span>Give your integration a name and copy the integration token</span>
           </div>
           <div className="flex items-start gap-2">
             <Badge variant="outline" className="mt-0.5">3</Badge>
-            <span>Copy the full URL from your browser when viewing the database</span>
+            <span>Share your database with the integration (click "Share" → "Invite" → select your integration)</span>
           </div>
           <div className="flex items-start gap-2">
             <Badge variant="outline" className="mt-0.5">4</Badge>
-            <span>Use the debug preview to see how your data will be parsed before adding</span>
+            <span>Copy the database URL from your browser address bar</span>
+          </div>
+          <div className="flex items-start gap-2">
+            <Badge variant="outline" className="mt-0.5">5</Badge>
+            <span>Your database should have at least a title and date column for events</span>
           </div>
           <Separator className="my-3" />
           <p className="text-xs">
-            <strong>Supported column types:</strong> Title, Date, Time, Location, Description, Status, Categories, Priority
+            <strong>Benefits of API integration:</strong> Faster sync, more reliable data access, better error handling, 
+            and support for all Notion property types including dates, rich text, select options, and more.
           </p>
         </CardContent>
       </Card>
@@ -225,7 +255,11 @@ export const NotionScrapedSettings: React.FC = () => {
       {debugUrl && (
         <NotionDebugPreview
           url={debugUrl}
-          onClose={() => setDebugUrl(null)}
+          token={debugToken}
+          onClose={() => {
+            setDebugUrl(null);
+            setDebugToken(null);
+          }}
         />
       )}
     </div>

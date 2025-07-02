@@ -1,22 +1,25 @@
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
-import { Loader2, ExternalLink, Bug, Eye } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Loader2, TestTube, Bug, CheckCircle, AlertCircle, ExternalLink } from 'lucide-react';
 
 interface NotionUrlFormProps {
-  onSubmit: (data: { name: string; url: string; color: string }) => Promise<void>;
+  onSubmit: (data: { name: string; url: string; color: string; token: string; databaseId: string }) => Promise<void>;
   onCancel: () => void;
-  validateUrl: (url: string) => Promise<{ isValid: boolean; error?: string }>;
+  validateUrl: (url: string, token?: string) => Promise<{ isValid: boolean; error?: string }>;
   showDebugButton?: boolean;
-  onDebugPreview?: (url: string) => void;
+  onDebugPreview?: (url: string, token?: string) => void;
 }
 
-export const NotionUrlForm: React.FC<NotionUrlFormProps> = ({ 
-  onSubmit, 
-  onCancel, 
+const CALENDAR_COLORS = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899'];
+
+export const NotionUrlForm: React.FC<NotionUrlFormProps> = ({
+  onSubmit,
+  onCancel,
   validateUrl,
   showDebugButton = false,
   onDebugPreview
@@ -24,178 +27,274 @@ export const NotionUrlForm: React.FC<NotionUrlFormProps> = ({
   const [formData, setFormData] = useState({
     name: '',
     url: '',
-    color: '#3b82f6'
+    token: '',
+    color: CALENDAR_COLORS[0]
   });
   const [isValidating, setIsValidating] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [validationResult, setValidationResult] = useState<{ isValid: boolean; error?: string } | null>(null);
+  const [validationResult, setValidationResult] = useState<{
+    status: 'idle' | 'success' | 'error';
+    error?: string;
+    database?: any;
+  }>({ status: 'idle' });
 
-  const handleUrlChange = (url: string) => {
-    setFormData(prev => ({ ...prev, url }));
-    setValidationResult(null);
+  const extractDatabaseIdFromUrl = (url: string): string | null => {
+    const patterns = [
+      /notion\.so\/([a-f0-9]{32})/,
+      /notion\.so\/.*-([a-f0-9]{32})/,
+      /notion\.so\/.*\/([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})/,
+    ];
+
+    for (const pattern of patterns) {
+      const match = url.match(pattern);
+      if (match) {
+        return match[1].replace(/-/g, '');
+      }
+    }
+    return null;
   };
 
   const handleValidate = async () => {
-    if (!formData.url.trim()) return;
+    if (!formData.url.trim()) {
+      setValidationResult({ status: 'error', error: 'Please enter a Notion database URL' });
+      return;
+    }
+
+    if (!formData.token.trim()) {
+      setValidationResult({ status: 'error', error: 'Please enter a Notion integration token' });
+      return;
+    }
 
     setIsValidating(true);
+    setValidationResult({ status: 'idle' });
+
     try {
-      const result = await validateUrl(formData.url);
-      setValidationResult(result);
+      const result = await validateUrl(formData.url, formData.token);
       
-      // Auto-generate name if validation is successful and name is empty
-      if (result.isValid && !formData.name.trim()) {
-        const urlParts = formData.url.split('/');
-        const lastPart = urlParts[urlParts.length - 1];
-        const suggestedName = lastPart.split('?')[0].split('-').slice(0, -1).join(' ') || 'Notion Calendar';
-        setFormData(prev => ({ ...prev, name: suggestedName }));
+      if (result.isValid) {
+        setValidationResult({ status: 'success' });
+        
+        // Auto-generate name if not provided
+        if (!formData.name.trim()) {
+          const databaseId = extractDatabaseIdFromUrl(formData.url);
+          setFormData(prev => ({ 
+            ...prev, 
+            name: `Notion Database ${databaseId?.slice(-8) || 'Calendar'}` 
+          }));
+        }
+      } else {
+        setValidationResult({ status: 'error', error: result.error });
       }
     } catch (error) {
-      setValidationResult({ isValid: false, error: 'Validation failed' });
+      setValidationResult({ 
+        status: 'error', 
+        error: error instanceof Error ? error.message : 'Validation failed' 
+      });
     } finally {
       setIsValidating(false);
     }
   };
 
-  const handleDebugPreview = () => {
-    if (formData.url.trim() && onDebugPreview) {
-      onDebugPreview(formData.url);
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!validationResult?.isValid) {
+  const handleSubmit = async () => {
+    if (validationResult.status !== 'success') {
       await handleValidate();
       return;
     }
 
+    if (!formData.name.trim()) {
+      setValidationResult({ status: 'error', error: 'Please enter a calendar name' });
+      return;
+    }
+
     setIsSubmitting(true);
+
     try {
-      await onSubmit(formData);
+      const databaseId = extractDatabaseIdFromUrl(formData.url);
+      if (!databaseId) {
+        throw new Error('Could not extract database ID from URL');
+      }
+
+      await onSubmit({
+        name: formData.name,
+        url: formData.url,
+        color: formData.color,
+        token: formData.token,
+        databaseId
+      });
     } catch (error) {
-      console.error('Form submission failed:', error);
+      setValidationResult({ 
+        status: 'error', 
+        error: error instanceof Error ? error.message : 'Failed to add calendar' 
+      });
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const canSubmit = formData.name.trim() && formData.url.trim() && validationResult?.isValid;
+  const handleDebugPreview = () => {
+    if (onDebugPreview) {
+      onDebugPreview(formData.url, formData.token);
+    }
+  };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="url">Notion Page URL</Label>
-        <div className="flex gap-2">
-          <Input
-            id="url"
-            type="url"
-            placeholder="https://notion.so/your-database-page"
-            value={formData.url}
-            onChange={(e) => handleUrlChange(e.target.value)}
-            className="flex-1"
-          />
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handleValidate}
-            disabled={!formData.url.trim() || isValidating}
-          >
-            {isValidating ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              'Validate'
-            )}
-          </Button>
-        </div>
-        
-        {/* Validation Result */}
-        {validationResult && (
-          <div className={`p-3 rounded-md text-sm ${
-            validationResult.isValid 
-              ? 'bg-green-50 text-green-800 border border-green-200'
-              : 'bg-red-50 text-red-800 border border-red-200'
-          }`}>
-            {validationResult.isValid ? (
-              <div className="flex items-center gap-2">
-                <Badge variant="secondary" className="bg-green-100 text-green-800">Valid</Badge>
-                <span>Notion page is accessible and ready to import</span>
-              </div>
-            ) : (
-              <div>
-                <Badge variant="destructive" className="mb-2">Invalid</Badge>
-                <p>{validationResult.error}</p>
-              </div>
-            )}
+    <div className="space-y-4">
+      {/* Instructions */}
+      <Alert>
+        <ExternalLink className="h-4 w-4" />
+        <AlertDescription>
+          <div className="space-y-2">
+            <p><strong>Before adding your database:</strong></p>
+            <ol className="list-decimal list-inside space-y-1 text-sm">
+              <li>Create an integration at <a href="https://www.notion.so/my-integrations" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">notion.so/my-integrations</a></li>
+              <li>Copy the integration token (starts with "ntn_")</li>
+              <li>Share your database with the integration</li>
+              <li>Copy the database URL from your browser</li>
+            </ol>
           </div>
-        )}
+        </AlertDescription>
+      </Alert>
 
-        {/* Debug Preview Button */}
-        {showDebugButton && formData.url.trim() && (
-          <div className="flex gap-2">
+      {/* Integration Token */}
+      <div>
+        <Label htmlFor="token">Notion Integration Token</Label>
+        <Input
+          id="token"
+          type="password"
+          placeholder="ntn_..."
+          value={formData.token}
+          onChange={(e) => {
+            setFormData(prev => ({ ...prev, token: e.target.value }));
+            setValidationResult({ status: 'idle' });
+          }}
+          className="mt-1"
+        />
+        <p className="text-xs text-muted-foreground mt-1">
+          Get your integration token from <a href="https://www.notion.so/my-integrations" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">Notion Integrations</a>
+        </p>
+      </div>
+
+      {/* Database URL */}
+      <div>
+        <Label htmlFor="url">Notion Database URL</Label>
+        <Input
+          id="url"
+          type="url"
+          placeholder="https://notion.so/your-database-url"
+          value={formData.url}
+          onChange={(e) => {
+            setFormData(prev => ({ ...prev, url: e.target.value }));
+            setValidationResult({ status: 'idle' });
+          }}
+          className="mt-1"
+        />
+        <p className="text-xs text-muted-foreground mt-1">
+          Copy the full URL from your browser when viewing the database
+        </p>
+      </div>
+
+      {/* Validation Button */}
+      <Button
+        onClick={handleValidate}
+        disabled={isValidating || !formData.url.trim() || !formData.token.trim()}
+        variant="outline"
+        className="w-full"
+      >
+        {isValidating ? (
+          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+        ) : (
+          <TestTube className="h-4 w-4 mr-2" />
+        )}
+        Test Connection
+      </Button>
+
+      {/* Validation Result */}
+      {validationResult.status === 'success' && (
+        <Alert className="border-green-200 bg-green-50">
+          <CheckCircle className="h-4 w-4 text-green-600" />
+          <AlertDescription className="text-green-800">
+            Connection successful! Database is accessible and ready to sync.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {validationResult.status === 'error' && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            {validationResult.error}
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Calendar Configuration - only show after successful validation */}
+      {validationResult.status === 'success' && (
+        <Card>
+          <CardContent className="pt-6 space-y-4">
+            {/* Calendar Name */}
+            <div>
+              <Label htmlFor="name">Calendar Name</Label>
+              <Input
+                id="name"
+                placeholder="My Notion Calendar"
+                value={formData.name}
+                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                className="mt-1"
+              />
+            </div>
+
+            {/* Color Picker */}
+            <div>
+              <Label>Calendar Color</Label>
+              <div className="flex gap-2 mt-2">
+                {CALENDAR_COLORS.map(color => (
+                  <button
+                    key={color}
+                    type="button"
+                    className={`w-6 h-6 rounded-full border-2 ${
+                      formData.color === color ? 'border-gray-900' : 'border-gray-300'
+                    }`}
+                    style={{ backgroundColor: color }}
+                    onClick={() => setFormData(prev => ({ ...prev, color }))}
+                  />
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Action Buttons */}
+      <div className="flex justify-between">
+        <div className="flex gap-2">
+          {showDebugButton && (
             <Button
               type="button"
               variant="outline"
-              size="sm"
               onClick={handleDebugPreview}
-              className="flex items-center gap-2"
+              disabled={!formData.url.trim() || !formData.token.trim()}
             >
-              <Bug className="h-3 w-3" />
+              <Bug className="h-4 w-4 mr-2" />
               Debug Preview
             </Button>
-            <p className="text-xs text-muted-foreground self-center">
-              See exactly what data will be extracted from this page
-            </p>
-          </div>
-        )}
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="name">Calendar Name</Label>
-        <Input
-          id="name"
-          placeholder="My Notion Calendar"
-          value={formData.name}
-          onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-        />
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="color">Color</Label>
-        <div className="flex items-center gap-2">
-          <Input
-            id="color"
-            type="color"
-            value={formData.color}
-            onChange={(e) => setFormData(prev => ({ ...prev, color: e.target.value }))}
-            className="w-16 h-10"
-          />
-          <span className="text-sm text-muted-foreground">{formData.color}</span>
+          )}
+        </div>
+        
+        <div className="flex gap-2">
+          <Button type="button" variant="outline" onClick={onCancel}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleSubmit}
+            disabled={isSubmitting || validationResult.status !== 'success' || !formData.name.trim()}
+          >
+            {isSubmitting ? (
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            ) : null}
+            Add Calendar
+          </Button>
         </div>
       </div>
-
-      <div className="flex gap-2 pt-4">
-        <Button type="button" variant="outline" onClick={onCancel}>
-          Cancel
-        </Button>
-        <Button 
-          type="submit" 
-          disabled={!canSubmit || isSubmitting}
-        >
-          {isSubmitting ? (
-            <Loader2 className="h-4 w-4 animate-spin mr-2" />
-          ) : null}
-          Add Calendar
-        </Button>
-      </div>
-
-      {/* Help Text */}
-      <div className="text-xs text-muted-foreground space-y-1">
-        <p>• Make sure your Notion page is shared publicly</p>
-        <p>• Your database should have at least a title and date column</p>
-        <p>• Copy the full URL from your browser address bar</p>
-      </div>
-    </form>
+    </div>
   );
 };

@@ -1,11 +1,13 @@
+
 /**
- * Hook for managing scraped Notion calendars and events
+ * Hook for managing Notion API-based calendars (formerly scraped calendars)
  */
 
 import { useState, useEffect, useCallback } from 'react';
 import { NotionScrapedCalendar, notionScrapedEventsStorage } from '@/services/notionScrapedEventsStorage';
-import { NotionScrapedEvent, notionPageScraper } from '@/services/NotionPageScraper';
+import { NotionScrapedEvent } from '@/services/NotionPageScraper';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface NotionScrapedSyncStatus {
   [calendarId: string]: 'syncing' | 'success' | 'error' | '';
@@ -24,10 +26,10 @@ export const useNotionScrapedCalendars = () => {
       const storedCalendars = await notionScrapedEventsStorage.getAllCalendars();
       setCalendars(storedCalendars);
     } catch (error) {
-      console.error('Error loading scraped Notion calendars:', error);
+      console.error('Error loading Notion calendars:', error);
       toast({
         title: "Loading Error",
-        description: "Failed to load scraped Notion calendars",
+        description: "Failed to load Notion calendars",
         variant: "destructive"
       });
     }
@@ -38,9 +40,9 @@ export const useNotionScrapedCalendars = () => {
     try {
       const storedEvents = await notionScrapedEventsStorage.getAllEvents();
       setEvents(storedEvents);
-      console.log('Loaded scraped Notion events:', storedEvents.length);
+      console.log('Loaded Notion events:', storedEvents.length);
     } catch (error) {
-      console.error('Error loading scraped Notion events:', error);
+      console.error('Error loading Notion events:', error);
     }
   }, []);
 
@@ -49,7 +51,7 @@ export const useNotionScrapedCalendars = () => {
     try {
       const newCalendar: NotionScrapedCalendar = {
         ...calendarData,
-        id: `notion_scraped_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        id: `notion_api_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         type: 'notion-scraped'
       };
 
@@ -58,15 +60,15 @@ export const useNotionScrapedCalendars = () => {
       
       toast({
         title: "Calendar Added",
-        description: `Successfully added scraped calendar: ${newCalendar.name}`,
+        description: `Successfully added Notion calendar: ${newCalendar.name}`,
       });
 
       return newCalendar;
     } catch (error) {
-      console.error('Error adding scraped calendar:', error);
+      console.error('Error adding calendar:', error);
       toast({
         title: "Error",
-        description: "Failed to add scraped calendar",
+        description: "Failed to add calendar",
         variant: "destructive"
       });
       throw error;
@@ -79,10 +81,10 @@ export const useNotionScrapedCalendars = () => {
       await notionScrapedEventsStorage.updateCalendar(id, updates);
       await loadCalendars();
     } catch (error) {
-      console.error('Error updating scraped calendar:', error);
+      console.error('Error updating calendar:', error);
       toast({
         title: "Update Error",
-        description: "Failed to update scraped calendar",
+        description: "Failed to update calendar",
         variant: "destructive"
       });
       throw error;
@@ -98,41 +100,85 @@ export const useNotionScrapedCalendars = () => {
       
       toast({
         title: "Calendar Removed",
-        description: "Successfully removed scraped calendar and its events",
+        description: "Successfully removed calendar and its events",
       });
     } catch (error) {
-      console.error('Error removing scraped calendar:', error);
+      console.error('Error removing calendar:', error);
       toast({
         title: "Error",
-        description: "Failed to remove scraped calendar",
+        description: "Failed to remove calendar",
         variant: "destructive"
       });
       throw error;
     }
   }, [loadCalendars, loadEvents, toast]);
 
-  // Sync a single calendar
+  // Sync a single calendar using Notion API
   const syncCalendar = useCallback(async (calendar: NotionScrapedCalendar) => {
+    if (!calendar.metadata?.token) {
+      throw new Error('Notion integration token is required for this calendar');
+    }
+
+    if (!calendar.metadata?.databaseId) {
+      throw new Error('Database ID is required for this calendar');
+    }
+
     setSyncStatus(prev => ({ ...prev, [calendar.id]: 'syncing' }));
 
     try {
-      console.log(`🔄 Syncing scraped calendar: ${calendar.name}`);
+      console.log(`🔄 Syncing Notion calendar: ${calendar.name}`);
       
-      // Scrape the Notion page
-      const result = await notionPageScraper.scrapePage(calendar.url);
-      
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to scrape page');
+      // Call the Notion API edge function
+      const { data, error } = await supabase.functions.invoke('notion-api', {
+        body: {
+          action: 'query',
+          token: calendar.metadata.token,
+          databaseId: calendar.metadata.databaseId,
+        }
+      });
+
+      if (error) {
+        throw new Error(error.message || 'Failed to sync with Notion API');
       }
 
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to fetch events from Notion');
+      }
+
+      // Transform API events to our format
+      const apiEvents = data.events || [];
+      const notionEvents: NotionScrapedEvent[] = apiEvents.map((event: any) => ({
+        id: event.id,
+        title: event.title,
+        date: new Date(event.date),
+        time: event.time,
+        description: event.description,
+        location: event.location,
+        status: event.status,
+        categories: event.categories,
+        priority: event.priority,
+        properties: event.properties,
+        sourceUrl: event.sourceUrl,
+        scrapedAt: new Date(event.scrapedAt),
+        calendarId: calendar.id,
+        customProperties: event.customProperties,
+        dateRange: event.date ? {
+          startDate: new Date(event.date),
+          endDate: event.endDate ? new Date(event.endDate) : undefined
+        } : undefined
+      }));
+
       // Save events to IndexedDB
-      await notionScrapedEventsStorage.saveEvents(calendar.id, result.events);
+      await notionScrapedEventsStorage.saveEvents(calendar.id, notionEvents);
 
       // Update calendar metadata
       await updateCalendar(calendar.id, {
         lastSync: new Date().toISOString(),
-        eventCount: result.events.length,
-        metadata: result.metadata
+        eventCount: notionEvents.length,
+        metadata: {
+          ...calendar.metadata,
+          ...data.metadata
+        }
       });
 
       // Reload events
@@ -142,13 +188,13 @@ export const useNotionScrapedCalendars = () => {
       
       toast({
         title: "Sync Complete",
-        description: `Successfully synced ${result.events.length} events from ${calendar.name}`,
+        description: `Successfully synced ${notionEvents.length} events from ${calendar.name}`,
       });
 
-      console.log(`✅ Synced ${result.events.length} events from scraped calendar: ${calendar.name}`);
+      console.log(`✅ Synced ${notionEvents.length} events from Notion calendar: ${calendar.name}`);
 
     } catch (error) {
-      console.error('Error syncing scraped calendar:', error);
+      console.error('Error syncing calendar:', error);
       setSyncStatus(prev => ({ ...prev, [calendar.id]: 'error' }));
       
       toast({
@@ -173,55 +219,44 @@ export const useNotionScrapedCalendars = () => {
       
       toast({
         title: "Sync Complete",
-        description: `Successfully synced ${enabledCalendars.length} scraped calendars`,
+        description: `Successfully synced ${enabledCalendars.length} calendars`,
       });
     } catch (error) {
-      console.error('Error syncing all scraped calendars:', error);
+      console.error('Error syncing all calendars:', error);
       // Individual error messages are handled in syncCalendar
     } finally {
       setIsLoading(false);
     }
   }, [calendars, syncCalendar, toast]);
 
-  // Validate a Notion URL with improved error handling
-  const validateNotionUrl = useCallback(async (url: string): Promise<{ isValid: boolean; error?: string }> => {
+  // Validate a Notion integration and database
+  const validateNotionUrl = useCallback(async (url: string, token?: string): Promise<{ isValid: boolean; error?: string }> => {
     try {
-      console.log('Validating Notion URL:', url);
+      console.log('Validating Notion integration and database...');
       
-      // First check URL format
-      const urlInfo = notionPageScraper.parseNotionUrl(url);
-      if (!urlInfo) {
-        return { isValid: false, error: 'Invalid Notion URL format. Please ensure the URL is from a public Notion page.' };
+      if (!token) {
+        return { isValid: false, error: 'Notion integration token is required' };
       }
 
-      console.log('URL format is valid, testing access...');
-      
-      // Try to scrape the page to validate access
-      const result = await notionPageScraper.scrapePage(url);
-      
-      if (result.success) {
+      // Call the edge function to validate
+      const { data, error } = await supabase.functions.invoke('notion-api', {
+        body: {
+          action: 'validate',
+          token,
+          url,
+        }
+      });
+
+      if (error) {
+        return { isValid: false, error: error.message || 'Validation failed' };
+      }
+
+      if (data.success) {
         console.log('Validation successful');
         return { isValid: true };
       } else {
-        console.log('Validation failed:', result.error);
-        
-        // Provide more specific error messages
-        if (result.error?.includes('Network error')) {
-          return { 
-            isValid: false, 
-            error: 'Cannot connect to Notion. Please check your internet connection and try again.' 
-          };
-        } else if (result.error?.includes('401') || result.error?.includes('403')) {
-          return { 
-            isValid: false, 
-            error: 'This Notion page is not publicly accessible. Please make sure the page is shared publicly.' 
-          };
-        } else {
-          return { 
-            isValid: false, 
-            error: result.error || 'Unable to access the Notion page. Please verify the URL and page permissions.' 
-          };
-        }
+        console.log('Validation failed:', data.error);
+        return { isValid: false, error: data.error || 'Unable to access the Notion database' };
       }
     } catch (error) {
       console.error('URL validation error:', error);
@@ -229,6 +264,27 @@ export const useNotionScrapedCalendars = () => {
         isValid: false,
         error: error instanceof Error ? error.message : 'Unknown validation error occurred'
       };
+    }
+  }, []);
+
+  // Test database access
+  const testDatabaseAccess = useCallback(async (token: string, databaseId: string) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('notion-api', {
+        body: {
+          action: 'test',
+          token,
+          databaseId,
+        }
+      });
+
+      if (error) {
+        throw new Error(error.message || 'Failed to test database access');
+      }
+
+      return data;
+    } catch (error) {
+      throw error;
     }
   }, []);
 
@@ -254,6 +310,7 @@ export const useNotionScrapedCalendars = () => {
     syncCalendar,
     syncAllCalendars,
     validateNotionUrl,
+    testDatabaseAccess,
     getScrapedEvents
   };
 };
