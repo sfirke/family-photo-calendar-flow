@@ -20,34 +20,42 @@ export const useCalendarSelection = () => {
   const [refreshKey, setRefreshKey] = useState(0);
   
   // Get calendars from all sources
-  const { calendars: iCalCalendars, isLoading: iCalLoading } = useICalCalendars();
-  const { calendars: notionCalendars, events: notionEvents, isLoading: notionLoading } = useNotionCalendars();
-  const { calendars: scrapedCalendars, events: scrapedEvents, isLoading: scrapedLoading } = useNotionScrapedCalendars();
+  const { calendars: iCalCalendars = [], isLoading: iCalLoading } = useICalCalendars();
+  const { calendars: notionCalendars = [], events: notionEvents = [], isLoading: notionLoading } = useNotionCalendars();
+  const { calendars: scrapedCalendars = [], events: scrapedEvents = [], isLoading: scrapedLoading } = useNotionScrapedCalendars();
 
-  // Combine all calendars
-  const allCalendars = useMemo(() => [
-    ...iCalCalendars,
-    ...notionCalendars,
-    ...scrapedCalendars
-  ], [iCalCalendars, notionCalendars, scrapedCalendars]);
+  // Combine all calendars with safe array handling
+  const allCalendars = useMemo(() => {
+    const safeICalCalendars = Array.isArray(iCalCalendars) ? iCalCalendars : [];
+    const safeNotionCalendars = Array.isArray(notionCalendars) ? notionCalendars : [];
+    const safeScrapedCalendars = Array.isArray(scrapedCalendars) ? scrapedCalendars : [];
+    
+    return [
+      ...safeICalCalendars,
+      ...safeNotionCalendars,
+      ...safeScrapedCalendars
+    ];
+  }, [iCalCalendars, notionCalendars, scrapedCalendars]);
 
-  // Get enabled calendars
-  const enabledCalendars = useMemo(() => 
-    allCalendars.filter(cal => cal.enabled), 
-    [allCalendars]
-  );
+  // Get enabled calendars with safe array handling
+  const enabledCalendars = useMemo(() => {
+    if (!Array.isArray(allCalendars)) return [];
+    return allCalendars.filter(cal => cal && cal.enabled);
+  }, [allCalendars]);
 
   // Create calendarsFromEvents (mock data for now - this would be populated from actual events)
   const calendarsFromEvents = useMemo((): CalendarFromEvents[] => {
+    if (!Array.isArray(allCalendars)) return [];
+    
     // Convert all calendars to CalendarFromEvents format
     const calendarList: CalendarFromEvents[] = allCalendars.map(cal => ({
-      id: cal.id,
-      summary: cal.name,
-      color: cal.color,
+      id: cal?.id || '',
+      summary: cal?.name || 'Unnamed Calendar',
+      color: cal?.color || '#3b82f6',
       primary: false,
-      hasEvents: (cal.eventCount || 0) > 0,
-      eventCount: cal.eventCount || 0,
-      lastSync: cal.lastSync
+      hasEvents: (cal?.eventCount || 0) > 0,
+      eventCount: cal?.eventCount || 0,
+      lastSync: cal?.lastSync
     }));
 
     return calendarList;
@@ -55,7 +63,9 @@ export const useCalendarSelection = () => {
 
   // Initialize selected calendars with all enabled calendars
   useEffect(() => {
-    const enabledIds = enabledCalendars.map(cal => cal.id);
+    if (!Array.isArray(enabledCalendars)) return;
+    
+    const enabledIds = enabledCalendars.map(cal => cal?.id).filter(Boolean);
     if (enabledIds.length > 0 && selectedCalendarIds.length === 0) {
       setSelectedCalendarIds(enabledIds);
     }
@@ -63,10 +73,13 @@ export const useCalendarSelection = () => {
 
   // Update selected calendars when calendars change
   useEffect(() => {
-    const enabledIds = enabledCalendars.map(cal => cal.id);
-    const validSelectedIds = selectedCalendarIds.filter(id => enabledIds.includes(id));
+    if (!Array.isArray(enabledCalendars)) return;
     
-    if (validSelectedIds.length !== selectedCalendarIds.length) {
+    const enabledIds = enabledCalendars.map(cal => cal?.id).filter(Boolean);
+    const safeSelectedIds = Array.isArray(selectedCalendarIds) ? selectedCalendarIds : [];
+    const validSelectedIds = safeSelectedIds.filter(id => enabledIds.includes(id));
+    
+    if (validSelectedIds.length !== safeSelectedIds.length) {
       setSelectedCalendarIds(validSelectedIds);
     }
   }, [enabledCalendars, selectedCalendarIds]);
@@ -74,26 +87,29 @@ export const useCalendarSelection = () => {
   // Toggle calendar (support both 1 and 2 parameter versions)
   const toggleCalendar = useCallback((calendarId: string, checked?: boolean) => {
     setSelectedCalendarIds(prev => {
+      const safePrev = Array.isArray(prev) ? prev : [];
+      
       if (typeof checked === 'boolean') {
         // Two parameter version
         if (checked) {
-          return prev.includes(calendarId) ? prev : [...prev, calendarId];
+          return safePrev.includes(calendarId) ? safePrev : [...safePrev, calendarId];
         } else {
-          return prev.filter(id => id !== calendarId);
+          return safePrev.filter(id => id !== calendarId);
         }
       } else {
         // Single parameter version (toggle)
-        if (prev.includes(calendarId)) {
-          return prev.filter(id => id !== calendarId);
+        if (safePrev.includes(calendarId)) {
+          return safePrev.filter(id => id !== calendarId);
         } else {
-          return [...prev, calendarId];
+          return [...safePrev, calendarId];
         }
       }
     });
   }, []);
 
   const selectAllCalendars = useCallback(() => {
-    const enabledIds = enabledCalendars.map(cal => cal.id);
+    if (!Array.isArray(enabledCalendars)) return;
+    const enabledIds = enabledCalendars.map(cal => cal?.id).filter(Boolean);
     setSelectedCalendarIds(enabledIds);
   }, [enabledCalendars]);
 
@@ -107,18 +123,24 @@ export const useCalendarSelection = () => {
   }, []);
 
   const selectCalendarsWithEvents = useCallback(() => {
+    if (!Array.isArray(calendarsFromEvents)) return;
     const calendarsWithEventsIds = calendarsFromEvents
-      .filter(cal => cal.hasEvents)
-      .map(cal => cal.id);
+      .filter(cal => cal?.hasEvents)
+      .map(cal => cal?.id)
+      .filter(Boolean);
     setSelectedCalendarIds(calendarsWithEventsIds);
   }, [calendarsFromEvents]);
 
   const updateSelectedCalendars = useCallback((newSelectedIds: string[]) => {
-    setSelectedCalendarIds(newSelectedIds);
+    const safeNewSelectedIds = Array.isArray(newSelectedIds) ? newSelectedIds : [];
+    setSelectedCalendarIds(safeNewSelectedIds);
   }, []);
 
   const cleanupDeletedCalendar = useCallback((calendarId: string) => {
-    setSelectedCalendarIds(prev => prev.filter(id => id !== calendarId));
+    setSelectedCalendarIds(prev => {
+      const safePrev = Array.isArray(prev) ? prev : [];
+      return safePrev.filter(id => id !== calendarId);
+    });
   }, []);
 
   const forceRefresh = useCallback(() => {
@@ -127,12 +149,17 @@ export const useCalendarSelection = () => {
 
   const isLoading = iCalLoading || notionLoading || scrapedLoading;
 
+  // Ensure all returned arrays are safe
+  const safeNotionEvents = Array.isArray(notionEvents) ? notionEvents : [];
+  const safeScrapedEvents = Array.isArray(scrapedEvents) ? scrapedEvents : [];
+  const safeSelectedCalendarIds = Array.isArray(selectedCalendarIds) ? selectedCalendarIds : [];
+
   return {
     allCalendars,
     enabledCalendars,
-    selectedCalendarIds,
-    notionEvents,
-    scrapedEvents,
+    selectedCalendarIds: safeSelectedCalendarIds,
+    notionEvents: safeNotionEvents,
+    scrapedEvents: safeScrapedEvents,
     calendarsFromEvents,
     isLoading,
     toggleCalendar,

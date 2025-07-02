@@ -50,18 +50,24 @@ const convertScrapedEventToEvent = (scrapedEvent: NotionScrapedEvent, calendarId
   };
 };
 
-export const useEventFiltering = ({ googleEvents, notionEvents, scrapedEvents = [], selectedCalendarIds }: UseEventFilteringProps) => {
+export const useEventFiltering = ({ googleEvents = [], notionEvents = [], scrapedEvents = [], selectedCalendarIds = [] }: UseEventFilteringProps) => {
   const filteredEvents = useMemo(() => {
+    // Ensure all arrays are properly initialized
+    const safeGoogleEvents = Array.isArray(googleEvents) ? googleEvents : [];
+    const safeNotionEvents = Array.isArray(notionEvents) ? notionEvents : [];
+    const safeScrapedEvents = Array.isArray(scrapedEvents) ? scrapedEvents : [];
+    const safeSelectedCalendarIds = Array.isArray(selectedCalendarIds) ? selectedCalendarIds : [];
+
     // Convert Notion events to Event format
-    const convertedNotionEvents = notionEvents.map(convertNotionEventToEvent);
+    const convertedNotionEvents = safeNotionEvents.map(convertNotionEventToEvent);
     
     // Convert scraped events to Event format
-    const convertedScrapedEvents = scrapedEvents.map(event => 
+    const convertedScrapedEvents = safeScrapedEvents.map(event => 
       convertScrapedEventToEvent(event, event.calendarId || 'scraped', 'Scraped Calendar', '#10B981')
     );
     
     // Combine all event sources
-    const hasGoogleEvents = googleEvents.length > 0;
+    const hasGoogleEvents = safeGoogleEvents.length > 0;
     const hasNotionEvents = convertedNotionEvents.length > 0;
     const hasScrapedEvents = convertedScrapedEvents.length > 0;
     
@@ -69,7 +75,7 @@ export const useEventFiltering = ({ googleEvents, notionEvents, scrapedEvents = 
     
     // Add Google events if available
     if (hasGoogleEvents) {
-      baseEvents = [...baseEvents, ...googleEvents];
+      baseEvents = [...baseEvents, ...safeGoogleEvents];
     }
     
     // Add Notion API events if available
@@ -95,12 +101,12 @@ export const useEventFiltering = ({ googleEvents, notionEvents, scrapedEvents = 
       }
       
       // Filter by selected calendar IDs
-      if (selectedCalendarIds.length === 0) {
+      if (safeSelectedCalendarIds.length === 0) {
         return false;
       }
       
       const eventCalendarId = event.calendarId || 'primary';
-      return selectedCalendarIds.includes(eventCalendarId);
+      return safeSelectedCalendarIds.includes(eventCalendarId);
     });
 
     // Process events to ensure single-day all-day events only appear on their specific date
@@ -121,8 +127,8 @@ export const useEventFiltering = ({ googleEvents, notionEvents, scrapedEvents = 
 
   return {
     filteredEvents,
-    hasGoogleEvents: googleEvents.length > 0,
-    hasNotionEvents: notionEvents.length > 0,
-    hasScrapedEvents: scrapedEvents.length > 0
+    hasGoogleEvents: Array.isArray(googleEvents) && googleEvents.length > 0,
+    hasNotionEvents: Array.isArray(notionEvents) && notionEvents.length > 0,
+    hasScrapedEvents: Array.isArray(scrapedEvents) && scrapedEvents.length > 0
   };
 };
