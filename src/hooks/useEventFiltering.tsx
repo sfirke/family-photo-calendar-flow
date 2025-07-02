@@ -44,7 +44,7 @@ const convertScrapedEventToEvent = (scrapedEvent: NotionScrapedEvent, calendarId
     description: scrapedEvent.description || '',
     organizer: 'Notion (Scraped)',
     date: scrapedEvent.date,
-    calendarId: calendarId,
+    calendarId: scrapedEvent.calendarId || calendarId,
     calendarName: calendarName,
     source: 'notion'
   };

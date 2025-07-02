@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -180,7 +179,6 @@ const ScrapedCalendarCard = ({
             <Switch
               checked={calendar.enabled}
               onCheckedChange={handleToggleEnabled}
-              size="sm"
             />
             
             <Button

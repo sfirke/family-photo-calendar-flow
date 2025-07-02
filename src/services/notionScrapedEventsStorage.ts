@@ -258,4 +258,4 @@ class NotionScrapedEventsStorage {
 }
 
 export const notionScrapedEventsStorage = new NotionScrapedEventsStorage();
-export type { NotionScrapedCalendar };
+// Remove the duplicate export type line that's causing the conflict
