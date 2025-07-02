@@ -1,30 +1,10 @@
-
 /**
  * Notion Page Scraper Service
  * 
  * Handles fetching and parsing public Notion database pages to extract calendar events.
  */
 
-export interface NotionScrapedEvent {
-  id: string;
-  title: string;
-  date: Date;
-  time?: string;
-  description?: string;
-  location?: string;
-  properties: Record<string, any>;
-  sourceUrl: string;
-  scrapedAt: Date;
-}
-
-export interface NotionPageMetadata {
-  url: string;
-  title: string;
-  lastScraped: Date;
-  eventCount: number;
-  databaseId?: string;
-  viewId?: string;
-}
+import { NotionScrapedEvent, NotionPageMetadata } from '@/types/notion';
 
 export interface ScrapingResult {
   success: boolean;
@@ -85,7 +65,7 @@ export class NotionPageScraper {
   /**
    * Parse HTML and extract event data
    */
-  private parseEventsFromHtml(html: string, sourceUrl: string): NotionScrapedEvent[] {
+  private parseEventsFromHtml(html: string, sourceUrl: string, calendarId: string): NotionScrapedEvent[] {
     const parser = new DOMParser();
     const doc = parser.parseFromString(html, 'text/html');
     const events: NotionScrapedEvent[] = [];
@@ -96,7 +76,7 @@ export class NotionPageScraper {
       
       rows.forEach((row, index) => {
         try {
-          const event = this.extractEventFromRow(row as Element, sourceUrl, index);
+          const event = this.extractEventFromRow(row as Element, sourceUrl, index, calendarId);
           if (event) {
             events.push(event);
           }
@@ -110,7 +90,7 @@ export class NotionPageScraper {
         const tableRows = doc.querySelectorAll('tr');
         tableRows.forEach((row, index) => {
           try {
-            const event = this.extractEventFromTableRow(row as Element, sourceUrl, index);
+            const event = this.extractEventFromTableRow(row as Element, sourceUrl, index, calendarId);
             if (event) {
               events.push(event);
             }
@@ -130,7 +110,7 @@ export class NotionPageScraper {
   /**
    * Extract event data from a Notion database row
    */
-  private extractEventFromRow(row: Element, sourceUrl: string, index: number): NotionScrapedEvent | null {
+  private extractEventFromRow(row: Element, sourceUrl: string, index: number, calendarId: string): NotionScrapedEvent | null {
     try {
       // Look for title/name in various possible selectors
       const titleSelectors = [
@@ -202,7 +182,8 @@ export class NotionPageScraper {
         location: properties.location,
         properties,
         sourceUrl,
-        scrapedAt: new Date()
+        scrapedAt: new Date(),
+        calendarId // Include the required calendarId
       };
     } catch (error) {
       console.error('Error extracting event from row:', error);
@@ -213,7 +194,7 @@ export class NotionPageScraper {
   /**
    * Extract event data from a table row (fallback method)
    */
-  private extractEventFromTableRow(row: Element, sourceUrl: string, index: number): NotionScrapedEvent | null {
+  private extractEventFromTableRow(row: Element, sourceUrl: string, index: number, calendarId: string): NotionScrapedEvent | null {
     const cells = row.querySelectorAll('td, th');
     if (cells.length < 2) return null;
 
@@ -243,7 +224,8 @@ export class NotionPageScraper {
         time: parsedDate.time,
         properties,
         sourceUrl,
-        scrapedAt: new Date()
+        scrapedAt: new Date(),
+        calendarId // Include the required calendarId
       };
     } catch (error) {
       console.error('Error extracting event from table row:', error);
@@ -307,7 +289,7 @@ export class NotionPageScraper {
   /**
    * Main method to scrape a Notion page for events
    */
-  async scrapePage(url: string): Promise<ScrapingResult> {
+  async scrapePage(url: string, calendarId: string = 'default'): Promise<ScrapingResult> {
     try {
       console.log('🔍 Scraping Notion page:', url);
 
@@ -321,7 +303,7 @@ export class NotionPageScraper {
       const html = await this.fetchPageHtml(urlInfo.cleanUrl);
       
       // Parse events from HTML
-      const events = this.parseEventsFromHtml(html, url);
+      const events = this.parseEventsFromHtml(html, url, calendarId);
       
       // Create metadata
       const metadata: NotionPageMetadata = {
