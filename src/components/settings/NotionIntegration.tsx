@@ -18,7 +18,7 @@ import {
 import { useNotionCalendars } from '@/hooks/useNotionCalendars';
 import { useNotionScrapedCalendars } from '@/hooks/useNotionScrapedCalendars';
 import { NotionUrlForm } from './NotionUrlForm';
-import { NotionIntegrationForm } from './NotionIntegrationForm';
+import NotionIntegrationForm from './NotionIntegrationForm';
 import { ScrapedCalendarCard } from './ScrapedCalendarCard';
 import { NotionDebugPreview } from './NotionDebugPreview';
 
@@ -103,7 +103,8 @@ export const NotionIntegration: React.FC = () => {
         url: formData.url,
         color: formData.color,
         enabled: true,
-        eventCount: 0
+        eventCount: 0,
+        type: 'notion'
       });
       setShowLegacyForm(false);
     } catch (error) {
@@ -264,10 +265,6 @@ export const NotionIntegration: React.FC = () => {
                     ? apiSyncStatus[calendar.id] || ''
                     : legacySyncStatus[calendar.id] || '';
                   
-                  const handleUpdate = isApiCalendar ? updateApiCalendar : updateLegacyCalendar;
-                  const handleRemove = isApiCalendar ? removeApiCalendar : removeLegacyCalendar;
-                  const handleSync = isApiCalendar ? syncApiCalendar : syncLegacyCalendar;
-
                   return (
                     <div key={calendar.id} className="relative">
                       {isApiCalendar && (
@@ -283,9 +280,9 @@ export const NotionIntegration: React.FC = () => {
                       <ScrapedCalendarCard
                         calendar={calendar}
                         syncStatus={syncStatus}
-                        onUpdate={handleUpdate}
-                        onRemove={handleRemove}
-                        onSync={handleSync}
+                        onUpdate={isApiCalendar ? updateApiCalendar : updateLegacyCalendar}
+                        onRemove={isApiCalendar ? removeApiCalendar : removeLegacyCalendar}
+                        onSync={isApiCalendar ? syncApiCalendar : syncLegacyCalendar}
                         onDebugPreview={handleDebugPreview}
                       />
                     </div>
