@@ -104,7 +104,7 @@ export interface NotionScrapedEvent {
   properties: Record<string, any>;
   sourceUrl: string;
   scrapedAt: Date;
-  calendarId?: string;
+  calendarId: string; // Fixed: made required instead of optional
 }
 
 export interface NotionPageMetadata {

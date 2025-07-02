@@ -2,6 +2,7 @@
 import React from 'react';
 import { Popover } from '@/components/ui/popover';
 import { useCalendarSelection } from '@/hooks/useCalendarSelection';
+import { useIntegratedEvents } from '@/hooks/useIntegratedEvents';
 import CalendarSelectorButton from './calendar/CalendarSelectorButton';
 import CalendarSelectorContent from './calendar/CalendarSelectorContent';
 
@@ -11,6 +12,7 @@ interface CalendarSelectorProps {
 }
 
 const CalendarSelector = ({ selectedCalendarIds, onCalendarChange }: CalendarSelectorProps) => {
+  const { filteredEvents } = useIntegratedEvents();
   const { 
     calendarsFromEvents, 
     isLoading, 
@@ -19,7 +21,7 @@ const CalendarSelector = ({ selectedCalendarIds, onCalendarChange }: CalendarSel
     selectCalendarsWithEvents, 
     clearAllCalendars,
     updateSelectedCalendars
-  } = useCalendarSelection();
+  } = useCalendarSelection(filteredEvents);
 
   const handleCalendarToggle = (calendarId: string, checked: boolean) => {
     toggleCalendar(calendarId, checked);
