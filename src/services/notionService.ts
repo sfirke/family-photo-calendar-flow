@@ -1,5 +1,5 @@
-
 import { NotionEvent, NotionPage } from '@/types/notion';
+import { notionAPIClient } from './NotionAPIClient';
 
 interface NotionIntegrationInfo {
   type: string;
@@ -31,74 +31,6 @@ interface DatabaseTestResult {
 }
 
 class NotionService {
-  private readonly baseURL = 'https://api.notion.com/v1';
-  private readonly headers = {
-    'Notion-Version': '2022-06-28',
-    'Content-Type': 'application/json',
-  };
-
-  private async makeNotionRequest(endpoint: string, token: string, options: RequestInit = {}) {
-    try {
-      const response = await fetch(`${this.baseURL}${endpoint}`, {
-        ...options,
-        headers: {
-          ...this.headers,
-          'Authorization': `Bearer ${token}`,
-          ...options.headers,
-        },
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(this.classifyNotionError(error));
-      }
-
-      return await response.json();
-    } catch (error) {
-      console.error(`Notion API request failed for ${endpoint}:`, error);
-      throw error;
-    }
-  }
-
-  private classifyNotionError(error: any): string {
-    if (error?.code) {
-      switch (error.code) {
-        case 'unauthorized':
-          return 'Invalid Notion token. Please check your integration token and ensure it has the correct permissions.';
-        case 'restricted_resource':
-          return 'Access forbidden. Please ensure your integration has access to the requested page or database.';
-        case 'object_not_found':
-          return 'Page or database not found. Please check the URL and ensure the page/database exists and is shared with your integration.';
-        case 'rate_limited':
-          return 'Rate limit exceeded. Please wait a moment and try again.';
-        case 'invalid_json':
-          return 'Invalid request format. Please check your integration token format and try again.';
-        case 'invalid_request':
-          return 'Invalid request. Please check the page/database URL and try again.';
-        case 'validation_error':
-          return 'Validation error. Please check your request parameters.';
-        case 'conflict_error':
-          return 'Conflict error. The resource may have been modified by another process.';
-        default:
-          return `Notion API error: ${error.message || 'Unknown error'}`;
-      }
-    }
-
-    if (error?.message) {
-      if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
-        return 'Network error: Unable to reach Notion API. Please check your internet connection and try again.';
-      }
-      
-      if (error.name === 'AbortError' || error.message.includes('timeout')) {
-        return 'Request timed out. The Notion API may be slow to respond. Please try again.';
-      }
-
-      return `Unexpected error: ${error.message}`;
-    }
-
-    return 'An unknown error occurred while connecting to Notion.';
-  }
-
   private validateTokenFormat(token: string): boolean {
     return token.startsWith('ntn_') && token.length >= 50;
   }
@@ -129,7 +61,7 @@ class NotionService {
       console.log(`🧪 Testing database access for ID: ${databaseId}`);
       
       // Get database metadata
-      const database = await this.makeNotionRequest(`/databases/${databaseId}`, token);
+      const database = await notionAPIClient.getDatabase(databaseId, token);
       
       // Extract properties
       const properties: DatabaseProperties = {};
@@ -144,18 +76,13 @@ class NotionService {
       }
 
       // Query for sample pages (limit to 3 for preview)
-      const queryResult = await this.makeNotionRequest(`/databases/${databaseId}/query`, token, {
-        method: 'POST',
-        body: JSON.stringify({
-          page_size: 3
-        }),
-      });
+      const queryResult = await notionAPIClient.queryDatabase(databaseId, token);
 
       return {
         success: true,
         database,
         properties,
-        samplePages: queryResult.results || [],
+        samplePages: queryResult.results?.slice(0, 3) || [],
       };
     } catch (error) {
       console.error('Database test failed:', error);
@@ -173,21 +100,9 @@ class NotionService {
     pageSize?: number;
   } = {}): Promise<any> {
     try {
-      const { filter, sorts, pageSize = 100 } = options;
+      const { filter, sorts } = options;
       
-      return await this.makeNotionRequest(`/databases/${databaseId}/query`, token, {
-        method: 'POST',
-        body: JSON.stringify({
-          filter,
-          sorts: sorts || [
-            {
-              property: 'Date',
-              direction: 'ascending'
-            }
-          ],
-          page_size: pageSize
-        }),
-      });
+      return await notionAPIClient.queryDatabase(databaseId, token, filter);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       throw new Error(errorMessage);
@@ -201,7 +116,7 @@ class NotionService {
 
     try {
       console.log('🔐 Getting Notion integration info...');
-      const userInfo = await this.makeNotionRequest('/users/me', token);
+      const userInfo = await notionAPIClient.getIntegrationInfo(token);
       
       return {
         type: userInfo.type || 'bot',
@@ -224,7 +139,7 @@ class NotionService {
 
   async getPage(pageId: string, token: string): Promise<any> {
     try {
-      return await this.makeNotionRequest(`/pages/${pageId}`, token);
+      return await notionAPIClient.getPage(pageId, token);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       throw new Error(errorMessage);
@@ -233,7 +148,7 @@ class NotionService {
 
   async getDatabase(databaseId: string, token: string): Promise<any> {
     try {
-      return await this.makeNotionRequest(`/databases/${databaseId}`, token);
+      return await notionAPIClient.getDatabase(databaseId, token);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       throw new Error(errorMessage);
@@ -242,18 +157,7 @@ class NotionService {
 
   async queryDatabase(databaseId: string, token: string, filter?: any): Promise<any> {
     try {
-      return await this.makeNotionRequest(`/databases/${databaseId}/query`, token, {
-        method: 'POST',
-        body: JSON.stringify({
-          filter,
-          sorts: [
-            {
-              property: 'Date',
-              direction: 'ascending'
-            }
-          ]
-        }),
-      });
+      return await notionAPIClient.queryDatabase(databaseId, token, filter);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       throw new Error(errorMessage);
@@ -408,9 +312,9 @@ class NotionService {
         return false;
       }
 
-      await this.makeNotionRequest('/users/me', token);
+      const isValid = await notionAPIClient.validateToken(token);
       console.log('✅ Notion token validation successful');
-      return true;
+      return isValid;
     } catch (error) {
       console.error('❌ Notion token validation failed:', error);
       return false;
@@ -425,7 +329,7 @@ class NotionService {
 
     // Try database first
     try {
-      await this.makeNotionRequest(`/databases/${pageId}`, token);
+      await notionAPIClient.getDatabase(pageId, token);
       return { hasAccess: true, resourceType: 'database' };
     } catch (error) {
       console.log('Database access failed, trying page...');
@@ -433,7 +337,7 @@ class NotionService {
 
     // Try page
     try {
-      await this.makeNotionRequest(`/pages/${pageId}`, token);
+      await notionAPIClient.getPage(pageId, token);
       return { hasAccess: true, resourceType: 'page' };
     } catch (error) {
       console.log('Page access failed');
