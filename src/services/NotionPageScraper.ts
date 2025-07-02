@@ -1,4 +1,3 @@
-
 import { NotionScrapedEvent, NotionPageMetadata } from '@/types/notion';
 import { notionTableParser } from './NotionTableParser';
 
@@ -11,6 +10,7 @@ interface ScrapeResult {
 
 class NotionPageScraper {
   private readonly corsProxy = 'https://api.allorigins.win/get';
+  private readonly DOM_LOAD_DELAY = 20000; // 20 seconds
 
   async scrapePage(pageUrl: string): Promise<ScrapeResult> {
     try {
@@ -51,7 +51,12 @@ class NotionPageScraper {
       }
 
       const htmlContent = proxyData.contents;
-      console.log('📄 Received HTML content, parsing with enhanced table parser...');
+      console.log('📄 Received HTML content, waiting for DOM to finish loading...');
+
+      // Wait for DOM to fully load before parsing
+      await this.waitForDOMLoad();
+
+      console.log('📊 DOM loading complete, parsing with enhanced table parser...');
 
       // Use enhanced table parser
       const parseResult = this.parseHtmlForStructuredEvents(htmlContent, pageUrl);
@@ -102,6 +107,11 @@ class NotionPageScraper {
     }
   }
 
+  private async waitForDOMLoad(): Promise<void> {
+    console.log(`⏳ Waiting ${this.DOM_LOAD_DELAY / 1000} seconds for DOM to fully load...`);
+    return new Promise(resolve => setTimeout(resolve, this.DOM_LOAD_DELAY));
+  }
+
   private parseHtmlForStructuredEvents(htmlContent: string, sourceUrl: string): {
     events: NotionScrapedEvent[];
     title: string;
@@ -123,7 +133,7 @@ class NotionPageScraper {
 
       console.log('📊 Parsing structured table data for page:', pageTitle);
 
-      // Use enhanced table parser
+      // Use enhanced table parser with modern selectors
       const parseResult = notionTableParser.parseTableStructure(doc, sourceUrl);
       
       console.log(`✅ Successfully parsed ${parseResult.events.length} events from ${parseResult.metadata.viewType} view`);

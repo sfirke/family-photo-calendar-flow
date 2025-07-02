@@ -1,4 +1,3 @@
-
 import { NotionScrapedEvent, NotionColumnMapping } from '@/types/notion';
 
 interface ParsedTableStructure {
@@ -18,33 +17,26 @@ interface TableParseResult {
 }
 
 export class NotionTableParser {
-  private readonly notionSelectors = {
-    // Notion-specific CSS selectors for database views
-    databaseView: '[data-block-id] .notion-table-view, .notion-board-view, .notion-calendar-view',
-    tableContainer: '.notion-table-view',
-    tableHeader: '.notion-table-view .notion-table-header',
-    tableRows: '.notion-table-view .notion-table-row',
-    tableCells: '.notion-table-cell, .notion-selectable',
-    boardView: '.notion-board-view',
-    boardColumns: '.notion-board-column',
-    boardCards: '.notion-board-item',
-    // Fallback generic selectors
-    genericTable: 'table',
-    genericHeader: 'thead tr th, table tr:first-child td',
-    genericRows: 'tbody tr, table tr:not(:first-child)',
-    genericCells: 'td, th'
+  private readonly modernSelectors = {
+    // Modern Notion selectors using data attributes
+    dataBlockRows: '[data-block-id]',
+    columnCells: '[data-column-index]',
+    // Fallback selectors for compatibility
+    fallbackTable: '.notion-table-view',
+    fallbackRows: '.notion-table-row',
+    fallbackCells: '.notion-table-cell, .notion-selectable'
   };
 
   parseTableStructure(doc: Document, sourceUrl: string): TableParseResult {
-    console.log('🔍 Starting enhanced table structure parsing');
+    console.log('🔍 Starting enhanced table structure parsing with modern data selectors');
     
-    // Try Notion-specific parsing first
-    let parseResult = this.parseNotionDatabase(doc, sourceUrl);
+    // Try modern data-attribute parsing first
+    let parseResult = this.parseModernNotionStructure(doc, sourceUrl);
     
-    // Fallback to generic table parsing
+    // Fallback to legacy CSS class parsing
     if (!parseResult || parseResult.events.length === 0) {
-      console.log('📋 Falling back to generic table parsing');
-      parseResult = this.parseGenericTable(doc, sourceUrl);
+      console.log('📋 Falling back to legacy CSS class parsing');
+      parseResult = this.parseLegacyNotionStructure(doc, sourceUrl);
     }
 
     return parseResult || {
@@ -58,50 +50,62 @@ export class NotionTableParser {
     };
   }
 
-  private parseNotionDatabase(doc: Document, sourceUrl: string): TableParseResult | null {
-    // Try to find Notion table view first
-    const tableView = doc.querySelector(this.notionSelectors.tableContainer);
-    if (tableView) {
-      console.log('📊 Found Notion table view');
-      return this.parseNotionTableView(tableView, sourceUrl);
-    }
-
-    // Try board view
-    const boardView = doc.querySelector(this.notionSelectors.boardView);
-    if (boardView) {
-      console.log('📋 Found Notion board view');
-      return this.parseNotionBoardView(boardView, sourceUrl);
-    }
-
-    return null;
-  }
-
-  private parseNotionTableView(tableContainer: Element, sourceUrl: string): TableParseResult {
-    const events: NotionScrapedEvent[] = [];
+  private parseModernNotionStructure(doc: Document, sourceUrl: string): TableParseResult | null {
+    console.log('🔬 Attempting modern data-attribute parsing');
     
-    // Extract headers from table
-    const headerElements = tableContainer.querySelectorAll(this.notionSelectors.tableHeader + ' > *');
-    const headers = Array.from(headerElements).map(el => 
-      (el.textContent || '').trim().toLowerCase()
-    ).filter(header => header.length > 0);
+    // Find all elements with data-block-id (these are rows)
+    const rowElements = doc.querySelectorAll(this.modernSelectors.dataBlockRows);
+    console.log(`📊 Found ${rowElements.length} elements with data-block-id`);
 
-    console.log('📋 Found table headers:', headers);
+    if (rowElements.length === 0) {
+      return null;
+    }
 
-    // Create column mappings based on header content
-    const columnMappings = this.createColumnMappings(headers);
-
-    // Extract rows
-    const rowElements = tableContainer.querySelectorAll(this.notionSelectors.tableRows);
-    console.log(`📊 Processing ${rowElements.length} table rows`);
+    const events: NotionScrapedEvent[] = [];
+    const columnMappings: NotionColumnMapping = {};
+    let headers: string[] = [];
+    let isFirstRow = true;
 
     rowElements.forEach((row, rowIndex) => {
-      const cells = row.querySelectorAll(this.notionSelectors.tableCells);
-      const cellData = Array.from(cells).map(cell => (cell.textContent || '').trim());
+      // Find all cells with data-column-index within this row
+      const cellElements = row.querySelectorAll(this.modernSelectors.columnCells);
       
-      if (cellData.length > 0) {
+      if (cellElements.length === 0) {
+        console.log(`⚠️  Row ${rowIndex} has no column cells, skipping`);
+        return;
+      }
+
+      // Sort cells by column index to maintain proper order
+      const sortedCells = Array.from(cellElements).sort((a, b) => {
+        const indexA = parseInt(a.getAttribute('data-column-index') || '0');
+        const indexB = parseInt(b.getAttribute('data-column-index') || '0');
+        return indexA - indexB;
+      });
+
+      const cellData = sortedCells.map(cell => (cell.textContent || '').trim());
+      
+      console.log(`📋 Row ${rowIndex}: Found ${cellData.length} cells:`, cellData);
+
+      // Use first non-empty row as headers
+      if (isFirstRow && cellData.some(cell => cell.length > 0)) {
+        headers = cellData.map((cell, index) => cell || `Column ${index + 1}`);
+        columnMappings = this.createColumnMappings(headers);
+        console.log('📋 Headers identified:', headers);
+        isFirstRow = false;
+        return;
+      }
+
+      // Skip empty rows
+      if (cellData.every(cell => cell.length === 0)) {
+        return;
+      }
+
+      // Create event from row data if we have headers
+      if (headers.length > 0) {
         const event = this.createEventFromRowData(cellData, headers, columnMappings, sourceUrl, rowIndex);
         if (event) {
           events.push(event);
+          console.log(`✅ Created event from row ${rowIndex}:`, event.title);
         }
       }
     });
@@ -112,63 +116,48 @@ export class NotionTableParser {
       metadata: {
         totalRows: rowElements.length,
         successfullyParsed: events.length,
-        viewType: 'table'
+        viewType: 'modern-data-attributes'
       }
     };
   }
 
-  private parseNotionBoardView(boardContainer: Element, sourceUrl: string): TableParseResult {
-    const events: NotionScrapedEvent[] = [];
-    const columnMappings: NotionColumnMapping = {};
-
-    // Board view parsing - each card represents an event
-    const cards = boardContainer.querySelectorAll(this.notionSelectors.boardCards);
-    console.log(`📋 Processing ${cards.length} board cards`);
-
-    cards.forEach((card, cardIndex) => {
-      const event = this.createEventFromBoardCard(card, sourceUrl, cardIndex);
-      if (event) {
-        events.push(event);
-      }
-    });
-
-    return {
-      events,
-      columnMappings,
-      metadata: {
-        totalRows: cards.length,
-        successfullyParsed: events.length,
-        viewType: 'board'
-      }
-    };
-  }
-
-  private parseGenericTable(doc: Document, sourceUrl: string): TableParseResult {
-    const events: NotionScrapedEvent[] = [];
-    const tables = doc.querySelectorAll(this.notionSelectors.genericTable);
+  private parseLegacyNotionStructure(doc: Document, sourceUrl: string): TableParseResult | null {
+    console.log('🔄 Attempting legacy CSS class parsing');
     
-    if (tables.length === 0) {
-      return {
-        events: [],
-        columnMappings: {},
-        metadata: { totalRows: 0, successfullyParsed: 0, viewType: 'none' }
-      };
+    // Try to find legacy Notion table structure
+    const tableView = doc.querySelector(this.modernSelectors.fallbackTable);
+    if (!tableView) {
+      console.log('❌ No legacy table structure found');
+      return null;
     }
 
-    console.log(`📊 Found ${tables.length} generic tables`);
+    const events: NotionScrapedEvent[] = [];
+    const rowElements = tableView.querySelectorAll(this.modernSelectors.fallbackRows);
+    
+    console.log(`📊 Found ${rowElements.length} legacy table rows`);
 
-    // Process the first table (most likely to contain events)
-    const table = tables[0];
-    const headerElements = table.querySelectorAll(this.notionSelectors.genericHeader);
-    const headers = Array.from(headerElements).map(el => 
-      (el.textContent || '').trim().toLowerCase()
-    );
+    // Extract headers (first row or dedicated header)
+    const firstRow = rowElements[0];
+    if (!firstRow) {
+      return null;
+    }
 
+    const headerCells = firstRow.querySelectorAll(this.modernSelectors.fallbackCells);
+    const headers = Array.from(headerCells).map(cell => 
+      (cell.textContent || '').trim().toLowerCase()
+    ).filter(header => header.length > 0);
+
+    if (headers.length === 0) {
+      console.log('❌ No headers found in legacy structure');
+      return null;
+    }
+
+    console.log('📋 Legacy headers found:', headers);
     const columnMappings = this.createColumnMappings(headers);
-    const rows = table.querySelectorAll(this.notionSelectors.genericRows);
 
-    rows.forEach((row, rowIndex) => {
-      const cells = row.querySelectorAll(this.notionSelectors.genericCells);
+    // Process data rows (skip header row)
+    Array.from(rowElements).slice(1).forEach((row, rowIndex) => {
+      const cells = row.querySelectorAll(this.modernSelectors.fallbackCells);
       const cellData = Array.from(cells).map(cell => (cell.textContent || '').trim());
       
       const event = this.createEventFromRowData(cellData, headers, columnMappings, sourceUrl, rowIndex);
@@ -181,9 +170,9 @@ export class NotionTableParser {
       events,
       columnMappings,
       metadata: {
-        totalRows: rows.length,
+        totalRows: rowElements.length,
         successfullyParsed: events.length,
-        viewType: 'generic-table'
+        viewType: 'legacy-css-classes'
       }
     };
   }
@@ -300,30 +289,6 @@ export class NotionTableParser {
     eventData.categories = eventData.categories || [];
 
     return eventData as NotionScrapedEvent;
-  }
-
-  private createEventFromBoardCard(card: Element, sourceUrl: string, cardIndex: number): NotionScrapedEvent | null {
-    const title = card.querySelector('.notion-selectable')?.textContent?.trim();
-    if (!title) return null;
-
-    // Extract properties from card content
-    const cardText = card.textContent || '';
-    const dateMatch = this.parseEnhancedDate(cardText);
-    
-    if (!dateMatch) return null;
-
-    return {
-      id: `scraped_board_${Date.now()}_${cardIndex}`,
-      title,
-      date: dateMatch.date,
-      time: dateMatch.time || 'All day',
-      description: '',
-      location: '',
-      properties: { originalText: cardText },
-      sourceUrl,
-      scrapedAt: new Date(),
-      calendarId: this.extractCalendarIdFromUrl(sourceUrl)
-    };
   }
 
   private parseEnhancedDate(dateText: string): { date: Date; time?: string; endDate?: Date } | null {
