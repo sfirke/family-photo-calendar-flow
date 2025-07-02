@@ -1,3 +1,4 @@
+
 import { Client } from '@notionhq/client';
 import { NotionToMarkdown } from 'notion-to-md';
 
@@ -49,7 +50,7 @@ class NotionPageScraper {
       }
 
       const notion = new Client({}); // No token needed for public pages
-      const n2m = new NotionToMarkdown({ notion });
+      const n2m = new NotionToMarkdown({ notionClient: notion });
 
       // Fetch the page content as a block array
       const page = await notion.blocks.children.list({
@@ -98,7 +99,8 @@ class NotionPageScraper {
                   location: '',
                   properties: {},
                   sourceUrl: pageUrl,
-                  scrapedAt: new Date()
+                  scrapedAt: new Date(),
+                  calendarId: urlInfo.blockId
                 });
                 eventCount++;
               }
