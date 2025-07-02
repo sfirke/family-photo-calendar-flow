@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useICalCalendars } from './useICalCalendars';
 import { useNotionCalendars } from './useNotionCalendars';
@@ -53,17 +54,17 @@ export const useCalendarSelection = () => {
       let eventCount = 0;
       let hasEvents = false;
 
-      // Count events based on calendar source
-      if (cal.source === 'ical' || (!cal.source && cal.url)) {
-        // For iCal calendars, count events from storage
+      // Count events based on calendar type - identify iCal calendars by url property
+      if (cal.url && typeof cal.url === 'string') {
+        // This is an iCal calendar (has url property)
         eventCount = iCalEvents.filter(event => event.calendarId === cal.id).length;
         hasEvents = eventCount > 0;
-      } else if (cal.source === 'notion') {
-        // For Notion calendars, use existing event counting logic
+      } else if ('type' in cal && cal.type === 'notion') {
+        // This is a Notion calendar
         eventCount = notionEvents.filter(event => event.calendarId === cal.id).length;
         hasEvents = eventCount > 0;
-      } else if (cal.source === 'scraped') {
-        // For scraped calendars, count scraped events
+      } else if ('type' in cal && cal.type === 'notion-scraped') {
+        // This is a scraped Notion calendar
         eventCount = scrapedEvents.filter(event => event.calendarId === cal.id).length;
         hasEvents = eventCount > 0;
       } else {
