@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { GitFork } from 'lucide-react';
+import { GitFork, Database } from 'lucide-react';
 import { Event } from '@/types/calendar';
 
 interface EventIconProps {
@@ -13,6 +13,19 @@ const EventIcon = ({ event, isAllDay }: EventIconProps) => {
   const iconColor = event.color || '#3b82f6';
   
   if (event.source === 'notion') {
+    // Check if it's a scraped event (organizer contains "Scraped")
+    const isScraped = event.organizer?.includes('Scraped');
+    
+    if (isScraped) {
+      return (
+        <Database 
+          className={`${iconSize} flex-shrink-0`}
+          style={{ color: iconColor }}
+          aria-label={`Scraped Notion calendar: ${event.calendarName || event.category}`}
+        />
+      );
+    }
+    
     return (
       <GitFork 
         className={`${iconSize} flex-shrink-0`}
@@ -20,7 +33,7 @@ const EventIcon = ({ event, isAllDay }: EventIconProps) => {
           color: iconColor,
           transform: 'rotate(35deg)'
         }}
-        aria-label={`Notion calendar: ${event.calendarName || event.category}`}
+        aria-label={`Notion API calendar: ${event.calendarName || event.category}`}
       />
     );
   }

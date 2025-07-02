@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Clock, MapPin, ChevronDown, ChevronUp } from 'lucide-react';
+import { Clock, MapPin, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react';
 import { Event } from '@/types/calendar';
 import EventIcon from './EventIcon';
 import { getEventStyles, hasAdditionalData } from './eventUtils';
@@ -24,6 +24,9 @@ const RegularEvent = ({
 }: RegularEventProps) => {
   const styles = getEventStyles(event, viewMode);
   const isInteractive = (viewMode === 'timeline' || viewMode === 'week') && hasAdditionalData(event) && !styles.isAllDay;
+  
+  // Check if this is a Notion event with a source URL
+  const hasNotionUrl = event.source === 'notion' && 'notionUrl' in event && event.notionUrl;
 
   const handleClick = () => {
     if (isInteractive) {
@@ -35,6 +38,13 @@ const RegularEvent = ({
     if ((e.key === 'Enter' || e.key === ' ') && isInteractive) {
       e.preventDefault();
       onToggleExpanded();
+    }
+  };
+
+  const handleNotionLinkClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (hasNotionUrl && 'notionUrl' in event) {
+      window.open(event.notionUrl as string, '_blank', 'noopener,noreferrer');
     }
   };
 
@@ -63,6 +73,16 @@ const RegularEvent = ({
                 <h3 className={`${titleClasses} ${styles.fontSizes.title} leading-tight truncate`}>
                   {event.title}
                 </h3>
+                {hasNotionUrl && (
+                  <button
+                    onClick={handleNotionLinkClick}
+                    className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors"
+                    title="Open in Notion"
+                    aria-label="Open in Notion"
+                  >
+                    <ExternalLink className="h-3 w-3" />
+                  </button>
+                )}
               </div>
               
               <div className={`flex items-center gap-2 ${styles.fontSizes.time} ${styles.textColors.time} mb-2`}>

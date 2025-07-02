@@ -3,6 +3,7 @@ import React from 'react';
 import LocalDataManager from '@/components/LocalDataManager';
 import ICalSettings from './ICalSettings';
 import NotionSettings from './NotionSettings';
+import NotionScrapedSettings from './NotionScrapedSettings';
 
 const CalendarsTab = () => {
   return (
@@ -10,6 +11,7 @@ const CalendarsTab = () => {
       <LocalDataManager />
       <ICalSettings />
       <NotionSettings />
+      <NotionScrapedSettings />
     </div>
   );
 };
