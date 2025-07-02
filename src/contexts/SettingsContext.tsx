@@ -44,6 +44,7 @@ export const SettingsProvider = ({ children }: { children: React.ReactNode }) =>
     setGithubOwner: githubSettings.setGithubOwner,
     setGithubRepo: githubSettings.setGithubRepo,
     setNotionToken: notionSettings.setNotionToken,
+    setNotionDatabaseId: notionSettings.setNotionDatabaseId,
     setBackgroundDuration: photoSettings.setBackgroundDuration,
     setSelectedAlbum: photoSettings.setSelectedAlbum,
   });

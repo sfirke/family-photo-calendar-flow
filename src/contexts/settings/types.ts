@@ -47,6 +47,10 @@ export interface SettingsContextType {
   notionToken: string;
   /** Update Notion token with validation */
   setNotionToken: (token: string) => void;
+  /** Notion database ID for calendar events */
+  notionDatabaseId: string;
+  /** Update Notion database ID with validation */
+  setNotionDatabaseId: (databaseId: string) => void;
   
   // Background Settings
   /** Photo background rotation duration in minutes */

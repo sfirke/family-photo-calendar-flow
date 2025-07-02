@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { NotionCalendar, NotionEvent, NotionSyncStatus, NotionPage } from '@/types/notion';
 import { notionService } from '@/services/notionService';
@@ -11,7 +12,7 @@ export const useNotionCalendars = () => {
   const [events, setEvents] = useState<NotionEvent[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [syncStatus, setSyncStatus] = useState<NotionSyncStatus>({});
-  const { notionToken } = useSettings();
+  const { notionToken, notionDatabaseId } = useSettings();
 
   // Load calendars from localStorage
   const loadCalendars = useCallback(() => {
@@ -93,32 +94,30 @@ export const useNotionCalendars = () => {
     saveEvents(updatedEvents);
   }, [calendars, events, saveCalendars, saveEvents]);
 
-  // Sync a single calendar
+  // Sync a single calendar using the configured database ID
   const syncCalendar = useCallback(async (calendar: NotionCalendar) => {
     if (!notionToken) {
       throw new Error('Notion token not configured');
     }
 
+    if (!notionDatabaseId) {
+      throw new Error('Notion database ID not configured');
+    }
+
     setSyncStatus(prev => ({ ...prev, [calendar.id]: 'syncing' }));
 
     try {
-      const pageId = notionService.extractPageIdFromUrl(calendar.url);
-      if (!pageId) {
-        throw new Error('Invalid Notion URL - could not extract page ID');
-      }
-
       let notionEvents: NotionEvent[] = [];
       let pages: NotionPage[] = [];
 
       try {
-        // First try as database
-        const database = await notionService.getDatabase(pageId, notionToken);
-        const queryResult = await notionService.queryDatabase(pageId, notionToken);
+        // Use the configured database ID from settings
+        const database = await notionService.getDatabase(notionDatabaseId, notionToken);
+        const queryResult = await notionService.queryDatabase(notionDatabaseId, notionToken);
         pages = queryResult.results as NotionPage[];
       } catch (dbError) {
-        // If database fails, try as page
-        const page = await notionService.getPage(pageId, notionToken);
-        pages = [page];
+        console.error('Database access failed:', dbError);
+        throw new Error('Failed to access Notion database. Please check your integration permissions.');
       }
 
       notionEvents = notionService.transformToEvents(
@@ -147,12 +146,16 @@ export const useNotionCalendars = () => {
       setSyncStatus(prev => ({ ...prev, [calendar.id]: 'error' }));
       throw error;
     }
-  }, [notionToken, events, saveEvents, updateCalendar]);
+  }, [notionToken, notionDatabaseId, events, saveEvents, updateCalendar]);
 
   // Sync all calendars
   const syncAllCalendars = useCallback(async () => {
     if (!notionToken) {
       throw new Error('Notion token not configured');
+    }
+
+    if (!notionDatabaseId) {
+      throw new Error('Notion database ID not configured');
     }
 
     setIsLoading(true);
@@ -168,7 +171,7 @@ export const useNotionCalendars = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [calendars, notionToken, syncCalendar]);
+  }, [calendars, notionToken, notionDatabaseId, syncCalendar]);
 
   // Get events for filtering
   const getNotionEvents = useCallback(() => {
