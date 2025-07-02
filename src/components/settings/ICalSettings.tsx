@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -49,29 +48,34 @@ const ICalSettings = () => {
     console.log('ICalSettings - Selected calendar IDs:', selectedCalendarIds);
   }, [calendars, calendarsFromEvents, selectedCalendarIds]);
 
-  // Combine calendars from hook and events
-  const allCalendars = React.useMemo(() => {
+  // Filter calendars to only show iCal/ICS feeds (exclude Notion calendars)
+  const iCalOnlyCalendars = React.useMemo(() => {
     const calendarMap = new Map<string, ICalCalendar>();
 
-    // Add calendars from IndexedDB first (these have the complete configuration)
+    // Only add calendars from IndexedDB that have URLs (are actual iCal feeds)
     calendars.forEach(cal => {
-      console.log('Processing calendar from IndexedDB:', {
-        id: cal.id,
-        name: cal.name,
-        url: cal.url
-      });
-      calendarMap.set(cal.id, {
-        ...cal,
-        source: 'config',
-        hasEvents: calendarsFromEvents.some(eventCal => eventCal.id === cal.id && eventCal.hasEvents),
-        eventCount: calendarsFromEvents.find(eventCal => eventCal.id === cal.id)?.eventCount || cal.eventCount || 0
-      });
+      if (cal.url && cal.url.trim() !== '') {
+        console.log('Processing iCal calendar from IndexedDB:', {
+          id: cal.id,
+          name: cal.name,
+          url: cal.url
+        });
+        calendarMap.set(cal.id, {
+          ...cal,
+          source: 'config',
+          hasEvents: calendarsFromEvents.some(eventCal => eventCal.id === cal.id && eventCal.hasEvents),
+          eventCount: calendarsFromEvents.find(eventCal => eventCal.id === cal.id)?.eventCount || cal.eventCount || 0
+        });
+      }
     });
 
-    // Add calendars from events that aren't in IndexedDB (orphaned calendars)
+    // Add calendars from events that aren't in IndexedDB (orphaned calendars) but exclude local and notion calendars
     calendarsFromEvents.forEach(eventCal => {
-      if (!calendarMap.has(eventCal.id) && eventCal.id !== 'local_calendar') {
-        console.log('Processing orphaned calendar from events:', {
+      if (!calendarMap.has(eventCal.id) && 
+          eventCal.id !== 'local_calendar' && 
+          !eventCal.id.startsWith('notion_') &&
+          !eventCal.id.includes('scraped')) {
+        console.log('Processing orphaned iCal calendar from events:', {
           id: eventCal.id,
           name: eventCal.summary
         });
@@ -90,7 +94,7 @@ const ICalSettings = () => {
     });
     
     const result = Array.from(calendarMap.values()).sort((a, b) => a.name.localeCompare(b.name));
-    console.log('Combined calendars with URLs:', result.map(cal => ({
+    console.log('Filtered iCal-only calendars:', result.map(cal => ({
       id: cal.id,
       name: cal.name,
       url: cal.url,
@@ -242,9 +246,13 @@ const ICalSettings = () => {
     }
   };
 
-  const enabledCalendarsCount = allCalendars.filter(cal => cal.enabled && cal.source === 'config').length;
-  const totalEvents = calendarsFromEvents.reduce((sum, cal) => sum + cal.eventCount, 0);
-  const calendarsWithEventsCount = calendarsFromEvents.filter(cal => cal.hasEvents).length;
+  const enabledCalendarsCount = iCalOnlyCalendars.filter(cal => cal.enabled && cal.source === 'config').length;
+  const totalEvents = calendarsFromEvents
+    .filter(cal => !cal.id.startsWith('notion_') && !cal.id.includes('scraped') && cal.id !== 'local_calendar')
+    .reduce((sum, cal) => sum + cal.eventCount, 0);
+  const calendarsWithEventsCount = calendarsFromEvents
+    .filter(cal => !cal.id.startsWith('notion_') && !cal.id.includes('scraped') && cal.id !== 'local_calendar' && cal.hasEvents)
+    .length;
 
   return (
     <Card className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
@@ -256,10 +264,10 @@ const ICalSettings = () => {
               Calendar Feeds
             </CardTitle>
             <CardDescription className="text-gray-600 dark:text-gray-400">
-              Add external calendar feeds using iCal/ICS URLs. Calendar data is stored locally in IndexedDB.
+              Add external calendar feeds using iCal/ICS URLs. Does not include Notion calendars.
             </CardDescription>
           </div>
-          {allCalendars.length > 0 && (
+          {iCalOnlyCalendars.length > 0 && (
             <Button
               onClick={handleSyncAll}
               disabled={isLoading || enabledCalendarsCount === 0}
@@ -279,7 +287,7 @@ const ICalSettings = () => {
           <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
             <div className="flex items-center gap-2 mb-2">
               <BarChart3 className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-              <span className="font-medium text-blue-900 dark:text-blue-200">Event Summary</span>
+              <span className="font-medium text-blue-900 dark:text-blue-200">iCal Feed Summary</span>
             </div>
             <div className="grid grid-cols-3 gap-4 text-sm">
               <div>
@@ -291,7 +299,7 @@ const ICalSettings = () => {
                 <div className="text-blue-700 dark:text-blue-300">Active Calendars</div>
               </div>
               <div>
-                <div className="font-medium text-blue-900 dark:text-blue-200">{selectedCalendarIds.length}</div>
+                <div className="font-medium text-blue-900 dark:text-blue-200">{selectedCalendarIds.filter(id => !id.startsWith('notion_') && !id.includes('scraped')).length}</div>
                 <div className="text-blue-700 dark:text-blue-300">Selected</div>
               </div>
             </div>
@@ -370,9 +378,9 @@ const ICalSettings = () => {
         </Dialog>
 
         {/* Calendar List */}
-        {allCalendars.length > 0 && (
+        {iCalOnlyCalendars.length > 0 && (
           <div className="space-y-3">
-            {allCalendars.map(calendar => (
+            {iCalOnlyCalendars.map(calendar => (
               <EditableCalendarCard
                 key={calendar.id}
                 calendar={calendar}
@@ -387,10 +395,10 @@ const ICalSettings = () => {
           </div>
         )}
 
-        {allCalendars.length === 0 && (
+        {iCalOnlyCalendars.length === 0 && (
           <div className="text-center py-8 text-gray-500 dark:text-gray-400">
             <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>No calendar feeds added yet.</p>
+            <p>No iCal calendar feeds added yet.</p>
             <p className="text-sm">Add your first calendar feed to get started.</p>
           </div>
         )}

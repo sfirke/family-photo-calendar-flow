@@ -12,6 +12,7 @@ export interface CalendarFromEvents {
   hasEvents: boolean;
   eventCount: number;
   lastSync?: string;
+  source?: 'ical' | 'notion' | 'notion-scraped' | 'local';
 }
 
 export const useCalendarSelection = () => {
@@ -42,33 +43,38 @@ export const useCalendarSelection = () => {
     return allCalendars.filter(cal => cal && cal.enabled);
   }, [allCalendars]);
 
-  // Create calendarsFromEvents based on actual calendar data
+  // Create calendarsFromEvents based on actual calendar data with proper source attribution
   const calendarsFromEvents = useMemo((): CalendarFromEvents[] => {
     if (!Array.isArray(allCalendars)) return [];
     
     // Get iCal events to count them per calendar
     const iCalEvents = getICalEvents ? getICalEvents() : [];
     
-    // Convert all calendars to CalendarFromEvents format with proper event counting
+    // Convert all calendars to CalendarFromEvents format with proper event counting and source attribution
     const calendarList: CalendarFromEvents[] = allCalendars.map(cal => {
       let eventCount = 0;
       let hasEvents = false;
+      let source: 'ical' | 'notion' | 'notion-scraped' | 'local' = 'local';
 
-      // Count events based on calendar type - identify iCal calendars by url property
-      if (cal.url && typeof cal.url === 'string') {
+      // Determine source and count events based on calendar type
+      if (cal.url && typeof cal.url === 'string' && cal.url.trim() !== '') {
         // This is an iCal calendar (has url property)
+        source = 'ical';
         eventCount = iCalEvents.filter(event => event.calendarId === cal.id).length;
         hasEvents = eventCount > 0;
       } else if ('type' in cal && cal.type === 'notion') {
         // This is a Notion calendar
+        source = 'notion';
         eventCount = notionEvents.filter(event => event.calendarId === cal.id).length;
         hasEvents = eventCount > 0;
       } else if ('type' in cal && cal.type === 'notion-scraped') {
         // This is a scraped Notion calendar
+        source = 'notion-scraped';
         eventCount = scrapedEvents.filter(event => event.calendarId === cal.id).length;
         hasEvents = eventCount > 0;
       } else {
-        // Use eventCount property if available (for backwards compatibility)
+        // Local or unknown calendar type
+        source = 'local';
         eventCount = cal.eventCount || 0;
         hasEvents = eventCount > 0;
       }
@@ -80,7 +86,8 @@ export const useCalendarSelection = () => {
         primary: cal?.id === 'primary',
         hasEvents,
         eventCount,
-        lastSync: cal?.lastSync
+        lastSync: cal?.lastSync,
+        source
       };
     });
 
