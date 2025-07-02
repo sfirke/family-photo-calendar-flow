@@ -1,10 +1,23 @@
+
 /**
  * Notion Scraped Events Storage Service
  * 
  * Handles IndexedDB storage for events scraped from public Notion pages
  */
 
-import { NotionScrapedEvent, NotionPageMetadata, NotionScrapedCalendar } from '@/types/notion';
+import { NotionScrapedEvent, NotionPageMetadata } from './NotionPageScraper';
+
+export interface NotionScrapedCalendar {
+  id: string;
+  name: string;
+  url: string;
+  color: string;
+  enabled: boolean;
+  lastSync?: string;
+  eventCount?: number;
+  type: 'notion-scraped';
+  metadata?: NotionPageMetadata;
+}
 
 class NotionScrapedEventsStorage {
   private dbName = 'FamilyCalendarDB';
@@ -245,3 +258,4 @@ class NotionScrapedEventsStorage {
 }
 
 export const notionScrapedEventsStorage = new NotionScrapedEventsStorage();
+export type { NotionScrapedCalendar };

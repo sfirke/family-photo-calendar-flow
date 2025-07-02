@@ -1,7 +1,8 @@
 
 import { useMemo } from 'react';
 import { Event } from '@/types/calendar';
-import { NotionEvent, NotionScrapedEvent } from '@/types/notion';
+import { NotionEvent } from '@/types/notion';
+import { NotionScrapedEvent } from '@/services/NotionPageScraper';
 import { sampleEvents } from '@/data/sampleEvents';
 
 interface UseEventFilteringProps {
@@ -31,7 +32,7 @@ const convertNotionEventToEvent = (notionEvent: NotionEvent): Event => {
 };
 
 // Helper function to convert NotionScrapedEvent to Event format
-const convertScrapedEventToEvent = (scrapedEvent: NotionScrapedEvent, calendarName: string, color: string): Event => {
+const convertScrapedEventToEvent = (scrapedEvent: NotionScrapedEvent, calendarId: string, calendarName: string, color: string): Event => {
   return {
     id: scrapedEvent.id,
     title: scrapedEvent.title,
@@ -43,7 +44,7 @@ const convertScrapedEventToEvent = (scrapedEvent: NotionScrapedEvent, calendarNa
     description: scrapedEvent.description || '',
     organizer: 'Notion (Scraped)',
     date: scrapedEvent.date,
-    calendarId: scrapedEvent.calendarId,
+    calendarId: calendarId,
     calendarName: calendarName,
     source: 'notion'
   };
@@ -56,7 +57,7 @@ export const useEventFiltering = ({ googleEvents, notionEvents, scrapedEvents = 
     
     // Convert scraped events to Event format
     const convertedScrapedEvents = scrapedEvents.map(event => 
-      convertScrapedEventToEvent(event, 'Scraped Calendar', '#10B981')
+      convertScrapedEventToEvent(event, event.calendarId || 'scraped', 'Scraped Calendar', '#10B981')
     );
     
     // Combine all event sources

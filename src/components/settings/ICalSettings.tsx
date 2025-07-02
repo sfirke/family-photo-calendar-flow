@@ -8,7 +8,6 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useICalCalendars } from '@/hooks/useICalCalendars';
 import { useCalendarSelection } from '@/hooks/useCalendarSelection';
-import { useIntegratedEvents } from '@/hooks/useIntegratedEvents';
 import { Calendar, Plus, RotateCcw, BarChart3, AlertCircle } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -28,15 +27,12 @@ const ICalSettings = () => {
     syncCalendar,
     syncAllCalendars
   } = useICalCalendars();
-  
-  const { filteredEvents } = useIntegratedEvents();
   const {
     selectedCalendarIds,
     toggleCalendar,
     calendarsFromEvents,
     forceRefresh
-  } = useCalendarSelection(filteredEvents);
-  
+  } = useCalendarSelection();
   const { toast } = useToast();
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [newCalendar, setNewCalendar] = useState({

@@ -6,11 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useCalendarSelection } from '@/hooks/useCalendarSelection';
 import { useICalCalendars } from '@/hooks/useICalCalendars';
-import { useIntegratedEvents } from '@/hooks/useIntegratedEvents';
 import { useToast } from '@/hooks/use-toast';
 
 const CalendarList = () => {
-  const { filteredEvents } = useIntegratedEvents();
   const { 
     calendarsFromEvents,
     selectedCalendarIds, 
@@ -18,7 +16,7 @@ const CalendarList = () => {
     selectAllCalendars,
     clearAllCalendars,
     cleanupDeletedCalendar
-  } = useCalendarSelection(filteredEvents);
+  } = useCalendarSelection();
   
   const { calendars: iCalCalendars, syncCalendar, syncStatus, removeCalendar } = useICalCalendars();
   const { toast } = useToast();

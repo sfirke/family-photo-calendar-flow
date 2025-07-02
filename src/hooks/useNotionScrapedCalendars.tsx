@@ -1,3 +1,4 @@
+
 /**
  * Hook for managing scraped Notion calendars and events
  */
@@ -118,8 +119,8 @@ export const useNotionScrapedCalendars = () => {
     try {
       console.log(`🔄 Syncing scraped calendar: ${calendar.name}`);
       
-      // Scrape the Notion page with the calendar ID
-      const result = await notionPageScraper.scrapePage(calendar.url, calendar.id);
+      // Scrape the Notion page
+      const result = await notionPageScraper.scrapePage(calendar.url);
       
       if (!result.success) {
         throw new Error(result.error || 'Failed to scrape page');
@@ -192,7 +193,7 @@ export const useNotionScrapedCalendars = () => {
       }
 
       // Try to fetch a small sample to validate access
-      const result = await notionPageScraper.scrapePage(url, 'validation');
+      const result = await notionPageScraper.scrapePage(url);
       
       return {
         isValid: result.success,

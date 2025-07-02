@@ -6,7 +6,6 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useNotionCalendars } from '@/hooks/useNotionCalendars';
 import { useCalendarSelection } from '@/hooks/useCalendarSelection';
-import { useIntegratedEvents } from '@/hooks/useIntegratedEvents';
 import { useSettings } from '@/contexts/SettingsContext';
 import { GitFork, Plus, RotateCcw, BarChart3, Database, Settings } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -28,8 +27,7 @@ const NotionSettings = () => {
   } = useNotionCalendars();
   
   const { notionToken, notionDatabaseId } = useSettings();
-  const { filteredEvents } = useIntegratedEvents();
-  const { calendarsFromEvents } = useCalendarSelection(filteredEvents);
+  const { calendarsFromEvents } = useCalendarSelection();
   const { toast } = useToast();
   
   const [showIntegrationForm, setShowIntegrationForm] = useState(false);

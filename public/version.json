@@ -1,7 +1,7 @@
 {
-  "version": "1.4.23",
-  "buildDate": "2025-07-02T02:42:43.002Z",
-  "gitHash": "13bd408",
-  "buildNumber": 19,
+  "version": "1.4.21",
+  "buildDate": "2025-07-02T00:47:36.002Z",
+  "gitHash": "fc4a591",
+  "buildNumber": 17,
   "environment": "production"
 }
