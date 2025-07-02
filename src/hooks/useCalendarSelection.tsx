@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useICalCalendars } from './useICalCalendars';
 import { useNotionCalendars } from './useNotionCalendars';
@@ -19,7 +18,7 @@ export const useCalendarSelection = () => {
   const [refreshKey, setRefreshKey] = useState(0);
   
   // Get calendars from all sources
-  const { calendars: iCalCalendars = [], isLoading: iCalLoading } = useICalCalendars();
+  const { calendars: iCalCalendars = [], isLoading: iCalLoading, getICalEvents } = useICalCalendars();
   const { calendars: notionCalendars = [], events: notionEvents = [], isLoading: notionLoading } = useNotionCalendars();
   const { calendars: scrapedCalendars = [], events: scrapedEvents = [], isLoading: scrapedLoading } = useNotionScrapedCalendars();
 
@@ -46,14 +45,30 @@ export const useCalendarSelection = () => {
   const calendarsFromEvents = useMemo((): CalendarFromEvents[] => {
     if (!Array.isArray(allCalendars)) return [];
     
+    // Get iCal events to count them per calendar
+    const iCalEvents = getICalEvents ? getICalEvents() : [];
+    
     // Convert all calendars to CalendarFromEvents format with proper event counting
     const calendarList: CalendarFromEvents[] = allCalendars.map(cal => {
       let eventCount = 0;
       let hasEvents = false;
 
-      // Count events from iCal calendars
-      if (cal.events && Array.isArray(cal.events)) {
-        eventCount = cal.events.length;
+      // Count events based on calendar source
+      if (cal.source === 'ical' || (!cal.source && cal.url)) {
+        // For iCal calendars, count events from storage
+        eventCount = iCalEvents.filter(event => event.calendarId === cal.id).length;
+        hasEvents = eventCount > 0;
+      } else if (cal.source === 'notion') {
+        // For Notion calendars, use existing event counting logic
+        eventCount = notionEvents.filter(event => event.calendarId === cal.id).length;
+        hasEvents = eventCount > 0;
+      } else if (cal.source === 'scraped') {
+        // For scraped calendars, count scraped events
+        eventCount = scrapedEvents.filter(event => event.calendarId === cal.id).length;
+        hasEvents = eventCount > 0;
+      } else {
+        // Use eventCount property if available (for backwards compatibility)
+        eventCount = cal.eventCount || 0;
         hasEvents = eventCount > 0;
       }
 
@@ -69,21 +84,21 @@ export const useCalendarSelection = () => {
     });
 
     return calendarList;
-  }, [allCalendars, refreshKey]);
+  }, [allCalendars, getICalEvents, notionEvents, scrapedEvents, refreshKey]);
 
   // Initialize selected calendars with enabled calendars that have events
   useEffect(() => {
     if (!Array.isArray(enabledCalendars)) return;
     
-    const enabledWithEventsIds = enabledCalendars
-      .filter(cal => cal?.eventCount && cal.eventCount > 0)
+    const enabledWithEventsIds = calendarsFromEvents
+      .filter(cal => cal?.hasEvents)
       .map(cal => cal?.id)
       .filter(Boolean);
     
     if (enabledWithEventsIds.length > 0 && selectedCalendarIds.length === 0) {
       setSelectedCalendarIds(enabledWithEventsIds);
     }
-  }, [enabledCalendars, selectedCalendarIds.length]);
+  }, [calendarsFromEvents, selectedCalendarIds.length]);
 
   // Toggle calendar (support both 1 and 2 parameter versions)
   const toggleCalendar = useCallback((calendarId: string, checked?: boolean) => {
