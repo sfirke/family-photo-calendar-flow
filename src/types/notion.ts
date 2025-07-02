@@ -128,9 +128,10 @@ export interface NotionPageMetadata {
   lastScraped: Date;
   eventCount: number;
   databaseId?: string;
+  token?: string;
   viewId?: string;
   columnMappings?: NotionColumnMapping;
-  viewType?: 'table' | 'board' | 'calendar' | 'list';
+  viewType?: 'table' | 'list' | 'board' | 'calendar' | 'database';
 }
 
 export interface NotionScrapedCalendar {
