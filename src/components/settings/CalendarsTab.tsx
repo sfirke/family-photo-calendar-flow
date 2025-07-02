@@ -3,7 +3,7 @@ import React from 'react';
 import LocalDataManager from '@/components/LocalDataManager';
 import ICalSettings from './ICalSettings';
 import NotionSettings from './NotionSettings';
-import NotionScrapedSettings from './NotionScrapedSettings';
+import { NotionScrapedSettings } from './NotionScrapedSettings';
 
 const CalendarsTab = () => {
   return (

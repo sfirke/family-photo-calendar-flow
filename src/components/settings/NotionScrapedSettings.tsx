@@ -7,7 +7,7 @@ import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
   Plus, 
-  Sync, 
+  RefreshCw, 
   Loader2, 
   Calendar, 
   ExternalLink,
@@ -77,7 +77,7 @@ export const NotionScrapedSettings: React.FC = () => {
             {isLoading ? (
               <Loader2 className="h-4 w-4 animate-spin mr-2" />
             ) : (
-              <Sync className="h-4 w-4 mr-2" />
+              <RefreshCw className="h-4 w-4 mr-2" />
             )}
             Sync All
           </Button>

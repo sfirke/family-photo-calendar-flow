@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { 
   Calendar,
   ExternalLink,
-  Sync,
+  RefreshCw,
   Trash2,
   Edit2,
   Save,
@@ -252,7 +253,7 @@ export const ScrapedCalendarCard: React.FC<ScrapedCalendarCardProps> = ({
                 {syncStatus === 'syncing' ? (
                   <Loader2 className="h-3 w-3 animate-spin mr-1" />
                 ) : (
-                  <Sync className="h-3 w-3 mr-1" />
+                  <RefreshCw className="h-3 w-3 mr-1" />
                 )}
                 Sync
               </Button>
