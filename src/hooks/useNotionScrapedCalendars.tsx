@@ -1,4 +1,3 @@
-
 /**
  * Hook for managing scraped Notion calendars and events
  */
@@ -184,25 +183,51 @@ export const useNotionScrapedCalendars = () => {
     }
   }, [calendars, syncCalendar, toast]);
 
-  // Validate a Notion URL
+  // Validate a Notion URL with improved error handling
   const validateNotionUrl = useCallback(async (url: string): Promise<{ isValid: boolean; error?: string }> => {
     try {
+      console.log('Validating Notion URL:', url);
+      
+      // First check URL format
       const urlInfo = notionPageScraper.parseNotionUrl(url);
       if (!urlInfo) {
-        return { isValid: false, error: 'Invalid Notion URL format' };
+        return { isValid: false, error: 'Invalid Notion URL format. Please ensure the URL is from a public Notion page.' };
       }
 
-      // Try to fetch a small sample to validate access
+      console.log('URL format is valid, testing access...');
+      
+      // Try to scrape the page to validate access
       const result = await notionPageScraper.scrapePage(url);
       
-      return {
-        isValid: result.success,
-        error: result.error
-      };
+      if (result.success) {
+        console.log('Validation successful');
+        return { isValid: true };
+      } else {
+        console.log('Validation failed:', result.error);
+        
+        // Provide more specific error messages
+        if (result.error?.includes('Network error')) {
+          return { 
+            isValid: false, 
+            error: 'Cannot connect to Notion. Please check your internet connection and try again.' 
+          };
+        } else if (result.error?.includes('401') || result.error?.includes('403')) {
+          return { 
+            isValid: false, 
+            error: 'This Notion page is not publicly accessible. Please make sure the page is shared publicly.' 
+          };
+        } else {
+          return { 
+            isValid: false, 
+            error: result.error || 'Unable to access the Notion page. Please verify the URL and page permissions.' 
+          };
+        }
+      }
     } catch (error) {
+      console.error('URL validation error:', error);
       return {
         isValid: false,
-        error: error instanceof Error ? error.message : 'Unknown validation error'
+        error: error instanceof Error ? error.message : 'Unknown validation error occurred'
       };
     }
   }, []);
