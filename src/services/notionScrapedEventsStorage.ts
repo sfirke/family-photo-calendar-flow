@@ -1,34 +1,17 @@
 
-/**
- * Notion Scraped Events Storage Service
- * 
- * Handles IndexedDB storage for events scraped from public Notion pages
- */
+import { NotionScrapedEvent, NotionScrapedCalendar } from '@/types/notion';
 
-import { NotionScrapedEvent, NotionPageMetadata } from './NotionPageScraper';
-
-export interface NotionScrapedCalendar {
-  id: string;
-  name: string;
-  url: string;
-  color: string;
-  enabled: boolean;
-  lastSync?: string;
-  eventCount?: number;
-  type: 'notion-scraped';
-  metadata?: NotionPageMetadata;
-}
+const DB_NAME = 'NotionScrapedEventsDB';
+const DB_VERSION = 2; // Increment version for new schema
+const CALENDARS_STORE = 'calendars';
+const EVENTS_STORE = 'events';
 
 class NotionScrapedEventsStorage {
-  private dbName = 'FamilyCalendarDB';
-  private dbVersion = 2; // Increment version to add new stores
-  private eventsStoreName = 'notion_scraped_events';
-  private calendarsStoreName = 'notion_scraped_calendars';
   private db: IDBDatabase | null = null;
 
   async init(): Promise<void> {
     return new Promise((resolve, reject) => {
-      const request = indexedDB.open(this.dbName, this.dbVersion);
+      const request = indexedDB.open(DB_NAME, DB_VERSION);
 
       request.onerror = () => reject(request.error);
       request.onsuccess = () => {
@@ -39,223 +22,275 @@ class NotionScrapedEventsStorage {
       request.onupgradeneeded = (event) => {
         const db = (event.target as IDBOpenDBRequest).result;
         
-        // Create events store if it doesn't exist
-        if (!db.objectStoreNames.contains(this.eventsStoreName)) {
-          const eventsStore = db.createObjectStore(this.eventsStoreName, { keyPath: 'id' });
-          eventsStore.createIndex('calendarId', 'calendarId', { unique: false });
-          eventsStore.createIndex('date', 'date', { unique: false });
-          eventsStore.createIndex('scrapedAt', 'scrapedAt', { unique: false });
+        // Create calendars store if it doesn't exist
+        if (!db.objectStoreNames.contains(CALENDARS_STORE)) {
+          const calendarsStore = db.createObjectStore(CALENDARS_STORE, { keyPath: 'id' });
+          calendarsStore.createIndex('enabled', 'enabled', { unique: false });
         }
 
-        // Create calendars store if it doesn't exist
-        if (!db.objectStoreNames.contains(this.calendarsStoreName)) {
-          const calendarsStore = db.createObjectStore(this.calendarsStoreName, { keyPath: 'id' });
-          calendarsStore.createIndex('url', 'url', { unique: false });
-          calendarsStore.createIndex('enabled', 'enabled', { unique: false });
+        // Create events store if it doesn't exist
+        if (!db.objectStoreNames.contains(EVENTS_STORE)) {
+          const eventsStore = db.createObjectStore(EVENTS_STORE, { keyPath: 'id' });
+          eventsStore.createIndex('calendarId', 'calendarId', { unique: false });
+          eventsStore.createIndex('date', 'date', { unique: false });
+          
+          // New indexes for enhanced properties
+          eventsStore.createIndex('status', 'status', { unique: false });
+          eventsStore.createIndex('categories', 'categories', { unique: false, multiEntry: true });
+          eventsStore.createIndex('priority', 'priority', { unique: false });
+        } else {
+          // Handle existing events store - add new indexes if they don't exist
+          const transaction = (event.target as IDBOpenDBRequest).transaction;
+          if (transaction) {
+            const eventsStore = transaction.objectStore(EVENTS_STORE);
+            
+            // Add new indexes if they don't exist
+            try {
+              if (!eventsStore.indexNames.contains('status')) {
+                eventsStore.createIndex('status', 'status', { unique: false });
+              }
+              if (!eventsStore.indexNames.contains('categories')) {
+                eventsStore.createIndex('categories', 'categories', { unique: false, multiEntry: true });
+              }
+              if (!eventsStore.indexNames.contains('priority')) {
+                eventsStore.createIndex('priority', 'priority', { unique: false });
+              }
+            } catch (error) {
+              console.log('Indexes may already exist:', error);
+            }
+          }
         }
       };
     });
+  }
+
+  private async ensureDB(): Promise<IDBDatabase> {
+    if (!this.db) {
+      await this.init();
+    }
+    return this.db!;
   }
 
   // Calendar management methods
   async addCalendar(calendar: NotionScrapedCalendar): Promise<void> {
-    if (!this.db) await this.init();
-    
+    const db = await this.ensureDB();
     return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction([this.calendarsStoreName], 'readwrite');
-      const store = transaction.objectStore(this.calendarsStoreName);
+      const transaction = db.transaction([CALENDARS_STORE], 'readwrite');
+      const store = transaction.objectStore(CALENDARS_STORE);
       const request = store.add(calendar);
 
-      request.onerror = () => reject(request.error);
       request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
     });
   }
 
   async updateCalendar(id: string, updates: Partial<NotionScrapedCalendar>): Promise<void> {
-    if (!this.db) await this.init();
-
+    const db = await this.ensureDB();
     return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction([this.calendarsStoreName], 'readwrite');
-      const store = transaction.objectStore(this.calendarsStoreName);
+      const transaction = db.transaction([CALENDARS_STORE], 'readwrite');
+      const store = transaction.objectStore(CALENDARS_STORE);
+      
       const getRequest = store.get(id);
-
-      getRequest.onerror = () => reject(getRequest.error);
       getRequest.onsuccess = () => {
-        const calendar = getRequest.result;
-        if (calendar) {
-          const updatedCalendar = { ...calendar, ...updates };
+        const existingCalendar = getRequest.result;
+        if (existingCalendar) {
+          const updatedCalendar = { ...existingCalendar, ...updates };
           const putRequest = store.put(updatedCalendar);
-          putRequest.onerror = () => reject(putRequest.error);
           putRequest.onsuccess = () => resolve();
+          putRequest.onerror = () => reject(putRequest.error);
         } else {
           reject(new Error('Calendar not found'));
         }
       };
+      getRequest.onerror = () => reject(getRequest.error);
     });
   }
 
   async deleteCalendar(id: string): Promise<void> {
-    if (!this.db) await this.init();
-
+    const db = await this.ensureDB();
     return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction([this.calendarsStoreName, this.eventsStoreName], 'readwrite');
+      const transaction = db.transaction([CALENDARS_STORE, EVENTS_STORE], 'readwrite');
       
       // Delete calendar
-      const calendarsStore = transaction.objectStore(this.calendarsStoreName);
-      const deleteCalendarRequest = calendarsStore.delete(id);
-
+      const calendarsStore = transaction.objectStore(CALENDARS_STORE);
+      calendarsStore.delete(id);
+      
       // Delete associated events
-      const eventsStore = transaction.objectStore(this.eventsStoreName);
-      const eventsIndex = eventsStore.index('calendarId');
-      const deleteEventsRequest = eventsIndex.openCursor(IDBKeyRange.only(id));
-
-      let hasError = false;
-
-      deleteCalendarRequest.onerror = () => {
-        hasError = true;
-        reject(deleteCalendarRequest.error);
-      };
-
-      deleteEventsRequest.onerror = () => {
-        hasError = true;
-        reject(deleteEventsRequest.error);
-      };
-
-      deleteEventsRequest.onsuccess = (event) => {
+      const eventsStore = transaction.objectStore(EVENTS_STORE);
+      const index = eventsStore.index('calendarId');
+      const request = index.openCursor(IDBKeyRange.only(id));
+      
+      request.onsuccess = (event) => {
         const cursor = (event.target as IDBRequest).result;
         if (cursor) {
           cursor.delete();
           cursor.continue();
         }
       };
-
-      transaction.oncomplete = () => {
-        if (!hasError) resolve();
-      };
+      
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
     });
   }
 
   async getAllCalendars(): Promise<NotionScrapedCalendar[]> {
-    if (!this.db) await this.init();
-
+    const db = await this.ensureDB();
     return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction([this.calendarsStoreName], 'readonly');
-      const store = transaction.objectStore(this.calendarsStoreName);
+      const transaction = db.transaction([CALENDARS_STORE], 'readonly');
+      const store = transaction.objectStore(CALENDARS_STORE);
       const request = store.getAll();
 
-      request.onerror = () => reject(request.error);
       request.onsuccess = () => resolve(request.result || []);
-    });
-  }
-
-  async getCalendar(id: string): Promise<NotionScrapedCalendar | null> {
-    if (!this.db) await this.init();
-
-    return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction([this.calendarsStoreName], 'readonly');
-      const store = transaction.objectStore(this.calendarsStoreName);
-      const request = store.get(id);
-
       request.onerror = () => reject(request.error);
-      request.onsuccess = () => resolve(request.result || null);
     });
   }
 
-  // Event management methods
+  // Enhanced event management methods
   async saveEvents(calendarId: string, events: NotionScrapedEvent[]): Promise<void> {
-    if (!this.db) await this.init();
-
+    const db = await this.ensureDB();
     return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction([this.eventsStoreName], 'readwrite');
-      const store = transaction.objectStore(this.eventsStoreName);
-
-      // First, delete existing events for this calendar
+      const transaction = db.transaction([EVENTS_STORE], 'readwrite');
+      const store = transaction.objectStore(EVENTS_STORE);
+      
+      // Clear existing events for this calendar
       const index = store.index('calendarId');
       const deleteRequest = index.openCursor(IDBKeyRange.only(calendarId));
-
+      
       deleteRequest.onsuccess = (event) => {
         const cursor = (event.target as IDBRequest).result;
         if (cursor) {
           cursor.delete();
           cursor.continue();
         } else {
-          // After deletion, add new events
-          events.forEach(eventData => {
-            const eventWithCalendarId = { ...eventData, calendarId };
-            store.add(eventWithCalendarId);
+          // Add new events
+          events.forEach(event => {
+            // Ensure event has calendarId
+            event.calendarId = calendarId;
+            
+            // Convert date strings to Date objects if needed
+            if (typeof event.date === 'string') {
+              event.date = new Date(event.date);
+            }
+            if (event.dateRange?.startDate && typeof event.dateRange.startDate === 'string') {
+              event.dateRange.startDate = new Date(event.dateRange.startDate);
+            }
+            if (event.dateRange?.endDate && typeof event.dateRange.endDate === 'string') {
+              event.dateRange.endDate = new Date(event.dateRange.endDate);
+            }
+            if (typeof event.scrapedAt === 'string') {
+              event.scrapedAt = new Date(event.scrapedAt);
+            }
+            
+            store.add(event);
           });
         }
       };
-
-      deleteRequest.onerror = () => reject(deleteRequest.error);
+      
       transaction.oncomplete = () => resolve();
       transaction.onerror = () => reject(transaction.error);
     });
   }
 
-  async getEventsByCalendar(calendarId: string): Promise<NotionScrapedEvent[]> {
-    if (!this.db) await this.init();
-
+  async getAllEvents(): Promise<NotionScrapedEvent[]> {
+    const db = await this.ensureDB();
     return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction([this.eventsStoreName], 'readonly');
-      const store = transaction.objectStore(this.eventsStoreName);
+      const transaction = db.transaction([EVENTS_STORE], 'readonly');
+      const store = transaction.objectStore(EVENTS_STORE);
+      const request = store.getAll();
+
+      request.onsuccess = () => {
+        const events = request.result || [];
+        // Convert date strings back to Date objects
+        const processedEvents = events.map(event => ({
+          ...event,
+          date: typeof event.date === 'string' ? new Date(event.date) : event.date,
+          scrapedAt: typeof event.scrapedAt === 'string' ? new Date(event.scrapedAt) : event.scrapedAt,
+          dateRange: event.dateRange ? {
+            startDate: typeof event.dateRange.startDate === 'string' ? new Date(event.dateRange.startDate) : event.dateRange.startDate,
+            endDate: event.dateRange.endDate ? (typeof event.dateRange.endDate === 'string' ? new Date(event.dateRange.endDate) : event.dateRange.endDate) : undefined
+          } : undefined
+        }));
+        resolve(processedEvents);
+      };
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  async getEventsByCalendar(calendarId: string): Promise<NotionScrapedEvent[]> {
+    const db = await this.ensureDB();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction([EVENTS_STORE], 'readonly');
+      const store = transaction.objectStore(EVENTS_STORE);
       const index = store.index('calendarId');
       const request = index.getAll(calendarId);
 
-      request.onerror = () => reject(request.error);
       request.onsuccess = () => {
-        const events = request.result.map(event => ({
+        const events = request.result || [];
+        // Convert date strings back to Date objects
+        const processedEvents = events.map(event => ({
           ...event,
-          date: new Date(event.date),
-          scrapedAt: new Date(event.scrapedAt)
+          date: typeof event.date === 'string' ? new Date(event.date) : event.date,
+          scrapedAt: typeof event.scrapedAt === 'string' ? new Date(event.scrapedAt) : event.scrapedAt
         }));
-        resolve(events);
+        resolve(processedEvents);
       };
+      request.onerror = () => reject(request.error);
     });
   }
 
-  async getAllEvents(): Promise<NotionScrapedEvent[]> {
-    if (!this.db) await this.init();
-
+  // New methods for enhanced querying
+  async getEventsByStatus(status: string): Promise<NotionScrapedEvent[]> {
+    const db = await this.ensureDB();
     return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction([this.eventsStoreName], 'readonly');
-      const store = transaction.objectStore(this.eventsStoreName);
-      const request = store.getAll();
+      const transaction = db.transaction([EVENTS_STORE], 'readonly');
+      const store = transaction.objectStore(EVENTS_STORE);
+      const index = store.index('status');
+      const request = index.getAll(status);
 
+      request.onsuccess = () => resolve(request.result || []);
       request.onerror = () => reject(request.error);
-      request.onsuccess = () => {
-        const events = request.result.map(event => ({
-          ...event,
-          date: new Date(event.date),
-          scrapedAt: new Date(event.scrapedAt)
-        }));
-        resolve(events);
-      };
     });
   }
 
-  async getEventsByDateRange(startDate: Date, endDate: Date): Promise<NotionScrapedEvent[]> {
-    if (!this.db) await this.init();
-
+  async getEventsByCategory(category: string): Promise<NotionScrapedEvent[]> {
+    const db = await this.ensureDB();
     return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction([this.eventsStoreName], 'readonly');
-      const store = transaction.objectStore(this.eventsStoreName);
-      const index = store.index('date');
-      const range = IDBKeyRange.bound(startDate, endDate);
-      const request = index.getAll(range);
+      const transaction = db.transaction([EVENTS_STORE], 'readonly');
+      const store = transaction.objectStore(EVENTS_STORE);
+      const index = store.index('categories');
+      const request = index.getAll(category);
 
+      request.onsuccess = () => resolve(request.result || []);
       request.onerror = () => reject(request.error);
-      request.onsuccess = () => {
-        const events = request.result.map(event => ({
-          ...event,
-          date: new Date(event.date),
-          scrapedAt: new Date(event.scrapedAt)
-        }));
-        resolve(events);
-      };
+    });
+  }
+
+  async getEventsByPriority(priority: string): Promise<NotionScrapedEvent[]> {
+    const db = await this.ensureDB();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction([EVENTS_STORE], 'readonly');
+      const store = transaction.objectStore(EVENTS_STORE);
+      const index = store.index('priority');
+      const request = index.getAll(priority);
+
+      request.onsuccess = () => resolve(request.result || []);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  async clearAllData(): Promise<void> {
+    const db = await this.ensureDB();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction([CALENDARS_STORE, EVENTS_STORE], 'readwrite');
+      
+      transaction.objectStore(CALENDARS_STORE).clear();
+      transaction.objectStore(EVENTS_STORE).clear();
+      
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
     });
   }
 }
 
 export const notionScrapedEventsStorage = new NotionScrapedEventsStorage();
-// Remove the duplicate export type line that's causing the conflict
+export type { NotionScrapedCalendar };

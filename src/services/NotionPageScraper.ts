@@ -1,5 +1,6 @@
 
 import { NotionScrapedEvent, NotionPageMetadata } from '@/types/notion';
+import { notionTableParser } from './NotionTableParser';
 
 interface ScrapeResult {
   success: boolean;
@@ -28,9 +29,8 @@ class NotionPageScraper {
         };
       }
 
-      console.log('Fetching Notion page HTML:', pageUrl);
+      console.log('🔍 Fetching Notion page HTML:', pageUrl);
 
-      // Fetch the HTML content of the public Notion page
       const proxyUrl = `${this.corsProxy}?url=${encodeURIComponent(pageUrl)}`;
       
       const response = await fetch(proxyUrl, {
@@ -51,10 +51,10 @@ class NotionPageScraper {
       }
 
       const htmlContent = proxyData.contents;
-      console.log('Received HTML content, parsing for events...');
+      console.log('📄 Received HTML content, parsing with enhanced table parser...');
 
-      // Parse HTML content for calendar events
-      const parseResult = this.parseHtmlForEvents(htmlContent, pageUrl);
+      // Use enhanced table parser
+      const parseResult = this.parseHtmlForStructuredEvents(htmlContent, pageUrl);
       
       return {
         success: true,
@@ -65,12 +65,14 @@ class NotionPageScraper {
           lastScraped: new Date(),
           eventCount: parseResult.events.length,
           databaseId: urlInfo.blockId,
-          viewId: urlInfo.viewId
+          viewId: urlInfo.viewId,
+          columnMappings: parseResult.columnMappings,
+          viewType: parseResult.metadata.viewType
         }
       };
 
     } catch (error: any) {
-      console.error('Error scraping Notion page:', error);
+      console.error('❌ Error scraping Notion page:', error);
       
       if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
         return {
@@ -100,12 +102,15 @@ class NotionPageScraper {
     }
   }
 
-  private parseHtmlForEvents(htmlContent: string, sourceUrl: string): { events: NotionScrapedEvent[]; title: string } {
-    const events: NotionScrapedEvent[] = [];
+  private parseHtmlForStructuredEvents(htmlContent: string, sourceUrl: string): {
+    events: NotionScrapedEvent[];
+    title: string;
+    columnMappings: any;
+    metadata: any;
+  } {
     let pageTitle = 'Notion Page';
 
     try {
-      // Create a DOM parser
       const parser = new DOMParser();
       const doc = parser.parseFromString(htmlContent, 'text/html');
 
@@ -113,237 +118,111 @@ class NotionPageScraper {
       const titleElement = doc.querySelector('title');
       if (titleElement) {
         pageTitle = titleElement.textContent || 'Notion Page';
-        // Clean up Notion's title format
         pageTitle = pageTitle.replace(' | Notion', '').trim();
       }
 
-      console.log('Parsing HTML for events, page title:', pageTitle);
+      console.log('📊 Parsing structured table data for page:', pageTitle);
 
-      // Look for various date patterns in the content
-      const datePatterns = [
-        // MM/DD/YYYY or MM-DD-YYYY
-        /\b(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})\b/g,
-        // DD/MM/YYYY (European format)
-        /\b(\d{1,2})\.(\d{1,2})\.(\d{2,4})\b/g,
-        // Month DD, YYYY
-        /\b(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2}),?\s+(\d{4})\b/gi,
-        // Mon DD, YYYY (short month)
-        /\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{1,2}),?\s+(\d{4})\b/gi,
-        // YYYY-MM-DD (ISO format)
-        /\b(\d{4})-(\d{1,2})-(\d{1,2})\b/g
-      ];
-
-      // Get all text content from the page
-      const allText = doc.body ? doc.body.textContent || '' : htmlContent;
-      const lines = allText.split('\n').map(line => line.trim()).filter(line => line.length > 0);
-
-      console.log('Found', lines.length, 'non-empty lines to process');
-
-      // Process each line looking for events
-      for (let i = 0; i < lines.length; i++) {
-        const line = lines[i];
-        
-        // Skip very short lines or lines that are likely navigation/metadata
-        if (line.length < 5 || this.isMetadataLine(line)) {
-          continue;
-        }
-
-        // Check each date pattern
-        for (const pattern of datePatterns) {
-          pattern.lastIndex = 0; // Reset regex
-          const matches = pattern.exec(line);
-          
-          if (matches) {
-            const event = this.extractEventFromLine(line, matches, sourceUrl, events.length);
-            if (event) {
-              events.push(event);
-              console.log('Found event:', event.title, 'on', event.date);
-            }
-            break; // Don't check other patterns for this line
-          }
-        }
-      }
-
-      // Also look for table-like structures (common in Notion databases)
-      this.parseTableEvents(doc, sourceUrl, events);
-
-      console.log('Total events found:', events.length);
-
-    } catch (parseError) {
-      console.error('Error parsing HTML content:', parseError);
-      // Fallback to simple text parsing
-      this.parseTextFallback(htmlContent, sourceUrl, events);
-    }
-
-    return { events, title: pageTitle };
-  }
-
-  private isMetadataLine(line: string): boolean {
-    const metadataPatterns = [
-      /^(created|updated|edited|last|modified)/i,
-      /^(notion|workspace|template)/i,
-      /^(share|export|duplicate)/i,
-      /^\d+\s+(views?|comments?|likes?)/i
-    ];
-    
-    return metadataPatterns.some(pattern => pattern.test(line));
-  }
-
-  private extractEventFromLine(line: string, dateMatch: RegExpExecArray, sourceUrl: string, index: number): NotionScrapedEvent | null {
-    try {
-      let date: Date;
+      // Use enhanced table parser
+      const parseResult = notionTableParser.parseTableStructure(doc, sourceUrl);
       
-      // Parse different date formats
-      if (dateMatch[0].includes('/') || dateMatch[0].includes('-')) {
-        // Handle MM/DD/YYYY, DD/MM/YYYY, YYYY-MM-DD formats
-        const parts = dateMatch[0].split(/[\/\-]/);
-        if (parts.length === 3) {
-          let year, month, day;
-          
-          if (parts[0].length === 4) {
-            // YYYY-MM-DD format
-            year = parseInt(parts[0]);
-            month = parseInt(parts[1]) - 1; // JS months are 0-indexed
-            day = parseInt(parts[2]);
-          } else {
-            // MM/DD/YYYY or DD/MM/YYYY - assume MM/DD for US format
-            month = parseInt(parts[0]) - 1;
-            day = parseInt(parts[1]);
-            year = parseInt(parts[2]);
-            
-            // Handle 2-digit years
-            if (year < 100) {
-              year += 2000;
-            }
-          }
-          
-          date = new Date(year, month, day);
-        } else {
-          return null;
-        }
-      } else if (dateMatch[1] && isNaN(Number(dateMatch[1]))) {
-        // Month name format
-        const monthName = dateMatch[1];
-        const day = parseInt(dateMatch[2]);
-        const year = parseInt(dateMatch[3]);
-        
-        const monthIndex = this.getMonthIndex(monthName);
-        if (monthIndex === -1) return null;
-        
-        date = new Date(year, monthIndex, day);
-      } else {
-        return null;
-      }
+      console.log(`✅ Successfully parsed ${parseResult.events.length} events from ${parseResult.metadata.viewType} view`);
+      console.log(`📋 Column mappings:`, parseResult.columnMappings);
 
-      // Validate date
-      if (isNaN(date.getTime())) {
-        return null;
-      }
-
-      // Extract title (remove the date from the line)
-      let title = line.replace(dateMatch[0], '').trim();
-      
-      // Clean up common separators and artifacts
-      title = title.replace(/^[\-\:\|\•\*\#]+\s*/, '').trim();
-      title = title.replace(/\s*[\-\:\|]+\s*$/, '').trim();
-      
-      // If title is empty or too short, use a default
-      if (!title || title.length < 2) {
-        title = 'Event';
-      }
-
-      // Extract time if present in the line
-      const timeMatch = line.match(/\b(\d{1,2}):(\d{2})\s*(AM|PM|am|pm)?\b/);
-      let time = 'All day';
-      
-      if (timeMatch) {
-        time = timeMatch[0];
-        // Remove time from title to clean it up
-        title = title.replace(timeMatch[0], '').trim();
+      // Fallback to legacy parsing if no structured events found
+      if (parseResult.events.length === 0) {
+        console.log('🔄 No structured events found, trying legacy text parsing...');
+        const legacyEvents = this.legacyTextParsing(htmlContent, sourceUrl);
+        parseResult.events.push(...legacyEvents);
       }
 
       return {
-        id: `scraped_${Date.now()}_${index}`,
-        title: title,
-        date: date,
-        time: time,
-        description: '',
-        location: '',
-        properties: {},
-        sourceUrl: sourceUrl,
-        scrapedAt: new Date(),
-        calendarId: this.extractCalendarIdFromUrl(sourceUrl)
+        events: parseResult.events,
+        title: pageTitle,
+        columnMappings: parseResult.columnMappings,
+        metadata: parseResult.metadata
       };
 
-    } catch (error) {
-      console.error('Error extracting event from line:', line, error);
-      return null;
+    } catch (parseError) {
+      console.error('❌ Error in structured parsing:', parseError);
+      
+      // Fallback to legacy parsing
+      const legacyEvents = this.legacyTextParsing(htmlContent, sourceUrl);
+      
+      return {
+        events: legacyEvents,
+        title: pageTitle,
+        columnMappings: {},
+        metadata: {
+          totalRows: 0,
+          successfullyParsed: legacyEvents.length,
+          viewType: 'legacy-fallback'
+        }
+      };
     }
   }
 
-  private parseTableEvents(doc: Document, sourceUrl: string, events: NotionScrapedEvent[]): void {
-    // Look for table structures that might contain events
-    const tables = doc.querySelectorAll('table');
+  private legacyTextParsing(htmlContent: string, sourceUrl: string): NotionScrapedEvent[] {
+    const events: NotionScrapedEvent[] = [];
     
-    tables.forEach((table, tableIndex) => {
-      const rows = table.querySelectorAll('tr');
-      
-      rows.forEach((row, rowIndex) => {
-        if (rowIndex === 0) return; // Skip header row
-        
-        const cells = row.querySelectorAll('td, th');
-        if (cells.length < 2) return;
-        
-        const rowText = Array.from(cells).map(cell => cell.textContent || '').join(' ').trim();
-        
-        // Try to find dates in the row
-        const datePattern = /\b(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})\b/;
-        const dateMatch = datePattern.exec(rowText);
-        
-        if (dateMatch) {
-          const event = this.extractEventFromLine(rowText, dateMatch, sourceUrl, events.length);
-          if (event) {
-            events.push(event);
-          }
-        }
-      });
-    });
-  }
-
-  private parseTextFallback(htmlContent: string, sourceUrl: string, events: NotionScrapedEvent[]): void {
-    // Simple fallback text parsing
+    // Simple fallback parsing for basic date patterns
     const datePattern = /\b(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})\b/g;
     let match;
+    let eventIndex = 0;
     
-    while ((match = datePattern.exec(htmlContent)) !== null) {
-      const contextStart = Math.max(0, match.index - 50);
-      const contextEnd = Math.min(htmlContent.length, match.index + 100);
+    while ((match = datePattern.exec(htmlContent)) !== null && eventIndex < 50) {
+      const contextStart = Math.max(0, match.index - 100);
+      const contextEnd = Math.min(htmlContent.length, match.index + 200);
       const context = htmlContent.substring(contextStart, contextEnd).trim();
       
-      const event = this.extractEventFromLine(context, match, sourceUrl, events.length);
-      if (event) {
-        events.push(event);
+      // Clean up HTML tags from context
+      const cleanContext = context.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+      
+      if (cleanContext.length > 10) {
+        const parts = match[0].split(/[\/\-]/);
+        let year, month, day;
+        
+        if (parts[2].length === 2) {
+          year = 2000 + parseInt(parts[2]);
+        } else {
+          year = parseInt(parts[2]);
+        }
+        month = parseInt(parts[0]) - 1; // JS months are 0-indexed
+        day = parseInt(parts[1]);
+        
+        const date = new Date(year, month, day);
+        
+        if (!isNaN(date.getTime())) {
+          // Extract title from context
+          let title = cleanContext.replace(match[0], '').trim();
+          title = title.split('.')[0].split('!')[0].split('?')[0].trim();
+          if (title.length > 50) {
+            title = title.substring(0, 50) + '...';
+          }
+          if (title.length < 3) {
+            title = 'Event';
+          }
+          
+          events.push({
+            id: `legacy_${Date.now()}_${eventIndex}`,
+            title,
+            date,
+            time: 'All day',
+            description: '',
+            location: '',
+            properties: { context: cleanContext },
+            sourceUrl,
+            scrapedAt: new Date(),
+            calendarId: this.extractCalendarIdFromUrl(sourceUrl)
+          });
+          
+          eventIndex++;
+        }
       }
     }
-  }
-
-  private getMonthIndex(monthName: string): number {
-    const months = {
-      'january': 0, 'jan': 0,
-      'february': 1, 'feb': 1,
-      'march': 2, 'mar': 2,
-      'april': 3, 'apr': 3,
-      'may': 4,
-      'june': 5, 'jun': 5,
-      'july': 6, 'jul': 6,
-      'august': 7, 'aug': 7,
-      'september': 8, 'sep': 8,
-      'october': 9, 'oct': 9,
-      'november': 10, 'nov': 10,
-      'december': 11, 'dec': 11
-    };
     
-    return months[monthName.toLowerCase()] ?? -1;
+    console.log(`📝 Legacy parsing found ${events.length} events`);
+    return events;
   }
 
   private extractCalendarIdFromUrl(url: string): string {
@@ -357,8 +236,8 @@ class NotionPageScraper {
       const lastPart = urlParts[urlParts.length - 1];
       let blockId = lastPart.split('-').pop() as string;
 
-      console.log('Parsing Notion URL:', url);
-      console.log('Extracted blockId:', blockId);
+      console.log('🔗 Parsing Notion URL:', url);
+      console.log('🆔 Extracted blockId:', blockId);
 
       // Handle both UUID formats: with dashes and without dashes
       if (blockId.length === 32 && /^[0-9a-fA-F]{32}$/.test(blockId)) {
@@ -370,13 +249,13 @@ class NotionPageScraper {
           blockId.substring(16, 20),
           blockId.substring(20, 32)
         ].join('-');
-        console.log('Normalized blockId to UUID format:', blockId);
+        console.log('🔄 Normalized blockId to UUID format:', blockId);
       }
 
       // Validate UUID format (with dashes)
       const uuidRegex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/i;
       if (!uuidRegex.test(blockId)) {
-        console.warn('Invalid block ID format after normalization:', blockId);
+        console.warn('⚠️  Invalid block ID format after normalization:', blockId);
         return null;
       }
 
@@ -384,10 +263,10 @@ class NotionPageScraper {
       const viewIdMatch = url.match(/v=([a-f0-9]+)/i);
       const viewId = viewIdMatch ? viewIdMatch[1] : undefined;
 
-      console.log('Successfully parsed Notion URL - blockId:', blockId, 'viewId:', viewId);
+      console.log('✅ Successfully parsed Notion URL - blockId:', blockId, 'viewId:', viewId);
       return { blockId, viewId };
     } catch (error) {
-      console.error('Error parsing Notion URL:', error);
+      console.error('❌ Error parsing Notion URL:', error);
       return null;
     }
   }

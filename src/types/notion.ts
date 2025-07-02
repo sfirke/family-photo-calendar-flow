@@ -93,7 +93,7 @@ export interface DatabaseValidationResult {
   type: 'id' | 'url' | 'invalid';
 }
 
-// New interfaces for scraped Notion events
+// Enhanced interfaces for scraped Notion events with structured data
 export interface NotionScrapedEvent {
   id: string;
   title: string;
@@ -101,10 +101,25 @@ export interface NotionScrapedEvent {
   time?: string;
   description?: string;
   location?: string;
+  status?: 'confirmed' | 'tentative' | 'cancelled' | string;
+  categories?: string[];
+  priority?: 'high' | 'medium' | 'low' | string;
   properties: Record<string, any>;
   sourceUrl: string;
   scrapedAt: Date;
   calendarId?: string;
+  customProperties?: Record<string, any>;
+  dateRange?: {
+    startDate: Date;
+    endDate?: Date;
+  };
+}
+
+export interface NotionColumnMapping {
+  [columnName: string]: {
+    type: 'date' | 'title' | 'status' | 'category' | 'location' | 'description' | 'time' | 'priority' | 'custom';
+    propertyName: string;
+  };
 }
 
 export interface NotionPageMetadata {
@@ -114,6 +129,8 @@ export interface NotionPageMetadata {
   eventCount: number;
   databaseId?: string;
   viewId?: string;
+  columnMappings?: NotionColumnMapping;
+  viewType?: 'table' | 'board' | 'calendar' | 'list';
 }
 
 export interface NotionScrapedCalendar {
