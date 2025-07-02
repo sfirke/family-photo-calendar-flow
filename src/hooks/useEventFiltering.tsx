@@ -32,7 +32,17 @@ const convertNotionEventToEvent = (notionEvent: NotionEvent): Event => {
 };
 
 // Helper function to convert NotionScrapedEvent to Event format
-const convertScrapedEventToEvent = (scrapedEvent: NotionScrapedEvent, calendarId: string, calendarName: string, color: string): Event => {
+const convertScrapedEventToEvent = (scrapedEvent: NotionScrapedEvent): Event => {
+  // Use the calendar ID from the scraped event, which should match the calendar it belongs to
+  const calendarId = scrapedEvent.calendarId || 'unknown';
+  
+  console.log('Converting scraped event:', {
+    id: scrapedEvent.id,
+    title: scrapedEvent.title,
+    calendarId: calendarId,
+    originalCalendarId: scrapedEvent.calendarId
+  });
+
   return {
     id: scrapedEvent.id,
     title: scrapedEvent.title,
@@ -40,12 +50,12 @@ const convertScrapedEventToEvent = (scrapedEvent: NotionScrapedEvent, calendarId
     location: scrapedEvent.location || '',
     attendees: 0,
     category: 'Personal',
-    color: color,
+    color: '#10B981', // Default green color for scraped events
     description: scrapedEvent.description || '',
-    organizer: 'Notion (Scraped)',
+    organizer: 'Notion (API)',
     date: scrapedEvent.date,
-    calendarId: scrapedEvent.calendarId || calendarId,
-    calendarName: calendarName,
+    calendarId: calendarId,
+    calendarName: 'Notion API Calendar',
     source: 'notion'
   };
 };
@@ -58,18 +68,29 @@ export const useEventFiltering = ({ googleEvents = [], notionEvents = [], scrape
     const safeScrapedEvents = Array.isArray(scrapedEvents) ? scrapedEvents : [];
     const safeSelectedCalendarIds = Array.isArray(selectedCalendarIds) ? selectedCalendarIds : [];
 
+    console.log('Event filtering input:', {
+      googleEvents: safeGoogleEvents.length,
+      notionEvents: safeNotionEvents.length,
+      scrapedEvents: safeScrapedEvents.length,
+      selectedCalendarIds: safeSelectedCalendarIds.length
+    });
+
     // Convert Notion events to Event format
     const convertedNotionEvents = safeNotionEvents.map(convertNotionEventToEvent);
     
     // Convert scraped events to Event format
-    const convertedScrapedEvents = safeScrapedEvents.map(event => 
-      convertScrapedEventToEvent(event, event.calendarId || 'scraped', 'Scraped Calendar', '#10B981')
-    );
+    const convertedScrapedEvents = safeScrapedEvents.map(event => convertScrapedEventToEvent(event));
     
     // Combine all event sources
     const hasICalEvents = safeGoogleEvents.length > 0; // googleEvents now contains iCal events
     const hasNotionEvents = convertedNotionEvents.length > 0;
     const hasScrapedEvents = convertedScrapedEvents.length > 0;
+    
+    console.log('Event source availability:', {
+      hasICalEvents,
+      hasNotionEvents,
+      hasScrapedEvents
+    });
     
     let baseEvents: Event[] = [];
     
@@ -86,12 +107,15 @@ export const useEventFiltering = ({ googleEvents = [], notionEvents = [], scrape
     // Add scraped Notion events if available
     if (hasScrapedEvents) {
       baseEvents = [...baseEvents, ...convertedScrapedEvents];
+      console.log('Added scraped events:', convertedScrapedEvents.map(e => ({ id: e.id, title: e.title, calendarId: e.calendarId })));
     }
     
     // Use sample events only if no real events are available
     if (!hasICalEvents && !hasNotionEvents && !hasScrapedEvents) {
       baseEvents = sampleEvents;
     }
+
+    console.log('Total base events before filtering:', baseEvents.length);
 
     // Filter events by selected calendar IDs
     const filtered = baseEvents.filter(event => {
@@ -106,7 +130,26 @@ export const useEventFiltering = ({ googleEvents = [], notionEvents = [], scrape
       }
       
       const eventCalendarId = event.calendarId || 'primary';
-      return safeSelectedCalendarIds.includes(eventCalendarId);
+      const isSelected = safeSelectedCalendarIds.includes(eventCalendarId);
+      
+      if (!isSelected) {
+        console.log('Event filtered out:', {
+          title: event.title,
+          calendarId: eventCalendarId,
+          selectedCalendarIds: safeSelectedCalendarIds
+        });
+      }
+      
+      return isSelected;
+    });
+
+    console.log('Filtered events result:', {
+      totalFiltered: filtered.length,
+      bySource: {
+        ical: filtered.filter(e => e.source === 'ical').length,
+        notion: filtered.filter(e => e.source === 'notion').length,
+        local: filtered.filter(e => e.source === 'local').length
+      }
     });
 
     return filtered;

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -233,7 +232,7 @@ export const NotionIntegration: React.FC = () => {
           </CardHeader>
           <CardContent>
             <NotionIntegrationForm
-              onSubmit={handleAddLegacyCalendar}
+              onIntegrationComplete={handleAddLegacyCalendar}
               onCancel={() => setShowLegacyForm(false)}
             />
           </CardContent>
@@ -280,9 +279,15 @@ export const NotionIntegration: React.FC = () => {
                       <ScrapedCalendarCard
                         calendar={calendar}
                         syncStatus={syncStatus}
-                        onUpdate={isApiCalendar ? updateApiCalendar : updateLegacyCalendar}
+                        onUpdate={isApiCalendar ? 
+                          (id: string, updates: any) => updateApiCalendar(id, updates) : 
+                          (id: string, updates: any) => updateLegacyCalendar(id, updates)
+                        }
                         onRemove={isApiCalendar ? removeApiCalendar : removeLegacyCalendar}
-                        onSync={isApiCalendar ? syncApiCalendar : syncLegacyCalendar}
+                        onSync={isApiCalendar ? 
+                          (calendar: any) => syncApiCalendar(calendar) : 
+                          (calendar: any) => syncLegacyCalendar(calendar)
+                        }
                         onDebugPreview={handleDebugPreview}
                       />
                     </div>

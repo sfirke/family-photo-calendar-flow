@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useICalCalendars } from './useICalCalendars';
 import { useNotionCalendars } from './useNotionCalendars';
@@ -30,6 +29,12 @@ export const useCalendarSelection = () => {
     const safeNotionCalendars = Array.isArray(notionCalendars) ? notionCalendars : [];
     const safeScrapedCalendars = Array.isArray(scrapedCalendars) ? scrapedCalendars : [];
     
+    console.log('Calendar counts:', {
+      iCal: safeICalCalendars.length,
+      notion: safeNotionCalendars.length,
+      scraped: safeScrapedCalendars.length
+    });
+    
     return [
       ...safeICalCalendars,
       ...safeNotionCalendars,
@@ -50,6 +55,12 @@ export const useCalendarSelection = () => {
     // Get iCal events to count them per calendar
     const iCalEvents = getICalEvents ? getICalEvents() : [];
     
+    console.log('Event counts:', {
+      iCal: iCalEvents.length,
+      notion: notionEvents.length,
+      scraped: scrapedEvents.length
+    });
+
     // Convert all calendars to CalendarFromEvents format with proper event counting and source attribution
     const calendarList: CalendarFromEvents[] = allCalendars.map(cal => {
       let eventCount = 0;
@@ -57,18 +68,18 @@ export const useCalendarSelection = () => {
       let source: 'ical' | 'notion' | 'notion-scraped' | 'local' = 'local';
 
       // Determine source and count events based on calendar type
-      if (cal.url && typeof cal.url === 'string' && cal.url.trim() !== '') {
-        // This is an iCal calendar (has url property)
+      if (cal.url && typeof cal.url === 'string' && cal.url.trim() !== '' && !('type' in cal)) {
+        // This is an iCal calendar (has url property but no type)
         source = 'ical';
         eventCount = iCalEvents.filter(event => event.calendarId === cal.id).length;
         hasEvents = eventCount > 0;
       } else if ('type' in cal && cal.type === 'notion') {
-        // This is a Notion calendar
+        // This is a legacy Notion calendar
         source = 'notion';
         eventCount = notionEvents.filter(event => event.calendarId === cal.id).length;
         hasEvents = eventCount > 0;
       } else if ('type' in cal && cal.type === 'notion-scraped') {
-        // This is a scraped Notion calendar
+        // This is a Notion API calendar
         source = 'notion-scraped';
         eventCount = scrapedEvents.filter(event => event.calendarId === cal.id).length;
         hasEvents = eventCount > 0;
@@ -78,6 +89,13 @@ export const useCalendarSelection = () => {
         eventCount = cal.eventCount || 0;
         hasEvents = eventCount > 0;
       }
+
+      console.log(`Calendar ${cal.name} (${cal.id}):`, {
+        source,
+        eventCount,
+        hasEvents,
+        type: 'type' in cal ? cal.type : 'no-type'
+      });
 
       return {
         id: cal?.id || '',
@@ -104,6 +122,7 @@ export const useCalendarSelection = () => {
       .filter(Boolean);
     
     if (enabledWithEventsIds.length > 0 && selectedCalendarIds.length === 0) {
+      console.log('Auto-selecting calendars with events:', enabledWithEventsIds);
       setSelectedCalendarIds(enabledWithEventsIds);
     }
   }, [calendarsFromEvents, selectedCalendarIds.length]);

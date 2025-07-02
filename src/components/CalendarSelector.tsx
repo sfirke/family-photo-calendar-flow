@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Popover } from '@/components/ui/popover';
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { useCalendarSelection } from '@/hooks/useCalendarSelection';
 import CalendarSelectorButton from './calendar/CalendarSelectorButton';
 import CalendarSelectorContent from './calendar/CalendarSelectorContent';
@@ -83,18 +83,22 @@ const CalendarSelector = ({ selectedCalendarIds, onCalendarChange }: CalendarSel
 
   return (
     <Popover>
-      <CalendarSelectorButton
-        selectedCount={selectedCalendarIds.length}
-        totalCount={calendarsFromEvents.length}
-      />
-      <CalendarSelectorContent
-        calendarsFromEvents={calendarsFromEvents}
-        selectedCalendarIds={selectedCalendarIds}
-        onCalendarToggle={handleCalendarToggle}
-        onSelectAll={handleSelectAll}
-        onSelectWithEvents={handleSelectWithEvents}
-        onClearAll={handleClearAll}
-      />
+      <PopoverTrigger asChild>
+        <CalendarSelectorButton
+          selectedCount={selectedCalendarIds.length}
+          totalCount={calendarsFromEvents.length}
+        />
+      </PopoverTrigger>
+      <PopoverContent className="w-80 p-0" align="start">
+        <CalendarSelectorContent
+          calendarsFromEvents={calendarsFromEvents}
+          selectedCalendarIds={selectedCalendarIds}
+          onCalendarToggle={handleCalendarToggle}
+          onSelectAll={handleSelectAll}
+          onSelectWithEvents={handleSelectWithEvents}
+          onClearAll={handleClearAll}
+        />
+      </PopoverContent>
     </Popover>
   );
 };
