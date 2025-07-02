@@ -1,6 +1,5 @@
 
 import { Client } from '@notionhq/client';
-import { NotionToMarkdown } from 'notion-to-md';
 
 export interface NotionScrapedEvent {
   id: string;
@@ -50,7 +49,6 @@ class NotionPageScraper {
       }
 
       const notion = new Client({}); // No token needed for public pages
-      const n2m = new NotionToMarkdown({ notionClient: notion });
 
       // Fetch the page content as a block array
       const page = await notion.blocks.children.list({
