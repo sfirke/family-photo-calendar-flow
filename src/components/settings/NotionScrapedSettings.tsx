@@ -23,6 +23,7 @@ import { NotionDebugPreview } from './NotionDebugPreview';
 export const NotionScrapedSettings: React.FC = () => {
   const [showAddForm, setShowAddForm] = useState(false);
   const [debugUrl, setDebugUrl] = useState<string | null>(null);
+  const [debugToken, setDebugToken] = useState<string | null>(null);
   
   const {
     calendars,
@@ -68,8 +69,9 @@ export const NotionScrapedSettings: React.FC = () => {
     }
   };
 
-  const handleDebugPreview = (url: string) => {
+  const handleDebugPreview = (url: string, token?: string) => {
     setDebugUrl(url);
+    setDebugToken(token || null);
   };
 
   const totalEvents = events.length;
@@ -214,7 +216,8 @@ export const NotionScrapedSettings: React.FC = () => {
 
       {/* Help Section */}
       <Card>
-        <CardHeaderclass="flex items-center gap-2">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
             <ExternalLink className="h-4 w-4" />
             How to Connect Notion Databases
           </CardTitle>
@@ -252,8 +255,10 @@ export const NotionScrapedSettings: React.FC = () => {
       {debugUrl && (
         <NotionDebugPreview
           url={debugUrl}
+          token={debugToken}
           onClose={() => {
             setDebugUrl(null);
+            setDebugToken(null);
           }}
         />
       )}
