@@ -394,3 +394,6 @@ class NotionPageScraper {
 }
 
 export const notionPageScraper = new NotionPageScraper();
+
+// Export the interfaces for use in other files
+export { NotionScrapedEvent, NotionPageMetadata };
