@@ -62,7 +62,7 @@ export class NotionTableParser {
     }
 
     const events: NotionScrapedEvent[] = [];
-    const columnMappings: NotionColumnMapping = {};
+    let columnMappings: NotionColumnMapping = {};
     let headers: string[] = [];
     let isFirstRow = true;
 
