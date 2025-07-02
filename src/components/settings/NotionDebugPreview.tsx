@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -12,10 +11,11 @@ import { NotionDebugInfo } from '@/services/NotionTableParser';
 
 interface NotionDebugPreviewProps {
   url: string;
+  token?: string;
   onClose: () => void;
 }
 
-export const NotionDebugPreview: React.FC<NotionDebugPreviewProps> = ({ url, onClose }) => {
+export const NotionDebugPreview: React.FC<NotionDebugPreviewProps> = ({ url, token, onClose }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [debugResult, setDebugResult] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
@@ -66,6 +66,9 @@ export const NotionDebugPreview: React.FC<NotionDebugPreviewProps> = ({ url, onC
             </Button>
           </div>
           <p className="text-sm text-muted-foreground">URL: {url}</p>
+          {token && (
+            <p className="text-sm text-muted-foreground">Token: {token.substring(0, 10)}...</p>
+          )}
         </CardHeader>
 
         <CardContent className="flex-1 overflow-hidden">
