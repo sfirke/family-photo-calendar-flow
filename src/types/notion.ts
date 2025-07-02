@@ -92,3 +92,38 @@ export interface DatabaseValidationResult {
   id: string;
   type: 'id' | 'url' | 'invalid';
 }
+
+// New interfaces for scraped Notion events
+export interface NotionScrapedEvent {
+  id: string;
+  title: string;
+  date: Date;
+  time?: string;
+  description?: string;
+  location?: string;
+  properties: Record<string, any>;
+  sourceUrl: string;
+  scrapedAt: Date;
+  calendarId?: string;
+}
+
+export interface NotionPageMetadata {
+  url: string;
+  title: string;
+  lastScraped: Date;
+  eventCount: number;
+  databaseId?: string;
+  viewId?: string;
+}
+
+export interface NotionScrapedCalendar {
+  id: string;
+  name: string;
+  url: string;
+  color: string;
+  enabled: boolean;
+  lastSync?: string;
+  eventCount?: number;
+  type: 'notion-scraped';
+  metadata?: NotionPageMetadata;
+}

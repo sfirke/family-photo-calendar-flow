@@ -2,11 +2,13 @@
 import { useMemo } from 'react';
 import { Event } from '@/types/calendar';
 import { NotionEvent } from '@/types/notion';
+import { NotionScrapedEvent } from '@/services/NotionPageScraper';
 import { sampleEvents } from '@/data/sampleEvents';
 
 interface UseEventFilteringProps {
   googleEvents: Event[];
   notionEvents: NotionEvent[];
+  scrapedEvents?: NotionScrapedEvent[];
   selectedCalendarIds: string[];
 }
 
@@ -29,14 +31,39 @@ const convertNotionEventToEvent = (notionEvent: NotionEvent): Event => {
   };
 };
 
-export const useEventFiltering = ({ googleEvents, notionEvents, selectedCalendarIds }: UseEventFilteringProps) => {
+// Helper function to convert NotionScrapedEvent to Event format
+const convertScrapedEventToEvent = (scrapedEvent: NotionScrapedEvent, calendarId: string, calendarName: string, color: string): Event => {
+  return {
+    id: scrapedEvent.id,
+    title: scrapedEvent.title,
+    time: scrapedEvent.time || 'All day',
+    location: scrapedEvent.location || '',
+    attendees: 0,
+    category: 'Personal',
+    color: color,
+    description: scrapedEvent.description || '',
+    organizer: 'Notion (Scraped)',
+    date: scrapedEvent.date,
+    calendarId: calendarId,
+    calendarName: calendarName,
+    source: 'notion'
+  };
+};
+
+export const useEventFiltering = ({ googleEvents, notionEvents, scrapedEvents = [], selectedCalendarIds }: UseEventFilteringProps) => {
   const filteredEvents = useMemo(() => {
     // Convert Notion events to Event format
     const convertedNotionEvents = notionEvents.map(convertNotionEventToEvent);
     
+    // Convert scraped events to Event format
+    const convertedScrapedEvents = scrapedEvents.map(event => 
+      convertScrapedEventToEvent(event, event.calendarId || 'scraped', 'Scraped Calendar', '#10B981')
+    );
+    
     // Combine all event sources
     const hasGoogleEvents = googleEvents.length > 0;
     const hasNotionEvents = convertedNotionEvents.length > 0;
+    const hasScrapedEvents = convertedScrapedEvents.length > 0;
     
     let baseEvents: Event[] = [];
     
@@ -45,20 +72,25 @@ export const useEventFiltering = ({ googleEvents, notionEvents, selectedCalendar
       baseEvents = [...baseEvents, ...googleEvents];
     }
     
-    // Add Notion events if available
+    // Add Notion API events if available
     if (hasNotionEvents) {
       baseEvents = [...baseEvents, ...convertedNotionEvents];
     }
     
+    // Add scraped Notion events if available
+    if (hasScrapedEvents) {
+      baseEvents = [...baseEvents, ...convertedScrapedEvents];
+    }
+    
     // Use sample events only if no real events are available
-    if (!hasGoogleEvents && !hasNotionEvents) {
+    if (!hasGoogleEvents && !hasNotionEvents && !hasScrapedEvents) {
       baseEvents = sampleEvents;
     }
 
     // Filter events by selected calendar IDs
     const filtered = baseEvents.filter(event => {
       // For sample events, show all when no real events are available
-      if (!hasGoogleEvents && !hasNotionEvents) {
+      if (!hasGoogleEvents && !hasNotionEvents && !hasScrapedEvents) {
         return true;
       }
       
@@ -85,11 +117,12 @@ export const useEventFiltering = ({ googleEvents, notionEvents, selectedCalendar
     });
 
     return processedEvents;
-  }, [googleEvents, notionEvents, selectedCalendarIds]);
+  }, [googleEvents, notionEvents, scrapedEvents, selectedCalendarIds]);
 
   return {
     filteredEvents,
     hasGoogleEvents: googleEvents.length > 0,
-    hasNotionEvents: notionEvents.length > 0
+    hasNotionEvents: notionEvents.length > 0,
+    hasScrapedEvents: scrapedEvents.length > 0
   };
 };
