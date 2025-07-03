@@ -36,6 +36,14 @@ const CalendarSelector = () => {
     clearAllCalendars();
   };
 
+  // Add debugging logs
+  console.log('CalendarSelector - State:', {
+    isLoading,
+    calendarsCount: calendarsFromEvents.length,
+    selectedCount: selectedCalendarIds.length,
+    calendars: calendarsFromEvents.map(cal => ({ id: cal.id, name: cal.summary, hasEvents: cal.hasEvents }))
+  });
+
   if (isLoading) {
     return (
       <CalendarSelectorButton
@@ -46,17 +54,8 @@ const CalendarSelector = () => {
     );
   }
 
-  if (calendarsFromEvents.length === 0) {
-    return (
-      <CalendarSelectorButton
-        selectedCount={0}
-        totalCount={0}
-        disabled={true}
-      />
-    );
-  }
-
-  console.log('CalendarSelector - Rendering with calendars:', calendarsFromEvents.length, 'selected:', selectedCalendarIds.length);
+  // Show dropdown even when no calendars exist - this will show empty state
+  console.log('CalendarSelector - Rendering dropdown with calendars:', calendarsFromEvents.length, 'selected:', selectedCalendarIds.length);
 
   return (
     <Popover>
@@ -64,6 +63,7 @@ const CalendarSelector = () => {
         <CalendarSelectorButton
           selectedCount={selectedCalendarIds.length}
           totalCount={calendarsFromEvents.length}
+          disabled={calendarsFromEvents.length === 0}
         />
       </PopoverTrigger>
       <PopoverContent 

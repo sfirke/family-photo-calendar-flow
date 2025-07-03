@@ -20,13 +20,13 @@ const Calendar = () => {
     setView(defaultView);
   }, [defaultView]);
 
-  // Check if we have any real events (iCal, Notion, or scraped)
-  const hasRealEvents = eventStats.hasGoogleEvents || eventStats.hasNotionEvents || eventStats.hasScrapedEvents;
+  // Always show the calendar header - let CalendarSelector handle its own state
+  console.log('Calendar - Event stats:', eventStats);
 
   return (
     <div className="space-y-6">
       <CalendarHeader
-        hasGoogleEvents={hasRealEvents} // Show selector if we have any real events
+        hasGoogleEvents={true} // Always pass true to show the header
         view={view}
         onViewChange={setView}
       />
