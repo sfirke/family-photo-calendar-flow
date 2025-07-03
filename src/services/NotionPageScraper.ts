@@ -9,7 +9,7 @@ interface ScrapeResult {
 }
 
 interface DebugScrapeResult extends ScrapeResult {
-  debugInfo?: any;
+  debugInfo?: Record<string, any>;
 }
 
 class NotionPageScraper {
@@ -93,16 +93,18 @@ class NotionPageScraper {
       };
 
       if (options.debug && 'debugInfo' in parseResult) {
-        result.debugInfo = (parseResult as NotionDebugResult).debugInfo;
+        result.debugInfo = parseResult.debugInfo;
         console.log('🐛 DEBUG INFO:', result.debugInfo);
       }
 
       return result;
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('❌ Error scraping Notion page:', error);
       
-      if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      
+      if (errorMessage.includes('Failed to fetch') || errorMessage.includes('NetworkError')) {
         return {
           success: false,
           events: [],
@@ -125,7 +127,7 @@ class NotionPageScraper {
           lastScraped: new Date(),
           eventCount: 0
         },
-        error: error.message || 'Failed to scrape Notion page'
+        error: errorMessage
       };
     }
   }
@@ -135,7 +137,13 @@ class NotionPageScraper {
     return new Promise(resolve => setTimeout(resolve, this.DOM_LOAD_DELAY));
   }
 
-  private parseHtmlForStructuredEvents(htmlContent: string, sourceUrl: string, debug: boolean = false): any {
+  private parseHtmlForStructuredEvents(htmlContent: string, sourceUrl: string, debug: boolean = false): {
+    events: NotionScrapedEvent[];
+    title: string;
+    columnMappings: Record<string, any>;
+    metadata: any;
+    debugInfo?: Record<string, any>;
+  } {
     let pageTitle = 'Notion Page';
 
     try {
@@ -201,7 +209,7 @@ class NotionPageScraper {
     const events: NotionScrapedEvent[] = [];
     
     // Simple fallback parsing for basic date patterns
-    const datePattern = /\b(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})\b/g;
+    const datePattern = /\b(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})\b/g;
     let match;
     let eventIndex = 0;
     
@@ -214,16 +222,16 @@ class NotionPageScraper {
       const cleanContext = context.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
       
       if (cleanContext.length > 10) {
-        const parts = match[0].split(/[\/\-]/);
-        let year, month, day;
+        const parts = match[0].split(/[/-]/);
+        let year;
         
         if (parts[2].length === 2) {
           year = 2000 + parseInt(parts[2]);
         } else {
           year = parseInt(parts[2]);
         }
-        month = parseInt(parts[0]) - 1; // JS months are 0-indexed
-        day = parseInt(parts[1]);
+        const month = parseInt(parts[0]) - 1; // JS months are 0-indexed
+        const day = parseInt(parts[1]);
         
         const date = new Date(year, month, day);
         

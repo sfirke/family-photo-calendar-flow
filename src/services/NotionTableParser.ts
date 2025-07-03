@@ -129,7 +129,7 @@ export class NotionTableParser {
     };
   }
 
-  private logDebug(message: string, data?: any) {
+  private logDebug(message: string, data?: unknown) {
     if (this.debugMode) {
       console.log(`🐛 DEBUG: ${message}`, data || '');
     }
@@ -376,7 +376,7 @@ export class NotionTableParser {
     sourceUrl: string, 
     rowIndex: number
   ): NotionScrapedEvent | null {
-    let eventData: Partial<NotionScrapedEvent> = {
+    const eventData: Partial<NotionScrapedEvent> = {
       id: `scraped_${Date.now()}_${rowIndex}`,
       sourceUrl,
       scrapedAt: new Date(),
@@ -394,7 +394,7 @@ export class NotionTableParser {
       if (!mapping || !cellValue) continue;
 
       switch (mapping.type) {
-        case 'date':
+        case 'date': {
           const parsedDate = this.parseEnhancedDate(cellValue);
           if (parsedDate) {
             eventData.date = parsedDate.date;
@@ -407,6 +407,7 @@ export class NotionTableParser {
             }
           }
           break;
+        }
         case 'title':
           eventData.title = cellValue;
           break;

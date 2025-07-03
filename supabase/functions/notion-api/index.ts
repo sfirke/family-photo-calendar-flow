@@ -10,7 +10,7 @@ const corsHeaders = {
 interface NotionProperty {
   id: string;
   type: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 interface NotionPage {
@@ -37,9 +37,14 @@ interface CalendarEvent {
   status?: string;
   categories?: string[];
   priority?: string;
-  properties: Record<string, any>;
+  properties: Record<string, unknown>;
   sourceUrl: string;
   scrapedAt: string;
+}
+
+interface NotionQueryBody {
+  page_size: number;
+  start_cursor?: string;
 }
 
 serve(async (req) => {
@@ -81,8 +86,7 @@ serve(async (req) => {
 })
 
 async function validateNotionAccess(token: string, databaseId?: string, url?: string) {
-  try {
-    // First validate the token by getting user info
+  // First validate the token by getting user info
     const userResponse = await fetch('https://api.notion.com/v1/users/me', {
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -148,19 +152,15 @@ async function validateNotionAccess(token: string, databaseId?: string, url?: st
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
     )
-  } catch (error) {
-    throw error
-  }
 }
 
 async function queryNotionDatabase(token: string, databaseId: string) {
-  try {
     const events: CalendarEvent[] = []
     let hasMore = true
     let nextCursor: string | undefined
 
     while (hasMore) {
-      const queryBody: any = {
+      const queryBody: NotionQueryBody = {
         page_size: 100,
       }
 
@@ -210,13 +210,9 @@ async function queryNotionDatabase(token: string, databaseId: string) {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
     )
-  } catch (error) {
-    throw error
-  }
 }
 
 async function testNotionDatabase(token: string, databaseId: string) {
-  try {
     // Get database metadata
     const dbResponse = await fetch(`https://api.notion.com/v1/databases/${databaseId}`, {
       headers: {
@@ -265,9 +261,6 @@ async function testNotionDatabase(token: string, databaseId: string) {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
     )
-  } catch (error) {
-    throw error
-  }
 }
 
 function transformPageToEvent(page: NotionPage, databaseId: string): CalendarEvent | null {
@@ -279,7 +272,7 @@ function transformPageToEvent(page: NotionPage, databaseId: string): CalendarEve
     let description: string | undefined
     let location: string | undefined
     let status: string | undefined
-    let categories: string[] = []
+    const categories: string[] = []
     let priority: string | undefined
 
     // Extract data from properties
@@ -287,13 +280,14 @@ function transformPageToEvent(page: NotionPage, databaseId: string): CalendarEve
       const keyLower = key.toLowerCase()
 
       switch (property.type) {
-        case 'title':
+        case 'title': {
           if (property.title && property.title.length > 0) {
-            title = property.title.map((t: any) => t.plain_text).join('')
+            title = property.title.map((t: { plain_text: string }) => t.plain_text).join('')
           }
           break
+        }
 
-        case 'date':
+        case 'date': {
           if (property.date?.start) {
             const dateString = property.date.start
             date = dateString
@@ -317,17 +311,19 @@ function transformPageToEvent(page: NotionPage, databaseId: string): CalendarEve
             // If no 'T' in date string, it's definitely a date-only entry (all-day)
           }
           break
+        }
 
-        case 'rich_text':
-          const richText = property.rich_text?.map((t: any) => t.plain_text).join('') || ''
+        case 'rich_text': {
+          const richText = property.rich_text?.map((t: { plain_text: string }) => t.plain_text).join('') || ''
           if (keyLower.includes('description') || keyLower.includes('note')) {
             description = richText
           } else if (keyLower.includes('location') || keyLower.includes('place')) {
             location = richText
           }
           break
+        }
 
-        case 'select':
+        case 'select': {
           const selectValue = property.select?.name
           if (selectValue) {
             if (keyLower.includes('status')) {
@@ -339,13 +335,15 @@ function transformPageToEvent(page: NotionPage, databaseId: string): CalendarEve
             }
           }
           break
+        }
 
-        case 'multi_select':
-          const multiSelectValues = property.multi_select?.map((item: any) => item.name) || []
+        case 'multi_select': {
+          const multiSelectValues = property.multi_select?.map((item: { name: string }) => item.name) || []
           if (keyLower.includes('category') || keyLower.includes('tag')) {
             categories.push(...multiSelectValues)
           }
           break
+        }
       }
     }
 

@@ -9,6 +9,23 @@ import { NotionScrapedEvent } from '@/services/NotionPageScraper';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
+interface NotionApiEvent {
+  id: string;
+  title: string;
+  date: string;
+  time?: string;
+  description?: string;
+  location?: string;
+  status?: string;
+  categories?: string[];
+  priority?: string;
+  properties?: Record<string, any>;
+  sourceUrl?: string;
+  scrapedAt?: string;
+  endDate?: string;
+  customProperties?: Record<string, any>;
+}
+
 export interface NotionScrapedSyncStatus {
   [calendarId: string]: 'syncing' | 'success' | 'error' | '';
 }
@@ -146,8 +163,8 @@ export const useNotionScrapedCalendars = () => {
       }
 
       // Transform API events to our format
-      const apiEvents = data.events || [];
-      const notionEvents: NotionScrapedEvent[] = apiEvents.map((event: any) => ({
+      const apiEvents: NotionApiEvent[] = data.events || [];
+      const notionEvents: NotionScrapedEvent[] = apiEvents.map((event: NotionApiEvent) => ({
         id: event.id,
         title: event.title,
         date: new Date(event.date),
@@ -269,23 +286,19 @@ export const useNotionScrapedCalendars = () => {
 
   // Test database access
   const testDatabaseAccess = useCallback(async (token: string, databaseId: string) => {
-    try {
-      const { data, error } = await supabase.functions.invoke('notion-api', {
-        body: {
-          action: 'test',
-          token,
-          databaseId,
-        }
-      });
-
-      if (error) {
-        throw new Error(error.message || 'Failed to test database access');
+    const { data, error } = await supabase.functions.invoke('notion-api', {
+      body: {
+        action: 'test',
+        token,
+        databaseId,
       }
+    });
 
-      return data;
-    } catch (error) {
-      throw error;
+    if (error) {
+      throw new Error(error.message || 'Failed to test database access');
     }
+
+    return data;
   }, []);
 
   // Get events for filtering
