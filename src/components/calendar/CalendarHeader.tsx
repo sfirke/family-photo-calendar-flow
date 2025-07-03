@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { CalendarIcon } from 'lucide-react';
 import CalendarSelector from '../CalendarSelector';
 import ViewSwitcher from './ViewSwitcher';
+import QuickActions from './QuickActions';
 import { ViewMode } from '@/types/calendar';
 
 interface CalendarHeaderProps {
@@ -27,6 +28,7 @@ const CalendarHeader = ({ hasGoogleEvents, view, onViewChange }: CalendarHeaderP
       </div>
       
       <div className="flex items-center gap-2">
+        <QuickActions />
         <ViewSwitcher view={view} onViewChange={onViewChange} />
       </div>
     </div>
