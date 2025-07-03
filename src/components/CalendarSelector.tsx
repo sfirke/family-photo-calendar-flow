@@ -89,7 +89,7 @@ const CalendarSelector = ({ selectedCalendarIds, onCalendarChange }: CalendarSel
           totalCount={calendarsFromEvents.length}
         />
       </PopoverTrigger>
-      <PopoverContent className="w-80 p-0" align="start">
+      <PopoverContent className="p-0 w-auto" align="start">
         <CalendarSelectorContent
           calendarsFromEvents={calendarsFromEvents}
           selectedCalendarIds={selectedCalendarIds}
