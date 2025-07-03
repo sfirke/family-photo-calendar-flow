@@ -186,9 +186,18 @@ export const useEventFiltering = ({
           console.log('🔍 useEventFiltering - Event filtered out (sync disabled):', {
             title: event.title,
             calendarId: eventCalendarId,
-            enabledCalendarIds: safeEnabledCalendarIds
+            source: event.source,
+            enabledCalendarIds: safeEnabledCalendarIds,
+            isNotionEvent: event.source === 'notion'
           });
           return false;
+        } else {
+          console.log('🔍 useEventFiltering - Event passed sync check:', {
+            title: event.title,
+            calendarId: eventCalendarId,
+            source: event.source,
+            isNotionEvent: event.source === 'notion'
+          });
         }
       }
       

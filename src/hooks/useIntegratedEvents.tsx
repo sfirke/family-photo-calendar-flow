@@ -7,15 +7,14 @@ import { useCalendarSelection } from '@/hooks/useCalendarSelection';
 import { useICalCalendars } from '@/hooks/useICalCalendars';
 
 export const useIntegratedEvents = (googleEvents: Event[] = []) => {
-  const { selectedCalendarIds, notionEvents, scrapedEvents } = useCalendarSelection();
-  const { calendars: iCalCalendars } = useICalCalendars();
+  const { selectedCalendarIds, notionEvents, scrapedEvents, enabledCalendars } = useCalendarSelection();
   
-  // Get enabled calendar IDs for sync status filtering
+  // Get enabled calendar IDs for sync status filtering from ALL sources
   const enabledCalendarIds = useMemo(() => {
-    return iCalCalendars
+    return enabledCalendars
       .filter(cal => cal.enabled)
       .map(cal => cal.id);
-  }, [iCalCalendars]);
+  }, [enabledCalendars]);
   
   // Ensure all arrays are safe
   const safeGoogleEvents = Array.isArray(googleEvents) ? googleEvents : [];
