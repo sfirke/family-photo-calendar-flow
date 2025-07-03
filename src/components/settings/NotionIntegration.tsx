@@ -273,7 +273,7 @@ export const NotionIntegration: React.FC = () => {
                           title: calendar.name,
                           lastScraped: new Date(),
                           eventCount: calendar.eventCount || 0,
-                          databaseId: calendar.databaseId,
+                          databaseId: (calendar as any).databaseId, // Access databaseId for legacy calendars
                           viewType: 'database' as const
                         }
                       };
