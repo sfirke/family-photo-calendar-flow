@@ -74,13 +74,21 @@ const convertScrapedEventToEvent = (scrapedEvent: NotionScrapedEvent): Event => 
 
 export const useEventFiltering = ({ googleEvents = [], notionEvents = [], scrapedEvents = [], selectedCalendarIds = [] }: UseEventFilteringProps) => {
   const filteredEvents = useMemo(() => {
+    console.log('🔍 useEventFiltering - Starting filtering with inputs:', {
+      googleEvents: googleEvents.length,
+      notionEvents: notionEvents.length,
+      scrapedEvents: scrapedEvents.length,
+      selectedCalendarIds: selectedCalendarIds.length,
+      selectedIds: selectedCalendarIds
+    });
+
     // Ensure all arrays are properly initialized
     const safeGoogleEvents = Array.isArray(googleEvents) ? googleEvents : [];
     const safeNotionEvents = Array.isArray(notionEvents) ? notionEvents : [];
     const safeScrapedEvents = Array.isArray(scrapedEvents) ? scrapedEvents : [];
     const safeSelectedCalendarIds = Array.isArray(selectedCalendarIds) ? selectedCalendarIds : [];
 
-    console.log('Event filtering input:', {
+    console.log('🔍 useEventFiltering - Safe arrays:', {
       googleEvents: safeGoogleEvents.length,
       notionEvents: safeNotionEvents.length,
       scrapedEvents: safeScrapedEvents.length,
@@ -102,7 +110,7 @@ export const useEventFiltering = ({ googleEvents = [], notionEvents = [], scrape
     const hasNotionEvents = convertedNotionEvents.length > 0;
     const hasScrapedEvents = convertedScrapedEvents.length > 0;
     
-    console.log('Event source availability:', {
+    console.log('🔍 useEventFiltering - Event source availability:', {
       hasICalEvents,
       hasNotionEvents,
       hasScrapedEvents,
@@ -142,12 +150,14 @@ export const useEventFiltering = ({ googleEvents = [], notionEvents = [], scrape
       baseEvents = sampleEvents;
     }
 
-    console.log('Total base events before filtering:', baseEvents.length);
-    console.log('Event time analysis:', baseEvents.map(e => ({ 
-      title: e.title, 
-      time: e.time, 
-      source: e.source 
-    })));
+    console.log('🔍 useEventFiltering - Total base events before filtering:', {
+      count: baseEvents.length,
+      byCalendar: baseEvents.reduce((acc, event) => {
+        const calId = event.calendarId || 'unknown';
+        acc[calId] = (acc[calId] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>)
+    });
 
     // Filter events by selected calendar IDs
     const filtered = baseEvents.filter(event => {
@@ -158,6 +168,7 @@ export const useEventFiltering = ({ googleEvents = [], notionEvents = [], scrape
       
       // Filter by selected calendar IDs
       if (safeSelectedCalendarIds.length === 0) {
+        console.log('🔍 useEventFiltering - No calendars selected, showing no events');
         return false;
       }
       
@@ -165,7 +176,7 @@ export const useEventFiltering = ({ googleEvents = [], notionEvents = [], scrape
       const isSelected = safeSelectedCalendarIds.includes(eventCalendarId);
       
       if (!isSelected) {
-        console.log('Event filtered out:', {
+        console.log('🔍 useEventFiltering - Event filtered out:', {
           title: event.title,
           calendarId: eventCalendarId,
           selectedCalendarIds: safeSelectedCalendarIds
@@ -175,13 +186,18 @@ export const useEventFiltering = ({ googleEvents = [], notionEvents = [], scrape
       return isSelected;
     });
 
-    console.log('Filtered events result:', {
+    console.log('🔍 useEventFiltering - Filtering complete:', {
       totalFiltered: filtered.length,
       bySource: {
         ical: filtered.filter(e => e.source === 'ical').length,
         notion: filtered.filter(e => e.source === 'notion').length,
         local: filtered.filter(e => e.source === 'local').length
       },
+      byCalendar: filtered.reduce((acc, event) => {
+        const calId = event.calendarId || 'unknown';
+        acc[calId] = (acc[calId] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>),
       allDayEvents: filtered.filter(e => !e.time || e.time === 'All day' || e.time.toLowerCase().includes('all day')).length
     });
 

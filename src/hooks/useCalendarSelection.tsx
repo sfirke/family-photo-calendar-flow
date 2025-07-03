@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useICalCalendars } from './useICalCalendars';
 import { useNotionCalendars } from './useNotionCalendars';
@@ -129,30 +130,44 @@ export const useCalendarSelection = () => {
 
   // Toggle calendar (support both 1 and 2 parameter versions)
   const toggleCalendar = useCallback((calendarId: string, checked?: boolean) => {
+    console.log('🔄 toggleCalendar called:', { calendarId, checked, currentSelected: selectedCalendarIds });
+    
     setSelectedCalendarIds(prev => {
       const safePrev = Array.isArray(prev) ? prev : [];
+      let newSelected: string[];
       
       if (typeof checked === 'boolean') {
         // Two parameter version
         if (checked) {
-          return safePrev.includes(calendarId) ? safePrev : [...safePrev, calendarId];
+          newSelected = safePrev.includes(calendarId) ? safePrev : [...safePrev, calendarId];
         } else {
-          return safePrev.filter(id => id !== calendarId);
+          newSelected = safePrev.filter(id => id !== calendarId);
         }
       } else {
         // Single parameter version (toggle)
         if (safePrev.includes(calendarId)) {
-          return safePrev.filter(id => id !== calendarId);
+          newSelected = safePrev.filter(id => id !== calendarId);
         } else {
-          return [...safePrev, calendarId];
+          newSelected = [...safePrev, calendarId];
         }
       }
+      
+      console.log('🔄 toggleCalendar state change:', {
+        calendarId,
+        checked,
+        before: safePrev,
+        after: newSelected,
+        action: typeof checked === 'boolean' ? (checked ? 'select' : 'deselect') : 'toggle'
+      });
+      
+      return newSelected;
     });
-  }, []);
+  }, [selectedCalendarIds]);
 
   const selectAllCalendars = useCallback(() => {
     if (!Array.isArray(enabledCalendars)) return;
     const enabledIds = enabledCalendars.map(cal => cal?.id).filter(Boolean);
+    console.log('🔄 selectAllCalendars called:', enabledIds);
     setSelectedCalendarIds(enabledIds);
   }, [enabledCalendars]);
 
@@ -162,19 +177,23 @@ export const useCalendarSelection = () => {
       .filter(cal => cal?.hasEvents)
       .map(cal => cal?.id)
       .filter(Boolean);
+    console.log('🔄 selectCalendarsWithEvents called:', calendarsWithEventsIds);
     setSelectedCalendarIds(calendarsWithEventsIds);
   }, [calendarsFromEvents]);
 
   const clearAllCalendars = useCallback(() => {
+    console.log('🔄 clearAllCalendars called');
     setSelectedCalendarIds([]);
   }, []);
 
   const updateSelectedCalendars = useCallback((newSelectedIds: string[]) => {
     const safeNewSelectedIds = Array.isArray(newSelectedIds) ? newSelectedIds : [];
+    console.log('🔄 updateSelectedCalendars called:', safeNewSelectedIds);
     setSelectedCalendarIds(safeNewSelectedIds);
   }, []);
 
   const cleanupDeletedCalendar = useCallback((calendarId: string) => {
+    console.log('🔄 cleanupDeletedCalendar called:', calendarId);
     setSelectedCalendarIds(prev => {
       const safePrev = Array.isArray(prev) ? prev : [];
       return safePrev.filter(id => id !== calendarId);
@@ -182,6 +201,7 @@ export const useCalendarSelection = () => {
   }, []);
 
   const forceRefresh = useCallback(() => {
+    console.log('🔄 forceRefresh called');
     setRefreshKey(prev => prev + 1);
   }, []);
 
@@ -191,6 +211,13 @@ export const useCalendarSelection = () => {
   const safeNotionEvents = Array.isArray(notionEvents) ? notionEvents : [];
   const safeScrapedEvents = Array.isArray(scrapedEvents) ? scrapedEvents : [];
   const safeSelectedCalendarIds = Array.isArray(selectedCalendarIds) ? selectedCalendarIds : [];
+
+  // Add logging for current state
+  console.log('📊 useCalendarSelection current state:', {
+    selectedCalendarIds: safeSelectedCalendarIds,
+    calendarsFromEventsCount: calendarsFromEvents.length,
+    isLoading
+  });
 
   return {
     allCalendars,

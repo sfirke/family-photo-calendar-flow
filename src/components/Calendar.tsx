@@ -20,8 +20,16 @@ const Calendar = () => {
     setView(defaultView);
   }, [defaultView]);
 
+  // Log whenever filteredEvents changes to verify UI updates
+  console.log('🖥️ Calendar - Render with events:', {
+    filteredEventsCount: filteredEvents.length,
+    eventStats,
+    view,
+    timestamp: new Date().toISOString()
+  });
+
   // Always show the calendar header - let CalendarSelector handle its own state
-  console.log('Calendar - Event stats:', eventStats);
+  console.log('🖥️ Calendar - Event stats:', eventStats);
 
   return (
     <div className="space-y-6">
