@@ -1,10 +1,10 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Plus, RefreshCw } from 'lucide-react';
+import { Plus, RefreshCw, Calendar } from 'lucide-react';
 import { useNotionScrapedCalendars } from '@/hooks/useNotionScrapedCalendars';
 import { useSettings } from '@/contexts/SettingsContext';
-import NotionUrlForm from './NotionUrlForm';
+import { NotionUrlForm } from './NotionUrlForm';
 import ScrapedCalendarCard from './ScrapedCalendarCard';
 import { toast } from 'sonner';
 
@@ -23,12 +23,26 @@ const NotionScrapedSettings = ({ selectedCalendarIds, onToggleSelection }: Notio
     updateCalendar, 
     syncCalendar,
     syncAllCalendars,
-    syncStatus 
+    syncStatus,
+    validateNotionUrl
   } = useNotionScrapedCalendars();
 
-  const handleAddCalendar = async (name: string, url: string) => {
+  const handleAddCalendar = async (data: { name: string; url: string; color: string; token: string; databaseId: string }) => {
     try {
-      await addCalendar({ name, url, enabled: true });
+      await addCalendar({ 
+        name: data.name, 
+        url: data.url, 
+        color: data.color,
+        enabled: true,
+        metadata: {
+          token: data.token,
+          databaseId: data.databaseId,
+          url: data.url,
+          title: data.name,
+          lastScraped: new Date(),
+          eventCount: 0
+        }
+      });
       setShowAddForm(false);
       toast.success('Notion database added successfully');
     } catch (error) {
@@ -59,8 +73,11 @@ const NotionScrapedSettings = ({ selectedCalendarIds, onToggleSelection }: Notio
 
   const handleSyncCalendar = async (id: string) => {
     try {
-      await syncCalendar(id);
-      toast.success('Calendar synced successfully');
+      const calendar = calendars.find(cal => cal.id === id);
+      if (calendar) {
+        await syncCalendar(calendar);
+        toast.success('Calendar synced successfully');
+      }
     } catch (error) {
       console.error('Error syncing calendar:', error);
       toast.error('Failed to sync calendar');
@@ -159,7 +176,8 @@ const NotionScrapedSettings = ({ selectedCalendarIds, onToggleSelection }: Notio
           <NotionUrlForm
             onSubmit={handleAddCalendar}
             onCancel={() => setShowAddForm(false)}
-            isLoading={isLoading}
+            validateUrl={validateNotionUrl}
+            showDebugButton={false}
           />
         </div>
       )}
@@ -169,7 +187,15 @@ const NotionScrapedSettings = ({ selectedCalendarIds, onToggleSelection }: Notio
         {calendars.map((calendar) => (
           <ScrapedCalendarCard
             key={calendar.id}
-            calendar={calendar}
+            calendar={{
+              id: calendar.id,
+              name: calendar.name,
+              url: calendar.url,
+              enabled: calendar.enabled,
+              eventCount: calendar.eventCount || 0,
+              lastSync: calendar.lastSync,
+              type: calendar.type
+            }}
             onToggle={handleToggleCalendar}
             onDelete={handleDeleteCalendar}
             onSync={handleSyncCalendar}

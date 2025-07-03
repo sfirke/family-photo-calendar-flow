@@ -2,7 +2,7 @@
 import React from 'react';
 import LocalDataManager from '@/components/LocalDataManager';
 import ICalSettings from './ICalSettings';
-import { NotionIntegration } from './NotionIntegration';
+import NotionIntegration from './NotionIntegration';
 
 const CalendarsTab = () => {
   return (
