@@ -53,7 +53,7 @@ const CalendarSelectorContent = ({
   };
 
   return (
-    <div className="w-80 p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg rounded-md">
+    <div className="w-80 p-4 bg-white dark:bg-gray-800 border-0">
       <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">Select Calendars</h3>
       
       {/* Quick Actions */}
@@ -94,11 +94,12 @@ const CalendarSelectorContent = ({
           return (
             <div 
               key={calendar.id} 
-              className={`flex items-center space-x-3 p-3 rounded-lg border ${
+              className={`flex items-center space-x-3 p-3 rounded-lg border cursor-pointer transition-colors ${
                 calendar.hasEvents 
-                  ? 'bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800' 
-                  : 'bg-gray-50 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700'
+                  ? 'bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/40' 
+                  : 'bg-gray-50 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700/50'
               }`}
+              onClick={() => onCalendarToggle(calendar.id, !isSelected)}
             >
               <Checkbox
                 id={`calendar-${calendar.id}`}
@@ -108,6 +109,7 @@ const CalendarSelectorContent = ({
                   onCalendarToggle(calendar.id, checked === true);
                 }}
                 className="data-[state=checked]:bg-blue-600 dark:data-[state=checked]:bg-blue-500 data-[state=checked]:border-blue-600 dark:data-[state=checked]:border-blue-500 border-gray-300 dark:border-gray-600"
+                onClick={(e) => e.stopPropagation()}
               />
               <div className="flex-1 min-w-0">
                 <label

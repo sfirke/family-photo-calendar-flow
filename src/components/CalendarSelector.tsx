@@ -66,7 +66,11 @@ const CalendarSelector = () => {
           totalCount={calendarsFromEvents.length}
         />
       </PopoverTrigger>
-      <PopoverContent className="p-0 w-auto z-50" align="start">
+      <PopoverContent 
+        className="p-0 w-auto z-[9999] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg" 
+        align="start"
+        sideOffset={4}
+      >
         <CalendarSelectorContent
           calendarsFromEvents={calendarsFromEvents}
           selectedCalendarIds={selectedCalendarIds}
