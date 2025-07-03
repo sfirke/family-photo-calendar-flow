@@ -1,35 +1,40 @@
 
-import React from 'react';
-import { Button } from '@/components/ui/button';
-import { CalendarIcon } from 'lucide-react';
 import CalendarSelector from '../CalendarSelector';
 import ViewSwitcher from './ViewSwitcher';
-import QuickActions from './QuickActions';
-import { ViewMode } from '@/types/calendar';
 
 interface CalendarHeaderProps {
   hasGoogleEvents: boolean;
-  view: ViewMode;
-  onViewChange: (view: ViewMode) => void;
+  selectedCalendarIds: string[];
+  onCalendarChange: (calendarIds: string[]) => void;
+  view: 'timeline' | 'week' | 'month';
+  onViewChange: (view: 'timeline' | 'week' | 'month') => void;
 }
 
-const CalendarHeader = ({ hasGoogleEvents, view, onViewChange }: CalendarHeaderProps) => {
+const CalendarHeader = ({
+  hasGoogleEvents,
+  selectedCalendarIds,
+  onCalendarChange,
+  view,
+  onViewChange
+}: CalendarHeaderProps) => {
   return (
-    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm p-4 rounded-lg border border-white/20 dark:border-gray-600/20">
-      <div className="flex items-center gap-4">
-        <div className="flex items-center gap-2">
-          <CalendarIcon className="h-6 w-6 text-gray-900 dark:text-gray-100" />
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Calendar</h2>
+    <div className="space-y-3 sm:space-y-4">
+      {/* Responsive calendar controls */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-end gap-3 sm:gap-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 w-full sm:w-auto">
+          {hasGoogleEvents && (
+            <div className="w-full sm:w-auto">
+              <CalendarSelector 
+                selectedCalendarIds={selectedCalendarIds} 
+                onCalendarChange={onCalendarChange} 
+              />
+            </div>
+          )}
+          
+          <div className="w-full sm:w-auto">
+            <ViewSwitcher view={view} onViewChange={onViewChange} />
+          </div>
         </div>
-        
-        {hasGoogleEvents && (
-          <CalendarSelector />
-        )}
-      </div>
-      
-      <div className="flex items-center gap-2">
-        <QuickActions />
-        <ViewSwitcher view={view} onViewChange={onViewChange} />
       </div>
     </div>
   );

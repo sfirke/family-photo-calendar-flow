@@ -14,7 +14,7 @@ const Calendar = () => {
   const { getWeatherForDate } = useWeather();
   const { googleEvents } = useLocalEvents(); // Now contains iCal events
   
-  const { filteredEvents, eventStats } = useIntegratedEvents(googleEvents);
+  const { filteredEvents, eventStats, selectedCalendarIds } = useIntegratedEvents(googleEvents);
 
   useEffect(() => {
     setView(defaultView);
@@ -27,6 +27,8 @@ const Calendar = () => {
     <div className="space-y-6">
       <CalendarHeader
         hasGoogleEvents={hasRealEvents} // Show selector if we have any real events
+        selectedCalendarIds={selectedCalendarIds}
+        onCalendarChange={() => {}} // Calendar selection is now handled internally
         view={view}
         onViewChange={setView}
       />

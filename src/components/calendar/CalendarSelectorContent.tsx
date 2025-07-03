@@ -52,11 +52,6 @@ const CalendarSelectorContent = ({
     return calendar.id.replace(/[@.]/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
 
-  const handleCalendarToggle = (calendarId: string, checked: boolean) => {
-    console.log('CalendarSelectorContent - calendar toggle:', { calendarId, checked });
-    onCalendarToggle(calendarId, checked);
-  };
-
   return (
     <div className="w-80 p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg rounded-md">
       <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">Select Calendars</h3>
@@ -108,7 +103,7 @@ const CalendarSelectorContent = ({
               <Checkbox
                 id={`calendar-${calendar.id}`}
                 checked={isSelected}
-                onCheckedChange={(checked) => handleCalendarToggle(calendar.id, checked === true)}
+                onCheckedChange={(checked) => onCalendarToggle(calendar.id, checked === true)}
                 className="data-[state=checked]:bg-blue-600 dark:data-[state=checked]:bg-blue-500 data-[state=checked]:border-blue-600 dark:data-[state=checked]:border-blue-500 border-gray-300 dark:border-gray-600"
               />
               <div className="flex-1 min-w-0">

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -92,13 +91,16 @@ export const NotionIntegration: React.FC = () => {
     }
   };
 
-  const handleAddLegacyCalendar = async (token: string, databaseId: string) => {
+  const handleAddLegacyCalendar = async (formData: {
+    name: string;
+    url: string;
+    color: string;
+  }) => {
     try {
-      // For legacy integration, we'll create a basic calendar entry
       await addLegacyCalendar({
-        name: `Notion Database (${databaseId.slice(-8)})`,
-        url: `https://notion.so/${databaseId}`,
-        color: '#10B981',
+        name: formData.name,
+        url: formData.url,
+        color: formData.color,
         enabled: true,
         eventCount: 0,
         type: 'notion'
@@ -231,6 +233,7 @@ export const NotionIntegration: React.FC = () => {
           <CardContent>
             <NotionIntegrationForm
               onIntegrationComplete={handleAddLegacyCalendar}
+              onCancel={() => setShowLegacyForm(false)}
             />
           </CardContent>
         </Card>
@@ -274,7 +277,7 @@ export const NotionIntegration: React.FC = () => {
                         </Badge>
                       )}
                       <ScrapedCalendarCard
-                        calendar={calendar as any}
+                        calendar={calendar}
                         syncStatus={syncStatus}
                         onUpdate={isApiCalendar ? 
                           (id: string, updates: any) => updateApiCalendar(id, updates) : 
