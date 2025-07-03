@@ -1,267 +1,201 @@
 
-import React, { useState } from 'react';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { 
-  Plus, 
-  RefreshCw, 
-  Loader2, 
-  Calendar, 
-  ExternalLink,
-  Bug,
-  Database,
-  Key
-} from 'lucide-react';
+import { Plus, RefreshCw } from 'lucide-react';
 import { useNotionScrapedCalendars } from '@/hooks/useNotionScrapedCalendars';
-import { NotionUrlForm } from './NotionUrlForm';
-import { ScrapedCalendarCard } from './ScrapedCalendarCard';
-import { NotionDebugPreview } from './NotionDebugPreview';
+import { useSettings } from '@/contexts/SettingsContext';
+import NotionUrlForm from './NotionUrlForm';
+import ScrapedCalendarCard from './ScrapedCalendarCard';
+import { toast } from 'sonner';
 
-export const NotionScrapedSettings: React.FC = () => {
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [debugUrl, setDebugUrl] = useState<string | null>(null);
-  const [debugToken, setDebugToken] = useState<string | null>(null);
-  
-  const {
-    calendars,
-    events,
-    isLoading,
-    syncStatus,
-    addCalendar,
-    updateCalendar,
-    removeCalendar,
+interface NotionScrapedSettingsProps {
+  selectedCalendarIds: string[];
+  onToggleSelection: (calendarId: string, selected: boolean) => void;
+}
+
+const NotionScrapedSettings = ({ selectedCalendarIds, onToggleSelection }: NotionScrapedSettingsProps) => {
+  const [showAddForm, setShowAddForm] = React.useState(false);
+  const { 
+    calendars, 
+    isLoading, 
+    addCalendar, 
+    removeCalendar, 
+    updateCalendar, 
     syncCalendar,
     syncAllCalendars,
-    validateNotionUrl,
-    testDatabaseAccess
+    syncStatus 
   } = useNotionScrapedCalendars();
 
-  const handleAddCalendar = async (formData: { 
-    name: string; 
-    url: string; 
-    color: string; 
-    token: string; 
-    databaseId: string;
-  }) => {
+  const handleAddCalendar = async (name: string, url: string) => {
     try {
-      await addCalendar({
-        name: formData.name,
-        url: formData.url,
-        color: formData.color,
-        enabled: true,
-        eventCount: 0,
-        metadata: {
-          url: formData.url,
-          title: formData.name,
-          lastScraped: new Date(),
-          eventCount: 0,
-          databaseId: formData.databaseId,
-          token: formData.token, // Store token securely in metadata
-          viewType: 'database'
-        }
-      });
+      await addCalendar({ name, url, enabled: true });
       setShowAddForm(false);
+      toast.success('Notion database added successfully');
     } catch (error) {
-      console.error('Failed to add calendar:', error);
+      console.error('Error adding Notion calendar:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to add Notion database');
     }
   };
 
-  const handleDebugPreview = (url: string, token?: string) => {
-    setDebugUrl(url);
-    setDebugToken(token || null);
+  const handleToggleCalendar = async (id: string, enabled: boolean) => {
+    try {
+      await updateCalendar(id, { enabled });
+      toast.success(enabled ? 'Calendar enabled' : 'Calendar disabled');
+    } catch (error) {
+      console.error('Error updating calendar:', error);
+      toast.error('Failed to update calendar');
+    }
   };
 
-  const totalEvents = events.length;
+  const handleDeleteCalendar = async (id: string) => {
+    try {
+      await removeCalendar(id);
+      toast.success('Notion database removed');
+    } catch (error) {
+      console.error('Error removing calendar:', error);
+      toast.error('Failed to remove calendar');
+    }
+  };
+
+  const handleSyncCalendar = async (id: string) => {
+    try {
+      await syncCalendar(id);
+      toast.success('Calendar synced successfully');
+    } catch (error) {
+      console.error('Error syncing calendar:', error);
+      toast.error('Failed to sync calendar');
+    }
+  };
+
+  const handleSyncAll = async () => {
+    try {
+      await syncAllCalendars();
+      toast.success('All calendars synced successfully');
+    } catch (error) {
+      console.error('Error syncing all calendars:', error);
+      toast.error('Failed to sync calendars');
+    }
+  };
+
+  const handleToggleSelection = (calendarId: string, selected: boolean) => {
+    console.log('NotionScrapedSettings - Toggle selection:', { calendarId, selected });
+    onToggleSelection(calendarId, selected);
+  };
+
   const enabledCalendars = calendars.filter(cal => cal.enabled);
+  const totalEvents = calendars.reduce((sum, cal) => sum + (cal.eventCount || 0), 0);
+  const selectedCount = calendars.filter(cal => selectedCalendarIds.includes(cal.id)).length;
+
+  console.log('NotionScrapedSettings - Render state:', {
+    calendarsCount: calendars.length,
+    enabledCount: enabledCalendars.length,
+    totalEvents,
+    selectedCount,
+    selectedCalendarIds
+  });
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
+    <div className="space-y-4">
+      {/* Header with Add Button and Sync All */}
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-lg font-semibold flex items-center gap-2">
-            <Database className="h-5 w-5" />
-            Notion Databases
-          </h3>
-          <p className="text-sm text-muted-foreground">
-            Import events from Notion databases using the official API
+          <h4 className="font-medium">Notion Databases</h4>
+          <p className="text-sm text-gray-600">
+            Connect your Notion databases to sync events automatically
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            onClick={syncAllCalendars}
-            disabled={isLoading || enabledCalendars.length === 0}
+        <div className="flex gap-2">
+          {enabledCalendars.length > 0 && (
+            <Button
+              onClick={handleSyncAll}
+              disabled={isLoading}
+              variant="outline"
+              size="sm"
+              className="gap-2"
+            >
+              <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+              Sync All
+            </Button>
+          )}
+          <Button 
+            onClick={() => setShowAddForm(true)}
+            size="sm"
+            className="gap-2"
           >
-            {isLoading ? (
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-            ) : (
-              <RefreshCw className="h-4 w-4 mr-2" />
-            )}
-            Sync All
-          </Button>
-          <Button onClick={() => setShowAddForm(true)}>
-            <Plus className="h-4 w-4 mr-2" />
+            <Plus className="h-4 w-4" />
             Add Database
           </Button>
         </div>
       </div>
 
-      {/* Stats */}
+      {/* Stats Summary */}
       {calendars.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center">
-                <Database className="h-4 w-4 text-muted-foreground" />
-                <div className="ml-2">
-                  <p className="text-sm font-medium">Total Databases</p>
-                  <p className="text-2xl font-bold">{calendars.length}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center">
-                <Calendar className="h-4 w-4 text-muted-foreground" />
-                <div className="ml-2">
-                  <p className="text-sm font-medium">Enabled</p>
-                  <p className="text-2xl font-bold">{enabledCalendars.length}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center">
-                <Calendar className="h-4 w-4 text-muted-foreground" />
-                <div className="ml-2">
-                  <p className="text-sm font-medium">Total Events</p>
-                  <p className="text-2xl font-bold">{totalEvents}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+        <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+            <div>
+              <span className="text-gray-600">Databases:</span>
+              <span className="ml-2 font-medium">{calendars.length}</span>
+            </div>
+            <div>
+              <span className="text-gray-600">Active:</span>
+              <span className="ml-2 font-medium">{enabledCalendars.length}</span>
+            </div>
+            <div>
+              <span className="text-gray-600">Visible:</span>
+              <span className="ml-2 font-medium">{selectedCount}</span>
+            </div>
+            <div>
+              <span className="text-gray-600">Total Events:</span>
+              <span className="ml-2 font-medium">{totalEvents}</span>
+            </div>
+          </div>
         </div>
       )}
 
       {/* Add Form */}
       {showAddForm && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Key className="h-4 w-4" />
-              Add Notion Database
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <NotionUrlForm
-              onSubmit={handleAddCalendar}
-              onCancel={() => setShowAddForm(false)}
-              validateUrl={validateNotionUrl}
-              showDebugButton={true}
-              onDebugPreview={handleDebugPreview}
-            />
-          </CardContent>
-        </Card>
+        <div className="border rounded-lg p-4 bg-gray-50 dark:bg-gray-800/50">
+          <h5 className="font-medium mb-3">Add Notion Database</h5>
+          <NotionUrlForm
+            onSubmit={handleAddCalendar}
+            onCancel={() => setShowAddForm(false)}
+            isLoading={isLoading}
+          />
+        </div>
       )}
 
-      {/* Calendars List */}
-      {calendars.length > 0 ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>Configured Databases</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ScrollArea className="h-[400px]">
-              <div className="space-y-4">
-                {calendars.map((calendar) => (
-                  <ScrapedCalendarCard
-                    key={calendar.id}
-                    calendar={calendar}
-                    syncStatus={syncStatus[calendar.id] || ''}
-                    onUpdate={updateCalendar}
-                    onRemove={removeCalendar}
-                    onSync={syncCalendar}
-                    onDebugPreview={handleDebugPreview}
-                  />
-                ))}
-              </div>
-            </ScrollArea>
-          </CardContent>
-        </Card>
-      ) : (
-        !showAddForm && (
-          <Card>
-            <CardContent className="pt-6">
-              <div className="text-center py-8">
-                <Database className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-medium mb-2">No Notion Databases Added</h3>
-                <p className="text-muted-foreground mb-4">
-                  Connect your first Notion database to start importing events using the official API
-                </p>
-                <Button onClick={() => setShowAddForm(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Your First Database
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )
-      )}
+      {/* Calendar Cards */}
+      <div className="space-y-4">
+        {calendars.map((calendar) => (
+          <ScrapedCalendarCard
+            key={calendar.id}
+            calendar={calendar}
+            onToggle={handleToggleCalendar}
+            onDelete={handleDeleteCalendar}
+            onSync={handleSyncCalendar}
+            isSyncing={syncStatus[calendar.id] === 'syncing'}
+            isSelected={selectedCalendarIds.includes(calendar.id)}
+            onToggleSelection={handleToggleSelection}
+          />
+        ))}
+      </div>
 
-      {/* Help Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <ExternalLink className="h-4 w-4" />
-            How to Connect Notion Databases
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3 text-sm text-muted-foreground">
-          <div className="flex items-start gap-2">
-            <Badge variant="outline" className="mt-0.5">1</Badge>
-            <span>Create an integration at <a href="https://www.notion.so/my-integrations" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">notion.so/my-integrations</a></span>
-          </div>
-          <div className="flex items-start gap-2">
-            <Badge variant="outline" className="mt-0.5">2</Badge>
-            <span>Give your integration a name and copy the integration token</span>
-          </div>
-          <div className="flex items-start gap-2">
-            <Badge variant="outline" className="mt-0.5">3</Badge>
-            <span>Share your database with the integration (click "Share" → "Invite" → select your integration)</span>
-          </div>
-          <div className="flex items-start gap-2">
-            <Badge variant="outline" className="mt-0.5">4</Badge>
-            <span>Copy the database URL from your browser address bar</span>
-          </div>
-          <div className="flex items-start gap-2">
-            <Badge variant="outline" className="mt-0.5">5</Badge>
-            <span>Your database should have at least a title and date column for events</span>
-          </div>
-          <Separator className="my-3" />
-          <p className="text-xs">
-            <strong>Benefits of API integration:</strong> Faster sync, more reliable data access, better error handling, 
-            and support for all Notion property types including dates, rich text, select options, and more.
+      {/* Empty State */}
+      {calendars.length === 0 && !showAddForm && (
+        <div className="text-center py-8 text-gray-500">
+          <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
+          <p className="mb-2">No Notion databases configured</p>
+          <p className="text-sm mb-4">
+            Add a Notion database to start syncing events automatically
           </p>
-        </CardContent>
-      </Card>
-
-      {/* Debug Preview Modal */}
-      {debugUrl && (
-        <NotionDebugPreview
-          url={debugUrl}
-          token={debugToken}
-          onClose={() => {
-            setDebugUrl(null);
-            setDebugToken(null);
-          }}
-        />
+          <Button onClick={() => setShowAddForm(true)} className="gap-2">
+            <Plus className="h-4 w-4" />
+            Add Your First Database
+          </Button>
+        </div>
       )}
     </div>
   );
 };
+
+export default NotionScrapedSettings;

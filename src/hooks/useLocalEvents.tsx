@@ -8,19 +8,16 @@ export const useLocalEvents = () => {
   const { calendars: iCalCalendars, getICalEvents } = useICalCalendars();
 
   useEffect(() => {
-    // Get all iCal events from storage
+    // Get ALL iCal events from storage - don't filter by enabled status here
+    // Let useIntegratedEvents handle all filtering logic
     const iCalEvents = getICalEvents();
     
-    // Filter events for enabled calendars only
-    const enabledCalendarIds = iCalCalendars
-      .filter(cal => cal.enabled)
-      .map(cal => cal.id);
+    console.log('🔄 useLocalEvents - Loading all iCal events:', {
+      totalEvents: iCalEvents.length,
+      calendarsCount: iCalCalendars.length
+    });
     
-    const filteredEvents = iCalEvents.filter(event => 
-      enabledCalendarIds.includes(event.calendarId)
-    );
-    
-    setGoogleEvents(filteredEvents);
+    setGoogleEvents(iCalEvents);
   }, [iCalCalendars, getICalEvents]);
 
   return {

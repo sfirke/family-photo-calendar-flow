@@ -1,306 +1,184 @@
 
-import React, { useState } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import React from 'react';
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { 
-  Calendar,
-  ExternalLink,
-  RefreshCw,
-  Trash2,
-  Edit2,
-  Save,
-  X,
-  Loader2,
-  CheckCircle,
-  AlertCircle,
-  Bug
-} from 'lucide-react';
-import { NotionScrapedCalendar } from '@/services/notionScrapedEventsStorage';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Trash2, RefreshCw, Calendar, Eye, EyeOff } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
 
-interface ScrapedCalendarCardProps {
-  calendar: NotionScrapedCalendar;
-  syncStatus: 'syncing' | 'success' | 'error' | '';
-  onUpdate: (id: string, updates: Partial<NotionScrapedCalendar>) => Promise<void>;
-  onRemove: (id: string) => Promise<void>;
-  onSync: (calendar: NotionScrapedCalendar) => Promise<void>;
-  onDebugPreview?: (url: string) => void;
+export interface ScrapedCalendarData {
+  id: string;
+  name: string;
+  url: string;
+  enabled: boolean;
+  eventCount: number;
+  lastSync?: string;
+  type: 'notion-scraped';
 }
 
-export const ScrapedCalendarCard: React.FC<ScrapedCalendarCardProps> = ({
-  calendar,
-  syncStatus,
-  onUpdate,
-  onRemove,
-  onSync,
-  onDebugPreview
-}) => {
-  const [isEditing, setIsEditing] = useState(false);
-  const [editData, setEditData] = useState({
-    name: calendar.name,
-    color: calendar.color
-  });
-  const [isUpdating, setIsUpdating] = useState(false);
-  const [isRemoving, setIsRemoving] = useState(false);
+interface ScrapedCalendarCardProps {
+  calendar: ScrapedCalendarData;
+  onToggle: (id: string, enabled: boolean) => void;
+  onDelete: (id: string) => void;
+  onSync: (id: string) => void;
+  isSyncing?: boolean;
+  isSelected?: boolean;
+  onToggleSelection?: (id: string, selected: boolean) => void;
+}
 
-  const handleSave = async () => {
-    setIsUpdating(true);
+const ScrapedCalendarCard = ({ 
+  calendar, 
+  onToggle, 
+  onDelete, 
+  onSync, 
+  isSyncing = false,
+  isSelected = false,
+  onToggleSelection
+}: ScrapedCalendarCardProps) => {
+  const handleToggle = (checked: boolean) => {
+    onToggle(calendar.id, checked);
+  };
+
+  const handleDelete = () => {
+    onDelete(calendar.id);
+  };
+
+  const handleSync = () => {
+    onSync(calendar.id);
+  };
+
+  const handleVisibilityToggle = (checked: boolean) => {
+    if (onToggleSelection) {
+      onToggleSelection(calendar.id, checked);
+    }
+  };
+
+  const formatLastSync = (lastSync?: string) => {
+    if (!lastSync) return 'Never';
+    
     try {
-      await onUpdate(calendar.id, editData);
-      setIsEditing(false);
+      const date = new Date(lastSync);
+      const now = new Date();
+      const diffMs = now.getTime() - date.getTime();
+      const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+      const diffMinutes = Math.floor(diffMs / (1000 * 60));
+      
+      if (diffHours > 24) {
+        return date.toLocaleDateString();
+      } else if (diffHours > 0) {
+        return `${diffHours}h ago`;
+      } else if (diffMinutes > 0) {
+        return `${diffMinutes}m ago`;
+      } else {
+        return 'Just now';
+      }
     } catch (error) {
-      console.error('Failed to update calendar:', error);
-    } finally {
-      setIsUpdating(false);
-    }
-  };
-
-  const handleCancel = () => {
-    setEditData({
-      name: calendar.name,
-      color: calendar.color
-    });
-    setIsEditing(false);
-  };
-
-  const handleRemove = async () => {
-    setIsRemoving(true);
-    try {
-      await onRemove(calendar.id);
-    } catch (error) {
-      console.error('Failed to remove calendar:', error);
-      setIsRemoving(false);
-    }
-  };
-
-  const handleSync = async () => {
-    try {
-      await onSync(calendar);
-    } catch (error) {
-      console.error('Failed to sync calendar:', error);
-    }
-  };
-
-  const handleToggleEnabled = async (enabled: boolean) => {
-    try {
-      await onUpdate(calendar.id, { enabled });
-    } catch (error) {
-      console.error('Failed to toggle calendar:', error);
-    }
-  };
-
-  const handleDebugPreview = () => {
-    if (onDebugPreview) {
-      onDebugPreview(calendar.url);
-    }
-  };
-
-  const getSyncStatusIcon = () => {
-    switch (syncStatus) {
-      case 'syncing':
-        return <Loader2 className="h-4 w-4 animate-spin text-blue-500" />;
-      case 'success':
-        return <CheckCircle className="h-4 w-4 text-green-500" />;
-      case 'error':
-        return <AlertCircle className="h-4 w-4 text-red-500" />;
-      default:
-        return null;
-    }
-  };
-
-  const getSyncStatusText = () => {
-    switch (syncStatus) {
-      case 'syncing':
-        return 'Syncing...';
-      case 'success':
-        return 'Synced';
-      case 'error':
-        return 'Error';
-      default:
-        return 'Ready';
+      return 'Invalid date';
     }
   };
 
   return (
-    <Card className={`transition-all ${calendar.enabled ? 'border-primary/20' : 'border-muted'}`}>
-      <CardContent className="pt-6">
-        <div className="flex items-start justify-between mb-4">
-          <div className="flex items-center gap-3 flex-1">
-            {/* Color indicator */}
-            <div 
-              className="w-4 h-4 rounded-full border-2 border-white shadow-sm"
-              style={{ backgroundColor: calendar.color }}
-            />
-            
-            {/* Calendar info */}
-            <div className="flex-1">
-              {isEditing ? (
-                <div className="space-y-2">
-                  <div>
-                    <Label htmlFor="edit-name" className="text-sm">Name</Label>
-                    <Input
-                      id="edit-name"
-                      value={editData.name}
-                      onChange={(e) => setEditData(prev => ({ ...prev, name: e.target.value }))}
-                      className="mt-1"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="edit-color" className="text-sm">Color</Label>
-                    <div className="flex items-center gap-2 mt-1">
-                      <Input
-                        id="edit-color"
-                        type="color"
-                        value={editData.color}
-                        onChange={(e) => setEditData(prev => ({ ...prev, color: e.target.value }))}
-                        className="w-16 h-8"
-                      />
-                      <span className="text-sm text-muted-foreground">{editData.color}</span>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <>
-                  <h4 className="font-medium">{calendar.name}</h4>
-                  <div className="flex items-center gap-2 mt-1">
-                    <Calendar className="h-3 w-3 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">
-                      {calendar.eventCount || 0} events
-                    </span>
-                    {calendar.lastSync && (
-                      <>
-                        <span className="text-muted-foreground">•</span>
-                        <span className="text-sm text-muted-foreground">
-                          Last sync: {new Date(calendar.lastSync).toLocaleDateString()}
-                        </span>
-                      </>
-                    )}
-                  </div>
-                </>
-              )}
-            </div>
-            
-            {/* Status indicator */}
-            <div className="flex items-center gap-2">
-              {getSyncStatusIcon()}
-              <span className="text-sm text-muted-foreground">
-                {getSyncStatusText()}
-              </span>
-            </div>
+    <Card className="mb-4">
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Calendar className="h-5 w-5" />
+            {calendar.name}
+          </CardTitle>
+          <div className="flex items-center gap-2">
+            <Badge variant={calendar.enabled ? "default" : "secondary"}>
+              {calendar.enabled ? 'Active' : 'Disabled'}
+            </Badge>
+            <Badge variant="outline">
+              {calendar.eventCount} events
+            </Badge>
           </div>
+        </div>
+      </CardHeader>
 
-          {/* Enable/Disable toggle */}
+      <CardContent className="space-y-4">
+        {/* Sync Control */}
+        <div className="flex items-center justify-between">
+          <div className="space-y-1">
+            <label className="text-sm font-medium">
+              Enable Sync
+            </label>
+            <p className="text-xs text-gray-500">
+              Automatically sync events from this Notion database
+            </p>
+          </div>
           <Switch
             checked={calendar.enabled}
-            onCheckedChange={handleToggleEnabled}
-            disabled={syncStatus === 'syncing'}
+            onCheckedChange={handleToggle}
+            disabled={isSyncing}
           />
         </div>
 
-        {/* URL display */}
-        <div className="mb-4 p-2 bg-muted rounded text-sm font-mono break-all">
-          {calendar.url}
+        {/* URL Display */}
+        <div className="space-y-1">
+          <label className="text-sm font-medium">Notion URL</label>
+          <p className="text-xs text-gray-600 break-all bg-gray-50 p-2 rounded">
+            {calendar.url}
+          </p>
         </div>
 
-        {/* Metadata */}
-        {calendar.metadata && (
-          <div className="mb-4 flex flex-wrap gap-2">
-            {calendar.metadata.viewType && (
-              <Badge variant="outline" className="text-xs">
-                {calendar.metadata.viewType}
-              </Badge>
-            )}
-            {calendar.metadata.databaseId && (
-              <Badge variant="outline" className="text-xs">
-                DB: {calendar.metadata.databaseId.slice(-8)}
-              </Badge>
-            )}
-          </div>
-        )}
-
-        {/* Actions */}
-        <div className="flex items-center gap-2">
-          {isEditing ? (
-            <>
-              <Button
-                size="sm"
-                onClick={handleSave}
-                disabled={isUpdating || !editData.name.trim()}
-              >
-                {isUpdating ? (
-                  <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                ) : (
-                  <Save className="h-3 w-3 mr-1" />
-                )}
-                Save
-              </Button>
-              <Button size="sm" variant="outline" onClick={handleCancel}>
-                <X className="h-3 w-3 mr-1" />
-                Cancel
-              </Button>
-            </>
-          ) : (
-            <>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={handleSync}
-                disabled={syncStatus === 'syncing'}
-              >
-                {syncStatus === 'syncing' ? (
-                  <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                ) : (
-                  <RefreshCw className="h-3 w-3 mr-1" />
-                )}
-                Sync
-              </Button>
-              
-              {onDebugPreview && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={handleDebugPreview}
-                  className="flex items-center gap-1"
-                >
-                  <Bug className="h-3 w-3" />
-                  Debug
-                </Button>
-              )}
-              
-              <Button size="sm" variant="outline" onClick={() => setIsEditing(true)}>
-                <Edit2 className="h-3 w-3 mr-1" />
-                Edit
-              </Button>
-              
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => window.open(calendar.url, '_blank')}
-              >
-                <ExternalLink className="h-3 w-3 mr-1" />
-                Open
-              </Button>
-              
-              <Button
-                size="sm"
-                variant="destructive"
-                onClick={handleRemove}
-                disabled={isRemoving}
-              >
-                {isRemoving ? (
-                  <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                ) : (
-                  <Trash2 className="h-3 w-3 mr-1" />
-                )}
-                Remove
-              </Button>
-            </>
-          )}
+        {/* Last Sync Info */}
+        <div className="flex items-center justify-between text-sm">
+          <span className="text-gray-500">
+            Last sync: {formatLastSync(calendar.lastSync)}
+          </span>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleSync}
+            disabled={isSyncing || !calendar.enabled}
+            className="gap-2"
+          >
+            <RefreshCw className={`h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
+            {isSyncing ? 'Syncing...' : 'Sync Now'}
+          </Button>
         </div>
       </CardContent>
+
+      {/* Visibility Control Footer */}
+      {onToggleSelection && (
+        <CardFooter className="bg-gray-50 dark:bg-gray-800/50">
+          <div className="flex items-center justify-between w-full">
+            <div className="flex items-center space-x-3">
+              <Checkbox
+                id={`visibility-${calendar.id}`}
+                checked={isSelected}
+                onCheckedChange={handleVisibilityToggle}
+                disabled={!calendar.enabled}
+              />
+              <div className="flex items-center gap-2">
+                {isSelected ? (
+                  <Eye className="h-4 w-4 text-green-600" />
+                ) : (
+                  <EyeOff className="h-4 w-4 text-gray-400" />
+                )}
+                <label 
+                  htmlFor={`visibility-${calendar.id}`} 
+                  className="text-sm font-medium cursor-pointer"
+                >
+                  Show in calendar view
+                </label>
+              </div>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleDelete}
+              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        </CardFooter>
+      )}
     </Card>
   );
 };
+
+export default ScrapedCalendarCard;

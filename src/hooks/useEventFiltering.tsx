@@ -10,6 +10,7 @@ interface UseEventFilteringProps {
   notionEvents: NotionEvent[];
   scrapedEvents?: NotionScrapedEvent[];
   selectedCalendarIds: string[];
+  enabledCalendarIds?: string[]; // Add this to filter by sync status
 }
 
 // Helper function to convert NotionEvent to Event format
@@ -72,14 +73,22 @@ const convertScrapedEventToEvent = (scrapedEvent: NotionScrapedEvent): Event => 
   };
 };
 
-export const useEventFiltering = ({ googleEvents = [], notionEvents = [], scrapedEvents = [], selectedCalendarIds = [] }: UseEventFilteringProps) => {
+export const useEventFiltering = ({ 
+  googleEvents = [], 
+  notionEvents = [], 
+  scrapedEvents = [], 
+  selectedCalendarIds = [],
+  enabledCalendarIds = []
+}: UseEventFilteringProps) => {
   const filteredEvents = useMemo(() => {
     console.log('🔍 useEventFiltering - Starting filtering with inputs:', {
       googleEvents: googleEvents.length,
       notionEvents: notionEvents.length,
       scrapedEvents: scrapedEvents.length,
       selectedCalendarIds: selectedCalendarIds.length,
-      selectedIds: selectedCalendarIds
+      enabledCalendarIds: enabledCalendarIds.length,
+      selectedIds: selectedCalendarIds,
+      enabledIds: enabledCalendarIds
     });
 
     // Ensure all arrays are properly initialized
@@ -87,12 +96,14 @@ export const useEventFiltering = ({ googleEvents = [], notionEvents = [], scrape
     const safeNotionEvents = Array.isArray(notionEvents) ? notionEvents : [];
     const safeScrapedEvents = Array.isArray(scrapedEvents) ? scrapedEvents : [];
     const safeSelectedCalendarIds = Array.isArray(selectedCalendarIds) ? selectedCalendarIds : [];
+    const safeEnabledCalendarIds = Array.isArray(enabledCalendarIds) ? enabledCalendarIds : [];
 
     console.log('🔍 useEventFiltering - Safe arrays:', {
       googleEvents: safeGoogleEvents.length,
       notionEvents: safeNotionEvents.length,
       scrapedEvents: safeScrapedEvents.length,
-      selectedCalendarIds: safeSelectedCalendarIds.length
+      selectedCalendarIds: safeSelectedCalendarIds.length,
+      enabledCalendarIds: safeEnabledCalendarIds.length
     });
 
     // Convert Notion events to Event format
@@ -159,31 +170,45 @@ export const useEventFiltering = ({ googleEvents = [], notionEvents = [], scrape
       }, {} as Record<string, number>)
     });
 
-    // Filter events by selected calendar IDs
+    // Filter events by BOTH sync status (enabled) AND visibility selection
     const filtered = baseEvents.filter(event => {
       // For sample events, show all when no real events are available
       if (!hasICalEvents && !hasNotionEvents && !hasScrapedEvents) {
         return true;
       }
       
-      // Filter by selected calendar IDs
+      const eventCalendarId = event.calendarId || 'primary';
+      
+      // First check: Calendar must be enabled for sync (if we have enabled calendar info)
+      if (safeEnabledCalendarIds.length > 0) {
+        const isEnabledForSync = safeEnabledCalendarIds.includes(eventCalendarId);
+        if (!isEnabledForSync) {
+          console.log('🔍 useEventFiltering - Event filtered out (sync disabled):', {
+            title: event.title,
+            calendarId: eventCalendarId,
+            enabledCalendarIds: safeEnabledCalendarIds
+          });
+          return false;
+        }
+      }
+      
+      // Second check: Calendar must be selected for visibility
       if (safeSelectedCalendarIds.length === 0) {
         console.log('🔍 useEventFiltering - No calendars selected, showing no events');
         return false;
       }
       
-      const eventCalendarId = event.calendarId || 'primary';
-      const isSelected = safeSelectedCalendarIds.includes(eventCalendarId);
+      const isSelectedForVisibility = safeSelectedCalendarIds.includes(eventCalendarId);
       
-      if (!isSelected) {
-        console.log('🔍 useEventFiltering - Event filtered out:', {
+      if (!isSelectedForVisibility) {
+        console.log('🔍 useEventFiltering - Event filtered out (visibility unchecked):', {
           title: event.title,
           calendarId: eventCalendarId,
           selectedCalendarIds: safeSelectedCalendarIds
         });
       }
       
-      return isSelected;
+      return isSelectedForVisibility;
     });
 
     console.log('🔍 useEventFiltering - Filtering complete:', {
@@ -202,7 +227,7 @@ export const useEventFiltering = ({ googleEvents = [], notionEvents = [], scrape
     });
 
     return filtered;
-  }, [googleEvents, notionEvents, scrapedEvents, selectedCalendarIds]);
+  }, [googleEvents, notionEvents, scrapedEvents, selectedCalendarIds, enabledCalendarIds]);
 
   return {
     filteredEvents,
