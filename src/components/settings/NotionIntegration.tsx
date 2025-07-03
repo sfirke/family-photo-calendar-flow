@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -91,19 +92,17 @@ export const NotionIntegration: React.FC = () => {
     }
   };
 
-  const handleAddLegacyCalendar = async (formData: {
-    name: string;
-    url: string;
-    color: string;
-  }) => {
+  const handleLegacyIntegrationComplete = async (token: string, databaseId: string) => {
     try {
+      // Create a legacy calendar entry with the token and database ID
       await addLegacyCalendar({
-        name: formData.name,
-        url: formData.url,
-        color: formData.color,
+        name: `Notion Database`,
+        url: `https://notion.so/${databaseId}`,
+        color: '#6366f1',
         enabled: true,
         eventCount: 0,
-        type: 'notion'
+        type: 'notion',
+        databaseId: databaseId
       });
       setShowLegacyForm(false);
     } catch (error) {
@@ -232,8 +231,7 @@ export const NotionIntegration: React.FC = () => {
           </CardHeader>
           <CardContent>
             <NotionIntegrationForm
-              onIntegrationComplete={handleAddLegacyCalendar}
-              onCancel={() => setShowLegacyForm(false)}
+              onIntegrationComplete={handleLegacyIntegrationComplete}
             />
           </CardContent>
         </Card>
@@ -264,6 +262,22 @@ export const NotionIntegration: React.FC = () => {
                     ? apiSyncStatus[calendar.id] || ''
                     : legacySyncStatus[calendar.id] || '';
                   
+                  // Convert legacy calendar to scraped calendar format for the card
+                  const scrapedCalendar = isApiCalendar 
+                    ? calendar 
+                    : {
+                        ...calendar,
+                        type: 'notion-scraped' as const,
+                        metadata: {
+                          url: calendar.url,
+                          title: calendar.name,
+                          lastScraped: new Date(),
+                          eventCount: calendar.eventCount || 0,
+                          databaseId: calendar.databaseId,
+                          viewType: 'database' as const
+                        }
+                      };
+                  
                   return (
                     <div key={calendar.id} className="relative">
                       {isApiCalendar && (
@@ -277,7 +291,7 @@ export const NotionIntegration: React.FC = () => {
                         </Badge>
                       )}
                       <ScrapedCalendarCard
-                        calendar={calendar}
+                        calendar={scrapedCalendar}
                         syncStatus={syncStatus}
                         onUpdate={isApiCalendar ? 
                           (id: string, updates: any) => updateApiCalendar(id, updates) : 
