@@ -36,17 +36,29 @@ const convertScrapedEventToEvent = (scrapedEvent: NotionScrapedEvent): Event => 
   // Use the calendar ID from the scraped event, which should match the calendar it belongs to
   const calendarId = scrapedEvent.calendarId || 'unknown';
   
+  // Enhanced time handling for all-day detection
+  let eventTime = scrapedEvent.time;
+  
+  // If time is undefined, null, or empty, treat as all-day
+  if (!eventTime || eventTime.trim() === '') {
+    eventTime = 'All day';
+    console.log(`Converting scraped event "${scrapedEvent.title}" as all-day (no time specified)`);
+  } else {
+    console.log(`Converting scraped event "${scrapedEvent.title}" with time: ${eventTime}`);
+  }
+  
   console.log('Converting scraped event:', {
     id: scrapedEvent.id,
     title: scrapedEvent.title,
     calendarId: calendarId,
-    originalCalendarId: scrapedEvent.calendarId
+    time: eventTime,
+    isAllDay: !scrapedEvent.time || scrapedEvent.time.trim() === ''
   });
 
   return {
     id: scrapedEvent.id,
     title: scrapedEvent.title,
-    time: scrapedEvent.time || 'All day',
+    time: eventTime,
     location: scrapedEvent.location || '',
     attendees: 0,
     category: 'Personal',
@@ -78,8 +90,12 @@ export const useEventFiltering = ({ googleEvents = [], notionEvents = [], scrape
     // Convert Notion events to Event format
     const convertedNotionEvents = safeNotionEvents.map(convertNotionEventToEvent);
     
-    // Convert scraped events to Event format
-    const convertedScrapedEvents = safeScrapedEvents.map(event => convertScrapedEventToEvent(event));
+    // Convert scraped events to Event format with enhanced logging
+    const convertedScrapedEvents = safeScrapedEvents.map(event => {
+      const convertedEvent = convertScrapedEventToEvent(event);
+      console.log(`Scraped event conversion - Original time: "${event.time}", Converted time: "${convertedEvent.time}"`);
+      return convertedEvent;
+    });
     
     // Combine all event sources
     const hasICalEvents = safeGoogleEvents.length > 0; // googleEvents now contains iCal events
@@ -89,7 +105,12 @@ export const useEventFiltering = ({ googleEvents = [], notionEvents = [], scrape
     console.log('Event source availability:', {
       hasICalEvents,
       hasNotionEvents,
-      hasScrapedEvents
+      hasScrapedEvents,
+      scrapedEventsDetail: convertedScrapedEvents.map(e => ({ 
+        title: e.title, 
+        time: e.time, 
+        calendarId: e.calendarId 
+      }))
     });
     
     let baseEvents: Event[] = [];
@@ -107,7 +128,13 @@ export const useEventFiltering = ({ googleEvents = [], notionEvents = [], scrape
     // Add scraped Notion events if available
     if (hasScrapedEvents) {
       baseEvents = [...baseEvents, ...convertedScrapedEvents];
-      console.log('Added scraped events:', convertedScrapedEvents.map(e => ({ id: e.id, title: e.title, calendarId: e.calendarId })));
+      console.log('Added scraped events:', convertedScrapedEvents.map(e => ({ 
+        id: e.id, 
+        title: e.title, 
+        calendarId: e.calendarId,
+        time: e.time,
+        isAllDay: e.time === 'All day' || !e.time || e.time.trim() === ''
+      })));
     }
     
     // Use sample events only if no real events are available
@@ -116,6 +143,11 @@ export const useEventFiltering = ({ googleEvents = [], notionEvents = [], scrape
     }
 
     console.log('Total base events before filtering:', baseEvents.length);
+    console.log('Event time analysis:', baseEvents.map(e => ({ 
+      title: e.title, 
+      time: e.time, 
+      source: e.source 
+    })));
 
     // Filter events by selected calendar IDs
     const filtered = baseEvents.filter(event => {
@@ -149,7 +181,8 @@ export const useEventFiltering = ({ googleEvents = [], notionEvents = [], scrape
         ical: filtered.filter(e => e.source === 'ical').length,
         notion: filtered.filter(e => e.source === 'notion').length,
         local: filtered.filter(e => e.source === 'local').length
-      }
+      },
+      allDayEvents: filtered.filter(e => !e.time || e.time === 'All day' || e.time.toLowerCase().includes('all day')).length
     });
 
     return filtered;

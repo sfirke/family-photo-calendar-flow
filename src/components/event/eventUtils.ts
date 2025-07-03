@@ -1,4 +1,3 @@
-
 import { Event } from '@/types/calendar';
 
 export const hasAdditionalData = (event: Event): boolean => {
@@ -6,7 +5,34 @@ export const hasAdditionalData = (event: Event): boolean => {
 };
 
 export const isAllDayEvent = (time: string): boolean => {
-  return time.toLowerCase().includes('all day') || time === '00:00 - 23:59';
+  // Handle undefined, null, or empty time values
+  if (!time || time.trim() === '') {
+    console.log('Event classified as all-day: no time value');
+    return true;
+  }
+  
+  const timeStr = time.toLowerCase().trim();
+  
+  // Explicit all-day indicators
+  if (timeStr.includes('all day') || timeStr.includes('all-day')) {
+    console.log('Event classified as all-day: explicit indicator');
+    return true;
+  }
+  
+  // Full day time ranges
+  if (timeStr === '00:00 - 23:59' || timeStr === '0:00 - 23:59') {
+    console.log('Event classified as all-day: full day time range');
+    return true;
+  }
+  
+  // Multi-day indicators
+  if (timeStr.includes('days') || timeStr.includes('day')) {
+    console.log('Event classified as all-day: multi-day indicator');
+    return true;
+  }
+  
+  console.log(`Event classified as timed: ${time}`);
+  return false;
 };
 
 export const hasEventPassed = (event: Event, viewMode: string): boolean => {

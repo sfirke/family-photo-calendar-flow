@@ -295,14 +295,26 @@ function transformPageToEvent(page: NotionPage, databaseId: string): CalendarEve
 
         case 'date':
           if (property.date?.start) {
-            date = property.date.start
-            // Extract time if present
-            if (date.includes('T')) {
-              const timePart = date.split('T')[1]
-              if (timePart && timePart !== '00:00:00.000+00:00') {
-                time = timePart.substring(0, 5) // HH:MM format
+            const dateString = property.date.start
+            date = dateString
+            
+            // Enhanced time detection logic
+            if (dateString.includes('T')) {
+              const timePart = dateString.split('T')[1]
+              // Check if it's a meaningful time (not just 00:00:00.000+00:00 or similar)
+              if (timePart && 
+                  !timePart.startsWith('00:00:00') && 
+                  !timePart.startsWith('00:00') && 
+                  timePart !== '00:00:00.000+00:00') {
+                // Extract time in HH:MM format
+                const timeMatch = timePart.match(/(\d{2}):(\d{2})/)
+                if (timeMatch) {
+                  time = `${timeMatch[1]}:${timeMatch[2]}`
+                }
               }
+              // If no meaningful time found, leave time undefined for all-day treatment
             }
+            // If no 'T' in date string, it's definitely a date-only entry (all-day)
           }
           break
 
@@ -339,14 +351,17 @@ function transformPageToEvent(page: NotionPage, databaseId: string): CalendarEve
 
     // Must have a date to be a valid calendar event
     if (!date) {
+      console.log(`Skipping event "${title}" - no date found`)
       return null
     }
+
+    console.log(`Processing Notion event: "${title}", date: ${date}, time: ${time || 'undefined (all-day)'}`)
 
     return {
       id: `notion_${page.id}`,
       title,
       date,
-      time,
+      time, // This will be undefined for all-day events
       description,
       location,
       status,
