@@ -18,6 +18,7 @@ export interface CalendarFromEvents {
 export const useCalendarSelection = () => {
   const [selectedCalendarIds, setSelectedCalendarIds] = useState<string[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [hasUserMadeSelection, setHasUserMadeSelection] = useState(false);
   
   // Get calendars from all sources
   const { calendars: iCalCalendars = [], isLoading: iCalLoading, getICalEvents } = useICalCalendars();
@@ -113,24 +114,28 @@ export const useCalendarSelection = () => {
     return calendarList;
   }, [allCalendars, getICalEvents, notionEvents, scrapedEvents, refreshKey]);
 
-  // Initialize selected calendars with enabled calendars that have events
+  // Initialize selected calendars ONLY on first load when user hasn't made selections
   useEffect(() => {
-    if (!Array.isArray(enabledCalendars)) return;
+    if (!Array.isArray(enabledCalendars) || hasUserMadeSelection) return;
     
     const enabledWithEventsIds = calendarsFromEvents
       .filter(cal => cal?.hasEvents)
       .map(cal => cal?.id)
       .filter(Boolean);
     
-    if (enabledWithEventsIds.length > 0 && selectedCalendarIds.length === 0) {
-      console.log('Auto-selecting calendars with events:', enabledWithEventsIds);
+    // Only auto-select if there are calendars with events AND user hasn't made any explicit selections
+    if (enabledWithEventsIds.length > 0 && selectedCalendarIds.length === 0 && !hasUserMadeSelection) {
+      console.log('🔄 Initial auto-selecting calendars with events:', enabledWithEventsIds);
       setSelectedCalendarIds(enabledWithEventsIds);
     }
-  }, [calendarsFromEvents, selectedCalendarIds.length]);
+  }, [calendarsFromEvents, enabledCalendars, hasUserMadeSelection]);
 
   // Toggle calendar (support both 1 and 2 parameter versions)
   const toggleCalendar = useCallback((calendarId: string, checked?: boolean) => {
-    console.log('🔄 toggleCalendar called:', { calendarId, checked, currentSelected: selectedCalendarIds });
+    console.log('🔄 toggleCalendar called:', { calendarId, checked });
+    
+    // Mark that user has made an explicit selection
+    setHasUserMadeSelection(true);
     
     setSelectedCalendarIds(prev => {
       const safePrev = Array.isArray(prev) ? prev : [];
@@ -162,10 +167,11 @@ export const useCalendarSelection = () => {
       
       return newSelected;
     });
-  }, [selectedCalendarIds]);
+  }, []); // Remove dependency on selectedCalendarIds to fix circular dependency
 
   const selectAllCalendars = useCallback(() => {
     if (!Array.isArray(enabledCalendars)) return;
+    setHasUserMadeSelection(true);
     const enabledIds = enabledCalendars.map(cal => cal?.id).filter(Boolean);
     console.log('🔄 selectAllCalendars called:', enabledIds);
     setSelectedCalendarIds(enabledIds);
@@ -173,6 +179,7 @@ export const useCalendarSelection = () => {
 
   const selectCalendarsWithEvents = useCallback(() => {
     if (!Array.isArray(calendarsFromEvents)) return;
+    setHasUserMadeSelection(true);
     const calendarsWithEventsIds = calendarsFromEvents
       .filter(cal => cal?.hasEvents)
       .map(cal => cal?.id)
@@ -183,12 +190,14 @@ export const useCalendarSelection = () => {
 
   const clearAllCalendars = useCallback(() => {
     console.log('🔄 clearAllCalendars called');
+    setHasUserMadeSelection(true);
     setSelectedCalendarIds([]);
   }, []);
 
   const updateSelectedCalendars = useCallback((newSelectedIds: string[]) => {
     const safeNewSelectedIds = Array.isArray(newSelectedIds) ? newSelectedIds : [];
     console.log('🔄 updateSelectedCalendars called:', safeNewSelectedIds);
+    setHasUserMadeSelection(true);
     setSelectedCalendarIds(safeNewSelectedIds);
   }, []);
 

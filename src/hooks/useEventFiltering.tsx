@@ -193,8 +193,9 @@ export const useEventFiltering = ({
       }
       
       // Second check: Calendar must be selected for visibility
+      // If no calendars are selected, show nothing (user has explicitly deselected all)
       if (safeSelectedCalendarIds.length === 0) {
-        console.log('🔍 useEventFiltering - No calendars selected, showing no events');
+        console.log('🔍 useEventFiltering - No calendars selected, hiding all events');
         return false;
       }
       
