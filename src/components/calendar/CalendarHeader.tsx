@@ -4,16 +4,12 @@ import ViewSwitcher from './ViewSwitcher';
 
 interface CalendarHeaderProps {
   hasGoogleEvents: boolean;
-  selectedCalendarIds: string[];
-  onCalendarChange: (calendarIds: string[]) => void;
   view: 'timeline' | 'week' | 'month';
   onViewChange: (view: 'timeline' | 'week' | 'month') => void;
 }
 
 const CalendarHeader = ({
   hasGoogleEvents,
-  selectedCalendarIds,
-  onCalendarChange,
   view,
   onViewChange
 }: CalendarHeaderProps) => {
@@ -24,10 +20,7 @@ const CalendarHeader = ({
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 w-full sm:w-auto">
           {hasGoogleEvents && (
             <div className="w-full sm:w-auto">
-              <CalendarSelector 
-                selectedCalendarIds={selectedCalendarIds} 
-                onCalendarChange={onCalendarChange} 
-              />
+              <CalendarSelector />
             </div>
           )}
           

@@ -5,61 +5,36 @@ import { useCalendarSelection } from '@/hooks/useCalendarSelection';
 import CalendarSelectorButton from './calendar/CalendarSelectorButton';
 import CalendarSelectorContent from './calendar/CalendarSelectorContent';
 
-interface CalendarSelectorProps {
-  selectedCalendarIds: string[];
-  onCalendarChange: (calendarIds: string[]) => void;
-}
-
-const CalendarSelector = ({ selectedCalendarIds, onCalendarChange }: CalendarSelectorProps) => {
+const CalendarSelector = () => {
   const { 
     calendarsFromEvents, 
+    selectedCalendarIds,
     isLoading, 
     toggleCalendar, 
     selectAllCalendars, 
     selectCalendarsWithEvents, 
-    clearAllCalendars,
-    updateSelectedCalendars
+    clearAllCalendars
   } = useCalendarSelection();
 
   const handleCalendarToggle = (calendarId: string, checked: boolean) => {
+    console.log('CalendarSelector - Toggling calendar:', calendarId, checked);
     toggleCalendar(calendarId, checked);
-    // Sync with parent component
-    let newSelection: string[];
-    if (checked) {
-      newSelection = [...selectedCalendarIds.filter(id => id !== calendarId), calendarId];
-    } else {
-      newSelection = selectedCalendarIds.filter(id => id !== calendarId);
-    }
-    onCalendarChange(newSelection);
   };
 
   const handleSelectAll = () => {
+    console.log('CalendarSelector - Select all calendars');
     selectAllCalendars();
-    const allIds = calendarsFromEvents.map(cal => cal.id);
-    onCalendarChange(allIds);
   };
 
   const handleSelectWithEvents = () => {
+    console.log('CalendarSelector - Select calendars with events');
     selectCalendarsWithEvents();
-    const withEventsIds = calendarsFromEvents.filter(cal => cal.hasEvents).map(cal => cal.id);
-    onCalendarChange(withEventsIds);
   };
 
   const handleClearAll = () => {
+    console.log('CalendarSelector - Clear all calendars');
     clearAllCalendars();
-    onCalendarChange([]);
   };
-
-  // Sync selected calendars with the hook's state
-  React.useEffect(() => {
-    const hookSelectedIds = calendarsFromEvents
-      .filter(cal => selectedCalendarIds.includes(cal.id))
-      .map(cal => cal.id);
-    
-    if (JSON.stringify(hookSelectedIds.sort()) !== JSON.stringify(selectedCalendarIds.sort())) {
-      updateSelectedCalendars(hookSelectedIds);
-    }
-  }, [calendarsFromEvents, selectedCalendarIds, updateSelectedCalendars]);
 
   if (isLoading) {
     return (
@@ -81,6 +56,8 @@ const CalendarSelector = ({ selectedCalendarIds, onCalendarChange }: CalendarSel
     );
   }
 
+  console.log('CalendarSelector - Rendering with calendars:', calendarsFromEvents.length, 'selected:', selectedCalendarIds.length);
+
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -89,7 +66,7 @@ const CalendarSelector = ({ selectedCalendarIds, onCalendarChange }: CalendarSel
           totalCount={calendarsFromEvents.length}
         />
       </PopoverTrigger>
-      <PopoverContent className="p-0 w-auto" align="start">
+      <PopoverContent className="p-0 w-auto z-50" align="start">
         <CalendarSelectorContent
           calendarsFromEvents={calendarsFromEvents}
           selectedCalendarIds={selectedCalendarIds}

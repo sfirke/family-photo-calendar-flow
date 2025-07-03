@@ -103,7 +103,10 @@ const CalendarSelectorContent = ({
               <Checkbox
                 id={`calendar-${calendar.id}`}
                 checked={isSelected}
-                onCheckedChange={(checked) => onCalendarToggle(calendar.id, checked === true)}
+                onCheckedChange={(checked) => {
+                  console.log('Calendar checkbox toggled:', calendar.id, checked);
+                  onCalendarToggle(calendar.id, checked === true);
+                }}
                 className="data-[state=checked]:bg-blue-600 dark:data-[state=checked]:bg-blue-500 data-[state=checked]:border-blue-600 dark:data-[state=checked]:border-blue-500 border-gray-300 dark:border-gray-600"
               />
               <div className="flex-1 min-w-0">
