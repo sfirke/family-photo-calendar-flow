@@ -15,7 +15,15 @@ import { ICalCalendar } from '@/types/ical';
 
 const CALENDAR_COLORS = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899'];
 
-const ICalSettings = () => {
+interface ICalSettingsProps {
+  selectedCalendarIds?: string[];
+  onToggleSelection?: (calendarId: string, selected: boolean) => void;
+}
+
+const ICalSettings = ({ 
+  selectedCalendarIds: propSelectedCalendarIds, 
+  onToggleSelection: propOnToggleSelection 
+}: ICalSettingsProps = {}) => {
   const {
     calendars,
     isLoading,
@@ -27,11 +35,15 @@ const ICalSettings = () => {
     syncAllCalendars
   } = useICalCalendars();
   const {
-    selectedCalendarIds,
-    toggleCalendar,
+    selectedCalendarIds: hookSelectedCalendarIds,
+    toggleCalendar: hookToggleCalendar,
     calendarsFromEvents,
     forceRefresh
   } = useCalendarSelection();
+
+  // Use props if provided, otherwise use hook values
+  const selectedCalendarIds = propSelectedCalendarIds || hookSelectedCalendarIds;
+  const toggleCalendar = propOnToggleSelection || hookToggleCalendar;
   const { toast } = useToast();
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [newCalendar, setNewCalendar] = useState({
@@ -389,7 +401,10 @@ const ICalSettings = () => {
                 onUpdate={handleUpdateCalendar}
                 onSync={handleSync}
                 onRemove={handleRemove}
-                onToggleSelection={toggleCalendar}
+                onToggleSelection={(calendarId: string, selected: boolean) => {
+                  console.log('ICalSettings - Toggle selection:', { calendarId, selected });
+                  toggleCalendar(calendarId, selected);
+                }}
               />
             ))}
           </div>

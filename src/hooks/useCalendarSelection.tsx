@@ -19,6 +19,31 @@ export const useCalendarSelection = () => {
   const [selectedCalendarIds, setSelectedCalendarIds] = useState<string[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
   const [hasUserMadeSelection, setHasUserMadeSelection] = useState(false);
+
+  // Load selectedCalendarIds from localStorage on init
+  useEffect(() => {
+    const stored = localStorage.getItem('selectedCalendarIds');
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          setSelectedCalendarIds(parsed);
+          setHasUserMadeSelection(true);
+          console.log('📦 useCalendarSelection - Loaded from localStorage:', parsed);
+        }
+      } catch (error) {
+        console.error('Failed to parse stored selectedCalendarIds:', error);
+      }
+    }
+  }, []);
+
+  // Save selectedCalendarIds to localStorage whenever it changes
+  useEffect(() => {
+    if (hasUserMadeSelection && selectedCalendarIds.length >= 0) {
+      localStorage.setItem('selectedCalendarIds', JSON.stringify(selectedCalendarIds));
+      console.log('💾 useCalendarSelection - Saved to localStorage:', selectedCalendarIds);
+    }
+  }, [selectedCalendarIds, hasUserMadeSelection]);
   
   // Get calendars from all sources
   const { calendars: iCalCalendars = [], isLoading: iCalLoading, getICalEvents } = useICalCalendars();

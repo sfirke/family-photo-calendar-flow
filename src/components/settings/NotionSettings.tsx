@@ -11,10 +11,19 @@ import { GitFork, Plus, RotateCcw, BarChart3, Database, Settings } from 'lucide-
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { NotionCalendar } from '@/types/notion';
 import NotionIntegrationForm from './NotionIntegrationForm';
+import { Checkbox } from '@/components/ui/checkbox';
 
-const CALENDAR_COLORS = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899'];
+const CALENDAR_COLORS = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4', '#3b82f6', '#ec4899'];
 
-const NotionSettings = () => {
+interface NotionSettingsProps {
+  selectedCalendarIds?: string[];
+  onToggleSelection?: (calendarId: string, selected: boolean) => void;
+}
+
+const NotionSettings = ({ 
+  selectedCalendarIds: propSelectedCalendarIds, 
+  onToggleSelection: propOnToggleSelection 
+}: NotionSettingsProps = {}) => {
   const {
     calendars,
     isLoading,
@@ -27,7 +36,11 @@ const NotionSettings = () => {
   } = useNotionCalendars();
   
   const { notionToken, notionDatabaseId } = useSettings();
-  const { calendarsFromEvents } = useCalendarSelection();
+  const { calendarsFromEvents, selectedCalendarIds: hookSelectedCalendarIds, toggleCalendar: hookToggleCalendar } = useCalendarSelection();
+  
+  // Use props if provided, otherwise use hook values
+  const selectedCalendarIds = propSelectedCalendarIds || hookSelectedCalendarIds;
+  const toggleCalendar = propOnToggleSelection || hookToggleCalendar;
   const { toast } = useToast();
   
   const [showIntegrationForm, setShowIntegrationForm] = useState(false);
@@ -304,6 +317,14 @@ const NotionSettings = () => {
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
+                      <Checkbox
+                        checked={selectedCalendarIds.includes(calendar.id)}
+                        onCheckedChange={(checked) => {
+                          console.log('NotionSettings - Toggle selection:', { calendarId: calendar.id, checked });
+                          toggleCalendar(calendar.id, checked === true);
+                        }}
+                        className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                      />
                       <div
                         className="w-4 h-4 rounded-full"
                         style={{ backgroundColor: calendar.color }}

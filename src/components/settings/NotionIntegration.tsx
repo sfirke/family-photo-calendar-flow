@@ -5,13 +5,25 @@ import NotionSettings from './NotionSettings';
 import NotionScrapedSettings from './NotionScrapedSettings';
 import { useCalendarSelection } from '@/hooks/useCalendarSelection';
 
-const NotionIntegration = () => {
+interface NotionIntegrationProps {
+  selectedCalendarIds?: string[];
+  onToggleSelection?: (calendarId: string, selected: boolean) => void;
+}
+
+const NotionIntegration = ({ 
+  selectedCalendarIds: propSelectedCalendarIds, 
+  onToggleSelection: propOnToggleSelection 
+}: NotionIntegrationProps = {}) => {
   const { 
-    selectedCalendarIds, 
-    toggleCalendar,
+    selectedCalendarIds: hookSelectedCalendarIds, 
+    toggleCalendar: hookToggleCalendar,
     scrapedEvents,
     notionEvents 
   } = useCalendarSelection();
+
+  // Use props if provided, otherwise use hook values
+  const selectedCalendarIds = propSelectedCalendarIds || hookSelectedCalendarIds;
+  const toggleCalendar = propOnToggleSelection || hookToggleCalendar;
 
   console.log('NotionIntegration - Current state:', {
     selectedCalendarIds,
@@ -27,7 +39,10 @@ const NotionIntegration = () => {
         <p className="text-sm text-gray-600 mb-4">
           Manual Notion page integration (deprecated in favor of API integration below)
         </p>
-        <NotionSettings />
+        <NotionSettings 
+          selectedCalendarIds={selectedCalendarIds}
+          onToggleSelection={toggleCalendar}
+        />
       </div>
 
       <Separator />
