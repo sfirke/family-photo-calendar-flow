@@ -14,9 +14,10 @@ interface WeekViewProps {
   onPreviousWeek: () => void;
   onNextWeek: () => void;
   getWeatherForDate: (date: Date) => { temp: number; condition: string };
+  onNotionEventClick?: (event: Event) => void;
 }
 
-const WeekView = ({ events, weekOffset, onPreviousWeek, onNextWeek, getWeatherForDate }: WeekViewProps) => {
+const WeekView = ({ events, weekOffset, onPreviousWeek, onNextWeek, getWeatherForDate, onNotionEventClick }: WeekViewProps) => {
   try {
     const today = new Date();
     const weekStart = addDays(startOfWeek(today, { weekStartsOn: 0 }), weekOffset * 7);
@@ -182,6 +183,7 @@ const WeekView = ({ events, weekOffset, onPreviousWeek, onNextWeek, getWeatherFo
                           event={event} 
                           viewMode="week" 
                           isMultiDayDisplay={isMultiDayEvent(event)}
+                          onNotionEventClick={onNotionEventClick}
                         />
                       </div>
                     ))}
@@ -189,7 +191,7 @@ const WeekView = ({ events, weekOffset, onPreviousWeek, onNextWeek, getWeatherFo
                     {/* Timed events below */}
                     {timedEvents.map(event => (
                       <div key={event.id} className="truncate">
-                        <EventCard event={event} viewMode="week" />
+                        <EventCard event={event} viewMode="week" onNotionEventClick={onNotionEventClick} />
                       </div>
                     ))}
                     

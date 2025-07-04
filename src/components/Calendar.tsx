@@ -6,8 +6,13 @@ import { useSettings } from '@/contexts/SettingsContext';
 import { useWeather } from '@/contexts/WeatherContext';
 import { useLocalEvents } from '@/hooks/useLocalEvents';
 import { useIntegratedEvents } from '@/hooks/useIntegratedEvents';
+import { Event } from '@/types/calendar';
 
-const Calendar = () => {
+interface CalendarProps {
+  onNotionEventClick?: (event: Event) => void;
+}
+
+const Calendar = ({ onNotionEventClick }: CalendarProps) => {
   const [view, setView] = useState<'timeline' | 'week' | 'month'>('month');
   const [weekOffset, setWeekOffset] = useState(0);
   const { defaultView } = useSettings();
@@ -46,6 +51,7 @@ const Calendar = () => {
         onPreviousWeek={() => setWeekOffset(prev => prev - 1)}
         onNextWeek={() => setWeekOffset(prev => prev + 1)}
         getWeatherForDate={getWeatherForDate}
+        onNotionEventClick={onNotionEventClick}
       />
     </div>
   );

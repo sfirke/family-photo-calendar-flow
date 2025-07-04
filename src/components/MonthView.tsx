@@ -11,9 +11,10 @@ import { compareTimeStrings } from '@/utils/timeUtils';
 interface MonthViewProps {
   events: Event[];
   getWeatherForDate: (date: Date) => { temp: number; condition: string };
+  onNotionEventClick?: (event: Event) => void;
 }
 
-const MonthView = ({ events, getWeatherForDate }: MonthViewProps) => {
+const MonthView = ({ events, getWeatherForDate, onNotionEventClick }: MonthViewProps) => {
   // Move useState calls to the top level, outside any conditional logic
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -221,6 +222,7 @@ const MonthView = ({ events, getWeatherForDate }: MonthViewProps) => {
             onOpenChange={() => setSelectedDate(null)}
             getWeatherForDate={getWeatherForDate}
             onNavigateDay={handleNavigateDay}
+            onNotionEventClick={onNotionEventClick}
           />
         )}
       </div>

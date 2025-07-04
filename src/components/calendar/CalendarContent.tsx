@@ -18,6 +18,7 @@ interface CalendarContentProps {
   onPreviousWeek: () => void;
   onNextWeek: () => void;
   getWeatherForDate: (date: Date) => WeatherInfo;
+  onNotionEventClick?: (event: Event) => void;
 }
 
 const CalendarContent = ({ 
@@ -27,7 +28,8 @@ const CalendarContent = ({
   weekOffset, 
   onPreviousWeek, 
   onNextWeek, 
-  getWeatherForDate 
+  getWeatherForDate,
+  onNotionEventClick
 }: CalendarContentProps) => {
   // Convert NotionEvents to Events and merge with regular events
   const convertedNotionEvents: Event[] = notionEvents.map(notionEvent => ({
@@ -50,7 +52,7 @@ const CalendarContent = ({
   const allEvents = [...events, ...convertedNotionEvents];
 
   if (view === 'timeline') {
-    return <TimelineView events={allEvents} getWeatherForDate={getWeatherForDate} />;
+    return <TimelineView events={allEvents} getWeatherForDate={getWeatherForDate} onNotionEventClick={onNotionEventClick} />;
   }
 
   if (view === 'week') {
@@ -61,6 +63,7 @@ const CalendarContent = ({
         onPreviousWeek={onPreviousWeek}
         onNextWeek={onNextWeek}
         getWeatherForDate={getWeatherForDate}
+        onNotionEventClick={onNotionEventClick}
       />
     );
   }
@@ -70,6 +73,7 @@ const CalendarContent = ({
       <MonthView 
         events={allEvents}
         getWeatherForDate={getWeatherForDate}
+        onNotionEventClick={onNotionEventClick}
       />
     );
   }

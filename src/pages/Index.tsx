@@ -2,11 +2,15 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import Calendar from '@/components/Calendar';
 import WeatherWidget from '@/components/WeatherWidget';
 import SettingsModal from '@/components/SettingsModal';
+import NotionEventModal from '@/components/NotionEventModal';
 import { Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useSettings } from '@/contexts/SettingsContext';
 import { getImagesFromAlbum, getDefaultBackgroundImages } from '@/utils/googlePhotosUtils';
 import { PerformanceMonitor, IntervalManager, displayOptimizations } from '@/utils/performanceUtils';
+import { Event } from '@/types/calendar';
+import { NotionScrapedEvent } from '@/services/NotionPageScraper';
+import { useNotionScrapedCalendars } from '@/hooks/useNotionScrapedCalendars';
 
 const Index = () => {
   const [currentBg, setCurrentBg] = useState(0);
@@ -14,10 +18,22 @@ const Index = () => {
   const [backgroundImages, setBackgroundImages] = useState<string[]>(getDefaultBackgroundImages());
   const [currentTime, setCurrentTime] = useState(new Date());
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [selectedNotionEvent, setSelectedNotionEvent] = useState<NotionScrapedEvent | null>(null);
+  const [isNotionModalOpen, setIsNotionModalOpen] = useState(false);
   const {
     backgroundDuration,
     publicAlbumUrl
   } = useSettings();
+  const { events: notionEvents } = useNotionScrapedCalendars();
+
+  const handleNotionEventClick = (event: Event) => {
+    // Find the corresponding NotionScrapedEvent
+    const notionEvent = notionEvents.find(ne => ne.id === event.id);
+    if (notionEvent) {
+      setSelectedNotionEvent(notionEvent);
+      setIsNotionModalOpen(true);
+    }
+  };
 
   // Debug logging for publicAlbumUrl
   useEffect(() => {
@@ -204,7 +220,9 @@ const Index = () => {
         {/* Main Content - Responsive top padding to account for fixed header */}
         <main className="px-3 sm:px-4 md:px-6 pb-3 sm:pb-4 md:pb-6 pt-20 sm:pt-24 md:pt-28 lg:pt-32 flex-1 flex flex-col overflow-visible">
           <div className="flex-1">
-            <Calendar />
+            <Calendar 
+              onNotionEventClick={handleNotionEventClick}
+            />
           </div>
         </main>
       </div>
@@ -220,6 +238,12 @@ const Index = () => {
       </Button>
 
       <SettingsModal open={showSettings} onOpenChange={setShowSettings} />
+
+      <NotionEventModal
+        open={isNotionModalOpen}
+        onOpenChange={setIsNotionModalOpen}
+        event={selectedNotionEvent}
+      />
     </div>
   );
 };

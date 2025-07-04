@@ -11,6 +11,7 @@ interface EventCardProps {
   showBoldHeader?: boolean;
   viewMode?: 'week' | 'timeline' | 'month';
   isMultiDayDisplay?: boolean;
+  onNotionEventClick?: (event: Event) => void;
 }
 
 const EventCard = ({ 
@@ -18,7 +19,8 @@ const EventCard = ({
   className = '', 
   showBoldHeader = false, 
   viewMode = 'month',
-  isMultiDayDisplay = false 
+  isMultiDayDisplay = false,
+  onNotionEventClick
 }: EventCardProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const isAllDay = isAllDayEvent(event.time);
@@ -46,6 +48,7 @@ const EventCard = ({
       showBoldHeader={showBoldHeader}
       isExpanded={isExpanded}
       onToggleExpanded={handleToggleExpanded}
+      onNotionEventClick={onNotionEventClick}
     />
   );
 };

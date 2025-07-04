@@ -17,6 +17,7 @@ interface DayViewModalProps {
   events: Event[];
   getWeatherForDate: (date: Date) => { temp: number; condition: string };
   onNavigateDay?: (direction: 'prev' | 'next') => void;
+  onNotionEventClick?: (event: Event) => void;
 }
 
 const DayViewModal = ({ 
@@ -25,7 +26,8 @@ const DayViewModal = ({
   date, 
   events, 
   getWeatherForDate,
-  onNavigateDay 
+  onNavigateDay,
+  onNotionEventClick
 }: DayViewModalProps) => {
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [transitionDirection, setTransitionDirection] = useState<'prev' | 'next' | null>(null);
@@ -211,6 +213,7 @@ const DayViewModal = ({
                         event={event}
                         className="bg-white/80 border border-gray-200 shadow-sm w-full"
                         viewMode="timeline"
+                        onNotionEventClick={onNotionEventClick}
                       />
                     ))}
                   </div>
@@ -233,6 +236,7 @@ const DayViewModal = ({
                         event={event}
                         className="bg-white/80 border border-gray-200 shadow-sm w-full"
                         viewMode="timeline"
+                        onNotionEventClick={onNotionEventClick}
                       />
                     ))}
                   </div>

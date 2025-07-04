@@ -12,6 +12,7 @@ interface RegularEventProps {
   showBoldHeader?: boolean;
   isExpanded: boolean;
   onToggleExpanded: () => void;
+  onNotionEventClick?: (event: Event) => void;
 }
 
 const RegularEvent = ({ 
@@ -20,24 +21,34 @@ const RegularEvent = ({
   className = '', 
   showBoldHeader = false,
   isExpanded,
-  onToggleExpanded
+  onToggleExpanded,
+  onNotionEventClick
 }: RegularEventProps) => {
   const styles = getEventStyles(event, viewMode);
   const isInteractive = (viewMode === 'timeline' || viewMode === 'week') && hasAdditionalData(event) && !styles.isAllDay;
   
   // Check if this is a Notion event with a source URL
   const hasNotionUrl = event.source === 'notion' && 'notionUrl' in event && event.notionUrl;
+  
+  // Check if this is a Notion API event (has properties indicating it came from Notion API)
+  const isNotionApiEvent = event.source === 'notion' && 'properties' in event;
 
   const handleClick = () => {
-    if (isInteractive) {
+    if (isNotionApiEvent && onNotionEventClick) {
+      onNotionEventClick(event);
+    } else if (isInteractive) {
       onToggleExpanded();
     }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if ((e.key === 'Enter' || e.key === ' ') && isInteractive) {
+    if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
-      onToggleExpanded();
+      if (isNotionApiEvent && onNotionEventClick) {
+        onNotionEventClick(event);
+      } else if (isInteractive) {
+        onToggleExpanded();
+      }
     }
   };
 
@@ -52,17 +63,25 @@ const RegularEvent = ({
     ? `font-bold ${styles.textColors.title.replace('font-medium', '')}` 
     : styles.textColors.title;
 
+  const isClickable = isInteractive || isNotionApiEvent;
+
   return (
     <article 
       className={`${styles.paddingClass} rounded-lg ${styles.backgroundOpacity} backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/30 ${
-        isInteractive ? `cursor-pointer ${styles.hoverBackgroundOpacity} transition-colors` : ''
+        isClickable ? `cursor-pointer ${styles.hoverBackgroundOpacity} transition-colors` : ''
       } ${styles.timelineStyles} ${className} self-start`}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
-      tabIndex={isInteractive ? 0 : undefined}
-      role={isInteractive ? 'button' : 'article'}
+      tabIndex={isClickable ? 0 : undefined}
+      role={isClickable ? 'button' : 'article'}
       aria-expanded={isInteractive ? isExpanded : undefined}
-      aria-label={isInteractive ? `${isExpanded ? 'Collapse' : 'Expand'} event details for ${event.title}` : `Event: ${event.title}`}
+      aria-label={
+        isNotionApiEvent 
+          ? `Open Notion event details for ${event.title}`
+          : isInteractive 
+            ? `${isExpanded ? 'Collapse' : 'Expand'} event details for ${event.title}` 
+            : `Event: ${event.title}`
+      }
     >
       <div className="flex items-start gap-3">
         <div className="flex-1 min-w-0">

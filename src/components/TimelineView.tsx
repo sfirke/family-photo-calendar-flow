@@ -9,9 +9,10 @@ import { compareTimeStrings } from '@/utils/timeUtils';
 interface TimelineViewProps {
   events: Event[];
   getWeatherForDate: (date: Date) => { temp: number; condition: string };
+  onNotionEventClick?: (event: Event) => void;
 }
 
-const TimelineView = ({ events, getWeatherForDate }: TimelineViewProps) => {
+const TimelineView = ({ events, getWeatherForDate, onNotionEventClick }: TimelineViewProps) => {
   try {
     // Get today and the next 2 days (total of 3 days starting from today)
     const today = new Date();
@@ -180,6 +181,7 @@ const TimelineView = ({ events, getWeatherForDate }: TimelineViewProps) => {
                           event={event} 
                           viewMode="timeline" 
                           isMultiDayDisplay={isMultiDayEvent(event)}
+                          onNotionEventClick={onNotionEventClick}
                         />
                       </div>
                     ))}
@@ -190,7 +192,7 @@ const TimelineView = ({ events, getWeatherForDate }: TimelineViewProps) => {
                 <div className="space-y-2 sm:space-y-3">
                   {timedEvents.map(event => (
                     <div key={event.id}>
-                      <EventCard event={event} viewMode="timeline" />
+                      <EventCard event={event} viewMode="timeline" onNotionEventClick={onNotionEventClick} />
                     </div>
                   ))}
                   

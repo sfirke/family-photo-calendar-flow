@@ -353,6 +353,12 @@ function transformPageToEvent(page: NotionPage, databaseId: string): CalendarEve
       return null
     }
 
+    // Filter out events with invalid titles
+    if (!title || title.trim() === '' || title.toLowerCase() === 'untitled') {
+      console.log(`Skipping event with invalid title: "${title}"`)
+      return null
+    }
+
     console.log(`Processing Notion event: "${title}", date: ${date}, time: ${time || 'undefined (all-day)'}`)
 
     return {
