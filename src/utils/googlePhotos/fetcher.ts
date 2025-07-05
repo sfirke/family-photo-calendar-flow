@@ -12,15 +12,23 @@ export const fetchAlbumImages = async (albumUrl: string): Promise<string[]> => {
     throw new Error('Invalid Google Photos album URL format');
   }
   
-  console.log('Attempting to fetch Google Photos album:', albumId);
+  // Enhanced Google Photos logging
+  console.log('🖼️ Google Photos Fetcher - Starting album fetch');
+  console.log('🖼️ Album URL:', albumUrl);
+  console.log('🖼️ Album ID:', albumId);
+  
+  // Add performance timing
+  const startTime = Date.now();
   
   // First try direct access (might work in some cases)
   const directImages = await tryDirectAccess(albumUrl);
   if (directImages.length > 0) {
+    console.log(`🖼️ Direct access successful in ${Date.now() - startTime}ms`);
     return directImages;
   }
   
   // Try each proxy service
+  console.log('🖼️ Direct access failed, trying proxy services...');
   return await tryProxyServices(albumUrl);
 };
 

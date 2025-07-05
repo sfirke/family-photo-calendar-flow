@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Calendar, Clock, MapPin, ExternalLink, Tag, Flag, AlertCircle } from 'lucide-react';
 import { NotionScrapedEvent } from '@/services/NotionPageScraper';
+import { formatNotionProperty } from '@/utils/notionPropertyFormatter';
 
 interface NotionEventModalProps {
   open: boolean;
@@ -145,21 +146,26 @@ const NotionEventModal = ({ open, onOpenChange, event }: NotionEventModalProps) 
             </div>
           )}
 
-          {/* Custom Properties */}
-          {event.customProperties && Object.keys(event.customProperties).length > 0 && (
+          {/* Database Properties */}
+          {event.properties && Object.keys(event.properties).length > 0 && (
             <div className="space-y-2">
-              <h3 className="font-medium text-gray-900 dark:text-gray-100">Additional Details</h3>
-              <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 ml-6">
-                {Object.entries(event.customProperties).map(([key, value]) => (
-                  <div key={key} className="flex justify-between items-start py-1">
-                    <span className="font-medium text-gray-600 dark:text-gray-400 capitalize">
-                      {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}:
-                    </span>
-                    <span className="text-gray-800 dark:text-gray-200 ml-4 text-right max-w-xs break-words">
-                      {String(value)}
-                    </span>
-                  </div>
-                ))}
+              <h3 className="font-medium text-gray-900 dark:text-gray-100">Database Properties</h3>
+              <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 ml-6 space-y-2">
+                {Object.entries(event.properties).map(([key, property]) => {
+                  const value = formatNotionProperty(property);
+                  if (!value) return null;
+                  
+                  return (
+                    <div key={key} className="flex justify-between items-start py-1">
+                      <span className="font-medium text-gray-600 dark:text-gray-400 capitalize">
+                        {key}:
+                      </span>
+                      <span className="text-gray-800 dark:text-gray-200 ml-4 text-right max-w-xs break-words">
+                        {value}
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}

@@ -210,7 +210,27 @@ class NotionService {
   private extractTitle(page: any): string {
     const properties = page.properties;
     
-    // Find title property
+    // First, look for a "Calendar Name" property
+    for (const [key, property] of Object.entries(properties)) {
+      if (key.toLowerCase().includes('calendar') && key.toLowerCase().includes('name')) {
+        if (property && typeof property === 'object' && 'type' in property) {
+          if (property.type === 'rich_text' && 'rich_text' in property && property.rich_text) {
+            const richTextArray = property.rich_text as any[];
+            if (Array.isArray(richTextArray)) {
+              const titleText = richTextArray
+                .map((text: any) => text.plain_text)
+                .join('');
+              if (titleText && titleText.trim()) return titleText.trim();
+            }
+          } else if (property.type === 'select' && 'select' in property && property.select) {
+            const selectValue = (property as any).select.name;
+            if (selectValue && selectValue.trim()) return selectValue.trim();
+          }
+        }
+      }
+    }
+    
+    // Then find title property as fallback
     for (const [key, property] of Object.entries(properties)) {
       if (property && typeof property === 'object' && 'type' in property && property.type === 'title' && 'title' in property && property.title) {
         // Add proper type assertion and array check
@@ -219,7 +239,7 @@ class NotionService {
           const titleText = titleArray
             .map((text: any) => text.plain_text)
             .join('');
-          return titleText || 'Untitled';
+          if (titleText && titleText.trim()) return titleText.trim();
         }
       }
     }

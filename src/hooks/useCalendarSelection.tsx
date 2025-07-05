@@ -1,7 +1,6 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useICalCalendars } from './useICalCalendars';
-import { useNotionCalendars } from './useNotionCalendars';
 import { useNotionScrapedCalendars } from './useNotionScrapedCalendars';
 
 export interface CalendarFromEvents {
@@ -47,27 +46,23 @@ export const useCalendarSelection = () => {
   
   // Get calendars from all sources
   const { calendars: iCalCalendars = [], isLoading: iCalLoading, getICalEvents } = useICalCalendars();
-  const { calendars: notionCalendars = [], events: notionEvents = [], isLoading: notionLoading } = useNotionCalendars();
   const { calendars: scrapedCalendars = [], events: scrapedEvents = [], isLoading: scrapedLoading } = useNotionScrapedCalendars();
 
   // Combine all calendars with safe array handling
   const allCalendars = useMemo(() => {
     const safeICalCalendars = Array.isArray(iCalCalendars) ? iCalCalendars : [];
-    const safeNotionCalendars = Array.isArray(notionCalendars) ? notionCalendars : [];
     const safeScrapedCalendars = Array.isArray(scrapedCalendars) ? scrapedCalendars : [];
     
     console.log('Calendar counts:', {
       iCal: safeICalCalendars.length,
-      notion: safeNotionCalendars.length,
       scraped: safeScrapedCalendars.length
     });
     
     return [
       ...safeICalCalendars,
-      ...safeNotionCalendars,
       ...safeScrapedCalendars
     ];
-  }, [iCalCalendars, notionCalendars, scrapedCalendars]);
+  }, [iCalCalendars, scrapedCalendars]);
 
   // Get enabled calendars with safe array handling
   const enabledCalendars = useMemo(() => {
@@ -84,7 +79,6 @@ export const useCalendarSelection = () => {
     
     console.log('Event counts:', {
       iCal: iCalEvents.length,
-      notion: notionEvents.length,
       scraped: scrapedEvents.length
     });
 
@@ -99,11 +93,6 @@ export const useCalendarSelection = () => {
         // This is an iCal calendar (has url property but no type)
         source = 'ical';
         eventCount = iCalEvents.filter(event => event.calendarId === cal.id).length;
-        hasEvents = eventCount > 0;
-      } else if ('type' in cal && cal.type === 'notion') {
-        // This is a legacy Notion calendar
-        source = 'notion';
-        eventCount = notionEvents.filter(event => event.calendarId === cal.id).length;
         hasEvents = eventCount > 0;
       } else if ('type' in cal && cal.type === 'notion-scraped') {
         // This is a Notion API calendar
@@ -137,7 +126,7 @@ export const useCalendarSelection = () => {
     });
 
     return calendarList;
-  }, [allCalendars, getICalEvents, notionEvents, scrapedEvents, refreshKey]);
+  }, [allCalendars, getICalEvents, scrapedEvents, refreshKey]);
 
   // Initialize selected calendars ONLY on first load when user hasn't made selections
   useEffect(() => {
@@ -239,10 +228,9 @@ export const useCalendarSelection = () => {
     setRefreshKey(prev => prev + 1);
   }, []);
 
-  const isLoading = iCalLoading || notionLoading || scrapedLoading;
+  const isLoading = iCalLoading || scrapedLoading;
 
   // Ensure all returned arrays are safe
-  const safeNotionEvents = Array.isArray(notionEvents) ? notionEvents : [];
   const safeScrapedEvents = Array.isArray(scrapedEvents) ? scrapedEvents : [];
   const safeSelectedCalendarIds = Array.isArray(selectedCalendarIds) ? selectedCalendarIds : [];
 
@@ -257,7 +245,7 @@ export const useCalendarSelection = () => {
     allCalendars,
     enabledCalendars,
     selectedCalendarIds: safeSelectedCalendarIds,
-    notionEvents: safeNotionEvents,
+    notionEvents: [], // Legacy support - empty array since legacy integration removed
     scrapedEvents: safeScrapedEvents,
     calendarsFromEvents,
     isLoading,
