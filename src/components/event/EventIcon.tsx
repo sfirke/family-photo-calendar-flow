@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { GitFork, Database } from 'lucide-react';
+import { Utensils, Database } from 'lucide-react';
 import { Event } from '@/types/calendar';
 
 interface EventIconProps {
@@ -27,7 +27,7 @@ const EventIcon = ({ event, isAllDay }: EventIconProps) => {
     }
     
     return (
-      <GitFork 
+      <Utensils 
         className={`${iconSize} flex-shrink-0`}
         style={{ 
           color: iconColor,
