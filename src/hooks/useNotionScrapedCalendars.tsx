@@ -221,6 +221,7 @@ export const useNotionScrapedCalendars = () => {
           scrapedAt: new Date(event.scrapedAt),
           calendarId: calendar.id,
           customProperties: event.customProperties,
+          source: 'notion',
           dateRange: event.date ? {
             startDate: new Date(event.date),
             endDate: event.endDate ? new Date(event.endDate) : undefined
