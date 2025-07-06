@@ -164,26 +164,69 @@ export const useNotionScrapedCalendars = () => {
 
       // Transform API events to our format
       const apiEvents: NotionApiEvent[] = data.events || [];
-      const notionEvents: NotionScrapedEvent[] = apiEvents.map((event: NotionApiEvent) => ({
-        id: event.id,
-        title: event.title,
-        date: new Date(event.date),
-        time: event.time,
-        description: event.description,
-        location: event.location,
-        status: event.status,
-        categories: event.categories,
-        priority: event.priority,
-        properties: event.properties,
-        sourceUrl: event.sourceUrl,
-        scrapedAt: new Date(event.scrapedAt),
-        calendarId: calendar.id,
-        customProperties: event.customProperties,
-        dateRange: event.date ? {
-          startDate: new Date(event.date),
-          endDate: event.endDate ? new Date(event.endDate) : undefined
-        } : undefined
-      }));
+      const notionEvents: NotionScrapedEvent[] = apiEvents.map((event: NotionApiEvent) => {
+        // Extract calendar name from properties to use as title
+        const calendarNameProperty = event.properties?.['calendar name'] || event.properties?.['Calendar Name'];
+        const eventTitle = calendarNameProperty?.title?.[0]?.plain_text || 
+                          calendarNameProperty?.rich_text?.[0]?.plain_text ||
+                          calendarNameProperty?.select?.name ||
+                          event.title;
+
+        // Build description with recipe, notes, and ingredients
+        let enhancedDescription = event.description || '';
+        
+        const specialColumns = ['recipe', 'notes', 'ingredients'];
+        const columnDescriptions: string[] = [];
+        
+        if (event.properties) {
+          specialColumns.forEach(columnName => {
+            const property = event.properties[columnName] || event.properties[columnName.charAt(0).toUpperCase() + columnName.slice(1)];
+            if (property) {
+              let value = '';
+              if (property.rich_text && Array.isArray(property.rich_text)) {
+                value = property.rich_text.map((text: any) => text.plain_text || '').join('');
+              } else if (property.title && Array.isArray(property.title)) {
+                value = property.title.map((text: any) => text.plain_text || '').join('');
+              } else if (property.select?.name) {
+                value = property.select.name;
+              } else if (property.multi_select && Array.isArray(property.multi_select)) {
+                value = property.multi_select.map((option: any) => option.name).join(', ');
+              }
+              
+              if (value.trim()) {
+                columnDescriptions.push(`${columnName.charAt(0).toUpperCase() + columnName.slice(1)}: ${value}`);
+              }
+            }
+          });
+        }
+
+        if (columnDescriptions.length > 0) {
+          enhancedDescription = enhancedDescription ? 
+            `${enhancedDescription}\n\n${columnDescriptions.join('\n')}` : 
+            columnDescriptions.join('\n');
+        }
+
+        return {
+          id: event.id,
+          title: eventTitle,
+          date: new Date(event.date),
+          time: event.time,
+          description: enhancedDescription,
+          location: event.location,
+          status: event.status,
+          categories: event.categories,
+          priority: event.priority,
+          properties: event.properties,
+          sourceUrl: event.sourceUrl,
+          scrapedAt: new Date(event.scrapedAt),
+          calendarId: calendar.id,
+          customProperties: event.customProperties,
+          dateRange: event.date ? {
+            startDate: new Date(event.date),
+            endDate: event.endDate ? new Date(event.endDate) : undefined
+          } : undefined
+        };
+      });
 
       // Save events to IndexedDB
       await notionScrapedEventsStorage.saveEvents(calendar.id, notionEvents);
