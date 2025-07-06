@@ -9,7 +9,9 @@ export const extractAlbumIdFromUrl = (url: string): string | null => {
     /\/albums\/([a-zA-Z0-9_-]+)(?:\/|\?|$)/,
     /albumid=([a-zA-Z0-9_-]+)(?:&|\?|$)/,
     /album\/([a-zA-Z0-9_-]+)/,
-    /shared\/([a-zA-Z0-9_-]+)/
+    /shared\/([a-zA-Z0-9_-]+)/,
+    // Add pattern for shortened URLs like photos.app.goo.gl
+    /photos\.app\.goo\.gl\/([a-zA-Z0-9_-]+)/
   ];
   
   for (const pattern of patterns) {

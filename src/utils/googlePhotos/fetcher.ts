@@ -1,4 +1,3 @@
-
 // Album fetching utilities with CORS proxy support
 
 import { extractAlbumIdFromUrl } from './urlExtractor';
@@ -6,22 +5,37 @@ import { extractImagesFromHtml } from './imageExtractor';
 import { CORS_PROXIES, buildProxyUrl, getProxyHeaders, extractResponseContent } from './corsProxies';
 
 export const fetchAlbumImages = async (albumUrl: string): Promise<string[]> => {
-  const albumId = extractAlbumIdFromUrl(albumUrl);
-  
-  if (!albumId) {
-    throw new Error('Invalid Google Photos album URL format');
-  }
-  
-  // Enhanced Google Photos logging
   console.log('🖼️ Google Photos Fetcher - Starting album fetch');
   console.log('🖼️ Album URL:', albumUrl);
-  console.log('🖼️ Album ID:', albumId);
+  console.log('🖼️ Album URL type:', typeof albumUrl);
+  console.log('🖼️ Album URL length:', albumUrl?.length);
   
   // Add performance timing
   const startTime = Date.now();
   
+  // Handle shortened URLs by trying to expand them first
+  let workingUrl = albumUrl;
+  if (albumUrl.includes('photos.app.goo.gl')) {
+    console.log('🖼️ Detected shortened Google Photos URL, attempting to expand...');
+    const expandedUrl = await tryExpandShortenedUrl(albumUrl);
+    if (expandedUrl) {
+      workingUrl = expandedUrl;
+      console.log('🖼️ Expanded URL:', workingUrl);
+    } else {
+      console.log('🖼️ Could not expand URL, proceeding with original');
+    }
+  }
+  
+  const albumId = extractAlbumIdFromUrl(workingUrl);
+  console.log('🖼️ Extracted Album ID:', albumId);
+  
+  if (!albumId) {
+    console.error('🖼️ Failed to extract album ID from URL:', workingUrl);
+    throw new Error('Invalid Google Photos album URL format - could not extract album ID');
+  }
+  
   // First try direct access (might work in some cases)
-  const directImages = await tryDirectAccess(albumUrl);
+  const directImages = await tryDirectAccess(workingUrl);
   if (directImages.length > 0) {
     console.log(`🖼️ Direct access successful in ${Date.now() - startTime}ms`);
     return directImages;
@@ -29,7 +43,26 @@ export const fetchAlbumImages = async (albumUrl: string): Promise<string[]> => {
   
   // Try each proxy service
   console.log('🖼️ Direct access failed, trying proxy services...');
-  return await tryProxyServices(albumUrl);
+  return await tryProxyServices(workingUrl);
+};
+
+const tryExpandShortenedUrl = async (shortenedUrl: string): Promise<string | null> => {
+  try {
+    // Try to follow the redirect to get the actual URL
+    const response = await fetch(shortenedUrl, {
+      method: 'HEAD',
+      redirect: 'follow'
+    });
+    
+    if (response.url && response.url !== shortenedUrl) {
+      console.log('🖼️ Successfully expanded shortened URL');
+      return response.url;
+    }
+  } catch (error) {
+    console.log('🖼️ Failed to expand shortened URL:', error);
+  }
+  
+  return null;
 };
 
 const tryDirectAccess = async (albumUrl: string): Promise<string[]> => {
