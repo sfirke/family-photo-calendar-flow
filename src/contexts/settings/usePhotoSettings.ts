@@ -59,20 +59,12 @@ export const usePhotoSettings = () => {
    */
   const setValidatedPublicAlbumUrl = (url: string) => {
     console.log('🖼️ usePhotoSettings - setValidatedPublicAlbumUrl called with:', url);
+    console.log('🖼️ usePhotoSettings - URL type:', typeof url);
+    console.log('🖼️ usePhotoSettings - URL length:', url?.length);
     
-    if (url === '') {
-      console.log('🖼️ usePhotoSettings - Setting empty URL');
-      setPublicAlbumUrl(url);
-      return;
-    }
-    
-    const validation = InputValidator.validateUrl(url);
-    if (validation.isValid) {
-      console.log('🖼️ usePhotoSettings - URL validation passed, setting URL');
-      setPublicAlbumUrl(url);
-    } else {
-      console.warn('🖼️ usePhotoSettings - Invalid album URL:', validation.error);
-    }
+    // Always set the URL, even if empty - let the Google Photos hook handle validation
+    console.log('🖼️ usePhotoSettings - Setting URL directly (validation moved to useGooglePhotos)');
+    setPublicAlbumUrl(url);
   };
 
   return {

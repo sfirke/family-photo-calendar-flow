@@ -2,6 +2,8 @@
 export const extractAlbumIdFromUrl = (url: string): string | null => {
   if (!url) return null;
   
+  console.log('🖼️ extractAlbumIdFromUrl - input URL:', url);
+  
   // Handle various Google Photos album URL formats
   const patterns = [
     /\/albums\/([a-zA-Z0-9_-]+)(?:\/|\?|$)/,
@@ -13,10 +15,12 @@ export const extractAlbumIdFromUrl = (url: string): string | null => {
   for (const pattern of patterns) {
     const match = url.match(pattern);
     if (match && match[1]) {
+      console.log('🖼️ extractAlbumIdFromUrl - found albumId:', match[1]);
       return match[1];
     }
   }
   
+  console.log('🖼️ extractAlbumIdFromUrl - no albumId found');
   return null;
 };
 
@@ -25,7 +29,19 @@ export const constructGooglePhotosApiUrl = (albumId: string): string => {
 };
 
 export const validateGooglePhotosUrl = (url: string): boolean => {
+  console.log('🖼️ validateGooglePhotosUrl - input URL:', url);
+  console.log('🖼️ validateGooglePhotosUrl - URL type:', typeof url);
+  
   if (!url || typeof url !== 'string') {
+    console.log('🖼️ validateGooglePhotosUrl - URL is null/undefined or not string');
+    return false;
+  }
+  
+  const trimmedUrl = url.trim();
+  console.log('🖼️ validateGooglePhotosUrl - trimmed URL:', trimmedUrl);
+  
+  if (trimmedUrl === '') {
+    console.log('🖼️ validateGooglePhotosUrl - URL is empty after trim');
     return false;
   }
   
@@ -37,5 +53,12 @@ export const validateGooglePhotosUrl = (url: string): boolean => {
     /^https:\/\/photos\.google\.com\/albums\//
   ];
   
-  return googlePhotosPatterns.some(pattern => pattern.test(url));
+  const isValid = googlePhotosPatterns.some(pattern => {
+    const matches = pattern.test(trimmedUrl);
+    console.log('🖼️ validateGooglePhotosUrl - pattern', pattern, 'matches:', matches);
+    return matches;
+  });
+  
+  console.log('🖼️ validateGooglePhotosUrl - final result:', isValid);
+  return isValid;
 };
