@@ -36,6 +36,7 @@ const EventCard = ({
         event={event}
         viewMode={viewMode}
         className={className}
+        onNotionEventClick={onNotionEventClick}
       />
     );
   }

@@ -9,16 +9,26 @@ interface CompactAllDayEventProps {
   event: Event;
   viewMode: string;
   className?: string;
+  onNotionEventClick?: (event: Event) => void;
 }
 
-const CompactAllDayEvent = ({ event, viewMode, className = '' }: CompactAllDayEventProps) => {
+const CompactAllDayEvent = ({ event, viewMode, className = '', onNotionEventClick }: CompactAllDayEventProps) => {
   const styles = getEventStyles(event, viewMode);
+
+  const handleClick = () => {
+    if (event.source === 'notion' && onNotionEventClick) {
+      onNotionEventClick(event);
+    }
+  };
+
+  const isClickable = event.source === 'notion';
 
   return (
     <article 
-      className={`${styles.paddingClass} rounded-lg ${styles.backgroundOpacity} backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/30 ${styles.timelineStyles} ${className}`}
+      className={`${styles.paddingClass} rounded-lg ${styles.backgroundOpacity} backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/30 ${styles.timelineStyles} ${className} ${isClickable ? 'cursor-pointer hover:shadow-md transition-shadow' : ''}`}
       role="article"
       aria-label={`All day event: ${event.title}`}
+      onClick={handleClick}
     >
       <div className="flex items-center gap-2">
         <EventIcon event={event} isAllDay={true} />
