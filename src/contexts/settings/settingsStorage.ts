@@ -28,7 +28,8 @@ interface LoadedSettings {
 export const getStorageValue = async (key: string, isSensitive: boolean = false): Promise<string | null> => {
   try {
     if (isSensitive && secureStorage.exists('test')) {
-      return await secureStorage.retrieve(key, 'defaultPassword');
+      const secureValue = await secureStorage.retrieve(key, 'defaultPassword');
+      return secureValue || localStorage.getItem(key);
     } else {
       return localStorage.getItem(key);
     }
@@ -56,6 +57,12 @@ export const saveStorageValue = async (key: string, value: string, isSensitive: 
 };
 
 export class SettingsStorage {
+  /**
+   * Get a storage value from appropriate storage (secure or regular)
+   */
+  static async getStorageValue(key: string, isSensitive: boolean = false): Promise<string | null> {
+    return getStorageValue(key, isSensitive);
+  }
   /**
    * Load all settings from appropriate storage on app initialization
    */
