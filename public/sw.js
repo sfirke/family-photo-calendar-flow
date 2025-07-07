@@ -173,17 +173,51 @@ async function getStoredCalendars() {
     request.onerror = () => reject(request.error);
     request.onsuccess = () => {
       const db = request.result;
-      if (!db.objectStoreNames.contains('calendar_feeds')) {
-        resolve([]);
-        return;
+      const allCalendars = [];
+      
+      // Get iCal calendars
+      if (db.objectStoreNames.contains('calendar_feeds')) {
+        const transaction1 = db.transaction(['calendar_feeds'], 'readonly');
+        const store1 = transaction1.objectStore('calendar_feeds');
+        const getAllRequest1 = store1.getAll();
+        
+        getAllRequest1.onsuccess = () => {
+          const icalCalendars = getAllRequest1.result || [];
+          allCalendars.push(...icalCalendars);
+          
+          // Get Notion calendars
+          if (db.objectStoreNames.contains('notion_scraped_calendars')) {
+            const transaction2 = db.transaction(['notion_scraped_calendars'], 'readonly');
+            const store2 = transaction2.objectStore('notion_scraped_calendars');
+            const getAllRequest2 = store2.getAll();
+            
+            getAllRequest2.onsuccess = () => {
+              const notionCalendars = getAllRequest2.result || [];
+              allCalendars.push(...notionCalendars);
+              resolve(allCalendars);
+            };
+            getAllRequest2.onerror = () => reject(getAllRequest2.error);
+          } else {
+            resolve(allCalendars);
+          }
+        };
+        getAllRequest1.onerror = () => reject(getAllRequest1.error);
+      } else {
+        // Just try Notion calendars if no iCal feeds
+        if (db.objectStoreNames.contains('notion_scraped_calendars')) {
+          const transaction = db.transaction(['notion_scraped_calendars'], 'readonly');
+          const store = transaction.objectStore('notion_scraped_calendars');
+          const getAllRequest = store.getAll();
+          
+          getAllRequest.onsuccess = () => {
+            const notionCalendars = getAllRequest.result || [];
+            resolve(notionCalendars);
+          };
+          getAllRequest.onerror = () => reject(getAllRequest.error);
+        } else {
+          resolve([]);
+        }
       }
-      
-      const transaction = db.transaction(['calendar_feeds'], 'readonly');
-      const store = transaction.objectStore('calendar_feeds');
-      const getAllRequest = store.getAll();
-      
-      getAllRequest.onerror = () => reject(getAllRequest.error);
-      getAllRequest.onsuccess = () => resolve(getAllRequest.result || []);
     };
   });
 }
@@ -323,7 +357,7 @@ self.addEventListener('message', (event) => {
     // Register for periodic background sync (if supported)
     if ('periodicSync' in self.registration) {
       self.registration.periodicSync.register('calendar-periodic-sync', {
-        minInterval: 12 * 60 * 60 * 1000, // 12 hours
+        minInterval: 60 * 60 * 1000, // 1 hour
       })
         .then(() => {
           console.log('Periodic background sync registered successfully');

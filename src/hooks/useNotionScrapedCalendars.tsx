@@ -8,6 +8,8 @@ import { NotionScrapedCalendar, notionScrapedEventsStorage } from '@/services/no
 import { NotionScrapedEvent } from '@/services/NotionPageScraper';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { toZonedTime } from 'date-fns-tz';
+import { useBackgroundSync } from './useBackgroundSync';
 
 interface NotionApiEvent {
   id: string;
@@ -36,6 +38,14 @@ export const useNotionScrapedCalendars = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [syncStatus, setSyncStatus] = useState<NotionScrapedSyncStatus>({});
   const { toast } = useToast();
+  
+  const { 
+    registerBackgroundSync, 
+    registerPeriodicSync, 
+    triggerBackgroundSync,
+    isBackgroundSyncSupported,
+    processSyncQueue
+  } = useBackgroundSync();
 
   // Load calendars from IndexedDB
   const loadCalendars = useCallback(async () => {
@@ -206,10 +216,17 @@ export const useNotionScrapedCalendars = () => {
             columnDescriptions.join('\n');
         }
 
+        // Convert dates to Eastern timezone for proper display
+        const easternTimezone = 'America/New_York';
+        const eventDate = toZonedTime(new Date(event.date), easternTimezone);
+        const scrapedDate = toZonedTime(new Date(event.scrapedAt), easternTimezone);
+        
+        console.log(`Converting Notion event "${eventTitle}" date from ${event.date} to Eastern:`, eventDate);
+
         return {
           id: event.id,
           title: eventTitle,
-          date: new Date(event.date),
+          date: eventDate,
           time: event.time,
           description: enhancedDescription,
           location: event.location,
@@ -218,13 +235,13 @@ export const useNotionScrapedCalendars = () => {
           priority: event.priority,
           properties: event.properties,
           sourceUrl: event.sourceUrl,
-          scrapedAt: new Date(event.scrapedAt),
+          scrapedAt: scrapedDate,
           calendarId: calendar.id,
           customProperties: event.customProperties,
           source: 'notion',
           dateRange: event.date ? {
-            startDate: new Date(event.date),
-            endDate: event.endDate ? new Date(event.endDate) : undefined
+            startDate: eventDate,
+            endDate: event.endDate ? toZonedTime(new Date(event.endDate), easternTimezone) : undefined
           } : undefined
         };
       });
@@ -349,6 +366,23 @@ export const useNotionScrapedCalendars = () => {
   const getScrapedEvents = useCallback(() => {
     return events;
   }, [events]);
+
+  // Initialize background sync when calendars are loaded
+  useEffect(() => {
+    if (calendars.length > 0 && isBackgroundSyncSupported) {
+      const initBackgroundSync = async () => {
+        try {
+          await registerBackgroundSync();
+          await registerPeriodicSync();
+          console.log('Background sync initialized for Notion calendars');
+        } catch (error) {
+          console.error('Failed to initialize background sync for Notion calendars:', error);
+        }
+      };
+      
+      initBackgroundSync();
+    }
+  }, [calendars.length, isBackgroundSyncSupported, registerBackgroundSync, registerPeriodicSync]);
 
   // Initialize
   useEffect(() => {

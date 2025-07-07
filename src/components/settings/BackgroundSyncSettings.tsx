@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useBackgroundSync } from '@/hooks/useBackgroundSync';
 import { useICalCalendars } from '@/hooks/useICalCalendars';
+import { useNotionScrapedCalendars } from '@/hooks/useNotionScrapedCalendars';
 import { Wifi, WifiOff, RotateCcw, Clock, CheckCircle, AlertCircle } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -16,12 +17,36 @@ const BackgroundSyncSettings = () => {
     triggerBackgroundSync
   } = useBackgroundSync();
   
-  const { calendars } = useICalCalendars();
+  const { calendars, syncAllCalendars: syncAllICalCalendars } = useICalCalendars();
+  const { calendars: notionCalendars, syncAllCalendars: syncAllNotionCalendars } = useNotionScrapedCalendars();
 
-  const enabledCalendarsCount = calendars.filter(cal => cal.enabled).length;
+  const enabledCalendarsCount = calendars.filter(cal => cal.enabled).length + 
+                               notionCalendars.filter(cal => cal.enabled).length;
 
   const handleManualBackgroundSync = async () => {
     await triggerBackgroundSync();
+  };
+
+  const handleTestSync = async () => {
+    console.log('🧪 Testing manual sync of all calendars...');
+    
+    try {
+      // Test iCal calendars
+      if (calendars.filter(cal => cal.enabled).length > 0) {
+        console.log('Testing iCal calendar sync...');
+        await syncAllICalCalendars();
+      }
+      
+      // Test Notion calendars  
+      if (notionCalendars.filter(cal => cal.enabled).length > 0) {
+        console.log('Testing Notion calendar sync...');
+        await syncAllNotionCalendars();
+      }
+      
+      console.log('✅ Manual sync test completed');
+    } catch (error) {
+      console.error('❌ Manual sync test failed:', error);
+    }
   };
 
   return (
@@ -38,15 +63,26 @@ const BackgroundSyncSettings = () => {
             </CardDescription>
           </div>
           {isBackgroundSyncSupported && enabledCalendarsCount > 0 && (
-            <Button 
-              onClick={handleManualBackgroundSync}
-              variant="outline" 
-              size="sm"
-              className="ml-4 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600"
-            >
-              <RotateCcw className="h-4 w-4 mr-2" />
-              Trigger Sync
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                onClick={handleTestSync}
+                variant="outline"
+                size="sm"
+                className="gap-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600"
+              >
+                <CheckCircle className="h-4 w-4" />
+                Test Sync
+              </Button>
+              <Button 
+                onClick={handleManualBackgroundSync}
+                variant="outline" 
+                size="sm"
+                className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600"
+              >
+                <RotateCcw className="h-4 w-4 mr-2" />
+                Trigger Sync
+              </Button>
+            </div>
           )}
         </div>
       </CardHeader>
@@ -137,7 +173,7 @@ const BackgroundSyncSettings = () => {
             <div className="flex items-start gap-2">
               <div className="w-2 h-2 bg-green-500 rounded-full mt-2 flex-shrink-0" />
               <div>
-                <strong>Periodic Sync:</strong> Automatically syncs calendars every 12 hours, even when the app is closed.
+                <strong>Periodic Sync:</strong> Automatically syncs calendars every hour, even when the app is closed.
               </div>
             </div>
           )}
@@ -163,7 +199,8 @@ const BackgroundSyncSettings = () => {
         {enabledCalendarsCount > 0 && (
           <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
             <div className="text-sm text-gray-600 dark:text-gray-400">
-              Background sync is configured for <strong>{enabledCalendarsCount}</strong> enabled calendar feed{enabledCalendarsCount !== 1 ? 's' : ''}.
+              Background sync is configured for <strong>{enabledCalendarsCount}</strong> enabled calendar{enabledCalendarsCount !== 1 ? 's' : ''} 
+              ({calendars.filter(cal => cal.enabled).length} iCal + {notionCalendars.filter(cal => cal.enabled).length} Notion).
             </div>
           </div>
         )}
