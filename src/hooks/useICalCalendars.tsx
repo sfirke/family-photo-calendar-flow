@@ -511,9 +511,53 @@ export const useICalCalendars = () => {
       try {
         const existingEvents = JSON.parse(localStorage.getItem(ICAL_EVENTS_KEY) || '[]');
         const filteredExisting = existingEvents.filter((event: any) => event.calendarId !== calendar.id);
-        const combinedEvents = [...filteredExisting, ...allEvents];
+        
+        // Create a map for efficient event comparison by a stable identifier
+        const existingEventMap = new Map();
+        filteredExisting.forEach(event => {
+          existingEventMap.set(`${event.calendarId}-${event.title}-${event.date}`, event);
+        });
+        
+        // Track which events are new, updated, or unchanged
+        const updatedEvents: any[] = [];
+        let newCount = 0;
+        let updatedCount = 0;
+        
+        allEvents.forEach(newEvent => {
+          const eventKey = `${newEvent.calendarId}-${newEvent.title}-${newEvent.date}`;
+          const existingEvent = existingEventMap.get(eventKey);
+          
+          if (!existingEvent) {
+            // New event
+            updatedEvents.push(newEvent);
+            newCount++;
+          } else {
+            // Check if event details have changed
+            const hasChanges = 
+              existingEvent.description !== newEvent.description ||
+              existingEvent.location !== newEvent.location ||
+              existingEvent.time !== newEvent.time ||
+              existingEvent.organizer !== newEvent.organizer;
+            
+            if (hasChanges) {
+              // Event has been updated
+              updatedEvents.push({ ...newEvent, id: existingEvent.id }); // Preserve original ID
+              updatedCount++;
+            } else {
+              // Event unchanged
+              updatedEvents.push(existingEvent);
+            }
+            
+            // Remove from map to track which events were deleted
+            existingEventMap.delete(eventKey);
+          }
+        });
+        
+        // Combine with events from other calendars
+        const combinedEvents = [...filteredExisting, ...updatedEvents];
         localStorage.setItem(ICAL_EVENTS_KEY, JSON.stringify(combinedEvents));
-        console.log('Events stored successfully in localStorage');
+        
+        console.log(`Calendar sync complete: ${newCount} new events, ${updatedCount} updated events, ${existingEventMap.size} removed events`);
       } catch (error) {
         console.error('Error storing iCal events:', error);
       }

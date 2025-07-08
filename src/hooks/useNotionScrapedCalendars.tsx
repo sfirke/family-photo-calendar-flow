@@ -246,8 +246,52 @@ export const useNotionScrapedCalendars = () => {
         };
       });
 
-      // Save events to IndexedDB
-      await notionScrapedEventsStorage.saveEvents(calendar.id, notionEvents);
+      // Get existing events for comparison
+      const existingEvents = await notionScrapedEventsStorage.getEventsByCalendar(calendar.id);
+      
+      // Track changes for better sync reporting
+      let newCount = 0;
+      let updatedCount = 0;
+      let unchangedCount = 0;
+      
+      const existingEventMap = new Map();
+      existingEvents.forEach(event => {
+        existingEventMap.set(event.id, event);
+      });
+      
+      const processedEvents = notionEvents.map(newEvent => {
+        const existingEvent = existingEventMap.get(newEvent.id);
+        
+        if (!existingEvent) {
+          newCount++;
+          return newEvent;
+        } else {
+          // Check if event has been updated
+          const hasChanges = 
+            existingEvent.title !== newEvent.title ||
+            existingEvent.description !== newEvent.description ||
+            existingEvent.location !== newEvent.location ||
+            existingEvent.status !== newEvent.status ||
+            new Date(existingEvent.date).getTime() !== new Date(newEvent.date).getTime();
+          
+          if (hasChanges) {
+            updatedCount++;
+            return newEvent;
+          } else {
+            unchangedCount++;
+            return existingEvent; // Keep existing event to preserve any local state
+          }
+        }
+      });
+      
+      // Calculate removed events
+      const newEventIds = new Set(notionEvents.map(e => e.id));
+      const removedCount = existingEvents.length - existingEvents.filter(e => newEventIds.has(e.id)).length;
+      
+      // Save updated events to IndexedDB
+      await notionScrapedEventsStorage.saveEvents(calendar.id, processedEvents);
+      
+      console.log(`Notion sync details: ${newCount} new, ${updatedCount} updated, ${unchangedCount} unchanged, ${removedCount} removed`);
 
       // Update calendar metadata
       await updateCalendar(calendar.id, {

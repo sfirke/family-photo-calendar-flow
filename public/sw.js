@@ -282,7 +282,8 @@ async function syncSingleCalendar(calendar) {
   const syncData = {
     calendarId: calendar.id,
     icalData: icalData,
-    syncTime: new Date().toISOString()
+    syncTime: new Date().toISOString(),
+    isBackgroundSync: true // Flag to indicate this came from background sync
   };
   
   // Store in a temporary location for the main thread to pick up

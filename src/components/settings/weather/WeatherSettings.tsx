@@ -23,8 +23,8 @@ const WeatherSettings = ({
 }: WeatherSettingsProps) => {
   const { isSecurityEnabled, hasLockedData } = useSecurity();
 
-  // Determine if fields should be disabled due to locked encrypted data
-  const fieldsDisabled = hasLockedData;
+  // Allow editing even when security is enabled - users can edit and re-encrypt
+  const fieldsDisabled = false;
 
   console.log('WeatherSettings - Security state:', { 
     isSecurityEnabled, 
@@ -62,32 +62,27 @@ const WeatherSettings = ({
         <Input
           id="api-key"
           type="password"
-          placeholder={fieldsDisabled ? "Unlock security to edit API key" : "Enter your OpenWeatherMap API key"}
-          value={fieldsDisabled ? "" : weatherApiKey}
+          placeholder="Enter your OpenWeatherMap API key"
+          value={weatherApiKey}
           onChange={handleApiKeyChange}
-          disabled={fieldsDisabled}
-          className={`bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 ${
-            fieldsDisabled ? 'opacity-50 cursor-not-allowed' : ''
-          }`}
+          className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100"
         />
-        {fieldsDisabled && (
-          <p className="text-xs text-amber-600 dark:text-amber-400">
-            Your API key is encrypted and locked. Use the unlock form above to access it.
-          </p>
-        )}
-        {!fieldsDisabled && (
-          <p className="text-sm text-gray-600 dark:text-gray-400">
-            Get a free API key from{' '}
-            <a 
-              href="https://openweathermap.org/api" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="text-blue-600 dark:text-blue-400 hover:underline"
-            >
-              OpenWeatherMap
-            </a>
-          </p>
-        )}
+        <p className="text-sm text-gray-600 dark:text-gray-400">
+          Get a free API key from{' '}
+          <a 
+            href="https://openweathermap.org/api" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="text-blue-600 dark:text-blue-400 hover:underline"
+          >
+            OpenWeatherMap
+          </a>
+          {isSecurityEnabled && (
+            <span className="text-green-600 dark:text-green-400 ml-2">
+              • Data will be encrypted automatically
+            </span>
+          )}
+        </p>
       </div>
 
       <div className="space-y-2">
@@ -102,17 +97,14 @@ const WeatherSettings = ({
         </div>
         <Input
           id="zipcode"
-          placeholder={fieldsDisabled ? "Unlock security to edit zip code" : "Enter your zip code (e.g., 90210)"}
-          value={fieldsDisabled ? "" : zipCode}
+          placeholder="Enter your zip code (e.g., 90210)"
+          value={zipCode}
           onChange={handleZipCodeChange}
-          disabled={fieldsDisabled}
-          className={`bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 ${
-            fieldsDisabled ? 'opacity-50 cursor-not-allowed' : ''
-          }`}
+          className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100"
         />
-        {fieldsDisabled && (
-          <p className="text-xs text-amber-600 dark:text-amber-400">
-            Your zip code is encrypted and locked. Use the unlock form above to access it.
+        {isSecurityEnabled && (
+          <p className="text-xs text-green-600 dark:text-green-400">
+            Your zip code will be encrypted automatically when saved.
           </p>
         )}
       </div>
