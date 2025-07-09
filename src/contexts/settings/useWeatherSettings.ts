@@ -13,23 +13,6 @@ export const useWeatherSettings = () => {
   const [zipCode, setZipCode] = useState('90210');
   const [weatherApiKey, setWeatherApiKey] = useState('');
 
-  // Load initial settings from storage
-  useEffect(() => {
-    const loadSettings = async () => {
-      try {
-        const savedZipCode = await SettingsStorage.getStorageValue('zipCode', true) || '90210';
-        const savedWeatherApiKey = await SettingsStorage.getStorageValue('weatherApiKey', true) || '';
-        
-        setZipCode(savedZipCode);
-        setWeatherApiKey(savedWeatherApiKey);
-      } catch (error) {
-        console.warn('Failed to load weather settings:', error);
-      }
-    };
-    
-    loadSettings();
-  }, []);
-
   // Auto-save zip code to appropriate storage
   useEffect(() => {
     SettingsStorage.saveSetting('zipCode', zipCode, true);

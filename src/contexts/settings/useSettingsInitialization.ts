@@ -40,6 +40,12 @@ export const useSettingsInitialization = (props: InitializationProps) => {
         // Load all settings
         const settings = await SettingsStorage.loadAllSettings();
         console.log('🔧 Loaded settings:', settings);
+        console.log('🔧 localStorage contents:', {
+          theme: localStorage.getItem('theme'),
+          defaultView: localStorage.getItem('defaultView'),
+          zipCode: localStorage.getItem('zipCode'),
+          weatherApiKey: localStorage.getItem('weatherApiKey')
+        });
 
         // Apply non-sensitive settings
         if (settings.theme) {

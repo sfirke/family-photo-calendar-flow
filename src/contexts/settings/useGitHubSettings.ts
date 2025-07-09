@@ -13,23 +13,6 @@ export const useGitHubSettings = () => {
   const [githubOwner, setGithubOwner] = useState('');
   const [githubRepo, setGithubRepo] = useState('');
 
-  // Load initial settings from storage
-  useEffect(() => {
-    const loadSettings = async () => {
-      try {
-        const savedGithubOwner = await SettingsStorage.getStorageValue('githubOwner', true) || '';
-        const savedGithubRepo = await SettingsStorage.getStorageValue('githubRepo', true) || '';
-        
-        setGithubOwner(savedGithubOwner);
-        setGithubRepo(savedGithubRepo);
-      } catch (error) {
-        console.warn('Failed to load GitHub settings:', error);
-      }
-    };
-    
-    loadSettings();
-  }, []);
-
   // Auto-save GitHub owner to appropriate storage
   useEffect(() => {
     SettingsStorage.saveSetting('githubOwner', githubOwner, true);

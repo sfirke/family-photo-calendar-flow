@@ -154,18 +154,8 @@ export class SettingsStorage {
   /**
    * Save a setting to appropriate storage (secure or regular)
    */
-  static saveSetting(key: string, value: string, isSensitive: boolean = false) {
-    try {
-      if (isSensitive && secureStorage.exists('test')) {
-        secureStorage.store(key, value, 'defaultPassword');
-        localStorage.removeItem(key); // Remove unencrypted version
-      } else {
-        localStorage.setItem(key, value);
-      }
-    } catch (error) {
-      console.warn(`Failed to save ${key} securely, using localStorage:`, error);
-      localStorage.setItem(key, value);
-    }
+  static async saveSetting(key: string, value: string, isSensitive: boolean = false) {
+    await saveStorageValue(key, value, isSensitive);
   }
 
   /**
