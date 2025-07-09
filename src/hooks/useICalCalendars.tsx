@@ -115,7 +115,7 @@ export const useICalCalendars = () => {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [calendars]);
 
   const processBackgroundSyncData = useCallback((syncData: any) => {
     try {
