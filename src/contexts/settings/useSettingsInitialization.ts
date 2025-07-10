@@ -40,12 +40,6 @@ export const useSettingsInitialization = (props: InitializationProps) => {
         // Load all settings
         const settings = await SettingsStorage.loadAllSettings();
         console.log('🔧 Loaded settings:', settings);
-        console.log('🔧 localStorage contents:', {
-          theme: localStorage.getItem('theme'),
-          defaultView: localStorage.getItem('defaultView'),
-          zipCode: localStorage.getItem('zipCode'),
-          weatherApiKey: localStorage.getItem('weatherApiKey')
-        });
 
         // Apply non-sensitive settings
         if (settings.theme) {
@@ -93,19 +87,7 @@ export const useSettingsInitialization = (props: InitializationProps) => {
     };
 
     initializeSettings();
-  }, [
-    props.setTheme,
-    props.setDefaultView,
-    props.setZipCode,
-    props.setWeatherApiKey,
-    props.setPublicAlbumUrl,
-    props.setGithubOwner,
-    props.setGithubRepo,
-    props.setNotionToken,
-    props.setNotionDatabaseId,
-    props.setBackgroundDuration,
-    props.setSelectedAlbum
-  ]); // Run when any setter function changes
+  }, []); // Empty dependency array - run once on mount
 
   return { isLoading };
 };

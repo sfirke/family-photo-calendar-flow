@@ -19,10 +19,24 @@ export const useNotionSettings = () => {
     saveStorageValue(NOTION_DATABASE_ID_KEY, databaseId, true); // true for sensitive data
   };
 
+  // Initialize from storage
+  const initializeNotionSettings = async () => {
+    const savedToken = await getStorageValue(NOTION_TOKEN_KEY, true);
+    const savedDatabaseId = await getStorageValue(NOTION_DATABASE_ID_KEY, true);
+    
+    if (savedToken) {
+      setNotionTokenState(savedToken);
+    }
+    if (savedDatabaseId) {
+      setNotionDatabaseIdState(savedDatabaseId);
+    }
+  };
+
   return {
     notionToken,
     setNotionToken,
     notionDatabaseId,
     setNotionDatabaseId,
+    initializeNotionSettings
   };
 };

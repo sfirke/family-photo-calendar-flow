@@ -14,6 +14,25 @@ export const usePhotoSettings = () => {
   const [backgroundDuration, setBackgroundDuration] = useState(30); // Default 30 minutes
   const [selectedAlbum, setSelectedAlbum] = useState<string | null>(null);
 
+  // Load initial settings
+  useEffect(() => {
+    const loadSettings = () => {
+      const savedUrl = SettingsStorage.getSetting('publicAlbumUrl', true) || '';
+      const savedDuration = parseInt(localStorage.getItem('backgroundDuration') || '30');
+      const savedAlbum = localStorage.getItem('selectedAlbum');
+      
+      console.log('🖼️ usePhotoSettings - Loading saved settings:');
+      console.log('🖼️ savedUrl:', savedUrl);
+      console.log('🖼️ savedDuration:', savedDuration);
+      console.log('🖼️ savedAlbum:', savedAlbum);
+      
+      setPublicAlbumUrl(savedUrl);
+      setBackgroundDuration(savedDuration);
+      setSelectedAlbum(savedAlbum);
+    };
+
+    loadSettings();
+  }, []);
 
   // Auto-save public album URL to appropriate storage
   useEffect(() => {
