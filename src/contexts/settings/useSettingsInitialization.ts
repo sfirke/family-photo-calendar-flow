@@ -93,7 +93,19 @@ export const useSettingsInitialization = (props: InitializationProps) => {
     };
 
     initializeSettings();
-  }, []); // Empty dependency array - run once on mount
+  }, [
+    props.setTheme,
+    props.setDefaultView,
+    props.setZipCode,
+    props.setWeatherApiKey,
+    props.setPublicAlbumUrl,
+    props.setGithubOwner,
+    props.setGithubRepo,
+    props.setNotionToken,
+    props.setNotionDatabaseId,
+    props.setBackgroundDuration,
+    props.setSelectedAlbum
+  ]); // Run when any setter function changes
 
   return { isLoading };
 };
