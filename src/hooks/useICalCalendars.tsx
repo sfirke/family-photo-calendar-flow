@@ -172,8 +172,8 @@ export const useICalCalendars = () => {
       await calendarStorageService.addCalendar(newCalendarFeed);
       console.log('Calendar added successfully:', newCalendarFeed);
       
-      // Update the calendars state immediately
-      setCalendars(prev => [...prev, newCalendarFeed]);
+      // Reload all calendars to ensure consistency
+      await loadCalendars();
       
       return newCalendarFeed;
     } catch (error) {
@@ -182,7 +182,7 @@ export const useICalCalendars = () => {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [loadCalendars]);
 
   // Remove calendar
   const removeCalendar = useCallback(async (id: string) => {
