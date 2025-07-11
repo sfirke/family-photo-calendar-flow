@@ -123,9 +123,67 @@ const NotionEventModal = ({ open, onOpenChange, event }: NotionEventModalProps) 
           {event.description && (
             <div className="space-y-2">
               <h3 className="font-medium text-gray-900 dark:text-gray-100">Description</h3>
-              <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
-                {event.description}
-              </p>
+              <div className="text-gray-700 dark:text-gray-300">
+                {event.description.split('\n').map((section, index) => {
+                  // Check if this section contains ingredients (bulleted list)
+                  if (section.toLowerCase().includes('ingredients:')) {
+                    const ingredientMatch = section.match(/ingredients:\s*(.*)/i);
+                    if (ingredientMatch) {
+                      const ingredients = ingredientMatch[1].split(',').map(item => item.trim()).filter(Boolean);
+                      return (
+                        <div key={index} className="mb-4">
+                          <p className="font-medium mb-2">Ingredients:</p>
+                          <ul className="list-disc pl-6 space-y-1">
+                            {ingredients.map((ingredient, i) => (
+                              <li key={i}>{ingredient}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      );
+                    }
+                  }
+                  
+                  // Check if this section contains notes with potential links
+                  if (section.toLowerCase().includes('notes:')) {
+                    const noteMatch = section.match(/notes:\s*(.*)/i);
+                    if (noteMatch) {
+                      const noteContent = noteMatch[1];
+                      // Simple URL detection
+                      const urlRegex = /(https?:\/\/[^\s]+)/g;
+                      const parts = noteContent.split(urlRegex);
+                      
+                      return (
+                        <div key={index} className="mb-4">
+                          <p className="font-medium mb-2">Notes:</p>
+                          <p>
+                            {parts.map((part, i) => {
+                              if (urlRegex.test(part)) {
+                                return (
+                                  <a 
+                                    key={i} 
+                                    href={part} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="text-blue-600 dark:text-blue-400 underline hover:text-blue-800 dark:hover:text-blue-200"
+                                  >
+                                    {part}
+                                  </a>
+                                );
+                              }
+                              return part;
+                            })}
+                          </p>
+                        </div>
+                      );
+                    }
+                  }
+                  
+                  // Regular text sections
+                  return section.trim() ? (
+                    <p key={index} className="mb-2 whitespace-pre-wrap">{section}</p>
+                  ) : null;
+                })}
+              </div>
             </div>
           )}
 

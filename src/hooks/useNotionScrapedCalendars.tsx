@@ -216,11 +216,23 @@ export const useNotionScrapedCalendars = () => {
             columnDescriptions.join('\n');
         }
 
-        // Use dates as-is from Notion without timezone conversion
-        const eventDate = new Date(event.date);
+        // Handle dates properly to avoid timezone issues
+        let eventDate: Date;
+        if (event.date.includes('T')) {
+          // If it's a datetime string, use as-is
+          eventDate = new Date(event.date);
+        } else {
+          // If it's a date-only string (YYYY-MM-DD), create date in local timezone
+          const [year, month, day] = event.date.split('-').map(Number);
+          eventDate = new Date(year, month - 1, day); // month is 0-indexed
+        }
         const scrapedDate = new Date(event.scrapedAt);
         
-        console.log(`Using Notion event "${eventTitle}" date as-is:`, eventDate);
+        console.log(`Processing Notion event "${eventTitle}":`, {
+          originalDate: event.date,
+          parsedDate: eventDate,
+          localDateString: eventDate.toDateString()
+        });
 
         return {
           id: event.id,
@@ -265,17 +277,26 @@ export const useNotionScrapedCalendars = () => {
           newCount++;
           return newEvent;
         } else {
-          // Check if event has been updated
+          // Check if event has been updated (check more fields including time)
           const hasChanges = 
             existingEvent.title !== newEvent.title ||
             existingEvent.description !== newEvent.description ||
             existingEvent.location !== newEvent.location ||
             existingEvent.status !== newEvent.status ||
+            existingEvent.time !== newEvent.time ||
             new Date(existingEvent.date).getTime() !== new Date(newEvent.date).getTime();
           
           if (hasChanges) {
             updatedCount++;
-            return newEvent;
+            console.log(`Updating event "${newEvent.title}":`, {
+              titleChanged: existingEvent.title !== newEvent.title,
+              descChanged: existingEvent.description !== newEvent.description,
+              locationChanged: existingEvent.location !== newEvent.location,
+              statusChanged: existingEvent.status !== newEvent.status,
+              timeChanged: existingEvent.time !== newEvent.time,
+              dateChanged: new Date(existingEvent.date).getTime() !== new Date(newEvent.date).getTime()
+            });
+            return { ...newEvent, scrapedAt: new Date() }; // Update scrapedAt timestamp
           } else {
             unchangedCount++;
             return existingEvent; // Keep existing event to preserve any local state

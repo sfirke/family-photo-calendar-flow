@@ -290,10 +290,13 @@ function transformPageToEvent(page: NotionPage, databaseId: string): CalendarEve
         case 'date': {
           if (property.date?.start) {
             const dateString = property.date.start
-            date = dateString
             
-            // Enhanced time detection logic
-            if (dateString.includes('T')) {
+            // For date-only entries (YYYY-MM-DD), preserve as-is for local date handling
+            if (!dateString.includes('T')) {
+              date = dateString // Keep as YYYY-MM-DD for all-day events
+            } else {
+              // For datetime entries, also preserve as-is but extract time
+              date = dateString
               const timePart = dateString.split('T')[1]
               // Check if it's a meaningful time (not just 00:00:00.000+00:00 or similar)
               if (timePart && 
@@ -306,9 +309,7 @@ function transformPageToEvent(page: NotionPage, databaseId: string): CalendarEve
                   time = `${timeMatch[1]}:${timeMatch[2]}`
                 }
               }
-              // If no meaningful time found, leave time undefined for all-day treatment
             }
-            // If no 'T' in date string, it's definitely a date-only entry (all-day)
           }
           break
         }
