@@ -100,6 +100,10 @@ export const formatNotionProperty = (property: any): string | null => {
     case 'last_edited_by':
       return property.last_edited_by?.name || 'Unknown';
     
+    case 'array':
+      // Handle array properties specially for ingredients and notes
+      return null; // Will be handled specially in the modal
+    
     default:
       // Try to stringify unknown property types
       try {
@@ -110,4 +114,55 @@ export const formatNotionProperty = (property: any): string | null => {
   }
 
   return null;
+};
+
+// Function to extract ingredients from array property
+export const extractIngredientsFromArray = (arrayProperty: any): string[] => {
+  if (!arrayProperty?.array || !Array.isArray(arrayProperty.array)) {
+    return [];
+  }
+
+  const ingredients: string[] = [];
+  
+  arrayProperty.array.forEach((item: any) => {
+    if (item.type === 'rich_text' && item.rich_text) {
+      // Combine all rich text parts into a single string
+      const fullText = item.rich_text.map((text: any) => text.plain_text || '').join('');
+      
+      // Split by bullet points and newlines to extract individual ingredients
+      const lines = fullText.split('\n').filter(line => line.trim());
+      
+      lines.forEach(line => {
+        // Remove bullet points and clean up
+        const cleaned = line.replace(/^[•·\-\*]\s*/, '').trim();
+        if (cleaned) {
+          ingredients.push(cleaned);
+        }
+      });
+    }
+  });
+
+  return ingredients;
+};
+
+// Function to extract notes from array property
+export const extractNotesFromArray = (arrayProperty: any): Array<{type: 'url' | 'text', content: string}> => {
+  if (!arrayProperty?.array || !Array.isArray(arrayProperty.array)) {
+    return [];
+  }
+
+  const notes: Array<{type: 'url' | 'text', content: string}> = [];
+  
+  arrayProperty.array.forEach((item: any) => {
+    if (item.type === 'url' && item.url) {
+      notes.push({ type: 'url', content: item.url });
+    } else if (item.type === 'rich_text' && item.rich_text) {
+      const textContent = item.rich_text.map((text: any) => text.plain_text || '').join('');
+      if (textContent.trim()) {
+        notes.push({ type: 'text', content: textContent });
+      }
+    }
+  });
+
+  return notes;
 };

@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Calendar, Clock, MapPin, ExternalLink, Tag, Flag, AlertCircle } from 'lucide-react';
 import { NotionScrapedEvent } from '@/services/NotionPageScraper';
-import { formatNotionProperty } from '@/utils/notionPropertyFormatter';
+import { formatNotionProperty, extractIngredientsFromArray, extractNotesFromArray } from '@/utils/notionPropertyFormatter';
 
 interface NotionEventModalProps {
   open: boolean;
@@ -208,8 +208,67 @@ const NotionEventModal = ({ open, onOpenChange, event }: NotionEventModalProps) 
           {event.properties && Object.keys(event.properties).length > 0 && (
             <div className="space-y-2">
               <h3 className="font-medium text-gray-900 dark:text-gray-100">Database Properties</h3>
-              <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 ml-6 space-y-2">
+              <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 ml-6 space-y-4">
                 {Object.entries(event.properties).map(([key, property]) => {
+                  const keyLower = key.toLowerCase();
+                  
+                  // Special handling for ingredients
+                  if (keyLower.includes('ingredient') && property.type === 'array') {
+                    const ingredients = extractIngredientsFromArray(property);
+                    if (ingredients.length === 0) return null;
+                    
+                    return (
+                      <div key={key} className="space-y-2">
+                        <span className="font-medium text-gray-600 dark:text-gray-400 capitalize block">
+                          {key}:
+                        </span>
+                        <div className="text-gray-800 dark:text-gray-200">
+                          <ul className="list-disc pl-6 space-y-1">
+                            {ingredients.map((ingredient, index) => (
+                              <li key={index}>{ingredient}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      </div>
+                    );
+                  }
+                  
+                  // Special handling for notes
+                  if (keyLower.includes('note') && property.type === 'array') {
+                    const notes = extractNotesFromArray(property);
+                    if (notes.length === 0) return null;
+                    
+                    return (
+                      <div key={key} className="space-y-2">
+                        <span className="font-medium text-gray-600 dark:text-gray-400 capitalize block">
+                          {key}:
+                        </span>
+                        <div className="text-gray-800 dark:text-gray-200 space-y-2">
+                          {notes.map((note, index) => {
+                            if (note.type === 'url') {
+                              return (
+                                <a 
+                                  key={index}
+                                  href={note.content} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="text-blue-600 dark:text-blue-400 underline hover:text-blue-800 dark:hover:text-blue-200 block"
+                                >
+                                  {note.content}
+                                </a>
+                              );
+                            } else {
+                              return (
+                                <p key={index}>{note.content}</p>
+                              );
+                            }
+                          })}
+                        </div>
+                      </div>
+                    );
+                  }
+                  
+                  // Regular property formatting
                   const value = formatNotionProperty(property);
                   if (!value) return null;
                   
