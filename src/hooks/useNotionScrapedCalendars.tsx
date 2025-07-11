@@ -8,7 +8,7 @@ import { NotionScrapedCalendar, notionScrapedEventsStorage } from '@/services/no
 import { NotionScrapedEvent } from '@/services/NotionPageScraper';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { toZonedTime } from 'date-fns-tz';
+
 import { useBackgroundSync } from './useBackgroundSync';
 
 interface NotionApiEvent {
@@ -216,12 +216,11 @@ export const useNotionScrapedCalendars = () => {
             columnDescriptions.join('\n');
         }
 
-        // Convert dates to Eastern timezone for proper display
-        const easternTimezone = 'America/New_York';
-        const eventDate = toZonedTime(new Date(event.date), easternTimezone);
-        const scrapedDate = toZonedTime(new Date(event.scrapedAt), easternTimezone);
+        // Use dates as-is from Notion without timezone conversion
+        const eventDate = new Date(event.date);
+        const scrapedDate = new Date(event.scrapedAt);
         
-        console.log(`Converting Notion event "${eventTitle}" date from ${event.date} to Eastern:`, eventDate);
+        console.log(`Using Notion event "${eventTitle}" date as-is:`, eventDate);
 
         return {
           id: event.id,
@@ -241,7 +240,7 @@ export const useNotionScrapedCalendars = () => {
           source: 'notion',
           dateRange: event.date ? {
             startDate: eventDate,
-            endDate: event.endDate ? toZonedTime(new Date(event.endDate), easternTimezone) : undefined
+            endDate: event.endDate ? new Date(event.endDate) : undefined
           } : undefined
         };
       });
