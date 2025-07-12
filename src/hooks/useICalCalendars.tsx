@@ -112,6 +112,14 @@ export const useICalCalendars = () => {
       // Update events in localStorage
       const existingEvents = JSON.parse(localStorage.getItem(ICAL_EVENTS_KEY) || '[]');
       const filteredExisting = existingEvents.filter((event: any) => event.calendarId !== calendarId);
+      
+      // Track sync changes for better reporting
+      const existingCalendarEvents = existingEvents.filter((event: any) => event.calendarId === calendarId);
+      const newCount = allEvents.length - existingCalendarEvents.length;
+      const removedCount = Math.max(0, existingCalendarEvents.length - allEvents.length);
+      
+      console.log(`iCal sync for ${calendar.name}: ${allEvents.length} total events, ${newCount > 0 ? newCount + ' new' : ''} ${removedCount > 0 ? removedCount + ' removed' : ''}`);
+      
       const combinedEvents = [...filteredExisting, ...allEvents];
       localStorage.setItem(ICAL_EVENTS_KEY, JSON.stringify(combinedEvents));
 
