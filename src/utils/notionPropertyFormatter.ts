@@ -129,16 +129,23 @@ export const extractIngredientsFromArray = (arrayProperty: any): string[] => {
       // Combine all rich text parts into a single string
       const fullText = item.rich_text.map((text: any) => text.plain_text || '').join('');
       
-      // Split by bullet points and newlines to extract individual ingredients
-      const lines = fullText.split('\n').filter(line => line.trim());
-      
-      lines.forEach(line => {
-        // Remove bullet points and clean up
-        const cleaned = line.replace(/^[•·\-\*]\s*/, '').trim();
-        if (cleaned) {
-          ingredients.push(cleaned);
-        }
-      });
+      // Check if it contains bullet points or newlines
+      if (fullText.includes('•') || fullText.includes('\n')) {
+        // Split by bullet points and newlines to extract individual ingredients
+        const lines = fullText.split('\n').filter(line => line.trim());
+        
+        lines.forEach(line => {
+          // Remove bullet points and clean up
+          const cleaned = line.replace(/^[•·\-\*]\s*/, '').trim();
+          if (cleaned) {
+            ingredients.push(cleaned);
+          }
+        });
+      } else {
+        // Handle comma-separated ingredients
+        const commaSeparated = fullText.split(',').map(item => item.trim()).filter(Boolean);
+        ingredients.push(...commaSeparated);
+      }
     }
   });
 
