@@ -55,12 +55,22 @@ const isValidAlbumPhoto = (url: string, html: string): boolean => {
   
   // Filter out common profile photo and UI element patterns
   const profilePhotoPatterns = [
-    /=s40/, /=s32/, /=s64/, /=s96/, /=s128/, /=s160/, /=s200/, // Small sizes typically used for profile photos
+    /=s40/, /=s32/, /=s64/, /=s96/, /=s128/, /=s160/, /=s200/, /=s240/, /=s280/, /=s320/, // Small to medium sizes typically used for profile photos
     /\/avatar\//, /-rp-/, /_rp\./, /profile/, /face/, /contact/,
     /=c-/, // Cropped images (often profile photos)
     /=p-/, // Profile photo indicator
     /\/photo\.jpg/, // Generic photo names often used for profiles
-    /user_/, /account_/, /member_/ // User-related identifiers
+    /user_/, /account_/, /member_/, // User-related identifiers
+    /=cc/, // Circular crop indicator (common for profile photos)
+    /=fh/, // Face highlight crop
+    /=fc/, // Face crop
+    /=rj/, // Round/circular crop (profile photos)
+    /=sc/, // Square crop (often profile photos)
+    /=rw/, // Round width crop
+    /=rh/, // Round height crop
+    /-c$/, /-cropped/, // Cropped image indicators
+    /=w\d+-h\d+-p-k-no-nu/, // Google's profile photo URL pattern
+    /circular/, /round/, /square/ // Shape-based indicators
   ];
   
   for (const pattern of profilePhotoPatterns) {
@@ -82,7 +92,11 @@ const isValidAlbumPhoto = (url: string, html: string): boolean => {
       'data-profile', 'profile-photo', 'user-avatar', 'owner-photo',
       'header-avatar', 'account-photo', 'member-photo', 'contributor',
       'aria-label="profile"', 'class="profile', 'id="profile',
-      'data-testid="profile', 'role="img".*profile', 'alt="profile'
+      'data-testid="profile', 'role="img".*profile', 'alt="profile',
+      'profile-image', 'profile-pic', 'user-photo', 'avatar-image',
+      'circular', 'round-image', 'face-crop', 'initials',
+      'letter-avatar', 'monogram', 'user-initial', 'profile-circle',
+      'account-avatar', 'user-badge', 'profile-badge'
     ];
     
     for (const contextPattern of profileContextPatterns) {
@@ -105,22 +119,46 @@ const isValidAlbumPhoto = (url: string, html: string): boolean => {
     }
   }
   
-  // Additional size-based filtering - very small images are likely UI elements
+  // Enhanced size-based filtering for profile photos
   const sizeMatch = url.match(/=s(\d+)/);
   if (sizeMatch) {
     const size = parseInt(sizeMatch[1]);
-    if (size < 200) { // Images smaller than 200px are likely profile photos or UI elements
+    // Profile photos are often small to medium sized (up to 400px)
+    if (size < 400) {
       return false;
     }
   }
   
-  // Check for metadata or thumbnail indicators in the URL
+  // Check for square dimensions which are common for profile photos
+  const squareDimensionMatch = url.match(/=w(\d+)-h(\d+)/);
+  if (squareDimensionMatch) {
+    const width = parseInt(squareDimensionMatch[1]);
+    const height = parseInt(squareDimensionMatch[2]);
+    // Square images under 400px are likely profile photos
+    if (width === height && width < 400) {
+      return false;
+    }
+    // Very small rectangular images are also likely profile elements
+    if (width < 300 || height < 300) {
+      return false;
+    }
+  }
+  
+  // Check for metadata, thumbnail, and profile photo indicators in the URL
   const metadataPatterns = [
     /\/metadata\//, /\/thumb\//, /\/thumbnail\//, /\/preview\//,
     /=w\d+-h\d+-/, // Specific width-height combinations often used for thumbnails
     /=pp-/, // Thumbnail indicator
     /=mv-/, // Movie/video thumbnail
     /=no-/, // No-crop indicator (sometimes used for profile photos)
+    /=fv/, // Face view indicator
+    /=ci/, // Circle indicator (profile photos)
+    /=mo/, // Monogram/initial indicator
+    /=ft/, // Face thumbnail
+    /=at/, // Avatar thumbnail
+    /=profile/, // Direct profile indicator
+    /=icon/, // Icon-sized images
+    /=badge/, // Badge-style images (often profile related)
   ];
   
   for (const pattern of metadataPatterns) {
