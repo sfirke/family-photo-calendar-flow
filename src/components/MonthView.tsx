@@ -10,7 +10,7 @@ import { compareTimeStrings } from '@/utils/timeUtils';
 
 interface MonthViewProps {
   events: Event[];
-  getWeatherForDate: (date: Date) => { temp: number; condition: string };
+  getWeatherForDate: (date: Date) => { temp: number; condition: string; highTemp?: number; lowTemp?: number };
   onNotionEventClick?: (event: Event) => void;
 }
 
@@ -167,12 +167,16 @@ const MonthView = ({ events, getWeatherForDate, onNotionEventClick }: MonthViewP
                       <span className={`text-xs sm:text-sm font-medium ${isDayToday ? 'text-blue-600 dark:text-blue-400' : ''}`}>
                         {format(day, 'd')}
                       </span>
-                      {isCurrentMonth && (
-                        <WeatherDisplay 
-                          weather={getWeatherForDate(day)}
-                          className="text-xs hidden sm:block"
-                        />
-                      )}
+                      {isCurrentMonth && (() => {
+                        const weather = getWeatherForDate(day);
+                        const highTemp = weather.highTemp ?? weather.temp;
+                        const lowTemp = weather.lowTemp ?? (weather.temp - 10);
+                        return (
+                          <span className="text-xs text-gray-600 dark:text-gray-300 hidden sm:block">
+                            {highTemp}/{lowTemp}
+                          </span>
+                        );
+                      })()}
                     </div>
                     
                     <div className="space-y-1">
