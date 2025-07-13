@@ -161,8 +161,11 @@ export const extractNotesFromArray = (arrayProperty: any): Array<{type: 'url' | 
   const notes: Array<{type: 'url' | 'text', content: string}> = [];
   
   arrayProperty.array.forEach((item: any) => {
-    if (item.type === 'url' && item.url) {
-      notes.push({ type: 'url', content: item.url });
+    if (item.type === 'url') {
+      // Handle URL items, skip if URL is null or empty
+      if (item.url && item.url.trim()) {
+        notes.push({ type: 'url', content: item.url });
+      }
     } else if (item.type === 'rich_text' && item.rich_text) {
       const textContent = item.rich_text.map((text: any) => text.plain_text || '').join('');
       if (textContent.trim()) {
