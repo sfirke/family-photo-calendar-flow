@@ -155,21 +155,14 @@ const TimelineView = ({ events, getWeatherForDate, onNotionEventClick }: Timelin
                     <hr className="border-border w-full" />
                   </div>
                   
-                  {/* Responsive Weather display */}
-                  <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm text-white/70 self-start sm:self-center">
-                    <div className="text-left sm:text-right">
-                      <div className="flex items-center gap-2">
-                        <WeatherDisplay 
-                          weather={weather}
-                          className="text-xs sm:text-sm"
-                          forceWhite={true}
-                        />
-                      </div>
-                      <div className="text-xs text-white">
-                        Low: {weather.temp - 10}°
-                      </div>
-                    </div>
-                  </div>
+                   {/* Responsive Weather display */}
+                   <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm text-white/70 self-start sm:self-center">
+                     <WeatherDisplay 
+                       weather={weather}
+                       className="text-xs sm:text-sm"
+                       forceWhite={true}
+                     />
+                   </div>
                 </div>
                 
                 {/* Responsive All-day events - full width on mobile, 45% on larger screens */}
