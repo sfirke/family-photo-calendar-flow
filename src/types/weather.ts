@@ -3,7 +3,13 @@ export interface WeatherData {
   location: string;
   temperature: number;
   condition: string;
+  description?: string;
+  humidity?: number;
+  windSpeed?: number;
+  uvIndex?: number;
   forecast: WeatherForecastDay[];
+  lastUpdated?: string;
+  provider?: string;
 }
 
 export interface WeatherForecastDay {
@@ -12,6 +18,10 @@ export interface WeatherForecastDay {
   high?: number;
   low?: number;
   condition: string;
+  description?: string;
+  humidity?: number;
+  windSpeed?: number;
+  uvIndex?: number;
 }
 
 export interface WeatherTestResult {
