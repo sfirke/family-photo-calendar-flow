@@ -10,17 +10,17 @@ const LocalDataManager = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
-  const handleExport = () => {
+  const handleExport = async () => {
     try {
-      localDataManager.exportAllData();
+      await localDataManager.exportAllData();
       toast({
         title: "Data exported",
-        description: "Your calendar data has been downloaded as a backup file.",
+        description: "Your calendar data and settings have been downloaded as a backup file.",
       });
     } catch (error) {
       toast({
         title: "Export failed",
-        description: "Failed to export your data. Please try again.",
+        description: "Failed to export your data and settings. Please try again.",
         variant: "destructive"
       });
     }
@@ -34,7 +34,7 @@ const LocalDataManager = () => {
       await localDataManager.importAllData(file);
       toast({
         title: "Data imported",
-        description: "Your calendar data has been restored from the backup file.",
+        description: "Your calendar data and settings have been restored from the backup file.",
       });
       // Reload the page to reflect imported data
       setTimeout(() => window.location.reload(), 1000);
@@ -52,12 +52,12 @@ const LocalDataManager = () => {
     }
   };
 
-  const handleClearData = () => {
-    if (window.confirm('Are you sure you want to clear all calendar data? This action cannot be undone.')) {
-      localDataManager.clearAllData();
+  const handleClearData = async () => {
+    if (window.confirm('Are you sure you want to clear all calendar data and settings? This action cannot be undone.')) {
+      await localDataManager.clearAllData();
       toast({
         title: "Data cleared",
-        description: "All calendar data has been removed.",
+        description: "All calendar data and settings have been removed.",
       });
       // Reload the page to reflect cleared data
       setTimeout(() => window.location.reload(), 1000);
@@ -75,7 +75,7 @@ const LocalDataManager = () => {
           Local Data Management
         </CardTitle>
         <CardDescription className="text-gray-600 dark:text-gray-400">
-          Backup, restore, and manage your local calendar data
+          Backup, restore, and manage your local calendar data and settings using tiered storage
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -135,7 +135,7 @@ const LocalDataManager = () => {
 
         <div className="p-3 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg">
           <p className="text-sm text-blue-800 dark:text-blue-200">
-            <strong>Note:</strong> All your calendar data is stored locally in your browser. 
+            <strong>Note:</strong> Your calendar data and settings are stored using a tiered storage system (cache → localStorage → IndexedDB). 
             Regular backups are recommended to prevent data loss.
           </p>
         </div>

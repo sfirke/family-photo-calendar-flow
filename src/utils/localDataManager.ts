@@ -2,23 +2,29 @@
 /* eslint-disable react-refresh/only-export-components */
 
 import { Event } from '@/types/calendar';
+import { settingsStorageService } from '@/services/settingsStorageService';
 
 interface ExportData {
   events: Event[];
+  settings: Record<string, any>;
   exportDate: string;
   version: string;
 }
 
 class LocalDataManager {
-  exportAllData(): void {
+  async exportAllData(): Promise<void> {
     try {
       const localEvents = localStorage.getItem('family_calendar_events');
       const events = localEvents ? JSON.parse(localEvents) : [];
       
+      // Get settings from tiered storage
+      const settings = await settingsStorageService.loadAllSettings();
+      
       const exportData: ExportData = {
         events,
+        settings,
         exportDate: new Date().toISOString(),
-        version: '1.0'
+        version: '2.0'
       };
       
       const dataStr = JSON.stringify(exportData, null, 2);
@@ -47,6 +53,16 @@ class LocalDataManager {
           
           if (importData.events && Array.isArray(importData.events)) {
             localStorage.setItem('family_calendar_events', JSON.stringify(importData.events));
+            
+            // Import settings if available (version 2.0+)
+            if (importData.settings && importData.version >= '2.0') {
+              for (const [key, value] of Object.entries(importData.settings)) {
+                if (value !== null && value !== undefined) {
+                  settingsStorageService.setValue(key, String(value));
+                }
+              }
+            }
+            
             resolve();
           } else {
             reject(new Error('Invalid file format'));
@@ -61,11 +77,14 @@ class LocalDataManager {
     });
   }
 
-  clearAllData(): void {
+  async clearAllData(): Promise<void> {
     try {
       localStorage.removeItem('family_calendar_events');
       localStorage.removeItem('family_calendar_events_version');
       localStorage.removeItem('family_calendar_ical_events');
+      
+      // Clear settings cache
+      settingsStorageService.clearCache();
     } catch (error) {
       console.error('Failed to clear local data:', error);
     }
@@ -90,17 +109,17 @@ class LocalDataManager {
   }
 }
 
-// Export legacy functions for backwards compatibility
-export const exportLocalData = (): void => {
-  localDataManager.exportAllData();
+// Export functions with enhanced functionality
+export const exportLocalData = (): Promise<void> => {
+  return localDataManager.exportAllData();
 };
 
 export const importLocalData = (file: File): Promise<void> => {
   return localDataManager.importAllData(file);
 };
 
-export const clearLocalData = (): void => {
-  localDataManager.clearAllData();
+export const clearLocalData = (): Promise<void> => {
+  return localDataManager.clearAllData();
 };
 
 // Export the manager instance

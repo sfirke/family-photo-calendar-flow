@@ -35,11 +35,14 @@ export const useSettingsInitialization = (props: InitializationProps) => {
   useEffect(() => {
     const initializeSettings = async () => {
       try {
-        console.log('🔧 Initializing settings from storage...');
+        console.log('🔧 Initializing settings from tiered storage...');
         
-        // Load all settings
+        // Preload cache for common settings
+        await SettingsStorage.preloadCache();
+        
+        // Load all settings using tiered storage
         const settings = await SettingsStorage.loadAllSettings();
-        console.log('🔧 Loaded settings:', settings);
+        console.log('🔧 Loaded settings from tiered storage:', settings);
 
         // Apply non-sensitive settings
         if (settings.theme) {

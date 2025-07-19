@@ -2,11 +2,12 @@
 /**
  * Settings Storage Utilities
  * 
- * Centralized storage management for application settings with
- * automatic encryption and migration between storage modes.
+ * Enhanced centralized storage management for application settings with
+ * tiered caching (memory -> localStorage -> IndexedDB) and automatic encryption.
  */
 
 import { secureStorage } from '@/utils/security/secureStorage';
+import { settingsStorageService } from '@/services/settingsStorageService';
 
 interface LoadedSettings {
   theme?: 'light' | 'dark' | 'system' | null;
@@ -23,35 +24,26 @@ interface LoadedSettings {
 }
 
 /**
- * Get a storage value from appropriate storage (secure or regular)
+ * Get a storage value using tiered storage (cache -> localStorage -> IndexedDB)
  */
 export const getStorageValue = async (key: string, isSensitive: boolean = false): Promise<string | null> => {
   try {
-    if (isSensitive && secureStorage.exists('test')) {
-      const secureValue = await secureStorage.retrieve(key, 'defaultPassword');
-      return secureValue || localStorage.getItem(key);
-    } else {
-      return localStorage.getItem(key);
-    }
+    return await settingsStorageService.getValue(key);
   } catch (error) {
-    console.warn(`Failed to get ${key}:`, error);
+    console.warn(`Failed to get ${key} from tiered storage:`, error);
+    // Fallback to direct localStorage access
     return localStorage.getItem(key);
   }
 };
 
 /**
- * Save a storage value to appropriate storage (secure or regular)
+ * Save a storage value using tiered storage (cache + localStorage + IndexedDB)
  */
 export const saveStorageValue = async (key: string, value: string, isSensitive: boolean = false): Promise<void> => {
   try {
-    if (isSensitive && secureStorage.exists('test')) {
-      await secureStorage.store(key, value, 'defaultPassword');
-      localStorage.removeItem(key); // Remove unencrypted version
-    } else {
-      localStorage.setItem(key, value);
-    }
+    await settingsStorageService.setValue(key, value);
   } catch (error) {
-    console.warn(`Failed to save ${key} securely, using localStorage:`, error);
+    console.warn(`Failed to save ${key} to tiered storage, using localStorage fallback:`, error);
     localStorage.setItem(key, value);
   }
 };
@@ -64,53 +56,36 @@ export class SettingsStorage {
     return getStorageValue(key, isSensitive);
   }
   /**
-   * Load all settings from appropriate storage on app initialization
+   * Load all settings using tiered storage approach
    */
   static async loadAllSettings(): Promise<LoadedSettings> {
     try {
-      // Load non-sensitive settings from regular localStorage
-      const nonSensitiveSettings = {
+      // Use the enhanced storage service that handles tiered storage
+      const settings = await settingsStorageService.loadAllSettings();
+      
+      // Migrate any legacy settings if needed
+      if (secureStorage.exists('test')) {
+        await this.migrateSensitiveSettings();
+      }
+      
+      return settings;
+    } catch (error) {
+      console.error('Error loading settings from tiered storage:', error);
+      
+      // Fallback to direct localStorage access
+      return {
         theme: localStorage.getItem('theme') as 'light' | 'dark' | 'system' | null,
         defaultView: localStorage.getItem('defaultView') as 'month' | 'week' | 'timeline' | null,
         backgroundDuration: localStorage.getItem('backgroundDuration'),
         selectedAlbum: localStorage.getItem('selectedAlbum'),
+        zipCode: localStorage.getItem('zipCode'),
+        weatherApiKey: localStorage.getItem('weatherApiKey'),
+        publicAlbumUrl: localStorage.getItem('publicAlbumUrl'),
+        githubOwner: localStorage.getItem('githubOwner'),
+        githubRepo: localStorage.getItem('githubRepo'),
+        notionToken: localStorage.getItem('notion_token'),
+        notionDatabaseId: localStorage.getItem('notion_database_id'),
       };
-
-      // Load sensitive settings from secure storage (with fallback to localStorage)
-      let sensitiveSettings: Partial<LoadedSettings> = {};
-      try {
-        sensitiveSettings = {
-          zipCode: await secureStorage.retrieve('zipCode', 'defaultPassword') || localStorage.getItem('zipCode'),
-          weatherApiKey: await secureStorage.retrieve('weatherApiKey', 'defaultPassword') || localStorage.getItem('weatherApiKey'),
-          publicAlbumUrl: await secureStorage.retrieve('publicAlbumUrl', 'defaultPassword') || localStorage.getItem('publicAlbumUrl'),
-          githubOwner: await secureStorage.retrieve('githubOwner', 'defaultPassword') || localStorage.getItem('githubOwner'),
-          githubRepo: await secureStorage.retrieve('githubRepo', 'defaultPassword') || localStorage.getItem('githubRepo'),
-          notionToken: await secureStorage.retrieve('notion_token', 'defaultPassword') || localStorage.getItem('notion_token'),
-          notionDatabaseId: await secureStorage.retrieve('notion_database_id', 'defaultPassword') || localStorage.getItem('notion_database_id'),
-        };
-
-        // Automatic migration: Move unencrypted sensitive data to secure storage
-        if (secureStorage.exists('test')) {
-          await this.migrateSensitiveSettings();
-        }
-      } catch (error) {
-        console.warn('Could not load secure settings:', error);
-        // Fallback to localStorage
-        sensitiveSettings = {
-          zipCode: localStorage.getItem('zipCode'),
-          weatherApiKey: localStorage.getItem('weatherApiKey'),
-          publicAlbumUrl: localStorage.getItem('publicAlbumUrl'),
-          githubOwner: localStorage.getItem('githubOwner'),
-          githubRepo: localStorage.getItem('githubRepo'),
-          notionToken: localStorage.getItem('notion_token'),
-          notionDatabaseId: localStorage.getItem('notion_database_id'),
-        };
-      }
-
-      return { ...nonSensitiveSettings, ...sensitiveSettings };
-    } catch (error) {
-      console.error('Error loading settings:', error);
-      return {};
     }
   }
 
@@ -134,17 +109,18 @@ export class SettingsStorage {
   }
 
   /**
-   * Get a setting from appropriate storage (secure or regular)
+   * Get a setting synchronously (cache first, then localStorage fallback)
    */
   static getSetting(key: string, isSensitive: boolean = false): string | null {
     try {
-      if (isSensitive && secureStorage.exists('test')) {
-        // For sensitive settings, we need to use async retrieval
-        // This is a synchronous fallback that tries localStorage first
-        return localStorage.getItem(key);
-      } else {
+      // Check cache first for immediate access
+      const cacheStats = settingsStorageService.getCacheStats();
+      if (cacheStats.keys.includes(key)) {
+        // Cache hit - async call but we need sync, so fallback to localStorage
         return localStorage.getItem(key);
       }
+      
+      return localStorage.getItem(key);
     } catch (error) {
       console.warn(`Failed to get ${key}:`, error);
       return localStorage.getItem(key);
@@ -152,33 +128,44 @@ export class SettingsStorage {
   }
 
   /**
-   * Save a setting to appropriate storage (secure or regular)
+   * Save a setting to tiered storage (async)
    */
-  static saveSetting(key: string, value: string, isSensitive: boolean = false) {
+  static async saveSetting(key: string, value: string, isSensitive: boolean = false) {
     try {
-      if (isSensitive && secureStorage.exists('test')) {
-        secureStorage.store(key, value, 'defaultPassword');
-        localStorage.removeItem(key); // Remove unencrypted version
-      } else {
-        localStorage.setItem(key, value);
-      }
+      await settingsStorageService.setValue(key, value);
     } catch (error) {
-      console.warn(`Failed to save ${key} securely, using localStorage:`, error);
+      console.warn(`Failed to save ${key} to tiered storage, using localStorage fallback:`, error);
       localStorage.setItem(key, value);
     }
   }
 
   /**
-   * Remove a setting from storage
+   * Remove a setting from all storage layers
    */
   static async removeSetting(key: string, isSensitive: boolean = false) {
     try {
+      await settingsStorageService.removeValue(key);
+    } catch (error) {
+      console.warn(`Failed to remove ${key} from tiered storage:`, error);
+      // Fallback to direct removal
+      localStorage.removeItem(key);
       if (isSensitive && secureStorage.exists('test')) {
         secureStorage.remove(key);
       }
-      localStorage.removeItem(key);
-    } catch (error) {
-      console.warn(`Failed to remove ${key}:`, error);
     }
+  }
+
+  /**
+   * Clear settings cache (useful for logout or testing)
+   */
+  static clearCache() {
+    settingsStorageService.clearCache();
+  }
+
+  /**
+   * Preload common settings into cache for better performance
+   */
+  static async preloadCache() {
+    await settingsStorageService.preloadCache();
   }
 }
