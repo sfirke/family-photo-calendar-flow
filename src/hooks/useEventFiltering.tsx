@@ -191,13 +191,6 @@ export const useEventFiltering = ({
             isNotionEvent: event.source === 'notion'
           });
           return false;
-        } else {
-          console.log('🔍 useEventFiltering - Event passed sync check:', {
-            title: event.title,
-            calendarId: eventCalendarId,
-            source: event.source,
-            isNotionEvent: event.source === 'notion'
-          });
         }
       }
       
@@ -216,9 +209,16 @@ export const useEventFiltering = ({
           calendarId: eventCalendarId,
           selectedCalendarIds: safeSelectedCalendarIds
         });
+        return false;
       }
       
-      return isSelectedForVisibility;
+      console.log('🔍 useEventFiltering - Event passed all checks:', {
+        title: event.title,
+        calendarId: eventCalendarId,
+        source: event.source
+      });
+      
+      return true;
     });
 
     console.log('🔍 useEventFiltering - Filtering complete:', {
