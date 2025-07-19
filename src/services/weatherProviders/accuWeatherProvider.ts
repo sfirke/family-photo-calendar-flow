@@ -203,12 +203,92 @@ export class AccuWeatherProvider implements WeatherProvider {
       `${baseUrl}/forecasts/v1/daily/15day/${locationKey}?apikey=${apiKey}&details=true&metric=false`
     );
 
+    console.log('AccuWeatherProvider - Forecast API response:', {
+      status: response.status,
+      statusText: response.statusText,
+      ok: response.ok,
+      contentType: response.headers.get('content-type')
+    });
+
     if (!response.ok) {
       throw new Error(`15-day forecast failed: ${response.status}`);
     }
 
-    const forecast: AccuWeatherForecastResponse = await response.json();
-    return this.formatForecastData(forecast);
+    // Check if response is actually JSON
+    const responseText = await response.text();
+    console.log('AccuWeatherProvider - Forecast response text:', responseText.substring(0, 100));
+    
+    if (responseText.trim() === 'Offline' || responseText.trim() === '') {
+      console.warn('AccuWeatherProvider - Forecast API returned "Offline", falling back to 5-day forecast');
+      // Try 5-day forecast as fallback
+      return this.getFallbackForecast(locationKey, apiKey, baseUrl);
+    }
+
+    try {
+      const forecast: AccuWeatherForecastResponse = JSON.parse(responseText);
+      return this.formatForecastData(forecast);
+    } catch (jsonError) {
+      console.error('AccuWeatherProvider - Failed to parse forecast JSON:', jsonError);
+      console.error('AccuWeatherProvider - Response text:', responseText);
+      // Try 5-day forecast as fallback
+      return this.getFallbackForecast(locationKey, apiKey, baseUrl);
+    }
+  }
+
+  private async getFallbackForecast(locationKey: string, apiKey: string, baseUrl: string) {
+    console.log('AccuWeatherProvider - Attempting 5-day forecast fallback');
+    
+    try {
+      const response = await fetch(
+        `${baseUrl}/forecasts/v1/daily/5day/${locationKey}?apikey=${apiKey}&details=true&metric=false`
+      );
+
+      console.log('AccuWeatherProvider - 5-day forecast response:', {
+        status: response.status,
+        statusText: response.statusText,
+        ok: response.ok
+      });
+
+      if (!response.ok) {
+        throw new Error(`5-day forecast failed: ${response.status}`);
+      }
+
+      const responseText = await response.text();
+      console.log('AccuWeatherProvider - 5-day forecast response text:', responseText.substring(0, 100));
+      
+      if (responseText.trim() === 'Offline' || responseText.trim() === '') {
+        console.warn('AccuWeatherProvider - 5-day forecast also returned "Offline", using minimal forecast');
+        return this.getMinimalForecast();
+      }
+
+      try {
+        const forecast: AccuWeatherForecastResponse = JSON.parse(responseText);
+        return this.formatForecastData(forecast);
+      } catch (jsonError) {
+        console.error('AccuWeatherProvider - Failed to parse 5-day forecast JSON:', jsonError);
+        return this.getMinimalForecast();
+      }
+    } catch (error) {
+      console.error('AccuWeatherProvider - 5-day forecast fallback failed:', error);
+      return this.getMinimalForecast();
+    }
+  }
+
+  private getMinimalForecast() {
+    console.log('AccuWeatherProvider - Using minimal forecast fallback');
+    // Return a basic 3-day forecast as absolute fallback
+    const today = new Date();
+    return Array.from({ length: 3 }, (_, i) => {
+      const date = new Date(today);
+      date.setDate(today.getDate() + i);
+      return {
+        date: date.toISOString().split('T')[0],
+        high: 75,
+        low: 60,
+        condition: 'Clear',
+        description: 'Weather forecast temporarily unavailable'
+      };
+    });
   }
 
   private async getLocationName(locationKey: string, apiKey: string, baseUrl: string): Promise<string> {
