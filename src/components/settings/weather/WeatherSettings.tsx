@@ -53,12 +53,12 @@ const WeatherSettings = ({
     }
 
     try {
-      if ('permissions' in navigator) {
-        const permission = await (navigator as any).permissions.query({ name: 'geolocation' });
+      if ('permissions' in navigator && navigator.permissions) {
+        const permission = await navigator.permissions.query({ name: 'geolocation' as PermissionName });
         setLocationPermission(permission.state);
-      } else {
+      } else if (navigator.geolocation) {
         // For older browsers, try to get location to check permission
-        (navigator as any).geolocation.getCurrentPosition(
+        navigator.geolocation.getCurrentPosition(
           () => setLocationPermission('granted'),
           () => setLocationPermission('denied'),
           { timeout: 5000 }
@@ -77,7 +77,7 @@ const WeatherSettings = ({
 
     try {
       const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-        (navigator as any).geolocation.getCurrentPosition(
+        navigator.geolocation.getCurrentPosition(
           (pos) => {
             resolve(pos);
           },

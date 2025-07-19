@@ -137,7 +137,7 @@ export const extractIngredientsFromArray = (arrayProperty: any): string[] => {
           
           lines.forEach(line => {
             // Remove bullet points and clean up
-            const cleaned = line.replace(/^[•·\-\*]\s*/, '').trim();
+            const cleaned = line.replace(/^[•·\-*]\s*/, '').trim();
             if (cleaned) {
               // Also split by comma in case there are multiple ingredients in one line
               const commaSeparated = cleaned.split(',').map(item => item.trim()).filter(Boolean);

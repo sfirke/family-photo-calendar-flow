@@ -1,12 +1,10 @@
 
-/* eslint-disable react-refresh/only-export-components */
-
 import { Event } from '@/types/calendar';
 import { settingsStorageService } from '@/services/settingsStorageService';
 
 interface ExportData {
   events: Event[];
-  settings: Record<string, any>;
+  settings: unknown;
   exportDate: string;
   version: string;
 }

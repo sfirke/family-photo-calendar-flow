@@ -361,7 +361,7 @@ export const useNotionScrapedCalendars = () => {
     setIsLoading(true);
     const enabledCalendars = calendars.filter(cal => cal.enabled);
     let successCount = 0;
-    let totalCount = enabledCalendars.length;
+    const totalCount = enabledCalendars.length;
 
     try {
       await Promise.all(

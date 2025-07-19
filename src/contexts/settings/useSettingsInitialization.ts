@@ -94,7 +94,7 @@ export const useSettingsInitialization = (props: InitializationProps) => {
     };
 
     initializeSettings();
-  }, []); // Empty dependency array - run once on mount
+  }, [props]); // Include props as dependency
 
   return { isLoading };
 };

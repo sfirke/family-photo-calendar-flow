@@ -137,7 +137,7 @@ export const useICalCalendars = () => {
     } catch (error) {
       console.error('Error processing background sync data:', error);
     }
-  }, [calendars]);
+  }, [calendars]); // Remove forward references
 
   // Add a new iCal calendar
   const addCalendar = useCallback(async (calendar: Omit<ICalCalendar, 'id'>) => {
@@ -598,7 +598,7 @@ export const useICalCalendars = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [updateCalendar]);
+  }, [updateCalendar]); // Only include updateCalendar
 
   const syncAllCalendars = useCallback(async () => {
     const enabledCalendars = calendars.filter(cal => cal.enabled);
@@ -618,7 +618,7 @@ export const useICalCalendars = () => {
     
     // Fallback to foreground sync
     let successCount = 0;
-    let totalCount = enabledCalendars.length;
+    const totalCount = enabledCalendars.length;
     
     for (const calendar of enabledCalendars) {
       try {

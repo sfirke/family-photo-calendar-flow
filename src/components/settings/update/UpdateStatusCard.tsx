@@ -3,10 +3,11 @@ import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { GitBranch, Download, CheckCircle, RefreshCw, ExternalLink } from 'lucide-react';
+import { UpdateInfo } from '@/types/update';
 
 interface UpdateStatusCardProps {
   updateAvailable: boolean;
-  updateInfo: any;
+  updateInfo: UpdateInfo;
   isChecking: boolean;
   isUpdating: boolean;
   onCheckForUpdates: () => void;
@@ -46,7 +47,7 @@ const UpdateStatusCard = ({
                 </p>
                 {updateInfo && (
                   <div className="text-xs text-gray-600 dark:text-gray-400">
-                    <p>Version {updateInfo.version} - {updateInfo.name}</p>
+                    <p>Version {updateInfo.version}</p>
                     <p>Released: {new Date(updateInfo.publishedAt).toLocaleDateString()}</p>
                   </div>
                 )}

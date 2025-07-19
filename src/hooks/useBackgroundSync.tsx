@@ -13,8 +13,29 @@ export const useBackgroundSync = () => {
   const [isBackgroundSyncSupported, setIsBackgroundSyncSupported] = useState(false);
   const [isPeriodicSyncSupported, setIsPeriodicSyncSupported] = useState(false);
   const [lastSyncResult, setLastSyncResult] = useState<BackgroundSyncResult | null>(null);
-  const [syncQueue, setSyncQueue] = useState<any[]>([]);
+  const [syncQueue, setSyncQueue] = useState<unknown[]>([]);
   const { toast } = useToast();
+
+  // Process sync queue from service worker
+  const processSyncQueue = useCallback(() => {
+    try {
+      const queueData = localStorage.getItem('calendar_sync_queue');
+      if (queueData) {
+        const queue = JSON.parse(queueData);
+        setSyncQueue(queue);
+        
+        // Clear the queue after processing
+        localStorage.removeItem('calendar_sync_queue');
+        
+        // Trigger a refresh of calendar data in the main application
+        window.dispatchEvent(new CustomEvent('background-sync-data-available', { 
+          detail: { syncQueue: queue } 
+        }));
+      }
+    } catch (error) {
+      console.error('Error processing sync queue:', error);
+    }
+  }, []);
 
   // Check for background sync support
   useEffect(() => {
@@ -62,28 +83,7 @@ export const useBackgroundSync = () => {
         navigator.serviceWorker.removeEventListener('message', handleMessage);
       };
     }
-  }, [toast]);
-
-  // Process sync queue from service worker
-  const processSyncQueue = useCallback(() => {
-    try {
-      const queueData = localStorage.getItem('calendar_sync_queue');
-      if (queueData) {
-        const queue = JSON.parse(queueData);
-        setSyncQueue(queue);
-        
-        // Clear the queue after processing
-        localStorage.removeItem('calendar_sync_queue');
-        
-        // Trigger a refresh of calendar data in the main application
-        window.dispatchEvent(new CustomEvent('background-sync-data-available', { 
-          detail: { syncQueue: queue } 
-        }));
-      }
-    } catch (error) {
-      console.error('Error processing sync queue:', error);
-    }
-  }, []);
+  }, [toast, processSyncQueue]);
 
   // Register for background sync
   const registerBackgroundSync = useCallback(async (): Promise<boolean> => {
@@ -150,7 +150,7 @@ export const useBackgroundSync = () => {
       
       // Check if sync property exists before using it
       if ('sync' in registration) {
-        await (registration as any).sync.register('calendar-sync');
+        await (registration as ServiceWorkerRegistration & { sync: { register(tag: string): Promise<void> } }).sync.register('calendar-sync');
         
         toast({
           title: "Background sync scheduled",

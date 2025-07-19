@@ -70,8 +70,6 @@ class NotionPageScraper {
 
       if (options.debug) {
         console.log('🐛 DEBUG MODE: Parsing with enhanced debug information...');
-      } else {
-        
       }
 
       // Use enhanced table parser with or without debug

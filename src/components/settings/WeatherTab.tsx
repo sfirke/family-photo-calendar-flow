@@ -9,9 +9,7 @@ import WeatherPreview from './weather/WeatherPreview';
 import WeatherInfo from './weather/WeatherInfo';
 import { WeatherTestResult } from '@/types/weather';
 
-interface WeatherTabProps {}
-
-const WeatherTab = ({}: WeatherTabProps) => {
+const WeatherTab = () => {
   const [testResult, setTestResult] = useState<WeatherTestResult | null>(null);
   const [showPreview, setShowPreview] = useState(false);
   const [useManualLocation, setUseManualLocation] = useState(false);

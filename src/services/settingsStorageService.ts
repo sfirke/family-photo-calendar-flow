@@ -246,7 +246,7 @@ class SettingsStorageService {
           // Handle key mapping for backwards compatibility
           const mappedKey = key === 'notion_token' ? 'notionToken' : 
                            key === 'notion_database_id' ? 'notionDatabaseId' : key;
-          (settings as any)[mappedKey] = value;
+          (settings as Record<string, unknown>)[mappedKey] = value;
         }
       }
 

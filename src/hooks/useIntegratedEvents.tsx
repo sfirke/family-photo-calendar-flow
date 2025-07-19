@@ -14,7 +14,7 @@ export const useIntegratedEvents = (googleEvents: Event[] = [], refreshKey?: num
     return enabledCalendars
       .filter(cal => cal.enabled)
       .map(cal => cal.id);
-  }, [enabledCalendars, refreshKey]); // Add refreshKey as dependency
+  }, [enabledCalendars]); // Remove refreshKey dependency
   
   // Ensure all arrays are safe
   const safeGoogleEvents = Array.isArray(googleEvents) ? googleEvents : [];
@@ -61,7 +61,7 @@ export const useIntegratedEvents = (googleEvents: Event[] = [], refreshKey?: num
     console.log('📈 useIntegratedEvents - Event stats calculated:', stats);
     
     return stats;
-  }, [safeGoogleEvents.length, safeNotionEvents.length, safeScrapedEvents.length, filteredEvents, hasGoogleEvents, hasNotionEvents, hasScrapedEvents, refreshKey]);
+  }, [safeGoogleEvents.length, safeNotionEvents.length, safeScrapedEvents.length, filteredEvents, hasGoogleEvents, hasNotionEvents, hasScrapedEvents]); // Remove refreshKey dependency
 
   console.log('📈 useIntegratedEvents - Final output:', {
     filteredEventsCount: Array.isArray(filteredEvents) ? filteredEvents.length : 0,

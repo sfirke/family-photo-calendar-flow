@@ -134,7 +134,7 @@ export const useCalendarSelection = () => {
     });
 
     return calendarList;
-  }, [allCalendars, getICalEvents, scrapedEvents, refreshKey]);
+  }, [allCalendars, getICalEvents, scrapedEvents]);
 
   // Initialize selected calendars ONLY on first load when user hasn't made selections
   useEffect(() => {
@@ -150,7 +150,7 @@ export const useCalendarSelection = () => {
       console.log('🔄 Initial auto-selecting calendars with events:', enabledWithEventsIds);
       setSelectedCalendarIds(enabledWithEventsIds);
     }
-  }, [calendarsFromEvents, enabledCalendars, hasUserMadeSelection]);
+  }, [calendarsFromEvents, enabledCalendars, hasUserMadeSelection, selectedCalendarIds.length]);
 
   // Toggle calendar (support both 1 and 2 parameter versions)
   const toggleCalendar = useCallback((calendarId: string, checked?: boolean) => {
