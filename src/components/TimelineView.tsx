@@ -163,13 +163,6 @@ const TimelineView = ({ events, getWeatherForDate, onNotionEventClick }: Timelin
                        className="text-xs sm:text-sm"
                        forceWhite={true}
                      />
-                     {(weather.highTemp || weather.lowTemp) && (
-                       <span className="text-xs text-white/60">
-                         {weather.highTemp && weather.lowTemp ? `${Math.round(weather.highTemp)}°/${Math.round(weather.lowTemp)}°` : 
-                          weather.highTemp ? `High ${Math.round(weather.highTemp)}°` : 
-                          weather.lowTemp ? `Low ${Math.round(weather.lowTemp)}°` : ''}
-                       </span>
-                     )}
                      
                    </div>
                 </div>
