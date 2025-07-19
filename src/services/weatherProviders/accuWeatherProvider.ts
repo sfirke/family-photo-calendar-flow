@@ -65,13 +65,13 @@ export class AccuWeatherProvider implements WeatherProvider {
     const baseUrl = 'https://dataservice.accuweather.com';
     
     try {
-      // First, get location key for the ZIP code
-      const locationKey = await this.getLocationKey(zipCode, config.apiKey, baseUrl);
+      // Get location key using IP address for more accurate location
+      const locationKey = await this.getLocationKeyByIP(config.apiKey, baseUrl);
       
       // Fetch current conditions
       const currentData = await this.getCurrentConditions(locationKey, config.apiKey, baseUrl);
       
-      // Fetch forecast (up to 30 days depending on subscription)
+      // Fetch 15-day forecast
       const forecastData = await this.getForecast(locationKey, config.apiKey, baseUrl);
       
       return {
@@ -92,22 +92,22 @@ export class AccuWeatherProvider implements WeatherProvider {
     }
   }
 
-  private async getLocationKey(zipCode: string, apiKey: string, baseUrl: string): Promise<string> {
+  private async getLocationKeyByIP(apiKey: string, baseUrl: string): Promise<string> {
     const response = await fetch(
-      `${baseUrl}/locations/v1/postalcodes/US/search?apikey=${apiKey}&q=${zipCode}`
+      `${baseUrl}/locations/v1/cities/ipaddress?apikey=${apiKey}`
     );
 
     if (!response.ok) {
-      throw new Error(`Location lookup failed: ${response.status}`);
+      throw new Error(`IP location lookup failed: ${response.status}`);
     }
 
-    const locations: AccuWeatherLocationResponse[] = await response.json();
+    const location: AccuWeatherLocationResponse = await response.json();
     
-    if (!locations || locations.length === 0) {
-      throw new Error('Location not found');
+    if (!location || !location.Key) {
+      throw new Error('Location not found for current IP');
     }
 
-    return locations[0].Key;
+    return location.Key;
   }
 
   private async getCurrentConditions(locationKey: string, apiKey: string, baseUrl: string) {
@@ -127,8 +127,11 @@ export class AccuWeatherProvider implements WeatherProvider {
 
     const data = current[0];
     
+    // Get location name
+    const locationName = await this.getLocationName(locationKey, apiKey, baseUrl);
+    
     return {
-      location: 'Location', // We'll get this from location lookup
+      location: locationName,
       temperature: Math.round(data.Temperature.Imperial.Value),
       condition: this.mapCondition(data.WeatherText),
       description: data.WeatherText,
@@ -139,26 +142,34 @@ export class AccuWeatherProvider implements WeatherProvider {
   }
 
   private async getForecast(locationKey: string, apiKey: string, baseUrl: string) {
-    // Try 30-day forecast first, fall back to shorter periods if subscription doesn't support it
-    const forecastDays = [30, 15, 10, 5];
-    
-    for (const days of forecastDays) {
-      try {
-        const response = await fetch(
-          `${baseUrl}/forecasts/v1/daily/${days}day/${locationKey}?apikey=${apiKey}&details=true&metric=false`
-        );
+    // Get 15-day forecast as specified
+    const response = await fetch(
+      `${baseUrl}/forecasts/v1/daily/15day/${locationKey}?apikey=${apiKey}&details=true&metric=false`
+    );
 
-        if (response.ok) {
-          const forecast: AccuWeatherForecastResponse = await response.json();
-          return this.formatForecastData(forecast);
-        }
-      } catch (error) {
-        console.warn(`Failed to fetch ${days}-day forecast, trying shorter period`);
-      }
+    if (!response.ok) {
+      throw new Error(`15-day forecast failed: ${response.status}`);
     }
 
-    // If all forecast attempts fail, return empty array
-    return [];
+    const forecast: AccuWeatherForecastResponse = await response.json();
+    return this.formatForecastData(forecast);
+  }
+
+  private async getLocationName(locationKey: string, apiKey: string, baseUrl: string): Promise<string> {
+    try {
+      const response = await fetch(
+        `${baseUrl}/locations/v1/${locationKey}?apikey=${apiKey}`
+      );
+
+      if (response.ok) {
+        const location: AccuWeatherLocationResponse = await response.json();
+        return `${location.LocalizedName}, ${location.Country.LocalizedName}`;
+      }
+    } catch (error) {
+      console.warn('Failed to fetch location name:', error);
+    }
+    
+    return 'Current Location';
   }
 
   private formatForecastData(data: AccuWeatherForecastResponse) {
