@@ -113,10 +113,17 @@ const WeatherConnectionTest = ({
         
         weatherData = testResult.data!;
       } else {
-        // Fall back to original weather service for OpenWeatherMap
-        console.log('Testing OpenWeatherMap connection with original service...');
-        const { fetchWeatherData } = await import('@/services/weatherService');
-        const fetchPromise = fetchWeatherData(zipCode, weatherApiKey);
+        // Use the weather provider factory to get the correct provider
+        console.log(`Testing ${weatherProvider} connection with provider factory...`);
+        const { weatherProviderFactory } = await import('@/services/weatherProviders');
+        const provider = weatherProviderFactory.getProvider(weatherProvider);
+        
+        const fetchPromise = provider.fetchWeather(zipCode, {
+          apiKey: weatherApiKey,
+          baseUrl: '', // Provider will use their own base URL
+          rateLimit: 60, // Default rate limit
+          maxForecastDays: provider.maxForecastDays
+        });
         weatherData = await Promise.race([fetchPromise, timeoutPromise]) as Awaited<typeof fetchPromise>;
       }
       
