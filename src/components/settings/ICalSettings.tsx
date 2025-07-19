@@ -145,7 +145,10 @@ const ICalSettings = ({
       });
       console.log('Calendar added successfully:', calendar);
 
-      // Try to sync immediately to validate the URL
+      // Force refresh the calendar selection immediately after adding
+      forceRefresh();
+
+      // Try to sync immediately to validate the URL and get events
       try {
         await syncCalendar(calendar);
         toast({
@@ -161,8 +164,11 @@ const ICalSettings = ({
         });
       }
 
-      // Force refresh the calendar selection to pick up new events
-      forceRefresh();
+      // Force refresh again after sync to ensure UI updates
+      setTimeout(() => {
+        forceRefresh();
+      }, 100);
+
       setNewCalendar({
         name: '',
         url: '',

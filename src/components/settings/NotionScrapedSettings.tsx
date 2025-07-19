@@ -3,6 +3,7 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Plus, RefreshCw, Calendar } from 'lucide-react';
 import { useNotionScrapedCalendars } from '@/hooks/useNotionScrapedCalendars';
+import { useCalendarSelection } from '@/hooks/useCalendarSelection';
 import { useSettings } from '@/contexts/SettingsContext';
 import { NotionUrlForm } from './NotionUrlForm';
 import ScrapedCalendarCard from './ScrapedCalendarCard';
@@ -26,6 +27,7 @@ const NotionScrapedSettings = ({ selectedCalendarIds, onToggleSelection }: Notio
     syncStatus,
     validateNotionUrl
   } = useNotionScrapedCalendars();
+  const { forceRefresh } = useCalendarSelection();
 
   const handleAddCalendar = async (data: { name: string; url: string; color: string; token: string; databaseId: string }) => {
     try {
@@ -43,8 +45,17 @@ const NotionScrapedSettings = ({ selectedCalendarIds, onToggleSelection }: Notio
           eventCount: 0
         }
       });
+      
+      // Force refresh calendar views immediately after adding
+      forceRefresh();
+      
       setShowAddForm(false);
       toast.success('Notion database added successfully');
+      
+      // Force refresh again after a short delay to ensure UI updates
+      setTimeout(() => {
+        forceRefresh();
+      }, 100);
     } catch (error) {
       console.error('Error adding Notion calendar:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to add Notion database');

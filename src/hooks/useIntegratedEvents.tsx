@@ -6,7 +6,7 @@ import { useEventFiltering } from '@/hooks/useEventFiltering';
 import { useCalendarSelection } from '@/hooks/useCalendarSelection';
 import { useICalCalendars } from '@/hooks/useICalCalendars';
 
-export const useIntegratedEvents = (googleEvents: Event[] = []) => {
+export const useIntegratedEvents = (googleEvents: Event[] = [], refreshKey?: number) => {
   const { selectedCalendarIds, notionEvents, scrapedEvents, enabledCalendars } = useCalendarSelection();
   
   // Get enabled calendar IDs for sync status filtering from ALL sources
@@ -14,7 +14,7 @@ export const useIntegratedEvents = (googleEvents: Event[] = []) => {
     return enabledCalendars
       .filter(cal => cal.enabled)
       .map(cal => cal.id);
-  }, [enabledCalendars]);
+  }, [enabledCalendars, refreshKey]); // Add refreshKey as dependency
   
   // Ensure all arrays are safe
   const safeGoogleEvents = Array.isArray(googleEvents) ? googleEvents : [];
@@ -30,7 +30,8 @@ export const useIntegratedEvents = (googleEvents: Event[] = []) => {
     selectedCalendarIds: safeSelectedCalendarIds.length,
     enabledCalendarIds: safeEnabledCalendarIds.length,
     selectedIds: safeSelectedCalendarIds,
-    enabledIds: safeEnabledCalendarIds
+    enabledIds: safeEnabledCalendarIds,
+    refreshKey
   });
   
   const { filteredEvents, hasGoogleEvents, hasNotionEvents, hasScrapedEvents } = useEventFiltering({
@@ -60,7 +61,7 @@ export const useIntegratedEvents = (googleEvents: Event[] = []) => {
     console.log('📈 useIntegratedEvents - Event stats calculated:', stats);
     
     return stats;
-  }, [safeGoogleEvents.length, safeNotionEvents.length, safeScrapedEvents.length, filteredEvents, hasGoogleEvents, hasNotionEvents, hasScrapedEvents]);
+  }, [safeGoogleEvents.length, safeNotionEvents.length, safeScrapedEvents.length, filteredEvents, hasGoogleEvents, hasNotionEvents, hasScrapedEvents, refreshKey]);
 
   console.log('📈 useIntegratedEvents - Final output:', {
     filteredEventsCount: Array.isArray(filteredEvents) ? filteredEvents.length : 0,

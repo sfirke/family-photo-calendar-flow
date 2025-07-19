@@ -22,7 +22,7 @@ const Calendar = ({ onNotionEventClick }: CalendarProps) => {
   const { googleEvents, forceRefresh } = useLocalEvents(); // Now contains iCal events
   const { useRefreshListener } = useCalendarRefresh();
   
-  const { filteredEvents, eventStats } = useIntegratedEvents(googleEvents);
+  const { filteredEvents, eventStats } = useIntegratedEvents(googleEvents, refreshKey);
 
   useEffect(() => {
     setView(defaultView);
@@ -39,6 +39,11 @@ const Calendar = ({ onNotionEventClick }: CalendarProps) => {
     
     // Trigger a re-render by updating refresh key
     setRefreshKey(prev => prev + 1);
+    
+    // Add a small delay to ensure all data is updated before re-rendering
+    setTimeout(() => {
+      setRefreshKey(prev => prev + 1);
+    }, 100);
   });
 
   // Log whenever filteredEvents changes to verify UI updates
