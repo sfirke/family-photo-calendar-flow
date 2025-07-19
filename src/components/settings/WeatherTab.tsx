@@ -32,7 +32,7 @@ const WeatherTab = ({}: WeatherTabProps) => {
   }, [isSecurityEnabled, hasLockedData]);
 
   const handleSecurityUnlock = () => {
-    console.log('WeatherTab - handleSecurityUnlock called');
+    
     // Force a refresh of the test results when security is unlocked
     setTestResult(null);
     setShowPreview(false);
@@ -42,7 +42,7 @@ const WeatherTab = ({}: WeatherTabProps) => {
     }, 100);
   };
 
-  console.log('WeatherTab - Render state:', { isSecurityEnabled, hasLockedData, zipCode, weatherApiKey });
+  
 
   return (
     <div className="space-y-6">

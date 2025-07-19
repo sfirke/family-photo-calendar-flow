@@ -22,10 +22,6 @@ const NotionIntegration = ({
   const selectedCalendarIds = propSelectedCalendarIds || hookSelectedCalendarIds;
   const toggleCalendar = propOnToggleSelection || hookToggleCalendar;
 
-  console.log('NotionIntegration - Current state:', {
-    selectedCalendarIds,
-    scrapedEventsCount: scrapedEvents.length
-  });
 
   return (
     <div className="space-y-6">

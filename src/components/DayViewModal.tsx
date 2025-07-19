@@ -36,7 +36,7 @@ const DayViewModal = ({
   const isToday = date.toDateString() === new Date().toDateString();
 
   // Debug logging
-  console.log('DayViewModal rendered with onNavigateDay:', !!onNavigateDay);
+  
 
   const handleNavigation = (direction: 'prev' | 'next') => {
     if (!onNavigateDay || isTransitioning) return;

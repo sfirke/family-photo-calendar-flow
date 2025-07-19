@@ -64,12 +64,6 @@ export class AccuWeatherProvider implements WeatherProvider {
   async fetchWeather(zipCode: string, config: WeatherProviderConfig): Promise<WeatherData> {
     const baseUrl = 'https://dataservice.accuweather.com';
     
-    console.log('AccuWeatherProvider - fetchWeather called with:', {
-      zipCode: zipCode || '(empty - will use IP)',
-      hasZipCode: !!zipCode?.trim(),
-      apiKey: config.apiKey.substring(0, 8) + '...',
-      baseUrl
-    });
     
     try {
       // Get location key - use IP detection if no zip code provided
@@ -77,21 +71,16 @@ export class AccuWeatherProvider implements WeatherProvider {
         ? await this.getLocationKeyByZip(zipCode, config.apiKey, baseUrl)
         : await this.getLocationKeyByIP(config.apiKey, baseUrl);
       
-      console.log('AccuWeatherProvider - Location key obtained:', locationKey);
+      
       
       // Fetch current conditions
       const currentData = await this.getCurrentConditions(locationKey, config.apiKey, baseUrl);
       
-      console.log('AccuWeatherProvider - Current conditions fetched:', {
-        location: currentData.location,
-        temperature: currentData.temperature,
-        condition: currentData.condition
-      });
       
       // Fetch 15-day forecast
       const forecastData = await this.getForecast(locationKey, config.apiKey, baseUrl);
       
-      console.log('AccuWeatherProvider - Forecast fetched, days:', forecastData.length);
+      
       
       return {
         location: currentData.location,
@@ -107,11 +96,6 @@ export class AccuWeatherProvider implements WeatherProvider {
       };
     } catch (error) {
       console.error('AccuWeather API error:', error);
-      console.error('AccuWeather API error details:', {
-        message: error instanceof Error ? error.message : 'Unknown error',
-        zipCode: zipCode || '(empty)',
-        apiKey: config.apiKey.substring(0, 8) + '...'
-      });
       throw error;
     }
   }
@@ -136,15 +120,10 @@ export class AccuWeatherProvider implements WeatherProvider {
 
   private async getLocationKeyByIP(apiKey: string, baseUrl: string): Promise<string> {
     const url = `${baseUrl}/locations/v1/cities/ipaddress?apikey=${apiKey}`;
-    console.log('AccuWeatherProvider - Calling IP location API:', url.replace(apiKey, apiKey.substring(0, 8) + '...'));
+    
     
     const response = await fetch(url);
 
-    console.log('AccuWeatherProvider - IP location API response:', {
-      status: response.status,
-      statusText: response.statusText,
-      ok: response.ok
-    });
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -153,11 +132,6 @@ export class AccuWeatherProvider implements WeatherProvider {
     }
 
     const location: AccuWeatherLocationResponse = await response.json();
-    console.log('AccuWeatherProvider - IP location API success:', {
-      key: location.Key,
-      name: location.LocalizedName,
-      country: location.Country?.LocalizedName
-    });
     
     if (!location || !location.Key) {
       throw new Error('Location not found for current IP');
@@ -203,12 +177,6 @@ export class AccuWeatherProvider implements WeatherProvider {
       `${baseUrl}/forecasts/v1/daily/15day/${locationKey}?apikey=${apiKey}&details=true&metric=false`
     );
 
-    console.log('AccuWeatherProvider - Forecast API response:', {
-      status: response.status,
-      statusText: response.statusText,
-      ok: response.ok,
-      contentType: response.headers.get('content-type')
-    });
 
     if (!response.ok) {
       throw new Error(`15-day forecast failed: ${response.status}`);
@@ -216,7 +184,7 @@ export class AccuWeatherProvider implements WeatherProvider {
 
     // Check if response is actually JSON
     const responseText = await response.text();
-    console.log('AccuWeatherProvider - Forecast response text:', responseText.substring(0, 100));
+    
     
     if (responseText.trim() === 'Offline' || responseText.trim() === '') {
       console.warn('AccuWeatherProvider - Forecast API returned "Offline", falling back to 5-day forecast');
@@ -236,25 +204,20 @@ export class AccuWeatherProvider implements WeatherProvider {
   }
 
   private async getFallbackForecast(locationKey: string, apiKey: string, baseUrl: string) {
-    console.log('AccuWeatherProvider - Attempting 5-day forecast fallback');
+    
     
     try {
       const response = await fetch(
         `${baseUrl}/forecasts/v1/daily/5day/${locationKey}?apikey=${apiKey}&details=true&metric=false`
       );
 
-      console.log('AccuWeatherProvider - 5-day forecast response:', {
-        status: response.status,
-        statusText: response.statusText,
-        ok: response.ok
-      });
 
       if (!response.ok) {
         throw new Error(`5-day forecast failed: ${response.status}`);
       }
 
       const responseText = await response.text();
-      console.log('AccuWeatherProvider - 5-day forecast response text:', responseText.substring(0, 100));
+      
       
       if (responseText.trim() === 'Offline' || responseText.trim() === '') {
         console.warn('AccuWeatherProvider - 5-day forecast also returned "Offline", using minimal forecast');
@@ -275,7 +238,7 @@ export class AccuWeatherProvider implements WeatherProvider {
   }
 
   private getMinimalForecast() {
-    console.log('AccuWeatherProvider - Using minimal forecast fallback');
+    
     // Return a basic 3-day forecast as absolute fallback
     const today = new Date();
     return Array.from({ length: 3 }, (_, i) => {

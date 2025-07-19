@@ -28,22 +28,22 @@ const BackgroundSyncSettings = () => {
   };
 
   const handleTestSync = async () => {
-    console.log('🧪 Testing manual sync of all calendars...');
+    
     
     try {
       // Test iCal calendars
       if (calendars.filter(cal => cal.enabled).length > 0) {
-        console.log('Testing iCal calendar sync...');
+        
         await syncAllICalCalendars();
       }
       
       // Test Notion calendars  
       if (notionCalendars.filter(cal => cal.enabled).length > 0) {
-        console.log('Testing Notion calendar sync...');
+        
         await syncAllNotionCalendars();
       }
       
-      console.log('✅ Manual sync test completed');
+      
     } catch (error) {
       console.error('❌ Manual sync test failed:', error);
     }

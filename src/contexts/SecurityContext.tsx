@@ -56,7 +56,7 @@ export const SecurityProvider = ({ children }: { children: React.ReactNode }) =>
    */
   const checkForLockedData = useCallback(async () => {
     const hasSecuritySalt = localStorage.getItem('security_salt') !== null;
-    console.log('checkForLockedData - hasSecuritySalt:', hasSecuritySalt, 'isSecurityEnabled:', isSecurityEnabled);
+    
     
     if (!hasSecuritySalt) {
       setHasLockedData(false);
@@ -69,7 +69,7 @@ export const SecurityProvider = ({ children }: { children: React.ReactNode }) =>
     
     // Data is locked if there's encrypted data but security is not enabled
     const isLocked = hasEncryptedData && !isSecurityEnabled;
-    console.log('checkForLockedData - hasEncryptedData:', hasEncryptedData, 'isLocked:', isLocked);
+    
     
     setHasLockedData(isLocked);
   }, [isSecurityEnabled]);

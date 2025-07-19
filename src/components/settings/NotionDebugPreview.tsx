@@ -32,9 +32,9 @@ export const NotionDebugPreview: React.FC<NotionDebugPreviewProps> = ({ url, tok
     setDebugResult(null);
 
     try {
-      console.log('🐛 Starting debug scrape for URL:', url);
+      
       const result = await notionPageScraper.scrapePageWithDebug(url);
-      console.log('🐛 Debug scrape completed:', result);
+      
       setDebugResult(result);
     } catch (error) {
       console.error('❌ Debug scrape failed:', error);

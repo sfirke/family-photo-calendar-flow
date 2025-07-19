@@ -41,7 +41,7 @@ class NotionPageScraper {
         };
       }
 
-      console.log('🔍 Fetching Notion page HTML:', pageUrl);
+      
 
       const proxyUrl = `${this.corsProxy}?url=${encodeURIComponent(pageUrl)}`;
       
@@ -63,7 +63,7 @@ class NotionPageScraper {
       }
 
       const htmlContent = proxyData.contents;
-      console.log('📄 Received HTML content, waiting for DOM to finish loading...');
+      
 
       // Wait for DOM to fully load before parsing
       await this.waitForDOMLoad();
@@ -71,7 +71,7 @@ class NotionPageScraper {
       if (options.debug) {
         console.log('🐛 DEBUG MODE: Parsing with enhanced debug information...');
       } else {
-        console.log('📊 DOM loading complete, parsing with enhanced table parser...');
+        
       }
 
       // Use enhanced table parser with or without debug
@@ -133,7 +133,7 @@ class NotionPageScraper {
   }
 
   private async waitForDOMLoad(): Promise<void> {
-    console.log(`⏳ Waiting ${this.DOM_LOAD_DELAY / 1000} seconds for DOM to fully load...`);
+    
     return new Promise(resolve => setTimeout(resolve, this.DOM_LOAD_DELAY));
   }
 
@@ -157,7 +157,7 @@ class NotionPageScraper {
         pageTitle = pageTitle.replace(' | Notion', '').trim();
       }
 
-      console.log('📊 Parsing structured table data for page:', pageTitle);
+      
 
       // Use enhanced table parser with debug mode if requested
       let parseResult;
@@ -173,7 +173,7 @@ class NotionPageScraper {
 
       // Fallback to legacy parsing if no structured events found
       if (parseResult.events.length === 0) {
-        console.log('🔄 No structured events found, trying legacy text parsing...');
+        
         const legacyEvents = this.legacyTextParsing(htmlContent, sourceUrl);
         parseResult.events.push(...legacyEvents);
       }
@@ -264,7 +264,7 @@ class NotionPageScraper {
       }
     }
     
-    console.log(`📝 Legacy parsing found ${events.length} events`);
+    
     return events;
   }
 
@@ -279,8 +279,6 @@ class NotionPageScraper {
       const lastPart = urlParts[urlParts.length - 1];
       let blockId = lastPart.split('-').pop() as string;
 
-      console.log('🔗 Parsing Notion URL:', url);
-      console.log('🆔 Extracted blockId:', blockId);
 
       // Handle both UUID formats: with dashes and without dashes
       if (blockId.length === 32 && /^[0-9a-fA-F]{32}$/.test(blockId)) {
@@ -292,7 +290,7 @@ class NotionPageScraper {
           blockId.substring(16, 20),
           blockId.substring(20, 32)
         ].join('-');
-        console.log('🔄 Normalized blockId to UUID format:', blockId);
+        
       }
 
       // Validate UUID format (with dashes)
@@ -306,7 +304,7 @@ class NotionPageScraper {
       const viewIdMatch = url.match(/v=([a-f0-9]+)/i);
       const viewId = viewIdMatch ? viewIdMatch[1] : undefined;
 
-      console.log('✅ Successfully parsed Notion URL - blockId:', blockId, 'viewId:', viewId);
+      
       return { blockId, viewId };
     } catch (error) {
       console.error('❌ Error parsing Notion URL:', error);

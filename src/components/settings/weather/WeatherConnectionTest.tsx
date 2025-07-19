@@ -68,12 +68,6 @@ const WeatherConnectionTest = ({
     });
 
     try {
-      console.log('WeatherConnectionTest - Testing AccuWeather connection...', { 
-        useManualLocation,
-        hasZipCode: !!zipCode.trim(),
-        apiKey: weatherApiKey.substring(0, 8) + '...',
-        zipCode: zipCode || 'empty'
-      });
       
       // Use AccuWeather provider directly
       const { AccuWeatherProvider } = await import('@/services/weatherProviders/accuWeatherProvider');
@@ -82,12 +76,6 @@ const WeatherConnectionTest = ({
       // For automatic location, don't send zip code (use IP detection)
       const testZipCode = useManualLocation ? zipCode : '';
       
-      console.log('WeatherConnectionTest - Final test parameters:', {
-        useManualLocation,
-        originalZipCode: zipCode,
-        testZipCode,
-        willUseIPDetection: !useManualLocation
-      });
       
       const fetchPromise = provider.fetchWeather(testZipCode, {
         apiKey: weatherApiKey,
