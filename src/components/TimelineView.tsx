@@ -4,11 +4,12 @@ import { format, isToday, isTomorrow, isYesterday, addDays, startOfDay, differen
 import { Event } from '@/types/calendar';
 import EventCard from './EventCard';
 import WeatherDisplay from './WeatherDisplay';
+import WeatherProviderBadge from './WeatherProviderBadge';
 import { compareTimeStrings } from '@/utils/timeUtils';
 
 interface TimelineViewProps {
   events: Event[];
-  getWeatherForDate: (date: Date) => { temp: number; condition: string };
+  getWeatherForDate: (date: Date) => { temp: number; condition: string; highTemp?: number; lowTemp?: number };
   onNotionEventClick?: (event: Event) => void;
 }
 
@@ -155,13 +156,21 @@ const TimelineView = ({ events, getWeatherForDate, onNotionEventClick }: Timelin
                     <hr className="border-border w-full" />
                   </div>
                   
-                   {/* Responsive Weather display */}
+                   {/* Enhanced Weather display with high/low temps and provider */}
                    <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm text-white/70 self-start sm:self-center">
                      <WeatherDisplay 
                        weather={weather}
                        className="text-xs sm:text-sm"
                        forceWhite={true}
                      />
+                     {(weather.highTemp || weather.lowTemp) && (
+                       <span className="text-xs text-white/60">
+                         {weather.highTemp && weather.lowTemp ? `${Math.round(weather.highTemp)}°/${Math.round(weather.lowTemp)}°` : 
+                          weather.highTemp ? `High ${Math.round(weather.highTemp)}°` : 
+                          weather.lowTemp ? `Low ${Math.round(weather.lowTemp)}°` : ''}
+                       </span>
+                     )}
+                     <WeatherProviderBadge className="hidden sm:inline-flex" />
                    </div>
                 </div>
                 

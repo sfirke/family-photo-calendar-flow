@@ -6,6 +6,7 @@ import { Event } from '@/types/calendar';
 import { Button } from '@/components/ui/button';
 import DayViewModal from './DayViewModal';
 import WeatherDisplay from './WeatherDisplay';
+import WeatherProviderBadge from './WeatherProviderBadge';
 import { compareTimeStrings } from '@/utils/timeUtils';
 
 interface MonthViewProps {
@@ -120,9 +121,12 @@ const MonthView = ({ events, getWeatherForDate, onNotionEventClick }: MonthViewP
             <span className="hidden sm:inline ml-1">Previous</span>
           </Button>
           
-          <h2 className="text-sm sm:text-base md:text-lg font-semibold text-gray-900 dark:text-gray-100 text-center px-2">
-            {format(currentDate, 'MMMM yyyy')}
-          </h2>
+          <div className="text-center px-2">
+            <h2 className="text-sm sm:text-base md:text-lg font-semibold text-gray-900 dark:text-gray-100">
+              {format(currentDate, 'MMMM yyyy')}
+            </h2>
+            <WeatherProviderBadge className="mt-1 hidden sm:inline-flex" />
+          </div>
           
           <Button
             variant="outline"

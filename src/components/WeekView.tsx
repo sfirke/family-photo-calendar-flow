@@ -6,6 +6,7 @@ import { Event } from '@/types/calendar';
 import { Button } from '@/components/ui/button';
 import EventCard from './EventCard';
 import WeatherDisplay from './WeatherDisplay';
+import WeatherProviderBadge from './WeatherProviderBadge';
 import { compareTimeStrings } from '@/utils/timeUtils';
 
 interface WeekViewProps {
@@ -13,7 +14,7 @@ interface WeekViewProps {
   weekOffset: number;
   onPreviousWeek: () => void;
   onNextWeek: () => void;
-  getWeatherForDate: (date: Date) => { temp: number; condition: string };
+  getWeatherForDate: (date: Date) => { temp: number; condition: string; highTemp?: number; lowTemp?: number };
   onNotionEventClick?: (event: Event) => void;
 }
 
@@ -138,9 +139,12 @@ const WeekView = ({ events, weekOffset, onPreviousWeek, onNextWeek, getWeatherFo
             <span className="hidden sm:inline ml-1">Previous</span>
           </Button>
           
-          <h2 className="text-sm sm:text-base md:text-lg font-semibold text-white text-center px-2">
-            {format(weekStart, 'MMM d')} - {format(addDays(weekStart, 6), 'MMM d, yyyy')}
-          </h2>
+          <div className="text-center px-2">
+            <h2 className="text-sm sm:text-base md:text-lg font-semibold text-white">
+              {format(weekStart, 'MMM d')} - {format(addDays(weekStart, 6), 'MMM d, yyyy')}
+            </h2>
+            <WeatherProviderBadge className="mt-1 hidden sm:inline-flex" />
+          </div>
           
           <Button
             variant="outline"
@@ -168,11 +172,24 @@ const WeekView = ({ events, weekOffset, onPreviousWeek, onNextWeek, getWeatherFo
                         {format(day, 'd')}
                       </div>
                     </div>
-                    <WeatherDisplay 
-                      weather={getWeatherForDate(day)}
-                      className="text-xs hidden sm:block"
-                      forceWhite={true}
-                    />
+                    <div className="text-right hidden sm:block">
+                      <WeatherDisplay 
+                        weather={getWeatherForDate(day)}
+                        className="text-xs"
+                        forceWhite={true}
+                      />
+                      {(() => {
+                        const weather = getWeatherForDate(day);
+                        if (weather.highTemp && weather.lowTemp) {
+                          return (
+                            <div className="text-xs text-white/60 mt-1">
+                              {Math.round(weather.highTemp)}°/{Math.round(weather.lowTemp)}°
+                            </div>
+                          );
+                        }
+                        return null;
+                      })()}
+                    </div>
                   </div>
                   
                   <div className="space-y-1 sm:space-y-2 overflow-hidden">
