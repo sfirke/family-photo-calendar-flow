@@ -64,17 +64,34 @@ export class AccuWeatherProvider implements WeatherProvider {
   async fetchWeather(zipCode: string, config: WeatherProviderConfig): Promise<WeatherData> {
     const baseUrl = 'https://dataservice.accuweather.com';
     
+    console.log('AccuWeatherProvider - fetchWeather called with:', {
+      zipCode: zipCode || '(empty - will use IP)',
+      hasZipCode: !!zipCode?.trim(),
+      apiKey: config.apiKey.substring(0, 8) + '...',
+      baseUrl
+    });
+    
     try {
       // Get location key - use IP detection if no zip code provided
       const locationKey = zipCode && zipCode.trim() 
         ? await this.getLocationKeyByZip(zipCode, config.apiKey, baseUrl)
         : await this.getLocationKeyByIP(config.apiKey, baseUrl);
       
+      console.log('AccuWeatherProvider - Location key obtained:', locationKey);
+      
       // Fetch current conditions
       const currentData = await this.getCurrentConditions(locationKey, config.apiKey, baseUrl);
       
+      console.log('AccuWeatherProvider - Current conditions fetched:', {
+        location: currentData.location,
+        temperature: currentData.temperature,
+        condition: currentData.condition
+      });
+      
       // Fetch 15-day forecast
       const forecastData = await this.getForecast(locationKey, config.apiKey, baseUrl);
+      
+      console.log('AccuWeatherProvider - Forecast fetched, days:', forecastData.length);
       
       return {
         location: currentData.location,
@@ -90,6 +107,11 @@ export class AccuWeatherProvider implements WeatherProvider {
       };
     } catch (error) {
       console.error('AccuWeather API error:', error);
+      console.error('AccuWeather API error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        zipCode: zipCode || '(empty)',
+        apiKey: config.apiKey.substring(0, 8) + '...'
+      });
       throw error;
     }
   }
@@ -113,15 +135,29 @@ export class AccuWeatherProvider implements WeatherProvider {
   }
 
   private async getLocationKeyByIP(apiKey: string, baseUrl: string): Promise<string> {
-    const response = await fetch(
-      `${baseUrl}/locations/v1/cities/ipaddress?apikey=${apiKey}`
-    );
+    const url = `${baseUrl}/locations/v1/cities/ipaddress?apikey=${apiKey}`;
+    console.log('AccuWeatherProvider - Calling IP location API:', url.replace(apiKey, apiKey.substring(0, 8) + '...'));
+    
+    const response = await fetch(url);
+
+    console.log('AccuWeatherProvider - IP location API response:', {
+      status: response.status,
+      statusText: response.statusText,
+      ok: response.ok
+    });
 
     if (!response.ok) {
-      throw new Error(`IP location lookup failed: ${response.status}`);
+      const errorText = await response.text();
+      console.error('AccuWeatherProvider - IP location API error response:', errorText);
+      throw new Error(`IP location lookup failed: ${response.status} - ${errorText}`);
     }
 
     const location: AccuWeatherLocationResponse = await response.json();
+    console.log('AccuWeatherProvider - IP location API success:', {
+      key: location.Key,
+      name: location.LocalizedName,
+      country: location.Country?.LocalizedName
+    });
     
     if (!location || !location.Key) {
       throw new Error('Location not found for current IP');
