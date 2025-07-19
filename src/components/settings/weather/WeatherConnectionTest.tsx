@@ -107,12 +107,6 @@ const WeatherConnectionTest = ({
         });
       } else {
         setDetailedError(null);
-        
-        // Store location key from successful test for future use
-        if (weatherData.locationKey) {
-          onLocationKeyChange(weatherData.locationKey);
-        }
-        
         onTestResult({
           success: true,
           message: `Successfully connected! Location: ${weatherData.location} (AccuWeather)`,

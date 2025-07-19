@@ -24,8 +24,9 @@ export const useWeatherSettings = () => {
         // Load weather settings from tiered storage with fallback to localStorage
         setZipCodeState(settings.zipCode || '');
         setWeatherApiKeyState(settings.weatherApiKey || '');
-        setLocationKeyState(settings.locationKey || '');
-        setUseManualLocationState(settings.useManualLocation || false);
+        // locationKey might not exist in legacy settings, so default to empty
+        setLocationKeyState('');
+        setUseManualLocationState(false);
       } catch (error) {
         console.warn('Failed to load weather settings from tiered storage:', error);
         // Fallback to localStorage

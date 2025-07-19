@@ -40,8 +40,6 @@ export const SettingsProvider = ({ children }: { children: React.ReactNode }) =>
     setDefaultView: displaySettings.setDefaultView,
     setZipCode: weatherSettings.setZipCode,
     setWeatherApiKey: weatherSettings.setWeatherApiKey,
-    setAccuWeatherApiKey: weatherSettings.setAccuWeatherApiKey,
-    setWeatherProvider: weatherSettings.setWeatherProvider,
     setUseManualLocation: weatherSettings.setUseManualLocation,
     setPublicAlbumUrl: photoSettings.setPublicAlbumUrl,
     setGithubOwner: githubSettings.setGithubOwner,

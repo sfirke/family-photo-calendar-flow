@@ -7,9 +7,9 @@ interface WeatherProviderBadgeProps {
 }
 
 export const WeatherProviderBadge = ({ className = '' }: WeatherProviderBadgeProps) => {
-  const { weatherData, useEnhancedService } = useWeather();
+  const { weatherData } = useWeather();
 
-  if (!weatherData || !useEnhancedService) {
+  if (!weatherData) {
     return null;
   }
 
