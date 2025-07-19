@@ -229,7 +229,8 @@ global.console = {
         !message.includes('connect ECONNREFUSED') &&
         !message.includes('Failed to get version info') &&
         !message.includes('Mock crypto') &&
-        !message.includes('Error fetching weather data: Error: API Error')) {
+        !message.includes('Error fetching weather data: Error: API Error') &&
+        !message.includes('Failed to load weather settings from tiered storage')) {
       originalError(message, ...args);
     }
   }),

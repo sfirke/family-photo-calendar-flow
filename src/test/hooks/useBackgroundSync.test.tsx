@@ -134,7 +134,7 @@ describe('useBackgroundSync', () => {
     const { result } = renderHook(() => useBackgroundSync());
 
     await expect(
-      result.current.registerPeriodicSync()
+      act(() => result.current.registerPeriodicSync())
     ).resolves.not.toThrow();
   });
 
@@ -148,6 +148,8 @@ describe('useBackgroundSync', () => {
 
     const { result } = renderHook(() => useBackgroundSync());
 
+    // Wait for the effect to run
+    expect(result.current).toBeDefined();
     expect(result.current.isBackgroundSyncSupported).toBe(false);
     expect(result.current.isPeriodicSyncSupported).toBe(false);
 

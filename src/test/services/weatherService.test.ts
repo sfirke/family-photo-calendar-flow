@@ -58,12 +58,15 @@ describe('weatherService', () => {
       temperature: 75,
       condition: 'Clear',
       forecast: expect.any(Array),
-      humidity: expect.any(Number),
-      windSpeed: expect.any(Number)
+      lastUpdated: expect.any(String),
+      provider: 'OpenWeatherMap'
     });
   });
 
   it('should handle API errors gracefully', async () => {
+    // Mock console.error to suppress error output in tests
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    
     mockFetch.mockRejectedValue(new Error('API Error'));
 
     const result = await fetchWeatherData('90210', 'invalid-key');
@@ -74,8 +77,10 @@ describe('weatherService', () => {
       temperature: 72,
       condition: 'Clear',
       forecast: expect.any(Array),
-      humidity: expect.any(Number),
-      windSpeed: expect.any(Number)
+      lastUpdated: expect.any(String),
+      provider: 'Mock Data'
     });
+
+    consoleSpy.mockRestore();
   });
 });
