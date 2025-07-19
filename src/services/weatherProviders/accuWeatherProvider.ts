@@ -6,6 +6,7 @@
  */
 
 import { WeatherProvider, WeatherData, WeatherProviderConfig } from './types';
+import { mapAccuWeatherCondition } from '@/utils/weatherIcons';
 
 interface AccuWeatherLocationResponse {
   Key: string;
@@ -282,7 +283,6 @@ export class AccuWeatherProvider implements WeatherProvider {
   }
 
   private mapCondition(accuWeatherCondition: string): string {
-    const { mapAccuWeatherCondition } = require('@/utils/weatherIcons');
     return mapAccuWeatherCondition(accuWeatherCondition);
   }
 
