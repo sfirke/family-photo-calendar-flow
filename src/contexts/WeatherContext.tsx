@@ -191,6 +191,7 @@ export const WeatherProvider = ({ children }: { children: React.ReactNode }) => 
       if (weatherData.forecast && weatherData.forecast.length > 0) {
         const forecast = weatherData.forecast.find(f => f.date === dateString);
         if (forecast) {
+          console.log(`Weather for ${dateString}: condition="${forecast.condition}", temp=${forecast.high || forecast.temp}`);
           return { 
             temp: forecast.high || forecast.temp || weatherData.temperature, 
             condition: forecast.condition,

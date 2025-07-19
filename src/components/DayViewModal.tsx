@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Sun, Cloud, CloudRain, Calendar, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
+import { getWeatherIcon } from '@/utils/weatherIcons';
 
 interface DayViewModalProps {
   open: boolean;
@@ -107,21 +108,6 @@ const DayViewModal = ({
   const allDayEvents = sortedEvents.filter(event => event.time.toLowerCase().includes('all day'));
   const timedEvents = sortedEvents.filter(event => !event.time.toLowerCase().includes('all day'));
 
-  const getWeatherIcon = (condition: string) => {
-    switch (condition.toLowerCase()) {
-      case 'sunny':
-      case 'clear':
-        return <Sun className="h-5 w-5 text-yellow-400" />;
-      case 'cloudy':
-      case 'partly cloudy':
-        return <Cloud className="h-5 w-5 text-gray-300" />;
-      case 'rain':
-      case 'rainy':
-        return <CloudRain className="h-5 w-5 text-blue-400" />;
-      default:
-        return <Sun className="h-5 w-5 text-yellow-400" />;
-    }
-  };
 
   // Get transition classes based on current state
   const getContentTransitionClasses = () => {
@@ -155,7 +141,7 @@ const DayViewModal = ({
             </div>
             <div className="flex items-center gap-3 flex-shrink-0">
               <div className="flex items-center gap-2 text-gray-600">
-                {getWeatherIcon(weather.condition)}
+                {getWeatherIcon(weather.condition, { size: "h-5 w-5" })}
                 <span className="text-sm font-medium">{weather.temp}°</span>
               </div>
               <div className="text-xs text-gray-500">
