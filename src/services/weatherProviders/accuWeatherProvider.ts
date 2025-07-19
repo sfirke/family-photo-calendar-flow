@@ -65,8 +65,10 @@ export class AccuWeatherProvider implements WeatherProvider {
     const baseUrl = 'https://dataservice.accuweather.com';
     
     try {
-      // Get location key using IP address for more accurate location
-      const locationKey = await this.getLocationKeyByIP(config.apiKey, baseUrl);
+      // Get location key - use IP detection if no zip code provided
+      const locationKey = zipCode && zipCode.trim() 
+        ? await this.getLocationKeyByZip(zipCode, config.apiKey, baseUrl)
+        : await this.getLocationKeyByIP(config.apiKey, baseUrl);
       
       // Fetch current conditions
       const currentData = await this.getCurrentConditions(locationKey, config.apiKey, baseUrl);
@@ -90,6 +92,24 @@ export class AccuWeatherProvider implements WeatherProvider {
       console.error('AccuWeather API error:', error);
       throw error;
     }
+  }
+
+  private async getLocationKeyByZip(zipCode: string, apiKey: string, baseUrl: string): Promise<string> {
+    const response = await fetch(
+      `${baseUrl}/locations/v1/postalcodes/US/search?apikey=${apiKey}&q=${zipCode}`
+    );
+
+    if (!response.ok) {
+      throw new Error(`Zip code location lookup failed: ${response.status}`);
+    }
+
+    const locations: AccuWeatherLocationResponse[] = await response.json();
+    
+    if (!locations || locations.length === 0) {
+      throw new Error('Location not found for provided zip code');
+    }
+
+    return locations[0].Key;
   }
 
   private async getLocationKeyByIP(apiKey: string, baseUrl: string): Promise<string> {

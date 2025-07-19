@@ -1,11 +1,11 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import { Shield, Lock, Zap, Calendar, ExternalLink } from 'lucide-react';
+import { Shield, Lock, Zap, Calendar, ExternalLink, MapPin } from 'lucide-react';
 import { useSecurity } from '@/contexts/SecurityContext';
 import { enhancedWeatherService } from '@/services/enhancedWeatherService';
 import SecurityUnlockBanner from '@/components/security/SecurityUnlockBanner';
@@ -34,6 +34,7 @@ const WeatherSettings = ({
   onSecurityUnlock
 }: WeatherSettingsProps) => {
   const { isSecurityEnabled, hasLockedData } = useSecurity();
+  const [useManualLocation, setUseManualLocation] = useState(false);
 
   // Allow editing even when security is enabled - users can edit and re-encrypt
   const fieldsDisabled = false;
@@ -41,6 +42,10 @@ const WeatherSettings = ({
   // Get available providers information
   const availableProviders = enhancedWeatherService.getAvailableProviders();
   const currentProviderInfo = availableProviders.find(p => p.name === weatherProvider);
+  
+  // Check if current provider is AccuWeather
+  const isAccuWeather = weatherProvider === 'accuweather';
+  const showLocationSettings = !isAccuWeather || useManualLocation;
 
   console.log('WeatherSettings - Security state:', { 
     isSecurityEnabled, 
@@ -49,7 +54,10 @@ const WeatherSettings = ({
     zipCode: zipCode ? `${zipCode.substring(0, 3)}...` : 'empty',
     weatherApiKey: weatherApiKey ? `${weatherApiKey.substring(0, 8)}...` : 'empty',
     weatherProvider,
-    useEnhancedService
+    useEnhancedService,
+    isAccuWeather,
+    useManualLocation,
+    showLocationSettings
   });
 
   const handleZipCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -204,30 +212,77 @@ const WeatherSettings = ({
         </div>
       </div>
 
-      {/* Zip Code */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <Label htmlFor="zipcode" className="text-gray-700 dark:text-gray-300">Zip Code</Label>
-          {isSecurityEnabled && (
-            <div className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
-              <Lock className="h-3 w-3" />
-              <span>Encrypted</span>
+      {/* Location Settings */}
+      {isAccuWeather && (
+        <div className="p-4 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-lg">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <MapPin className="h-5 w-5 text-green-600 dark:text-green-400" />
+              <div>
+                <Label className="text-sm font-medium text-green-900 dark:text-green-100">Automatic Location Detection</Label>
+                <p className="text-xs text-green-700 dark:text-green-300">
+                  Using your IP address to automatically detect your location
+                </p>
+              </div>
+            </div>
+            <Switch
+              checked={useManualLocation}
+              onCheckedChange={setUseManualLocation}
+            />
+          </div>
+          
+          {!useManualLocation && (
+            <div className="mt-3 pt-3 border-t border-green-200 dark:border-green-700">
+              <div className="flex items-center gap-2 text-xs text-green-700 dark:text-green-300">
+                <MapPin className="h-3 w-3" />
+                <span>Location detected automatically • More accurate • No manual input required</span>
+              </div>
+            </div>
+          )}
+          
+          {useManualLocation && (
+            <div className="mt-3 pt-3 border-t border-green-200 dark:border-green-700">
+              <div className="text-xs text-green-700 dark:text-green-300">
+                Manual location entry enabled. Enter your zip code below.
+              </div>
             </div>
           )}
         </div>
-        <Input
-          id="zipcode"
-          placeholder="Enter your zip code (e.g., 90210)"
-          value={zipCode}
-          onChange={handleZipCodeChange}
-          className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100"
-        />
-        {isSecurityEnabled && (
-          <p className="text-xs text-green-600 dark:text-green-400">
-            Your zip code will be encrypted automatically when saved.
-          </p>
-        )}
-      </div>
+      )}
+
+      {/* Zip Code */}
+      {showLocationSettings && (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <Label htmlFor="zipcode" className="text-gray-700 dark:text-gray-300">
+              {isAccuWeather ? 'Zip Code (Manual Override)' : 'Zip Code'}
+            </Label>
+            {isSecurityEnabled && (
+              <div className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
+                <Lock className="h-3 w-3" />
+                <span>Encrypted</span>
+              </div>
+            )}
+          </div>
+          <Input
+            id="zipcode"
+            placeholder={isAccuWeather ? "Enter zip code to override automatic location" : "Enter your zip code (e.g., 90210)"}
+            value={zipCode}
+            onChange={handleZipCodeChange}
+            className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100"
+          />
+          {isSecurityEnabled && (
+            <p className="text-xs text-green-600 dark:text-green-400">
+              Your zip code will be encrypted automatically when saved.
+            </p>
+          )}
+          {isAccuWeather && useManualLocation && (
+            <p className="text-xs text-amber-600 dark:text-amber-400">
+              Manual location will override automatic IP-based detection.
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Security Notice */}
       {!isSecurityEnabled && !hasLockedData && (
