@@ -132,13 +132,19 @@ describe('useBackgroundSync', () => {
 
   it('should call registerPeriodicSync without throwing', async () => {
     const { result } = renderHook(() => useBackgroundSync());
+    
+    // Wait for hook to initialize
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 0));
+    });
 
+    expect(result.current).not.toBeNull();
     await expect(
       act(() => result.current.registerPeriodicSync())
     ).resolves.not.toThrow();
   });
 
-  it('should handle service worker not supported', () => {
+  it('should handle service worker not supported', async () => {
     // Temporarily remove ServiceWorker support
     const originalServiceWorker = navigator.serviceWorker;
     const originalSWRegistration = window.ServiceWorkerRegistration;
@@ -148,8 +154,13 @@ describe('useBackgroundSync', () => {
 
     const { result } = renderHook(() => useBackgroundSync());
 
-    // Wait for the effect to run
+    // Wait for the hook to initialize and effects to run
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 0));
+    });
+
     expect(result.current).toBeDefined();
+    expect(result.current).not.toBeNull();
     expect(result.current.isBackgroundSyncSupported).toBe(false);
     expect(result.current.isPeriodicSyncSupported).toBe(false);
 
