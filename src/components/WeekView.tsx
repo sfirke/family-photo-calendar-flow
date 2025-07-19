@@ -6,7 +6,7 @@ import { Event } from '@/types/calendar';
 import { Button } from '@/components/ui/button';
 import EventCard from './EventCard';
 import WeatherDisplay from './WeatherDisplay';
-import WeatherProviderBadge from './WeatherProviderBadge';
+
 import { compareTimeStrings } from '@/utils/timeUtils';
 
 interface WeekViewProps {
@@ -143,7 +143,7 @@ const WeekView = ({ events, weekOffset, onPreviousWeek, onNextWeek, getWeatherFo
             <h2 className="text-sm sm:text-base md:text-lg font-semibold text-white">
               {format(weekStart, 'MMM d')} - {format(addDays(weekStart, 6), 'MMM d, yyyy')}
             </h2>
-            <WeatherProviderBadge className="mt-1 hidden sm:inline-flex" />
+            
           </div>
           
           <Button

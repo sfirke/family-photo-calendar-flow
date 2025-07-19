@@ -4,7 +4,7 @@ import { format, isToday, isTomorrow, isYesterday, addDays, startOfDay, differen
 import { Event } from '@/types/calendar';
 import EventCard from './EventCard';
 import WeatherDisplay from './WeatherDisplay';
-import WeatherProviderBadge from './WeatherProviderBadge';
+
 import { compareTimeStrings } from '@/utils/timeUtils';
 
 interface TimelineViewProps {
@@ -170,7 +170,7 @@ const TimelineView = ({ events, getWeatherForDate, onNotionEventClick }: Timelin
                           weather.lowTemp ? `Low ${Math.round(weather.lowTemp)}°` : ''}
                        </span>
                      )}
-                     <WeatherProviderBadge className="hidden sm:inline-flex" />
+                     
                    </div>
                 </div>
                 
