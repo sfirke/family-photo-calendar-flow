@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { CheckCircle, XCircle, Loader2, Key, Eye } from 'lucide-react';
-import { fetchWeatherData } from '@/services/weatherService';
+import { enhancedWeatherService } from '@/services/enhancedWeatherService';
 import { useWeather } from '@/contexts/WeatherContext';
+import { useWeatherSettings } from '@/contexts/settings/useWeatherSettings';
 import { WeatherTestResult } from '@/types/weather';
 
 interface WeatherConnectionTestProps {
@@ -25,6 +26,7 @@ const WeatherConnectionTest = ({
 }: WeatherConnectionTestProps) => {
   const [isTestingConnection, setIsTestingConnection] = useState(false);
   const { refreshWeather } = useWeather();
+  const { weatherProvider, useEnhancedService } = useWeatherSettings();
 
   const handleTestConnection = async () => {
     if (!weatherApiKey.trim()) {
@@ -35,7 +37,9 @@ const WeatherConnectionTest = ({
       return;
     }
 
-    if (!zipCode.trim()) {
+    // For AccuWeather, zip code is optional when using IP-based location
+    const isAccuWeather = weatherProvider === 'accuweather';
+    if (!isAccuWeather && !zipCode.trim()) {
       onTestResult({
         success: false,
         message: 'Please enter a zip code before testing.'
@@ -47,18 +51,42 @@ const WeatherConnectionTest = ({
     onTestResult(null);
 
     try {
-      const weatherData = await fetchWeatherData(zipCode, weatherApiKey);
+      let weatherData;
+      
+      if (useEnhancedService) {
+        // Use enhanced weather service
+        const testResult = await enhancedWeatherService.testProvider({
+          apiKey: weatherApiKey,
+          zipCode: zipCode,
+          provider: weatherProvider,
+          forecastDays: 15
+        });
+        
+        if (!testResult.success) {
+          onTestResult({
+            success: false,
+            message: testResult.message
+          });
+          return;
+        }
+        
+        weatherData = testResult.data!;
+      } else {
+        // Fall back to original weather service for OpenWeatherMap
+        const { fetchWeatherData } = await import('@/services/weatherService');
+        weatherData = await fetchWeatherData(zipCode, weatherApiKey);
+      }
       
       // Check if we got mock data (indicates API failure)
       if (weatherData.location === 'Location not found') {
         onTestResult({
           success: false,
-          message: 'API key or zip code is invalid. Please check your credentials.'
+          message: 'API key or location is invalid. Please check your credentials.'
         });
       } else {
         onTestResult({
           success: true,
-          message: `Successfully connected! Location: ${weatherData.location}`,
+          message: `Successfully connected! Location: ${weatherData.location} (${weatherData.provider})`,
           data: weatherData
         });
         
@@ -66,9 +94,10 @@ const WeatherConnectionTest = ({
         refreshWeather();
       }
     } catch (error) {
+      console.error('Weather connection test error:', error);
       onTestResult({
         success: false,
-        message: 'Failed to connect to weather service. Please check your API key and zip code.'
+        message: `Failed to connect to weather service: ${error instanceof Error ? error.message : 'Unknown error'}`
       });
     } finally {
       setIsTestingConnection(false);
