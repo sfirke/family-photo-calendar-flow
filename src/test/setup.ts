@@ -134,40 +134,69 @@ global.atob = vi.fn((str) => {
   }
 });
 
-// Mock localStorage with better error handling
+// Mock localStorage with better error handling and default settings
+const mockStorage = new Map<string, string>();
+
 const localStorageMock = {
-  getItem: vi.fn((key) => {
+  getItem: vi.fn((key: string) => {
     try {
-      return null; // Default empty state for tests
+      // Provide default values for common settings to prevent initialization errors
+      const defaults: Record<string, string> = {
+        'githubRepo': '',
+        'githubOwner': '',
+        'zipCode': '90210',
+        'weatherApiKey': '',
+        'publicAlbumUrl': '',
+        'backgroundDuration': '30',
+        'selectedAlbum': '',
+        'theme': 'light',
+        'defaultView': 'month',
+        'notionUrl': '',
+        'selectedCalendarIds': '[]',
+      };
+      
+      return mockStorage.get(key) || defaults[key] || null;
     } catch (error) {
       console.warn('localStorage.getItem mock error:', error);
       return null;
     }
   }),
-  setItem: vi.fn((key, value) => {
+  setItem: vi.fn((key: string, value: string) => {
     try {
-      // Mock implementation - do nothing
+      mockStorage.set(key, value);
     } catch (error) {
       console.warn('localStorage.setItem mock error:', error);
     }
   }),
-  removeItem: vi.fn((key) => {
+  removeItem: vi.fn((key: string) => {
     try {
-      // Mock implementation - do nothing
+      mockStorage.delete(key);
     } catch (error) {
       console.warn('localStorage.removeItem mock error:', error);
     }
   }),
   clear: vi.fn(() => {
     try {
-      // Mock implementation - do nothing
+      mockStorage.clear();
     } catch (error) {
       console.warn('localStorage.clear mock error:', error);
     }
   }),
+  get length() {
+    return mockStorage.size;
+  },
+  key: vi.fn((index: number) => {
+    const keys = Array.from(mockStorage.keys());
+    return keys[index] || null;
+  }),
 };
 
 Object.defineProperty(window, 'localStorage', {
+  value: localStorageMock,
+  writable: true,
+});
+
+Object.defineProperty(global, 'localStorage', {
   value: localStorageMock,
   writable: true,
 });
