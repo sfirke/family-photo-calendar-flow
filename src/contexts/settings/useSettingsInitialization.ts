@@ -14,6 +14,9 @@ interface InitializationProps {
   setDefaultView: (view: 'month' | 'week' | 'timeline') => void;
   setZipCode: (zipCode: string) => void;
   setWeatherApiKey: (apiKey: string) => void;
+  setAccuWeatherApiKey: (apiKey: string) => void;
+  setWeatherProvider: (provider: string) => void;
+  setUseManualLocation: (useManual: boolean) => void;
   setPublicAlbumUrl: (url: string) => void;
   setGithubOwner: (owner: string) => void;
   setGithubRepo: (repo: string) => void;
@@ -64,6 +67,15 @@ export const useSettingsInitialization = (props: InitializationProps) => {
         }
         if (settings.weatherApiKey) {
           props.setWeatherApiKey(settings.weatherApiKey);
+        }
+        if (settings.accuWeatherApiKey) {
+          props.setAccuWeatherApiKey(settings.accuWeatherApiKey);
+        }
+        if (settings.weatherProvider) {
+          props.setWeatherProvider(settings.weatherProvider);
+        }
+        if (settings.useManualLocation !== undefined) {
+          props.setUseManualLocation(settings.useManualLocation === 'true');
         }
         if (settings.publicAlbumUrl) {
           props.setPublicAlbumUrl(settings.publicAlbumUrl);

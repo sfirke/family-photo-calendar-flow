@@ -2,42 +2,58 @@
 /**
  * GitHub Settings Hook
  * 
- * Manages GitHub repository settings with secure storage and validation.
+ * Manages GitHub repository settings using tiered storage with validation.
  */
 
 import { useState, useEffect } from 'react';
 import { InputValidator } from '@/utils/security/inputValidation';
-import { SettingsStorage } from './settingsStorage';
+import { settingsStorageService } from '@/services/settingsStorageService';
 
 export const useGitHubSettings = () => {
   const [githubOwner, setGithubOwner] = useState('');
   const [githubRepo, setGithubRepo] = useState('');
 
-  // Load initial settings from storage
+  // Load initial settings from tiered storage
   useEffect(() => {
     const loadSettings = async () => {
       try {
-        const savedGithubOwner = await SettingsStorage.getStorageValue('githubOwner', true) || '';
-        const savedGithubRepo = await SettingsStorage.getStorageValue('githubRepo', true) || '';
+        const savedGithubOwner = await settingsStorageService.getValue('githubOwner') || '';
+        const savedGithubRepo = await settingsStorageService.getValue('githubRepo') || '';
         
         setGithubOwner(savedGithubOwner);
         setGithubRepo(savedGithubRepo);
       } catch (error) {
-        console.warn('Failed to load GitHub settings:', error);
+        console.warn('Failed to load GitHub settings from tiered storage:', error);
+        // Fallback to localStorage for compatibility
+        try {
+          const fallbackOwner = localStorage.getItem('githubOwner') || '';
+          const fallbackRepo = localStorage.getItem('githubRepo') || '';
+          
+          setGithubOwner(fallbackOwner);
+          setGithubRepo(fallbackRepo);
+        } catch (fallbackError) {
+          console.warn('Failed to load GitHub settings from fallback:', fallbackError);
+        }
       }
     };
     
     loadSettings();
   }, []);
 
-  // Auto-save GitHub owner to appropriate storage
+  // Auto-save GitHub owner to tiered storage
   useEffect(() => {
-    SettingsStorage.saveSetting('githubOwner', githubOwner, true);
+    settingsStorageService.setValue('githubOwner', githubOwner).catch(error => {
+      console.warn('Failed to save githubOwner to tiered storage:', error);
+      localStorage.setItem('githubOwner', githubOwner);
+    });
   }, [githubOwner]);
 
-  // Auto-save GitHub repo to appropriate storage
+  // Auto-save GitHub repo to tiered storage
   useEffect(() => {
-    SettingsStorage.saveSetting('githubRepo', githubRepo, true);
+    settingsStorageService.setValue('githubRepo', githubRepo).catch(error => {
+      console.warn('Failed to save githubRepo to tiered storage:', error);
+      localStorage.setItem('githubRepo', githubRepo);
+    });
   }, [githubRepo]);
 
   /**

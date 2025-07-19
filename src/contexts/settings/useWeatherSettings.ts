@@ -2,59 +2,111 @@
 /**
  * Weather Settings Hook
  * 
- * Manages weather-related settings with secure storage and validation.
+ * Manages weather-related settings using tiered storage with secure handling and validation.
  */
 
 import { useState, useEffect } from 'react';
 import { InputValidator } from '@/utils/security/inputValidation';
-import { SettingsStorage } from './settingsStorage';
+import { settingsStorageService } from '@/services/settingsStorageService';
 
 export const useWeatherSettings = () => {
   const [zipCode, setZipCode] = useState('90210');
   const [weatherApiKey, setWeatherApiKey] = useState('');
+  const [accuWeatherApiKey, setAccuWeatherApiKey] = useState('');
   const [weatherProvider, setWeatherProvider] = useState('openweathermap');
   const [useEnhancedService, setUseEnhancedService] = useState(false);
+  const [useManualLocation, setUseManualLocation] = useState(true);
 
-  // Load initial settings from storage
+  // Load initial settings from tiered storage
   useEffect(() => {
     const loadSettings = async () => {
       try {
-        const savedZipCode = await SettingsStorage.getStorageValue('zipCode', true) || '90210';
-        const savedWeatherApiKey = await SettingsStorage.getStorageValue('weatherApiKey', true) || '';
-        const savedWeatherProvider = await SettingsStorage.getStorageValue('weatherProvider', false) || 'openweathermap';
-        const savedUseEnhancedService = await SettingsStorage.getStorageValue('useEnhancedService', false);
+        const savedZipCode = await settingsStorageService.getValue('zipCode') || '90210';
+        const savedWeatherApiKey = await settingsStorageService.getValue('weatherApiKey') || '';
+        const savedAccuWeatherApiKey = await settingsStorageService.getValue('accuWeatherApiKey') || '';
+        const savedWeatherProvider = await settingsStorageService.getValue('weatherProvider') || 'openweathermap';
+        const savedUseEnhancedService = await settingsStorageService.getValue('useEnhancedService');
+        const savedUseManualLocation = await settingsStorageService.getValue('useManualLocation');
         
         setZipCode(savedZipCode);
         setWeatherApiKey(savedWeatherApiKey);
+        setAccuWeatherApiKey(savedAccuWeatherApiKey);
         setWeatherProvider(savedWeatherProvider);
         setUseEnhancedService(savedUseEnhancedService === 'true');
+        setUseManualLocation(savedUseManualLocation !== 'false'); // Default to true
       } catch (error) {
-        console.warn('Failed to load weather settings:', error);
+        console.warn('Failed to load weather settings from tiered storage:', error);
+        // Fallback to old storage method for compatibility
+        try {
+          const fallbackZipCode = localStorage.getItem('zipCode') || '90210';
+          const fallbackWeatherApiKey = localStorage.getItem('weatherApiKey') || '';
+          const fallbackAccuWeatherApiKey = localStorage.getItem('accuWeatherApiKey') || '';
+          const fallbackWeatherProvider = localStorage.getItem('weatherProvider') || 'openweathermap';
+          const fallbackUseEnhancedService = localStorage.getItem('useEnhancedService');
+          const fallbackUseManualLocation = localStorage.getItem('useManualLocation');
+          
+          setZipCode(fallbackZipCode);
+          setWeatherApiKey(fallbackWeatherApiKey);
+          setAccuWeatherApiKey(fallbackAccuWeatherApiKey);
+          setWeatherProvider(fallbackWeatherProvider);
+          setUseEnhancedService(fallbackUseEnhancedService === 'true');
+          setUseManualLocation(fallbackUseManualLocation !== 'false'); // Default to true
+        } catch (fallbackError) {
+          console.warn('Failed to load weather settings from fallback:', fallbackError);
+        }
       }
     };
     
     loadSettings();
   }, []);
 
-  // Auto-save zip code to appropriate storage
+  // Auto-save zip code to tiered storage
   useEffect(() => {
-    SettingsStorage.saveSetting('zipCode', zipCode, true);
+    settingsStorageService.setValue('zipCode', zipCode).catch(error => {
+      console.warn('Failed to save zipCode to tiered storage:', error);
+      localStorage.setItem('zipCode', zipCode);
+    });
   }, [zipCode]);
 
-  // Auto-save weather API key to appropriate storage
+  // Auto-save weather API key to tiered storage
   useEffect(() => {
-    SettingsStorage.saveSetting('weatherApiKey', weatherApiKey, true);
+    settingsStorageService.setValue('weatherApiKey', weatherApiKey).catch(error => {
+      console.warn('Failed to save weatherApiKey to tiered storage:', error);
+      localStorage.setItem('weatherApiKey', weatherApiKey);
+    });
   }, [weatherApiKey]);
 
-  // Auto-save weather provider
+  // Auto-save AccuWeather API key to tiered storage
   useEffect(() => {
-    SettingsStorage.saveSetting('weatherProvider', weatherProvider, false);
+    settingsStorageService.setValue('accuWeatherApiKey', accuWeatherApiKey).catch(error => {
+      console.warn('Failed to save accuWeatherApiKey to tiered storage:', error);
+      localStorage.setItem('accuWeatherApiKey', accuWeatherApiKey);
+    });
+  }, [accuWeatherApiKey]);
+
+  // Auto-save weather provider to tiered storage
+  useEffect(() => {
+    settingsStorageService.setValue('weatherProvider', weatherProvider).catch(error => {
+      console.warn('Failed to save weatherProvider to tiered storage:', error);
+      localStorage.setItem('weatherProvider', weatherProvider);
+    });
   }, [weatherProvider]);
 
-  // Auto-save enhanced service setting
+  // Auto-save enhanced service setting to tiered storage
   useEffect(() => {
-    SettingsStorage.saveSetting('useEnhancedService', useEnhancedService.toString(), false);
+    settingsStorageService.setValue('useEnhancedService', useEnhancedService.toString()).catch(error => {
+      console.warn('Failed to save useEnhancedService to tiered storage:', error);
+      localStorage.setItem('useEnhancedService', useEnhancedService.toString());
+    });
   }, [useEnhancedService]);
+
+  // Auto-save manual location setting to tiered storage
+  useEffect(() => {
+    settingsStorageService.setValue('useManualLocation', useManualLocation.toString()).catch(error => {
+      console.warn('Failed to save useManualLocation to tiered storage:', error);
+      localStorage.setItem('useManualLocation', useManualLocation.toString());
+    });
+  }, [useManualLocation]);
 
   /**
    * Enhanced zip code setter with progressive validation
@@ -90,14 +142,34 @@ export const useWeatherSettings = () => {
     }
   };
 
+  /**
+   * Enhanced AccuWeather API key setter with progressive validation
+   */
+  const setValidatedAccuWeatherApiKey = (apiKey: string) => {
+    // Always allow the input to be set for real-time typing
+    setAccuWeatherApiKey(apiKey);
+    
+    // Only log validation errors for non-empty invalid inputs
+    if (apiKey.trim() !== '') {
+      const validation = InputValidator.validateApiKey(apiKey);
+      if (!validation.isValid) {
+        console.warn('Invalid AccuWeather API key format:', validation.error);
+      }
+    }
+  };
+
   return {
     zipCode,
     setZipCode: setValidatedZipCode,
     weatherApiKey,
     setWeatherApiKey: setValidatedWeatherApiKey,
+    accuWeatherApiKey,
+    setAccuWeatherApiKey: setValidatedAccuWeatherApiKey,
     weatherProvider,
     setWeatherProvider,
     useEnhancedService,
     setUseEnhancedService,
+    useManualLocation,
+    setUseManualLocation,
   };
 };
