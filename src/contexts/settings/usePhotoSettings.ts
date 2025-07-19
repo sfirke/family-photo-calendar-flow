@@ -13,6 +13,7 @@ export const usePhotoSettings = () => {
   const [publicAlbumUrl, setPublicAlbumUrl] = useState('');
   const [backgroundDuration, setBackgroundDuration] = useState(30); // Default 30 minutes
   const [selectedAlbum, setSelectedAlbum] = useState<string | null>(null);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   // Load initial settings from tiered storage
   useEffect(() => {
@@ -45,31 +46,39 @@ export const usePhotoSettings = () => {
         } catch (fallbackError) {
           console.warn('Failed to load photo settings from fallback:', fallbackError);
         }
+      } finally {
+        setIsInitialized(true);
       }
     };
 
     loadSettings();
   }, []);
 
-  // Auto-save public album URL to tiered storage
+  // Auto-save public album URL to tiered storage (only after initialization)
   useEffect(() => {
+    if (!isInitialized) return;
+    
     console.log('🖼️ usePhotoSettings - Auto-saving publicAlbumUrl to tiered storage:', publicAlbumUrl);
     settingsStorageService.setValue('publicAlbumUrl', publicAlbumUrl).catch(error => {
       console.warn('Failed to save publicAlbumUrl to tiered storage:', error);
       localStorage.setItem('publicAlbumUrl', publicAlbumUrl);
     });
-  }, [publicAlbumUrl]);
+  }, [publicAlbumUrl, isInitialized]);
 
-  // Auto-save background duration to tiered storage
+  // Auto-save background duration to tiered storage (only after initialization)
   useEffect(() => {
+    if (!isInitialized) return;
+    
     settingsStorageService.setValue('backgroundDuration', backgroundDuration.toString()).catch(error => {
       console.warn('Failed to save backgroundDuration to tiered storage:', error);
       localStorage.setItem('backgroundDuration', backgroundDuration.toString());
     });
-  }, [backgroundDuration]);
+  }, [backgroundDuration, isInitialized]);
 
-  // Auto-save selected album to tiered storage
+  // Auto-save selected album to tiered storage (only after initialization)
   useEffect(() => {
+    if (!isInitialized) return;
+    
     if (selectedAlbum) {
       settingsStorageService.setValue('selectedAlbum', selectedAlbum).catch(error => {
         console.warn('Failed to save selectedAlbum to tiered storage:', error);
@@ -81,7 +90,7 @@ export const usePhotoSettings = () => {
         localStorage.removeItem('selectedAlbum');
       });
     }
-  }, [selectedAlbum]);
+  }, [selectedAlbum, isInitialized]);
 
   /**
    * Enhanced public album URL setter with input validation

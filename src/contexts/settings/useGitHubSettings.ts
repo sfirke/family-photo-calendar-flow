@@ -12,6 +12,7 @@ import { settingsStorageService } from '@/services/settingsStorageService';
 export const useGitHubSettings = () => {
   const [githubOwner, setGithubOwner] = useState('');
   const [githubRepo, setGithubRepo] = useState('');
+  const [isInitialized, setIsInitialized] = useState(false);
 
   // Load initial settings from tiered storage
   useEffect(() => {
@@ -34,27 +35,33 @@ export const useGitHubSettings = () => {
         } catch (fallbackError) {
           console.warn('Failed to load GitHub settings from fallback:', fallbackError);
         }
+      } finally {
+        setIsInitialized(true);
       }
     };
     
     loadSettings();
   }, []);
 
-  // Auto-save GitHub owner to tiered storage
+  // Auto-save GitHub owner to tiered storage (only after initialization)
   useEffect(() => {
+    if (!isInitialized) return;
+    
     settingsStorageService.setValue('githubOwner', githubOwner).catch(error => {
       console.warn('Failed to save githubOwner to tiered storage:', error);
       localStorage.setItem('githubOwner', githubOwner);
     });
-  }, [githubOwner]);
+  }, [githubOwner, isInitialized]);
 
-  // Auto-save GitHub repo to tiered storage
+  // Auto-save GitHub repo to tiered storage (only after initialization)
   useEffect(() => {
+    if (!isInitialized) return;
+    
     settingsStorageService.setValue('githubRepo', githubRepo).catch(error => {
       console.warn('Failed to save githubRepo to tiered storage:', error);
       localStorage.setItem('githubRepo', githubRepo);
     });
-  }, [githubRepo]);
+  }, [githubRepo, isInitialized]);
 
   /**
    * Enhanced GitHub owner setter with input validation

@@ -11,6 +11,7 @@ import { settingsStorageService } from '@/services/settingsStorageService';
 export const useDisplaySettings = () => {
   const [theme, setTheme] = useState<'light' | 'dark' | 'system'>('system');
   const [defaultView, setDefaultView] = useState<'month' | 'week' | 'timeline'>('month');
+  const [isInitialized, setIsInitialized] = useState(false);
 
   // Load initial settings from tiered storage
   useEffect(() => {
@@ -33,29 +34,35 @@ export const useDisplaySettings = () => {
         
         if (fallbackTheme) setTheme(fallbackTheme);
         if (fallbackDefaultView) setDefaultView(fallbackDefaultView);
+      } finally {
+        setIsInitialized(true);
       }
     };
     
     loadSettings();
   }, []);
 
-  // Auto-save theme to tiered storage
+  // Auto-save theme to tiered storage (only after initialization)
   useEffect(() => {
+    if (!isInitialized) return;
+    
     settingsStorageService.setValue('theme', theme).catch(error => {
       console.warn('Failed to save theme to tiered storage:', error);
       // Fallback to localStorage
       localStorage.setItem('theme', theme);
     });
-  }, [theme]);
+  }, [theme, isInitialized]);
 
-  // Auto-save default view to tiered storage
+  // Auto-save default view to tiered storage (only after initialization)
   useEffect(() => {
+    if (!isInitialized) return;
+    
     settingsStorageService.setValue('defaultView', defaultView).catch(error => {
       console.warn('Failed to save defaultView to tiered storage:', error);
       // Fallback to localStorage
       localStorage.setItem('defaultView', defaultView);
     });
-  }, [defaultView]);
+  }, [defaultView, isInitialized]);
 
   return {
     theme,

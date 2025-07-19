@@ -14,6 +14,7 @@ const NOTION_DATABASE_ID_KEY = 'notion_database_id';
 export const useNotionSettings = () => {
   const [notionToken, setNotionTokenState] = useState<string>('');
   const [notionDatabaseId, setNotionDatabaseIdState] = useState<string>('');
+  const [isInitialized, setIsInitialized] = useState(false);
 
   // Load initial settings from tiered storage
   useEffect(() => {
@@ -36,6 +37,8 @@ export const useNotionSettings = () => {
         } catch (fallbackError) {
           console.warn('Failed to load Notion settings from fallback:', fallbackError);
         }
+      } finally {
+        setIsInitialized(true);
       }
     };
     
