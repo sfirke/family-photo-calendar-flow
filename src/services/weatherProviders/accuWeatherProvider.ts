@@ -282,16 +282,8 @@ export class AccuWeatherProvider implements WeatherProvider {
   }
 
   private mapCondition(accuWeatherCondition: string): string {
-    const condition = accuWeatherCondition.toLowerCase();
-    
-    if (condition.includes('sunny') || condition.includes('clear')) return 'Clear';
-    if (condition.includes('cloud')) return 'Cloudy';
-    if (condition.includes('rain') || condition.includes('shower')) return 'Rain';
-    if (condition.includes('snow')) return 'Snow';
-    if (condition.includes('storm') || condition.includes('thunder')) return 'Thunderstorm';
-    if (condition.includes('fog') || condition.includes('mist')) return 'Fog';
-    
-    return 'Clear'; // Default fallback
+    const { mapAccuWeatherCondition } = require('@/utils/weatherIcons');
+    return mapAccuWeatherCondition(accuWeatherCondition);
   }
 
   validateApiKey(apiKey: string): boolean {
