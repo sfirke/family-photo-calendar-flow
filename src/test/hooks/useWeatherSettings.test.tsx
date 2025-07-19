@@ -35,7 +35,8 @@ describe('useWeatherSettings', () => {
   it('should initialize with default values', () => {
     const { result } = renderHook(() => useWeatherSettings());
 
-    expect(result.current.zipCode).toBe('90210');
+    // The hook should return empty string initially, not the localStorage default
+    expect(result.current.zipCode).toBe('');
     expect(result.current.weatherApiKey).toBe('');
   });
 

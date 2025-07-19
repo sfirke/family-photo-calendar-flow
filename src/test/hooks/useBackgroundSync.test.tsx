@@ -134,14 +134,17 @@ describe('useBackgroundSync', () => {
     const { result } = renderHook(() => useBackgroundSync());
 
     await expect(
-      act(() => result.current.registerPeriodicSync())
+      result.current.registerPeriodicSync()
     ).resolves.not.toThrow();
   });
 
   it('should handle service worker not supported', () => {
     // Temporarily remove ServiceWorker support
     const originalServiceWorker = navigator.serviceWorker;
+    const originalSWRegistration = window.ServiceWorkerRegistration;
+    
     delete (navigator as any).serviceWorker;
+    delete (window as any).ServiceWorkerRegistration;
 
     const { result } = renderHook(() => useBackgroundSync());
 
@@ -151,6 +154,10 @@ describe('useBackgroundSync', () => {
     // Restore ServiceWorker
     Object.defineProperty(navigator, 'serviceWorker', {
       value: originalServiceWorker,
+      configurable: true,
+    });
+    Object.defineProperty(window, 'ServiceWorkerRegistration', {
+      value: originalSWRegistration,
       configurable: true,
     });
   });

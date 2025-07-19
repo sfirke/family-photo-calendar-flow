@@ -52,12 +52,14 @@ describe('weatherService', () => {
 
     const result = await fetchWeatherData('90210', 'test-api-key');
 
-    // Updated to match the actual service behavior - service returns just the city name
+    // Check the actual structure returned by the weather service
     expect(result).toEqual({
-      location: 'Beverly Hills', // Service returns currentData.name which is just the city
+      location: 'Beverly Hills',
       temperature: 75,
       condition: 'Clear',
-      forecast: expect.any(Array)
+      forecast: expect.any(Array),
+      humidity: expect.any(Number),
+      windSpeed: expect.any(Number)
     });
   });
 
@@ -71,7 +73,9 @@ describe('weatherService', () => {
       location: 'Location not found',
       temperature: 72,
       condition: 'Clear',
-      forecast: expect.any(Array)
+      forecast: expect.any(Array),
+      humidity: expect.any(Number),
+      windSpeed: expect.any(Number)
     });
   });
 });

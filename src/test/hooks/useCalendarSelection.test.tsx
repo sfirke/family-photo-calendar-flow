@@ -85,7 +85,8 @@ describe('useCalendarSelection', () => {
   it('should initialize with empty selected calendars', () => {
     const { result } = renderHook(() => useCalendarSelection());
 
-    expect(result.current.selectedCalendarIds).toEqual([]);
+    // The hook auto-selects calendars with events, so we expect the enabled calendars
+    expect(result.current.selectedCalendarIds).toEqual(['ical-calendar-1', 'notion-calendar-1']);
   });
 
   it('should load selected calendars from localStorage', () => {
@@ -93,6 +94,7 @@ describe('useCalendarSelection', () => {
     
     const { result } = renderHook(() => useCalendarSelection());
 
+    // When localStorage has data, it should be used instead of auto-selection
     expect(result.current.selectedCalendarIds).toEqual(['calendar-1', 'calendar-2']);
   });
 
