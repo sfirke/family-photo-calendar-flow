@@ -1,8 +1,7 @@
-
 /**
  * Weather Settings Hook
  * 
- * Manages weather-related settings using tiered storage with secure handling and validation.
+ * Manages AccuWeather-only settings using tiered storage with secure handling and validation.
  */
 
 import { useState, useEffect } from 'react';
@@ -10,51 +9,37 @@ import { InputValidator } from '@/utils/security/inputValidation';
 import { settingsStorageService } from '@/services/settingsStorageService';
 
 export const useWeatherSettings = () => {
-  const [zipCode, setZipCode] = useState('90210');
-  const [weatherApiKey, setWeatherApiKey] = useState('');
-  const [accuWeatherApiKey, setAccuWeatherApiKey] = useState('');
-  const [weatherProvider, setWeatherProvider] = useState('openweathermap');
-  const [useEnhancedService, setUseEnhancedService] = useState(false);
-  const [useManualLocation, setUseManualLocation] = useState(true);
-  const [isInitialized, setIsInitialized] = useState(false);
+  const [zipCode, setZipCodeState] = useState<string>('');
+  const [weatherApiKey, setWeatherApiKeyState] = useState<string>('');
+  const [locationKey, setLocationKeyState] = useState<string>('');
+  const [useManualLocation, setUseManualLocationState] = useState<boolean>(false);
+  const [isInitialized, setIsInitialized] = useState<boolean>(false);
 
   // Load initial settings from tiered storage
   useEffect(() => {
     const loadSettings = async () => {
       try {
-        const savedZipCode = await settingsStorageService.getValue('zipCode') || '90210';
-        const savedWeatherApiKey = await settingsStorageService.getValue('weatherApiKey') || '';
-        const savedAccuWeatherApiKey = await settingsStorageService.getValue('accuWeatherApiKey') || '';
-        const savedWeatherProvider = await settingsStorageService.getValue('weatherProvider') || 'openweathermap';
-        const savedUseEnhancedService = await settingsStorageService.getValue('useEnhancedService');
-        const savedUseManualLocation = await settingsStorageService.getValue('useManualLocation');
+        const settings = await settingsStorageService.loadAllSettings();
         
-        setZipCode(savedZipCode);
-        setWeatherApiKey(savedWeatherApiKey);
-        setAccuWeatherApiKey(savedAccuWeatherApiKey);
-        setWeatherProvider(savedWeatherProvider);
-        setUseEnhancedService(savedUseEnhancedService === 'true');
-        setUseManualLocation(savedUseManualLocation !== 'false'); // Default to true
+        // Load weather settings from tiered storage with fallback to localStorage
+        setZipCodeState(settings.zipCode || '');
+        setWeatherApiKeyState(settings.weatherApiKey || '');
+        setLocationKeyState(settings.locationKey || '');
+        setUseManualLocationState(settings.useManualLocation || false);
       } catch (error) {
         console.warn('Failed to load weather settings from tiered storage:', error);
-        // Fallback to old storage method for compatibility
-        try {
-          const fallbackZipCode = localStorage.getItem('zipCode') || '90210';
-          const fallbackWeatherApiKey = localStorage.getItem('weatherApiKey') || '';
-          const fallbackAccuWeatherApiKey = localStorage.getItem('accuWeatherApiKey') || '';
-          const fallbackWeatherProvider = localStorage.getItem('weatherProvider') || 'openweathermap';
-          const fallbackUseEnhancedService = localStorage.getItem('useEnhancedService');
-          const fallbackUseManualLocation = localStorage.getItem('useManualLocation');
-          
-          setZipCode(fallbackZipCode);
-          setWeatherApiKey(fallbackWeatherApiKey);
-          setAccuWeatherApiKey(fallbackAccuWeatherApiKey);
-          setWeatherProvider(fallbackWeatherProvider);
-          setUseEnhancedService(fallbackUseEnhancedService === 'true');
-          setUseManualLocation(fallbackUseManualLocation !== 'false'); // Default to true
-        } catch (fallbackError) {
-          console.warn('Failed to load weather settings from fallback:', fallbackError);
-        }
+        // Fallback to localStorage
+        const fallbackSettings = {
+          zipCode: localStorage.getItem('zipCode') || '',
+          weatherApiKey: localStorage.getItem('weatherApiKey') || '',
+          locationKey: localStorage.getItem('locationKey') || '',
+          useManualLocation: localStorage.getItem('useManualLocation') ? JSON.parse(localStorage.getItem('useManualLocation')!) : false
+        };
+        
+        setZipCodeState(fallbackSettings.zipCode);
+        setWeatherApiKeyState(fallbackSettings.weatherApiKey);
+        setLocationKeyState(fallbackSettings.locationKey);
+        setUseManualLocationState(fallbackSettings.useManualLocation);
       } finally {
         setIsInitialized(true);
       }
@@ -63,128 +48,98 @@ export const useWeatherSettings = () => {
     loadSettings();
   }, []);
 
-  // Auto-save zip code to tiered storage (only after initialization)
+  // Auto-save settings changes to tiered storage
   useEffect(() => {
     if (!isInitialized) return;
-    
-    settingsStorageService.setValue('zipCode', zipCode).catch(error => {
-      console.warn('Failed to save zipCode to tiered storage:', error);
-      localStorage.setItem('zipCode', zipCode);
-    });
+    const saveSettings = async () => {
+      try {
+        await settingsStorageService.setValue('zipCode', zipCode);
+      } catch (error) {
+        console.warn('Failed to save zipCode to tiered storage, using localStorage fallback', error);
+        localStorage.setItem('zipCode', zipCode);
+      }
+    };
+    saveSettings();
   }, [zipCode, isInitialized]);
 
-  // Auto-save weather API key to tiered storage (only after initialization)
   useEffect(() => {
     if (!isInitialized) return;
-    
-    settingsStorageService.setValue('weatherApiKey', weatherApiKey).catch(error => {
-      console.warn('Failed to save weatherApiKey to tiered storage:', error);
-      localStorage.setItem('weatherApiKey', weatherApiKey);
-    });
+    const saveSettings = async () => {
+      try {
+        await settingsStorageService.setValue('weatherApiKey', weatherApiKey);
+      } catch (error) {
+        console.warn('Failed to save weatherApiKey to tiered storage, using localStorage fallback', error);
+        localStorage.setItem('weatherApiKey', weatherApiKey);
+      }
+    };
+    saveSettings();
   }, [weatherApiKey, isInitialized]);
 
-  // Auto-save AccuWeather API key to tiered storage (only after initialization)
   useEffect(() => {
     if (!isInitialized) return;
-    
-    settingsStorageService.setValue('accuWeatherApiKey', accuWeatherApiKey).catch(error => {
-      console.warn('Failed to save accuWeatherApiKey to tiered storage:', error);
-      localStorage.setItem('accuWeatherApiKey', accuWeatherApiKey);
-    });
-  }, [accuWeatherApiKey, isInitialized]);
+    const saveSettings = async () => {
+      try {
+        await settingsStorageService.setValue('locationKey', locationKey);
+      } catch (error) {
+        console.warn('Failed to save locationKey to tiered storage, using localStorage fallback', error);
+        localStorage.setItem('locationKey', locationKey);
+      }
+    };
+    saveSettings();
+  }, [locationKey, isInitialized]);
 
-  // Auto-save weather provider to tiered storage (only after initialization)
   useEffect(() => {
     if (!isInitialized) return;
-    
-    settingsStorageService.setValue('weatherProvider', weatherProvider).catch(error => {
-      console.warn('Failed to save weatherProvider to tiered storage:', error);
-      localStorage.setItem('weatherProvider', weatherProvider);
-    });
-  }, [weatherProvider, isInitialized]);
-
-  // Auto-save enhanced service setting to tiered storage (only after initialization)
-  useEffect(() => {
-    if (!isInitialized) return;
-    
-    settingsStorageService.setValue('useEnhancedService', useEnhancedService.toString()).catch(error => {
-      console.warn('Failed to save useEnhancedService to tiered storage:', error);
-      localStorage.setItem('useEnhancedService', useEnhancedService.toString());
-    });
-  }, [useEnhancedService, isInitialized]);
-
-  // Auto-save manual location setting to tiered storage (only after initialization)
-  useEffect(() => {
-    if (!isInitialized) return;
-    
-    settingsStorageService.setValue('useManualLocation', useManualLocation.toString()).catch(error => {
-      console.warn('Failed to save useManualLocation to tiered storage:', error);
-      localStorage.setItem('useManualLocation', useManualLocation.toString());
-    });
+    const saveSettings = async () => {
+      try {
+        await settingsStorageService.setValue('useManualLocation', useManualLocation.toString());
+      } catch (error) {
+        console.warn('Failed to save useManualLocation to tiered storage, using localStorage fallback', error);
+        localStorage.setItem('useManualLocation', JSON.stringify(useManualLocation));
+      }
+    };
+    saveSettings();
   }, [useManualLocation, isInitialized]);
 
-  /**
-   * Enhanced zip code setter with progressive validation
-   * Allows typing but validates on completion
-   */
+  // Input validation and enhanced setters
   const setValidatedZipCode = (newZipCode: string) => {
-    // Always allow the input to be set for real-time typing
-    setZipCode(newZipCode);
-    
-    // Only log validation errors for non-empty invalid inputs
-    if (newZipCode.trim() !== '') {
-      const validation = InputValidator.validateZipCode(newZipCode);
-      if (!validation.isValid) {
-        console.warn('Invalid zip code format:', validation.error);
-      }
+    const validation = InputValidator.validateZipCode(newZipCode);
+    if (!validation.isValid) {
+      console.warn('Invalid zip code:', validation.error);
     }
+    setZipCodeState(newZipCode);
   };
 
-  /**
-   * Enhanced weather API key setter with progressive validation
-   * Allows typing but validates on completion
-   */
   const setValidatedWeatherApiKey = (apiKey: string) => {
-    // Always allow the input to be set for real-time typing
-    setWeatherApiKey(apiKey);
-    
-    // Only log validation errors for non-empty invalid inputs
-    if (apiKey.trim() !== '') {
-      const validation = InputValidator.validateApiKey(apiKey);
-      if (!validation.isValid) {
-        console.warn('Invalid API key format:', validation.error);
-      }
+    const validation = InputValidator.validateApiKey(apiKey);
+    if (!validation.isValid) {
+      console.warn('Invalid API key:', validation.error);
     }
+    setWeatherApiKeyState(apiKey);
   };
 
-  /**
-   * Enhanced AccuWeather API key setter with progressive validation
-   */
-  const setValidatedAccuWeatherApiKey = (apiKey: string) => {
-    // Always allow the input to be set for real-time typing
-    setAccuWeatherApiKey(apiKey);
-    
-    // Only log validation errors for non-empty invalid inputs
-    if (apiKey.trim() !== '') {
-      const validation = InputValidator.validateApiKey(apiKey);
-      if (!validation.isValid) {
-        console.warn('Invalid AccuWeather API key format:', validation.error);
-      }
-    }
-  };
+  // Convenience setter functions that match existing API
+  const setZipCode = setValidatedZipCode;
+  const setWeatherApiKey = setValidatedWeatherApiKey;
+  const setLocationKey = setLocationKeyState;
+  const setUseManualLocation = setUseManualLocationState;
 
   return {
+    // Current values
     zipCode,
-    setZipCode: setValidatedZipCode,
     weatherApiKey,
-    setWeatherApiKey: setValidatedWeatherApiKey,
-    accuWeatherApiKey,
-    setAccuWeatherApiKey: setValidatedAccuWeatherApiKey,
-    weatherProvider,
-    setWeatherProvider,
-    useEnhancedService,
-    setUseEnhancedService,
+    locationKey,
     useManualLocation,
+    isInitialized,
+    
+    // Setter functions
+    setZipCode,
+    setWeatherApiKey,
+    setLocationKey,
     setUseManualLocation,
+    
+    // Validated setters (for direct use if needed)
+    setValidatedZipCode,
+    setValidatedWeatherApiKey
   };
 };

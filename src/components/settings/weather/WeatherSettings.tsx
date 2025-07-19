@@ -2,13 +2,10 @@
 import React, { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Shield, Lock, Zap, Calendar, ExternalLink, MapPin, Loader2 } from 'lucide-react';
+import { Shield, Lock, MapPin, Loader2 } from 'lucide-react';
 import { useSecurity } from '@/contexts/SecurityContext';
-import { enhancedWeatherService } from '@/services/enhancedWeatherService';
 import SecurityUnlockBanner from '@/components/security/SecurityUnlockBanner';
 
 interface WeatherSettingsProps {
@@ -16,10 +13,6 @@ interface WeatherSettingsProps {
   onZipCodeChange: (zipCode: string) => void;
   weatherApiKey: string;
   onWeatherApiKeyChange: (apiKey: string) => void;
-  weatherProvider: string;
-  onWeatherProviderChange: (provider: string) => void;
-  useEnhancedService: boolean;
-  onUseEnhancedServiceChange: (use: boolean) => void;
   onSecurityUnlock?: () => void;
   onUseManualLocationChange: (useManual: boolean) => void;
 }
@@ -29,10 +22,6 @@ const WeatherSettings = ({
   onZipCodeChange,
   weatherApiKey,
   onWeatherApiKeyChange,
-  weatherProvider,
-  onWeatherProviderChange,
-  useEnhancedService,
-  onUseEnhancedServiceChange,
   onSecurityUnlock,
   onUseManualLocationChange
 }: WeatherSettingsProps) => {
@@ -45,25 +34,13 @@ const WeatherSettings = ({
   // Allow editing even when security is enabled - users can edit and re-encrypt
   const fieldsDisabled = false;
 
-  // Get available providers information
-  const availableProviders = enhancedWeatherService.getAvailableProviders();
-  const currentProviderInfo = availableProviders.find(p => p.name === weatherProvider);
-  
-  // Check if current provider is AccuWeather
-  const isAccuWeather = weatherProvider === 'accuweather';
-  const showLocationSettings = !isAccuWeather || useManualLocation;
-
   console.log('WeatherSettings - Security state:', { 
     isSecurityEnabled, 
     hasLockedData, 
     fieldsDisabled,
     zipCode: zipCode ? `${zipCode.substring(0, 3)}...` : 'empty',
     weatherApiKey: weatherApiKey ? `${weatherApiKey.substring(0, 8)}...` : 'empty',
-    weatherProvider,
-    useEnhancedService,
-    isAccuWeather,
-    useManualLocation,
-    showLocationSettings
+    useManualLocation
   });
 
   const handleZipCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -78,11 +55,11 @@ const WeatherSettings = ({
 
   // Check for geolocation permission and get IP address
   useEffect(() => {
-    if (isAccuWeather && !useManualLocation) {
+    if (!useManualLocation) {
       checkLocationPermission();
       getUserIP();
     }
-  }, [isAccuWeather, useManualLocation]);
+  }, [useManualLocation]);
 
   const checkLocationPermission = async () => {
     if ('permissions' in navigator) {
@@ -143,93 +120,12 @@ const WeatherSettings = ({
       {/* Show unlock banner if data is locked */}
       <SecurityUnlockBanner onUnlock={onSecurityUnlock} />
 
-      {/* Enhanced Service Toggle */}
-      <div className="p-4 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Zap className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-            <div>
-              <Label className="text-sm font-medium text-blue-900 dark:text-blue-100">Enhanced Weather Service</Label>
-              <p className="text-xs text-blue-700 dark:text-blue-300">
-                Extended forecasts up to 30 days with multiple provider support
-              </p>
-            </div>
-          </div>
-          <Switch
-            checked={useEnhancedService}
-            onCheckedChange={onUseEnhancedServiceChange}
-          />
-        </div>
-        
-        {useEnhancedService && (
-          <div className="mt-3 pt-3 border-t border-blue-200 dark:border-blue-700">
-            <div className="flex items-center gap-2 text-xs text-blue-700 dark:text-blue-300">
-              <Calendar className="h-3 w-3" />
-              <span>Monthly forecasts • Multiple providers • Enhanced caching</span>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Weather Provider Selection */}
-      {useEnhancedService && (
-        <div className="space-y-3">
-          <Label className="text-gray-700 dark:text-gray-300">Weather Provider</Label>
-          <Select value={weatherProvider} onValueChange={onWeatherProviderChange}>
-            <SelectTrigger className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600">
-              <SelectValue placeholder="Select weather provider" />
-            </SelectTrigger>
-            <SelectContent>
-              {availableProviders.map((provider) => (
-                <SelectItem key={provider.name} value={provider.name}>
-                  <div className="flex items-center justify-between w-full">
-                    <span>{provider.displayName}</span>
-                    <div className="flex items-center gap-2 ml-4">
-                      <Badge variant="secondary" className="text-xs">
-                        {provider.maxForecastDays} days
-                      </Badge>
-                      {provider.requiresApiKey && (
-                        <Badge variant="outline" className="text-xs">
-                          API Key Required
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          
-          {currentProviderInfo && (
-            <div className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
-              <p>• Forecast range: Up to {currentProviderInfo.maxForecastDays} days</p>
-              {currentProviderInfo.config.apiKeyUrl && (
-                <p className="flex items-center gap-1">
-                  • Get API key: 
-                  <a 
-                    href={currentProviderInfo.config.apiKeyUrl} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1"
-                  >
-                    {currentProviderInfo.displayName}
-                    <ExternalLink className="h-3 w-3" />
-                  </a>
-                </p>
-              )}
-            </div>
-          )}
-        </div>
-      )}
 
       {/* API Key Configuration */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <Label htmlFor="api-key" className="text-gray-700 dark:text-gray-300">
-            {useEnhancedService && currentProviderInfo 
-              ? `${currentProviderInfo.displayName} API Key`
-              : 'OpenWeatherMap API Key'
-            }
+            AccuWeather API Key
           </Label>
           {isSecurityEnabled && (
             <div className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
@@ -241,37 +137,21 @@ const WeatherSettings = ({
         <Input
           id="api-key"
           type="password"
-          placeholder={`Enter your ${useEnhancedService && currentProviderInfo ? currentProviderInfo.displayName : 'OpenWeatherMap'} API key`}
+          placeholder="Enter your AccuWeather API key"
           value={weatherApiKey}
           onChange={handleApiKeyChange}
           className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100"
         />
         <div className="text-sm text-gray-600 dark:text-gray-400">
-          {useEnhancedService && currentProviderInfo?.config.apiKeyUrl ? (
-            <>
-              Get a free API key from{' '}
-              <a 
-                href={currentProviderInfo.config.apiKeyUrl} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="text-blue-600 dark:text-blue-400 hover:underline"
-              >
-                {currentProviderInfo.displayName}
-              </a>
-            </>
-          ) : (
-            <>
-              Get a free API key from{' '}
-              <a 
-                href="https://openweathermap.org/api" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="text-blue-600 dark:text-blue-400 hover:underline"
-              >
-                OpenWeatherMap
-              </a>
-            </>
-          )}
+          Get a free API key from{' '}
+          <a 
+            href="https://developer.accuweather.com/getting-started" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="text-blue-600 dark:text-blue-400 hover:underline"
+          >
+            AccuWeather Developer Portal
+          </a>
           {isSecurityEnabled && (
             <span className="text-green-600 dark:text-green-400 ml-2">
               • Data will be encrypted automatically
@@ -281,26 +161,25 @@ const WeatherSettings = ({
       </div>
 
       {/* Location Settings */}
-      {isAccuWeather && (
-        <div className="p-4 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-lg">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <MapPin className="h-5 w-5 text-green-600 dark:text-green-400" />
-              <div>
-                <Label className="text-sm font-medium text-green-900 dark:text-green-100">Automatic Location Detection</Label>
-                <p className="text-xs text-green-700 dark:text-green-300">
-                  Using your IP address to automatically detect your location
-                </p>
-              </div>
+      <div className="p-4 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-lg">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <MapPin className="h-5 w-5 text-green-600 dark:text-green-400" />
+            <div>
+              <Label className="text-sm font-medium text-green-900 dark:text-green-100">Automatic Location Detection</Label>
+              <p className="text-xs text-green-700 dark:text-green-300">
+                Using your IP address to automatically detect your location
+              </p>
             </div>
-            <Switch
-              checked={useManualLocation}
-              onCheckedChange={(checked) => {
-                setUseManualLocation(checked);
-                onUseManualLocationChange(checked);
-              }}
-            />
           </div>
+          <Switch
+            checked={useManualLocation}
+            onCheckedChange={(checked) => {
+              setUseManualLocation(checked);
+              onUseManualLocationChange(checked);
+            }}
+          />
+        </div>
           
           {!useManualLocation && (
             <div className="mt-3 pt-3 border-t border-green-200 dark:border-green-700 space-y-3">
@@ -378,14 +257,14 @@ const WeatherSettings = ({
             </div>
           )}
         </div>
-      )}
+      )
 
       {/* Zip Code */}
-      {showLocationSettings && (
+      {useManualLocation && (
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <Label htmlFor="zipcode" className="text-gray-700 dark:text-gray-300">
-              {isAccuWeather ? 'Zip Code (Manual Override)' : 'Zip Code'}
+              Zip Code (Manual Override)
             </Label>
             {isSecurityEnabled && (
               <div className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
@@ -396,7 +275,7 @@ const WeatherSettings = ({
           </div>
           <Input
             id="zipcode"
-            placeholder={isAccuWeather ? "Enter zip code to override automatic location" : "Enter your zip code (e.g., 90210)"}
+            placeholder="Enter zip code to override automatic location"
             value={zipCode}
             onChange={handleZipCodeChange}
             className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100"
@@ -406,11 +285,9 @@ const WeatherSettings = ({
               Your zip code will be encrypted automatically when saved.
             </p>
           )}
-          {isAccuWeather && useManualLocation && (
-            <p className="text-xs text-amber-600 dark:text-amber-400">
-              Manual location will override automatic IP-based detection.
-            </p>
-          )}
+          <p className="text-xs text-amber-600 dark:text-amber-400">
+            Manual location will override automatic IP-based detection.
+          </p>
         </div>
       )}
 

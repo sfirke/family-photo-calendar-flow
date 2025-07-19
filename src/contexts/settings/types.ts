@@ -21,7 +21,7 @@ export interface SettingsContextType {
   zipCode: string;
   /** Update zip code with validation */
   setZipCode: (zipCode: string) => void;
-  /** Weather service API key */
+  /** AccuWeather API key */
   weatherApiKey: string;
   /** Update weather API key with validation */
   setWeatherApiKey: (apiKey: string) => void;

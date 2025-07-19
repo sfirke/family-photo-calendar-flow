@@ -12,6 +12,7 @@ export interface WeatherData {
   provider: string;
   forecastRange?: 'weekly' | 'monthly'; // Extended forecast support
   cacheTimestamp?: number; // For cache management
+  locationKey?: string; // AccuWeather location key for future use
 }
 
 export interface WeatherForecastDay {

@@ -21,10 +21,8 @@ const WeatherTab = ({}: WeatherTabProps) => {
     setZipCode,
     weatherApiKey,
     setWeatherApiKey,
-    weatherProvider,
-    setWeatherProvider,
-    useEnhancedService,
-    setUseEnhancedService
+    locationKey,
+    setLocationKey
   } = useWeatherSettings();
 
   // Clear test results when security state changes to force re-testing with new data
@@ -64,10 +62,6 @@ const WeatherTab = ({}: WeatherTabProps) => {
             onZipCodeChange={setZipCode}
             weatherApiKey={weatherApiKey}
             onWeatherApiKeyChange={setWeatherApiKey}
-            weatherProvider={weatherProvider}
-            onWeatherProviderChange={setWeatherProvider}
-            useEnhancedService={useEnhancedService}
-            onUseEnhancedServiceChange={setUseEnhancedService}
             onSecurityUnlock={handleSecurityUnlock}
             onUseManualLocationChange={setUseManualLocation}
           />
@@ -80,6 +74,8 @@ const WeatherTab = ({}: WeatherTabProps) => {
             showPreview={showPreview}
             testResult={testResult}
             useManualLocation={useManualLocation}
+            locationKey={locationKey}
+            onLocationKeyChange={setLocationKey}
           />
 
           {showPreview && testResult?.success && testResult.data && (

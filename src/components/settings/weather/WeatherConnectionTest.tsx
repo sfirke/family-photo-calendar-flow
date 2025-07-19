@@ -15,6 +15,8 @@ interface WeatherConnectionTestProps {
   showPreview: boolean;
   testResult: WeatherTestResult | null;
   useManualLocation: boolean;
+  locationKey: string;
+  onLocationKeyChange: (key: string) => void;
 }
 
 const WeatherConnectionTest = ({
@@ -24,13 +26,14 @@ const WeatherConnectionTest = ({
   onShowPreviewToggle,
   showPreview,
   testResult,
-  useManualLocation
+  useManualLocation,
+  locationKey,
+  onLocationKeyChange
 }: WeatherConnectionTestProps) => {
   const [isTestingConnection, setIsTestingConnection] = useState(false);
   const [showErrorDetails, setShowErrorDetails] = useState(false);
   const [detailedError, setDetailedError] = useState<string | null>(null);
   const { refreshWeather } = useWeather();
-  const { weatherProvider, useEnhancedService } = useWeatherSettings();
 
   const handleTestConnection = async () => {
     if (!weatherApiKey.trim()) {
@@ -43,22 +46,8 @@ const WeatherConnectionTest = ({
       return;
     }
 
-    // Check if we need location data based on provider and automatic location setting
-    const isAccuWeather = weatherProvider === 'accuweather';
-    
-    // For non-AccuWeather providers, always require zip code
-    if (!isAccuWeather && !zipCode.trim()) {
-      const errorMsg = 'Please enter a zip code before testing.';
-      setDetailedError(errorMsg);
-      onTestResult({
-        success: false,
-        message: errorMsg
-      });
-      return;
-    }
-    
     // For AccuWeather with manual location, require zip code
-    if (isAccuWeather && useManualLocation && !zipCode.trim()) {
+    if (useManualLocation && !zipCode.trim()) {
       const errorMsg = 'Please enter a zip code for manual location.';
       setDetailedError(errorMsg);
       onTestResult({
@@ -79,80 +68,38 @@ const WeatherConnectionTest = ({
     });
 
     try {
-      let weatherData;
+      console.log('WeatherConnectionTest - Testing AccuWeather connection...', { 
+        useManualLocation,
+        hasZipCode: !!zipCode.trim(),
+        apiKey: weatherApiKey.substring(0, 8) + '...',
+        zipCode: zipCode || 'empty'
+      });
       
-      if (useEnhancedService) {
-        // Use enhanced weather service with timeout
-        console.log('WeatherConnectionTest - Testing with enhanced service...', { 
-          provider: weatherProvider, 
-          useManualLocation,
-          hasZipCode: !!zipCode.trim(),
-          apiKey: weatherApiKey.substring(0, 8) + '...',
-          zipCode: zipCode || 'empty'
-        });
-        
-        // For AccuWeather with automatic location, don't send zip code (use IP detection)
-        const testZipCode = (isAccuWeather && !useManualLocation) ? '' : zipCode;
-        
-        console.log('WeatherConnectionTest - Final test parameters:', {
-          provider: weatherProvider,
-          isAccuWeather,
-          useManualLocation,
-          originalZipCode: zipCode,
-          testZipCode,
-          willUseIPDetection: isAccuWeather && !useManualLocation
-        });
-        
-        const testPromise = enhancedWeatherService.testProvider({
-          apiKey: weatherApiKey,
-          zipCode: testZipCode,
-          provider: weatherProvider,
-          forecastDays: 15
-        });
-        
-        const testResult = await Promise.race([testPromise, timeoutPromise]) as Awaited<typeof testPromise>;
-        
-        if (!testResult.success) {
-          const errorDetails = `Provider: ${weatherProvider}, API Key: ${weatherApiKey.substring(0, 8)}..., Error: ${testResult.message}, Location Mode: ${useManualLocation ? 'manual' : 'automatic'}`;
-          setDetailedError(errorDetails);
-          onTestResult({
-            success: false,
-            message: testResult.message
-          });
-          return;
-        }
-        
-        weatherData = testResult.data!;
-      } else {
-        // Use the weather provider factory to get the correct provider
-        console.log(`Testing ${weatherProvider} connection with provider factory...`);
-        const { weatherProviderFactory } = await import('@/services/weatherProviders');
-        const provider = weatherProviderFactory.getProvider(weatherProvider);
-        
-        // For AccuWeather with automatic location, don't send zip code (use IP detection)
-        const testZipCodeDirect = (isAccuWeather && !useManualLocation) ? '' : zipCode;
-        
-        console.log('WeatherConnectionTest - Direct provider test parameters:', {
-          provider: weatherProvider,
-          isAccuWeather,
-          useManualLocation,
-          originalZipCode: zipCode,
-          testZipCodeDirect,
-          willUseIPDetection: isAccuWeather && !useManualLocation
-        });
-        
-        const fetchPromise = provider.fetchWeather(testZipCodeDirect, {
-          apiKey: weatherApiKey,
-          baseUrl: '', // Provider will use their own base URL
-          rateLimit: 60, // Default rate limit
-          maxForecastDays: provider.maxForecastDays
-        });
-        weatherData = await Promise.race([fetchPromise, timeoutPromise]) as Awaited<typeof fetchPromise>;
-      }
+      // Use AccuWeather provider directly
+      const { AccuWeatherProvider } = await import('@/services/weatherProviders/accuWeatherProvider');
+      const provider = new AccuWeatherProvider();
+      
+      // For automatic location, don't send zip code (use IP detection)
+      const testZipCode = useManualLocation ? zipCode : '';
+      
+      console.log('WeatherConnectionTest - Final test parameters:', {
+        useManualLocation,
+        originalZipCode: zipCode,
+        testZipCode,
+        willUseIPDetection: !useManualLocation
+      });
+      
+      const fetchPromise = provider.fetchWeather(testZipCode, {
+        apiKey: weatherApiKey,
+        baseUrl: '', // Provider will use their own base URL
+        rateLimit: 60, // Default rate limit
+        maxForecastDays: 15
+      });
+      const weatherData = await Promise.race([fetchPromise, timeoutPromise]) as Awaited<typeof fetchPromise>;
       
       // Check if we got mock data (indicates API failure)
       if (weatherData.location === 'Location not found') {
-        const errorDetails = `Provider: ${weatherProvider}, API Key: ${weatherApiKey.substring(0, 8)}..., Location: ${zipCode || 'IP-based'}, Error: Mock data returned - API call failed`;
+        const errorDetails = `Provider: AccuWeather, API Key: ${weatherApiKey.substring(0, 8)}..., Location: ${zipCode || 'IP-based'}, Error: Mock data returned - API call failed`;
         setDetailedError(errorDetails);
         onTestResult({
           success: false,
@@ -160,9 +107,15 @@ const WeatherConnectionTest = ({
         });
       } else {
         setDetailedError(null);
+        
+        // Store location key from successful test for future use
+        if (weatherData.locationKey) {
+          onLocationKeyChange(weatherData.locationKey);
+        }
+        
         onTestResult({
           success: true,
-          message: `Successfully connected! Location: ${weatherData.location} (${weatherData.provider})`,
+          message: `Successfully connected! Location: ${weatherData.location} (AccuWeather)`,
           data: weatherData
         });
         
@@ -173,7 +126,7 @@ const WeatherConnectionTest = ({
       console.error('Weather connection test error:', error);
       
       let errorMessage = 'Failed to connect to weather service';
-      let detailedErrorInfo = `Provider: ${weatherProvider}, API Key: ${weatherApiKey.substring(0, 8)}...`;
+      let detailedErrorInfo = `Provider: AccuWeather, API Key: ${weatherApiKey.substring(0, 8)}...`;
       
       if (error instanceof Error) {
         errorMessage += `: ${error.message}`;
@@ -285,8 +238,8 @@ const WeatherConnectionTest = ({
                     <ul className="list-disc list-inside mt-1 space-y-1">
                       <li>Your internet connection</li>
                       <li>API key validity and permissions</li>
-                      <li>Provider service status</li>
-                      {weatherProvider === 'accuweather' && <li>AccuWeather API rate limits</li>}
+                       <li>Provider service status</li>
+                       <li>AccuWeather API rate limits</li>
                     </ul>
                   </div>
                 </div>

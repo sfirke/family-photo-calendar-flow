@@ -1,8 +1,10 @@
 /**
- * WeatherContext - Weather Data Management
+ * WeatherContext - AccuWeather Data Management
  * 
- * Centralized weather data management for the Family Calendar application.
+ * Centralized AccuWeather data management for the Family Calendar application.
  * Provides real-time and forecast weather information with:
+ * - Automatic location detection via IP address
+ * - Manual location override with zip code
  * - Automatic background updates every 30 minutes
  * - Intelligent caching to prevent excessive API calls
  * - Graceful error handling with cached data fallback
@@ -10,7 +12,7 @@
  * 
  * Features:
  * - Current weather conditions with location
- * - 7-day weather forecasts for calendar planning
+ * - 15-day weather forecasts for calendar planning
  * - Temperature and condition information for each day
  * - Automatic retry logic for failed API calls
  * 
@@ -22,9 +24,8 @@
  */
 
 import React, { createContext, useContext, useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { fetchWeatherData, WeatherData } from '@/services/weatherService';
-import { enhancedWeatherService } from '@/services/enhancedWeatherService';
-import { useSettings } from './SettingsContext';
+import { useWeatherSettings } from '@/contexts/settings/useWeatherSettings';
+import { WeatherData } from '@/types/weather';
 import { IntervalManager } from '@/utils/performanceUtils';
 
 interface WeatherContextType {
@@ -38,10 +39,6 @@ interface WeatherContextType {
   getCurrentWeather: () => { temp: number; condition: string; location: string };
   /** Manually refresh weather data (bypasses rate limiting) */
   refreshWeather: () => Promise<void>;
-  /** Switch to enhanced weather service for extended forecasts */
-  useEnhancedService: boolean;
-  /** Toggle enhanced service usage */
-  setUseEnhancedService: (use: boolean) => void;
 }
 
 const WeatherContext = createContext<WeatherContextType | undefined>(undefined);
@@ -49,15 +46,19 @@ const WeatherContext = createContext<WeatherContextType | undefined>(undefined);
 /**
  * Weather Provider Component
  * 
- * Manages weather data fetching, caching, and distribution throughout
+ * Manages AccuWeather data fetching, caching, and distribution throughout
  * the application. Automatically handles background updates and provides
  * fallback data when API calls fail.
  */
 export const WeatherProvider = ({ children }: { children: React.ReactNode }) => {
   const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [useEnhancedService, setUseEnhancedService] = useState(false);
-  const { zipCode, weatherApiKey } = useSettings();
+  const { 
+    zipCode, 
+    weatherApiKey, 
+    locationKey,
+    useManualLocation 
+  } = useWeatherSettings();
   const lastFetchRef = useRef<number>(0);
 
   /**
@@ -71,7 +72,7 @@ export const WeatherProvider = ({ children }: { children: React.ReactNode }) => 
    * @param forceRefresh - Bypass rate limiting for manual refreshes
    */
   const loadWeather = useCallback(async (forceRefresh = false) => {
-    if (!zipCode) return;
+    if (!weatherApiKey) return;
     
     const now = Date.now();
     const timeSinceLastFetch = now - lastFetchRef.current;
@@ -85,21 +86,21 @@ export const WeatherProvider = ({ children }: { children: React.ReactNode }) => 
     lastFetchRef.current = now;
     
     try {
-      let data: WeatherData;
+      console.log('WeatherContext - Using AccuWeather service');
+      const { AccuWeatherProvider } = await import('@/services/weatherProviders/accuWeatherProvider');
+      const provider = new AccuWeatherProvider();
       
-      if (useEnhancedService) {
-        // Use enhanced service for extended forecasts
-        data = await enhancedWeatherService.fetchWeatherData({
-          zipCode,
-          apiKey: weatherApiKey,
-          forecastDays: 30 // Request monthly forecast
-        });
-      } else {
-        // Use legacy service for backward compatibility
-        data = await fetchWeatherData(zipCode, weatherApiKey);
-      }
+      // Use zip code only if manual location is enabled
+      const locationData = useManualLocation ? zipCode : '';
       
-      setWeatherData(data);
+      const weatherData = await provider.fetchWeather(locationData, {
+        apiKey: weatherApiKey,
+        baseUrl: '',
+        rateLimit: 60,
+        maxForecastDays: 15
+      });
+      
+      setWeatherData(weatherData);
     } catch (error) {
       console.warn('Weather fetch failed, using cached data if available:', error);
       // Keep existing data on error for 24/7 reliability
@@ -107,7 +108,7 @@ export const WeatherProvider = ({ children }: { children: React.ReactNode }) => 
     } finally {
       setIsLoading(false);
     }
-  }, [zipCode, weatherApiKey]);
+  }, [zipCode, weatherApiKey, useManualLocation]);
 
   /**
    * Exposed refresh function for manual weather updates
@@ -141,7 +142,7 @@ export const WeatherProvider = ({ children }: { children: React.ReactNode }) => 
     return () => {
       IntervalManager.clearInterval('weather-refresh');
     };
-  }, [loadWeather, useEnhancedService]);
+  }, [loadWeather]);
 
   /**
    * Get current weather conditions with fallback
@@ -235,10 +236,8 @@ export const WeatherProvider = ({ children }: { children: React.ReactNode }) => 
     isLoading,
     getWeatherForDate,
     getCurrentWeather,
-    refreshWeather,
-    useEnhancedService,
-    setUseEnhancedService
-  }), [weatherData, isLoading, getWeatherForDate, getCurrentWeather, refreshWeather, useEnhancedService]);
+    refreshWeather
+  }), [weatherData, isLoading, getWeatherForDate, getCurrentWeather, refreshWeather]);
 
   return (
     <WeatherContext.Provider value={contextValue}>
