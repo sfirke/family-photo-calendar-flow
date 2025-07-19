@@ -36,39 +36,7 @@ export const useICalCalendars = () => {
     processSyncQueue
   } = useBackgroundSync();
 
-  // Load calendars from IndexedDB
-  const loadCalendars = useCallback(async () => {
-    try {
-      console.log('Loading calendars from IndexedDB');
-      const storedCalendars = await calendarStorageService.getAllCalendars();
-      console.log('Loaded calendars from IndexedDB:', storedCalendars);
-      setCalendars(storedCalendars);
-      return storedCalendars;
-    } catch (error) {
-      console.error('Error loading calendars from IndexedDB:', error);
-      setCalendars([]);
-      return [];
-    }
-  }, []);
-
-  // Initialize background sync when calendars are loaded
-  useEffect(() => {
-    if (calendars.length > 0 && isBackgroundSyncSupported) {
-      const initBackgroundSync = async () => {
-        try {
-          await registerBackgroundSync();
-          await registerPeriodicSync();
-          console.log('Background sync initialized for calendar feeds');
-        } catch (error) {
-          console.error('Failed to initialize background sync:', error);
-        }
-      };
-      
-      initBackgroundSync();
-    }
-  }, [calendars.length, isBackgroundSyncSupported, registerBackgroundSync, registerPeriodicSync]);
-
-  // Helper functions that need to be defined first
+  // Helper functions defined first to avoid temporal dead zone issues
   const isEventInCurrentYear = (eventDate: Date): boolean => {
     const currentYear = new Date().getFullYear();
     return eventDate.getFullYear() === currentYear;
@@ -213,6 +181,21 @@ export const useICalCalendars = () => {
     return occurrences;
   }, []);
 
+  // Load calendars from IndexedDB
+  const loadCalendars = useCallback(async () => {
+    try {
+      console.log('Loading calendars from IndexedDB');
+      const storedCalendars = await calendarStorageService.getAllCalendars();
+      console.log('Loaded calendars from IndexedDB:', storedCalendars);
+      setCalendars(storedCalendars);
+      return storedCalendars;
+    } catch (error) {
+      console.error('Error loading calendars from IndexedDB:', error);
+      setCalendars([]);
+      return [];
+    }
+  }, []);
+
   // Update an existing calendar
   const updateCalendar = useCallback(async (id: string, updates: Partial<ICalCalendar>) => {
     console.log('Updating calendar:', id, 'with updates:', updates);
@@ -275,6 +258,23 @@ export const useICalCalendars = () => {
       console.error('Error processing background sync data:', error);
     }
   }, [calendars, expandRecurringEvent, updateCalendar]);
+
+  // Initialize background sync when calendars are loaded
+  useEffect(() => {
+    if (calendars.length > 0 && isBackgroundSyncSupported) {
+      const initBackgroundSync = async () => {
+        try {
+          await registerBackgroundSync();
+          await registerPeriodicSync();
+          console.log('Background sync initialized for calendar feeds');
+        } catch (error) {
+          console.error('Failed to initialize background sync:', error);
+        }
+      };
+      
+      initBackgroundSync();
+    }
+  }, [calendars.length, isBackgroundSyncSupported, registerBackgroundSync, registerPeriodicSync]);
 
   // Listen for background sync data
   useEffect(() => {
