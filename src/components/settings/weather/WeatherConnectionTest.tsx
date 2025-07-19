@@ -91,8 +91,17 @@ const WeatherConnectionTest = ({
           zipCode: zipCode || 'empty'
         });
         
-        // For AccuWeather with automatic location, don't send zip code
+        // For AccuWeather with automatic location, don't send zip code (use IP detection)
         const testZipCode = (isAccuWeather && !useManualLocation) ? '' : zipCode;
+        
+        console.log('WeatherConnectionTest - Final test parameters:', {
+          provider: weatherProvider,
+          isAccuWeather,
+          useManualLocation,
+          originalZipCode: zipCode,
+          testZipCode,
+          willUseIPDetection: isAccuWeather && !useManualLocation
+        });
         
         const testPromise = enhancedWeatherService.testProvider({
           apiKey: weatherApiKey,
@@ -120,7 +129,19 @@ const WeatherConnectionTest = ({
         const { weatherProviderFactory } = await import('@/services/weatherProviders');
         const provider = weatherProviderFactory.getProvider(weatherProvider);
         
-        const fetchPromise = provider.fetchWeather(zipCode, {
+        // For AccuWeather with automatic location, don't send zip code (use IP detection)
+        const testZipCodeDirect = (isAccuWeather && !useManualLocation) ? '' : zipCode;
+        
+        console.log('WeatherConnectionTest - Direct provider test parameters:', {
+          provider: weatherProvider,
+          isAccuWeather,
+          useManualLocation,
+          originalZipCode: zipCode,
+          testZipCodeDirect,
+          willUseIPDetection: isAccuWeather && !useManualLocation
+        });
+        
+        const fetchPromise = provider.fetchWeather(testZipCodeDirect, {
           apiKey: weatherApiKey,
           baseUrl: '', // Provider will use their own base URL
           rateLimit: 60, // Default rate limit
