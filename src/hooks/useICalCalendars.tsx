@@ -68,27 +68,164 @@ export const useICalCalendars = () => {
     }
   }, [calendars.length, isBackgroundSyncSupported, registerBackgroundSync, registerPeriodicSync]);
 
-  // Listen for background sync data
-  useEffect(() => {
-    const handleBackgroundSyncData = (event: CustomEvent) => {
-      const { syncQueue } = event.detail;
-      
-      // Process background sync results
-      syncQueue.forEach((syncData: any) => {
-        try {
-          processBackgroundSyncData(syncData);
-        } catch (error) {
-          console.error('Error processing background sync data:', error);
-        }
-      });
-    };
+  // Helper functions that need to be defined first
+  const isEventInCurrentYear = (eventDate: Date): boolean => {
+    const currentYear = new Date().getFullYear();
+    return eventDate.getFullYear() === currentYear;
+  };
 
-    window.addEventListener('background-sync-data-available', handleBackgroundSyncData as EventListener);
+  const isMultiDayEvent = (event: ICAL.Event): boolean => {
+    try {
+      if (!event.startDate || !event.endDate) {
+        return false;
+      }
+
+      if (event.startDate.isDate && event.endDate.isDate) {
+        const startDate = event.startDate.toJSDate();
+        const endDate = event.endDate.toJSDate();
+        
+        const diffTime = endDate.getTime() - startDate.getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        
+        return diffDays > 1;
+      }
+
+      return false;
+    } catch (error) {
+      console.warn('Error checking if event is multi-day:', error);
+      return false;
+    }
+  };
+
+  const createEventObject = (event: ICAL.Event, calendar: ICalCalendar, eventDate: Date, isRecurring: boolean, isMultiDay: boolean) => {
+    let timeString = 'All day';
     
-    return () => {
-      window.removeEventListener('background-sync-data-available', handleBackgroundSyncData as EventListener);
+    try {
+      if (event.startDate && !event.startDate.isDate) {
+        const endDate = event.endDate ? event.endDate.toJSDate() : eventDate;
+        timeString = `${eventDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - ${endDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+      } else if (isMultiDay) {
+        timeString = 'All day (Multi-day)';
+      }
+    } catch (dateError) {
+      console.warn('Error parsing event date:', dateError);
+    }
+
+    if (isRecurring && !timeString.includes('Recurring')) {
+      timeString = `${timeString} (Recurring)`;
+    }
+
+    return {
+      id: `${Date.now()}-${Math.random()}`,
+      title: event.summary || 'Untitled Event',
+      time: timeString,
+      location: event.location || '',
+      attendees: 0,
+      category: 'Personal' as const,
+      color: calendar.color,
+      description: event.description || '',
+      organizer: calendar.name,
+      date: eventDate,
+      calendarId: calendar.id,
+      calendarName: calendar.name,
+      source: 'ical',
+      isMultiDay: isMultiDay
     };
+  };
+
+  const generateMultiDayOccurrences = (event: ICAL.Event, calendar: ICalCalendar): any[] => {
+    const occurrences: any[] = [];
+    
+    try {
+      if (!isMultiDayEvent(event)) {
+        const eventDate = event.startDate.toJSDate();
+        if (isEventInCurrentYear(eventDate)) {
+          occurrences.push(createEventObject(event, calendar, eventDate, false, false));
+        }
+        return occurrences;
+      }
+
+      const startDate = event.startDate.toJSDate();
+      const endDate = event.endDate.toJSDate();
+      
+      const currentDate = new Date(startDate);
+      while (currentDate < endDate && isEventInCurrentYear(currentDate)) {
+        occurrences.push(createEventObject(event, calendar, new Date(currentDate), false, true));
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+      
+      console.log(`Generated ${occurrences.length} occurrences for multi-day event: ${event.summary}`);
+    } catch (error) {
+      console.warn('Error generating multi-day occurrences:', error);
+      const eventDate = event.startDate ? event.startDate.toJSDate() : new Date();
+      if (isEventInCurrentYear(eventDate)) {
+        occurrences.push(createEventObject(event, calendar, eventDate, false, false));
+      }
+    }
+
+    return occurrences;
+  };
+
+  // Function to expand recurring events
+  const expandRecurringEvent = useCallback((event: ICAL.Event, calendar: ICalCalendar): any[] => {
+    const currentYear = new Date().getFullYear();
+    const yearStart = new Date(currentYear, 0, 1);
+    const yearEnd = new Date(currentYear, 11, 31);
+    const occurrences: any[] = [];
+
+    try {
+      if (event.isRecurring()) {
+        const iterator = event.iterator();
+        let next;
+        let count = 0;
+        const maxOccurrences = 366;
+
+        while ((next = iterator.next()) && count < maxOccurrences) {
+          const occurrenceDate = next.toJSDate();
+          
+          if (occurrenceDate >= yearStart && occurrenceDate <= yearEnd) {
+            if (isMultiDayEvent(event)) {
+              const multiDayOccurrences = generateMultiDayOccurrences(event, calendar);
+              occurrences.push(...multiDayOccurrences);
+            } else {
+              occurrences.push(createEventObject(event, calendar, occurrenceDate, true, false));
+            }
+          }
+          
+          if (occurrenceDate > yearEnd) {
+            break;
+          }
+          
+          count++;
+        }
+      } else {
+        const multiDayOccurrences = generateMultiDayOccurrences(event, calendar);
+        occurrences.push(...multiDayOccurrences);
+      }
+    } catch (error) {
+      console.warn('Error expanding recurring event:', error);
+      const eventDate = event.startDate ? event.startDate.toJSDate() : new Date();
+      if (isEventInCurrentYear(eventDate)) {
+        occurrences.push(createEventObject(event, calendar, eventDate, false, false));
+      }
+    }
+
+    return occurrences;
   }, []);
+
+  // Update an existing calendar
+  const updateCalendar = useCallback(async (id: string, updates: Partial<ICalCalendar>) => {
+    console.log('Updating calendar:', id, 'with updates:', updates);
+    
+    try {
+      await calendarStorageService.updateCalendar(id, updates);
+      await loadCalendars(); // Refresh the state
+      console.log('Calendar updated successfully in IndexedDB');
+    } catch (error) {
+      console.error('Error updating calendar in IndexedDB:', error);
+      throw new Error('Failed to update calendar');
+    }
+  }, [loadCalendars]);
 
   const processBackgroundSyncData = useCallback((syncData: any) => {
     try {
@@ -137,7 +274,29 @@ export const useICalCalendars = () => {
     } catch (error) {
       console.error('Error processing background sync data:', error);
     }
-  }, [calendars]); // Remove forward references
+  }, [calendars, expandRecurringEvent, updateCalendar]);
+
+  // Listen for background sync data
+  useEffect(() => {
+    const handleBackgroundSyncData = (event: CustomEvent) => {
+      const { syncQueue } = event.detail;
+      
+      // Process background sync results
+      syncQueue.forEach((syncData: any) => {
+        try {
+          processBackgroundSyncData(syncData);
+        } catch (error) {
+          console.error('Error processing background sync data:', error);
+        }
+      });
+    };
+
+    window.addEventListener('background-sync-data-available', handleBackgroundSyncData as EventListener);
+    
+    return () => {
+      window.removeEventListener('background-sync-data-available', handleBackgroundSyncData as EventListener);
+    };
+  }, [processBackgroundSyncData]);
 
   // Add a new iCal calendar
   const addCalendar = useCallback(async (calendar: Omit<ICalCalendar, 'id'>) => {
@@ -195,20 +354,6 @@ export const useICalCalendars = () => {
       throw new Error('Failed to save calendar to database');
     }
   }, [loadCalendars, isBackgroundSyncSupported, triggerBackgroundSync]);
-
-  // Update an existing calendar
-  const updateCalendar = useCallback(async (id: string, updates: Partial<ICalCalendar>) => {
-    console.log('Updating calendar:', id, 'with updates:', updates);
-    
-    try {
-      await calendarStorageService.updateCalendar(id, updates);
-      await loadCalendars(); // Refresh the state
-      console.log('Calendar updated successfully in IndexedDB');
-    } catch (error) {
-      console.error('Error updating calendar in IndexedDB:', error);
-      throw new Error('Failed to update calendar');
-    }
-  }, [loadCalendars]);
 
   // Remove a calendar and clean up all related data
   const removeCalendar = useCallback(async (id: string) => {
@@ -277,149 +422,6 @@ export const useICalCalendars = () => {
     }
 
     return true;
-  };
-
-  const isEventInCurrentYear = (eventDate: Date): boolean => {
-    const currentYear = new Date().getFullYear();
-    return eventDate.getFullYear() === currentYear;
-  };
-
-  const isMultiDayEvent = (event: ICAL.Event): boolean => {
-    try {
-      if (!event.startDate || !event.endDate) {
-        return false;
-      }
-
-      if (event.startDate.isDate && event.endDate.isDate) {
-        const startDate = event.startDate.toJSDate();
-        const endDate = event.endDate.toJSDate();
-        
-        const diffTime = endDate.getTime() - startDate.getTime();
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        
-        return diffDays > 1;
-      }
-
-      return false;
-    } catch (error) {
-      console.warn('Error checking if event is multi-day:', error);
-      return false;
-    }
-  };
-
-  const generateMultiDayOccurrences = (event: ICAL.Event, calendar: ICalCalendar): any[] => {
-    const occurrences: any[] = [];
-    
-    try {
-      if (!isMultiDayEvent(event)) {
-        const eventDate = event.startDate.toJSDate();
-        if (isEventInCurrentYear(eventDate)) {
-          occurrences.push(createEventObject(event, calendar, eventDate, false, false));
-        }
-        return occurrences;
-      }
-
-      const startDate = event.startDate.toJSDate();
-      const endDate = event.endDate.toJSDate();
-      
-      const currentDate = new Date(startDate);
-      while (currentDate < endDate && isEventInCurrentYear(currentDate)) {
-        occurrences.push(createEventObject(event, calendar, new Date(currentDate), false, true));
-        currentDate.setDate(currentDate.getDate() + 1);
-      }
-      
-      console.log(`Generated ${occurrences.length} occurrences for multi-day event: ${event.summary}`);
-    } catch (error) {
-      console.warn('Error generating multi-day occurrences:', error);
-      const eventDate = event.startDate ? event.startDate.toJSDate() : new Date();
-      if (isEventInCurrentYear(eventDate)) {
-        occurrences.push(createEventObject(event, calendar, eventDate, false, false));
-      }
-    }
-
-    return occurrences;
-  };
-
-  const expandRecurringEvent = (event: ICAL.Event, calendar: ICalCalendar): any[] => {
-    const currentYear = new Date().getFullYear();
-    const yearStart = new Date(currentYear, 0, 1);
-    const yearEnd = new Date(currentYear, 11, 31);
-    const occurrences: any[] = [];
-
-    try {
-      if (event.isRecurring()) {
-        const iterator = event.iterator();
-        let next;
-        let count = 0;
-        const maxOccurrences = 366;
-
-        while ((next = iterator.next()) && count < maxOccurrences) {
-          const occurrenceDate = next.toJSDate();
-          
-          if (occurrenceDate >= yearStart && occurrenceDate <= yearEnd) {
-            if (isMultiDayEvent(event)) {
-              const multiDayOccurrences = generateMultiDayOccurrences(event, calendar);
-              occurrences.push(...multiDayOccurrences);
-            } else {
-              occurrences.push(createEventObject(event, calendar, occurrenceDate, true, false));
-            }
-          }
-          
-          if (occurrenceDate > yearEnd) {
-            break;
-          }
-          
-          count++;
-        }
-      } else {
-        const multiDayOccurrences = generateMultiDayOccurrences(event, calendar);
-        occurrences.push(...multiDayOccurrences);
-      }
-    } catch (error) {
-      console.warn('Error expanding recurring event:', error);
-      const eventDate = event.startDate ? event.startDate.toJSDate() : new Date();
-      if (isEventInCurrentYear(eventDate)) {
-        occurrences.push(createEventObject(event, calendar, eventDate, false, false));
-      }
-    }
-
-    return occurrences;
-  };
-
-  const createEventObject = (event: ICAL.Event, calendar: ICalCalendar, eventDate: Date, isRecurring: boolean, isMultiDay: boolean) => {
-    let timeString = 'All day';
-    
-    try {
-      if (event.startDate && !event.startDate.isDate) {
-        const endDate = event.endDate ? event.endDate.toJSDate() : eventDate;
-        timeString = `${eventDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - ${endDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
-      } else if (isMultiDay) {
-        timeString = 'All day (Multi-day)';
-      }
-    } catch (dateError) {
-      console.warn('Error parsing event date:', dateError);
-    }
-
-    if (isRecurring && !timeString.includes('Recurring')) {
-      timeString = `${timeString} (Recurring)`;
-    }
-
-    return {
-      id: `${Date.now()}-${Math.random()}`,
-      title: event.summary || 'Untitled Event',
-      time: timeString,
-      location: event.location || '',
-      attendees: 0,
-      category: 'Personal' as const,
-      color: calendar.color,
-      description: event.description || '',
-      organizer: calendar.name,
-      date: eventDate,
-      calendarId: calendar.id,
-      calendarName: calendar.name,
-      source: 'ical',
-      isMultiDay: isMultiDay
-    };
   };
 
   const fetchICalData = async (url: string): Promise<string> => {
