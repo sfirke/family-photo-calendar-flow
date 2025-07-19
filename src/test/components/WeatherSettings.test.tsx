@@ -84,42 +84,39 @@ describe('WeatherSettings', () => {
 
   it('should have proper mock structure for weather settings', () => {
     // Verify that our mocks provide the expected interface
-    const mockUseWeatherSettings = vi.mocked(
-      require('@/contexts/settings/useWeatherSettings').useWeatherSettings
-    );
-    
-    const mockSettings = mockUseWeatherSettings();
-    
-    expect(mockSettings).toHaveProperty('zipCode');
-    expect(mockSettings).toHaveProperty('setZipCode');
-    expect(mockSettings).toHaveProperty('weatherApiKey');
-    expect(mockSettings).toHaveProperty('setWeatherApiKey');
-    expect(typeof mockSettings.setZipCode).toBe('function');
-    expect(typeof mockSettings.setWeatherApiKey).toBe('function');
+    expect(() => {
+      const { useWeatherSettings } = require('@/contexts/settings/useWeatherSettings');
+      const mockSettings = useWeatherSettings();
+      
+      expect(mockSettings).toHaveProperty('zipCode');
+      expect(mockSettings).toHaveProperty('setZipCode');
+      expect(mockSettings).toHaveProperty('weatherApiKey');
+      expect(mockSettings).toHaveProperty('setWeatherApiKey');
+      expect(typeof mockSettings.setZipCode).toBe('function');
+      expect(typeof mockSettings.setWeatherApiKey).toBe('function');
+    }).not.toThrow();
   });
 
   it('should have proper mock structure for display settings', () => {
-    const mockUseDisplaySettings = vi.mocked(
-      require('@/contexts/settings/useDisplaySettings').useDisplaySettings
-    );
-    
-    const mockSettings = mockUseDisplaySettings();
-    
-    expect(mockSettings).toHaveProperty('theme');
-    expect(mockSettings).toHaveProperty('setTheme');
-    expect(mockSettings).toHaveProperty('defaultView');
-    expect(mockSettings).toHaveProperty('setDefaultView');
+    expect(() => {
+      const { useDisplaySettings } = require('@/contexts/settings/useDisplaySettings');
+      const mockSettings = useDisplaySettings();
+      
+      expect(mockSettings).toHaveProperty('theme');
+      expect(mockSettings).toHaveProperty('setTheme');
+      expect(mockSettings).toHaveProperty('defaultView');
+      expect(mockSettings).toHaveProperty('setDefaultView');
+    }).not.toThrow();
   });
 
   it('should have proper mock structure for theme context', () => {
-    const mockUseTheme = vi.mocked(
-      require('@/contexts/ThemeContext').useTheme
-    );
-    
-    const mockTheme = mockUseTheme();
-    
-    expect(mockTheme).toHaveProperty('theme');
-    expect(mockTheme).toHaveProperty('setTheme');
-    expect(typeof mockTheme.setTheme).toBe('function');
+    expect(() => {
+      const { useTheme } = require('@/contexts/ThemeContext');
+      const mockTheme = useTheme();
+      
+      expect(mockTheme).toHaveProperty('theme');
+      expect(mockTheme).toHaveProperty('setTheme');
+      expect(typeof mockTheme.setTheme).toBe('function');
+    }).not.toThrow();
   });
 });
