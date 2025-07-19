@@ -14,6 +14,7 @@ interface WeatherTabProps {}
 const WeatherTab = ({}: WeatherTabProps) => {
   const [testResult, setTestResult] = useState<WeatherTestResult | null>(null);
   const [showPreview, setShowPreview] = useState(false);
+  const [useManualLocation, setUseManualLocation] = useState(false);
   const { isSecurityEnabled, hasLockedData } = useSecurity();
   const {
     zipCode,
@@ -68,6 +69,7 @@ const WeatherTab = ({}: WeatherTabProps) => {
             useEnhancedService={useEnhancedService}
             onUseEnhancedServiceChange={setUseEnhancedService}
             onSecurityUnlock={handleSecurityUnlock}
+            onUseManualLocationChange={setUseManualLocation}
           />
 
           <WeatherConnectionTest
@@ -77,6 +79,7 @@ const WeatherTab = ({}: WeatherTabProps) => {
             onShowPreviewToggle={() => setShowPreview(!showPreview)}
             showPreview={showPreview}
             testResult={testResult}
+            useManualLocation={useManualLocation}
           />
 
           {showPreview && testResult?.success && testResult.data && (

@@ -14,6 +14,7 @@ interface WeatherConnectionTestProps {
   onShowPreviewToggle: () => void;
   showPreview: boolean;
   testResult: WeatherTestResult | null;
+  useManualLocation: boolean;
 }
 
 const WeatherConnectionTest = ({
@@ -22,7 +23,8 @@ const WeatherConnectionTest = ({
   onTestResult,
   onShowPreviewToggle,
   showPreview,
-  testResult
+  testResult,
+  useManualLocation
 }: WeatherConnectionTestProps) => {
   const [isTestingConnection, setIsTestingConnection] = useState(false);
   const [showErrorDetails, setShowErrorDetails] = useState(false);
@@ -41,10 +43,23 @@ const WeatherConnectionTest = ({
       return;
     }
 
-    // For AccuWeather, zip code is optional when using IP-based location
+    // Check if we need location data based on provider and automatic location setting
     const isAccuWeather = weatherProvider === 'accuweather';
+    
+    // For non-AccuWeather providers, always require zip code
     if (!isAccuWeather && !zipCode.trim()) {
       const errorMsg = 'Please enter a zip code before testing.';
+      setDetailedError(errorMsg);
+      onTestResult({
+        success: false,
+        message: errorMsg
+      });
+      return;
+    }
+    
+    // For AccuWeather with manual location, require zip code
+    if (isAccuWeather && useManualLocation && !zipCode.trim()) {
+      const errorMsg = 'Please enter a zip code for manual location.';
       setDetailedError(errorMsg);
       onTestResult({
         success: false,
@@ -68,10 +83,18 @@ const WeatherConnectionTest = ({
       
       if (useEnhancedService) {
         // Use enhanced weather service with timeout
-        console.log('Testing AccuWeather connection with enhanced service...');
+        console.log('Testing weather connection with enhanced service...', { 
+          provider: weatherProvider, 
+          useManualLocation,
+          hasZipCode: !!zipCode.trim()
+        });
+        
+        // For AccuWeather with automatic location, don't send zip code
+        const testZipCode = (isAccuWeather && !useManualLocation) ? '' : zipCode;
+        
         const testPromise = enhancedWeatherService.testProvider({
           apiKey: weatherApiKey,
-          zipCode: zipCode,
+          zipCode: testZipCode,
           provider: weatherProvider,
           forecastDays: 15
         });
@@ -79,7 +102,7 @@ const WeatherConnectionTest = ({
         const testResult = await Promise.race([testPromise, timeoutPromise]) as Awaited<typeof testPromise>;
         
         if (!testResult.success) {
-          const errorDetails = `Provider: ${weatherProvider}, API Key: ${weatherApiKey.substring(0, 8)}..., Error: ${testResult.message}`;
+          const errorDetails = `Provider: ${weatherProvider}, API Key: ${weatherApiKey.substring(0, 8)}..., Error: ${testResult.message}, Location Mode: ${useManualLocation ? 'manual' : 'automatic'}`;
           setDetailedError(errorDetails);
           onTestResult({
             success: false,

@@ -21,6 +21,7 @@ interface WeatherSettingsProps {
   useEnhancedService: boolean;
   onUseEnhancedServiceChange: (use: boolean) => void;
   onSecurityUnlock?: () => void;
+  onUseManualLocationChange: (useManual: boolean) => void;
 }
 
 const WeatherSettings = ({
@@ -32,7 +33,8 @@ const WeatherSettings = ({
   onWeatherProviderChange,
   useEnhancedService,
   onUseEnhancedServiceChange,
-  onSecurityUnlock
+  onSecurityUnlock,
+  onUseManualLocationChange
 }: WeatherSettingsProps) => {
   const { isSecurityEnabled, hasLockedData } = useSecurity();
   const [useManualLocation, setUseManualLocation] = useState(false);
@@ -293,7 +295,10 @@ const WeatherSettings = ({
             </div>
             <Switch
               checked={useManualLocation}
-              onCheckedChange={setUseManualLocation}
+              onCheckedChange={(checked) => {
+                setUseManualLocation(checked);
+                onUseManualLocationChange(checked);
+              }}
             />
           </div>
           
