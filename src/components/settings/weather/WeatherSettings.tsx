@@ -1,11 +1,12 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import { Shield, Lock, Zap, Calendar, ExternalLink, MapPin } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Shield, Lock, Zap, Calendar, ExternalLink, MapPin, Loader2 } from 'lucide-react';
 import { useSecurity } from '@/contexts/SecurityContext';
 import { enhancedWeatherService } from '@/services/enhancedWeatherService';
 import SecurityUnlockBanner from '@/components/security/SecurityUnlockBanner';
@@ -35,6 +36,9 @@ const WeatherSettings = ({
 }: WeatherSettingsProps) => {
   const { isSecurityEnabled, hasLockedData } = useSecurity();
   const [useManualLocation, setUseManualLocation] = useState(false);
+  const [userIpAddress, setUserIpAddress] = useState<string>('');
+  const [locationPermission, setLocationPermission] = useState<'granted' | 'denied' | 'prompt' | 'unknown'>('unknown');
+  const [isDetectingLocation, setIsDetectingLocation] = useState(false);
 
   // Allow editing even when security is enabled - users can edit and re-encrypt
   const fieldsDisabled = false;
@@ -68,6 +72,68 @@ const WeatherSettings = ({
   const handleApiKeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     console.log('WeatherSettings - API key input change:', e.target.value.substring(0, 8) + '...');
     onWeatherApiKeyChange(e.target.value);
+  };
+
+  // Check for geolocation permission and get IP address
+  useEffect(() => {
+    if (isAccuWeather && !useManualLocation) {
+      checkLocationPermission();
+      getUserIP();
+    }
+  }, [isAccuWeather, useManualLocation]);
+
+  const checkLocationPermission = async () => {
+    if ('permissions' in navigator) {
+      try {
+        const permission = await navigator.permissions.query({ name: 'geolocation' as PermissionName });
+        setLocationPermission(permission.state);
+        
+        permission.addEventListener('change', () => {
+          setLocationPermission(permission.state);
+        });
+      } catch (error) {
+        console.log('Geolocation permission check not supported');
+        setLocationPermission('unknown');
+      }
+    }
+  };
+
+  const getUserIP = async () => {
+    try {
+      const response = await fetch('https://api.ipify.org?format=json');
+      const data = await response.json();
+      setUserIpAddress(data.ip);
+    } catch (error) {
+      console.error('Failed to get IP address:', error);
+      setUserIpAddress('Unable to detect');
+    }
+  };
+
+  const requestLocationPermission = async () => {
+    setIsDetectingLocation(true);
+    
+    try {
+      if ('geolocation' in navigator) {
+        await new Promise((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(
+            (position) => {
+              console.log('Location granted:', position.coords);
+              setLocationPermission('granted');
+              resolve(position);
+            },
+            (error) => {
+              console.error('Location denied:', error);
+              setLocationPermission('denied');
+              reject(error);
+            }
+          );
+        });
+      }
+    } catch (error) {
+      console.error('Location permission error:', error);
+    } finally {
+      setIsDetectingLocation(false);
+    }
   };
 
   return (
@@ -232,10 +298,69 @@ const WeatherSettings = ({
           </div>
           
           {!useManualLocation && (
-            <div className="mt-3 pt-3 border-t border-green-200 dark:border-green-700">
+            <div className="mt-3 pt-3 border-t border-green-200 dark:border-green-700 space-y-3">
               <div className="flex items-center gap-2 text-xs text-green-700 dark:text-green-300">
                 <MapPin className="h-3 w-3" />
                 <span>Location detected automatically • More accurate • No manual input required</span>
+              </div>
+              
+              {/* IP Address Display */}
+              {userIpAddress && (
+                <div className="bg-green-100 dark:bg-green-800/50 p-2 rounded text-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="text-green-800 dark:text-green-200">Detected IP Address:</span>
+                    <span className="font-mono text-green-900 dark:text-green-100">{userIpAddress}</span>
+                  </div>
+                </div>
+              )}
+              
+              {/* Location Permission Status */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-green-700 dark:text-green-300">Location Permission:</span>
+                  <div className="flex items-center gap-2">
+                    {locationPermission === 'granted' && (
+                      <Badge variant="secondary" className="text-xs bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100">
+                        Granted
+                      </Badge>
+                    )}
+                    {locationPermission === 'denied' && (
+                      <Badge variant="destructive" className="text-xs">
+                        Denied
+                      </Badge>
+                    )}
+                    {(locationPermission === 'prompt' || locationPermission === 'unknown') && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={requestLocationPermission}
+                        disabled={isDetectingLocation}
+                        className="h-6 px-2 text-xs border-green-300 text-green-700 hover:bg-green-50 dark:border-green-600 dark:text-green-300 dark:hover:bg-green-900/50"
+                      >
+                        {isDetectingLocation ? (
+                          <>
+                            <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                            Requesting...
+                          </>
+                        ) : (
+                          'Request Permission'
+                        )}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+                
+                {locationPermission === 'denied' && (
+                  <p className="text-xs text-amber-600 dark:text-amber-400">
+                    Location permission denied. Using IP-based location detection as fallback.
+                  </p>
+                )}
+                
+                {locationPermission === 'granted' && (
+                  <p className="text-xs text-green-600 dark:text-green-400">
+                    Location permission granted. Using precise GPS coordinates when available.
+                  </p>
+                )}
               </div>
             </div>
           )}
