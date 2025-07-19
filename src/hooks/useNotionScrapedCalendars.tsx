@@ -8,6 +8,7 @@ import { NotionScrapedCalendar, notionScrapedEventsStorage } from '@/services/no
 import { NotionScrapedEvent } from '@/services/NotionPageScraper';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { CalendarRefreshUtils } from '@/hooks/useCalendarRefresh';
 
 import { useBackgroundSync } from './useBackgroundSync';
 
@@ -334,6 +335,9 @@ export const useNotionScrapedCalendars = () => {
       });
 
       console.log(`✅ Synced ${notionEvents.length} events from Notion calendar: ${calendar.name}`);
+      
+      // Trigger calendar refresh event
+      CalendarRefreshUtils.triggerNotionRefresh(calendar.id, notionEvents.length, true, `Synced ${notionEvents.length} events`);
 
     } catch (error) {
       console.error('Error syncing calendar:', error);
@@ -345,6 +349,9 @@ export const useNotionScrapedCalendars = () => {
         variant: "destructive"
       });
 
+      // Trigger calendar refresh event for error case
+      CalendarRefreshUtils.triggerNotionRefresh(calendar.id, 0, false, error instanceof Error ? error.message : 'Sync failed');
+
       throw error;
     }
   }, [updateCalendar, loadEvents, toast]);
@@ -353,16 +360,31 @@ export const useNotionScrapedCalendars = () => {
   const syncAllCalendars = useCallback(async () => {
     setIsLoading(true);
     const enabledCalendars = calendars.filter(cal => cal.enabled);
+    let successCount = 0;
+    let totalCount = enabledCalendars.length;
 
     try {
       await Promise.all(
-        enabledCalendars.map(calendar => syncCalendar(calendar))
+        enabledCalendars.map(async (calendar) => {
+          try {
+            await syncCalendar(calendar);
+            successCount++;
+          } catch (error) {
+            console.error(`Failed to sync calendar ${calendar.name}:`, error);
+          }
+        })
       );
       
       toast({
         title: "Sync Complete",
-        description: `Successfully synced ${enabledCalendars.length} calendars`,
+        description: `Successfully synced ${successCount}/${totalCount} calendars`,
       });
+      
+      // Trigger refresh for all calendars sync completion
+      CalendarRefreshUtils.triggerAllRefresh(
+        successCount === totalCount, 
+        `Synced ${successCount}/${totalCount} Notion calendars`
+      );
     } catch (error) {
       console.error('Error syncing all calendars:', error);
       // Individual error messages are handled in syncCalendar

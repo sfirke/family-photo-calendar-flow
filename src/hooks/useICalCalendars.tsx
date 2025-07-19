@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import ICAL from 'ical.js';
 import { calendarStorageService, CalendarFeed } from '@/services/calendarStorage';
 import { useBackgroundSync } from './useBackgroundSync';
+import { CalendarRefreshUtils } from './useCalendarRefresh';
 
 export interface ICalCalendar {
   id: string;
@@ -130,6 +131,9 @@ export const useICalCalendars = () => {
       });
 
       console.log(`Background sync processed ${allEvents.length} events for ${calendar.name}`);
+      
+      // Trigger calendar refresh event for background sync
+      CalendarRefreshUtils.triggerICalRefresh(calendarId, allEvents.length, true, `Background sync completed`);
     } catch (error) {
       console.error('Error processing background sync data:', error);
     }
@@ -577,11 +581,19 @@ export const useICalCalendars = () => {
 
       setSyncStatus(prev => ({ ...prev, [calendar.id]: 'success' }));
       console.log(`Successfully synced ${allEvents.length} event occurrences from ${calendar.name}`);
+      
+      // Trigger calendar refresh event
+      CalendarRefreshUtils.triggerICalRefresh(calendar.id, allEvents.length, true, `Synced ${allEvents.length} events`);
+      
       return allEvents;
 
     } catch (error) {
       console.error('Error syncing iCal calendar:', error);
       setSyncStatus(prev => ({ ...prev, [calendar.id]: 'error' }));
+      
+      // Trigger calendar refresh event for error case
+      CalendarRefreshUtils.triggerICalRefresh(calendar.id, 0, false, error instanceof Error ? error.message : 'Sync failed');
+      
       throw error;
     } finally {
       setIsLoading(false);
@@ -605,13 +617,23 @@ export const useICalCalendars = () => {
     }
     
     // Fallback to foreground sync
+    let successCount = 0;
+    let totalCount = enabledCalendars.length;
+    
     for (const calendar of enabledCalendars) {
       try {
         await syncCalendar(calendar);
+        successCount++;
       } catch (error) {
         console.error(`Failed to sync calendar ${calendar.name}:`, error);
       }
     }
+    
+    // Trigger refresh for all calendars sync completion
+    CalendarRefreshUtils.triggerAllRefresh(
+      successCount === totalCount, 
+      `Synced ${successCount}/${totalCount} calendars`
+    );
   }, [calendars, syncCalendar, isBackgroundSyncSupported, triggerBackgroundSync]);
 
   const getICalEvents = useCallback(() => {

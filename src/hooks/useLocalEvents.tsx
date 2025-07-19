@@ -5,7 +5,8 @@ import { useICalCalendars } from './useICalCalendars';
 
 export const useLocalEvents = () => {
   const [googleEvents, setGoogleEvents] = useState<Event[]>([]);
-  const { calendars: iCalCalendars, getICalEvents } = useICalCalendars();
+  const [refreshKey, setRefreshKey] = useState(0);
+  const { calendars: iCalCalendars, getICalEvents, forceRefresh: iCalForceRefresh } = useICalCalendars();
 
   useEffect(() => {
     // Get ALL iCal events from storage - don't filter by enabled status here
@@ -14,14 +15,24 @@ export const useLocalEvents = () => {
     
     console.log('🔄 useLocalEvents - Loading all iCal events:', {
       totalEvents: iCalEvents.length,
-      calendarsCount: iCalCalendars.length
+      calendarsCount: iCalCalendars.length,
+      refreshKey
     });
     
     setGoogleEvents(iCalEvents);
-  }, [iCalCalendars, getICalEvents]);
+  }, [iCalCalendars, getICalEvents, refreshKey]);
+
+  const forceRefresh = () => {
+    console.log('🔄 useLocalEvents - Force refresh triggered');
+    if (iCalForceRefresh) {
+      iCalForceRefresh();
+    }
+    setRefreshKey(prev => prev + 1);
+  };
 
   return {
     googleEvents,
-    isLoading: false
+    isLoading: false,
+    forceRefresh
   };
 };

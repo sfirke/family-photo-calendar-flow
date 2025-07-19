@@ -6,6 +6,7 @@ import { useSettings } from '@/contexts/SettingsContext';
 import { useWeather } from '@/contexts/WeatherContext';
 import { useLocalEvents } from '@/hooks/useLocalEvents';
 import { useIntegratedEvents } from '@/hooks/useIntegratedEvents';
+import { useCalendarRefresh } from '@/hooks/useCalendarRefresh';
 import { Event } from '@/types/calendar';
 
 interface CalendarProps {
@@ -15,15 +16,30 @@ interface CalendarProps {
 const Calendar = ({ onNotionEventClick }: CalendarProps) => {
   const [view, setView] = useState<'timeline' | 'week' | 'month'>('month');
   const [weekOffset, setWeekOffset] = useState(0);
+  const [refreshKey, setRefreshKey] = useState(0);
   const { defaultView } = useSettings();
   const { getWeatherForDate } = useWeather();
-  const { googleEvents } = useLocalEvents(); // Now contains iCal events
+  const { googleEvents, forceRefresh } = useLocalEvents(); // Now contains iCal events
+  const { useRefreshListener } = useCalendarRefresh();
   
   const { filteredEvents, eventStats } = useIntegratedEvents(googleEvents);
 
   useEffect(() => {
     setView(defaultView);
   }, [defaultView]);
+
+  // Listen for calendar refresh events
+  useRefreshListener((refreshEvent) => {
+    console.log('📱 Calendar received refresh event:', refreshEvent);
+    
+    // Force refresh of local events when sync completes
+    if (forceRefresh) {
+      forceRefresh();
+    }
+    
+    // Trigger a re-render by updating refresh key
+    setRefreshKey(prev => prev + 1);
+  });
 
   // Log whenever filteredEvents changes to verify UI updates
   console.log('🖥️ Calendar - Render with events:', {
@@ -37,7 +53,7 @@ const Calendar = ({ onNotionEventClick }: CalendarProps) => {
   console.log('🖥️ Calendar - Event stats:', eventStats);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" key={`calendar-${refreshKey}`}>
       <CalendarHeader
         hasGoogleEvents={true} // Always pass true to show the header
         view={view}

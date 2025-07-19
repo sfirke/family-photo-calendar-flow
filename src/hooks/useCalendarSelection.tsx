@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useICalCalendars } from './useICalCalendars';
 import { useNotionScrapedCalendars } from './useNotionScrapedCalendars';
+import { useCalendarRefresh } from './useCalendarRefresh';
 
 export interface CalendarFromEvents {
   id: string;
@@ -18,6 +19,7 @@ export const useCalendarSelection = () => {
   const [selectedCalendarIds, setSelectedCalendarIds] = useState<string[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
   const [hasUserMadeSelection, setHasUserMadeSelection] = useState(false);
+  const { useRefreshListener } = useCalendarRefresh();
 
   // Load selectedCalendarIds from localStorage on init
   useEffect(() => {
@@ -47,6 +49,12 @@ export const useCalendarSelection = () => {
   // Get calendars from all sources
   const { calendars: iCalCalendars = [], isLoading: iCalLoading, getICalEvents } = useICalCalendars();
   const { calendars: scrapedCalendars = [], events: scrapedEvents = [], isLoading: scrapedLoading } = useNotionScrapedCalendars();
+
+  // Listen for calendar refresh events to update data
+  useRefreshListener((refreshEvent) => {
+    console.log('📊 useCalendarSelection received refresh event:', refreshEvent);
+    setRefreshKey(prev => prev + 1);
+  });
 
   // Combine all calendars with safe array handling
   const allCalendars = useMemo(() => {
