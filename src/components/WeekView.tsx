@@ -178,17 +178,6 @@ const WeekView = ({ events, weekOffset, onPreviousWeek, onNextWeek, getWeatherFo
                         className="text-xs"
                         forceWhite={true}
                       />
-                      {(() => {
-                        const weather = getWeatherForDate(day);
-                        if (weather.highTemp && weather.lowTemp) {
-                          return (
-                            <div className="text-xs text-white/60 mt-1">
-                              {Math.round(weather.highTemp)}°/{Math.round(weather.lowTemp)}°
-                            </div>
-                          );
-                        }
-                        return null;
-                      })()}
                     </div>
                   </div>
                   
