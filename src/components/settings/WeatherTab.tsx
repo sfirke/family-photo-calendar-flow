@@ -2,24 +2,29 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { CloudSun } from 'lucide-react';
 import { useSecurity } from '@/contexts/SecurityContext';
-import { useSettings } from '@/contexts/SettingsContext';
+import { useWeatherSettings } from '@/contexts/settings/useWeatherSettings';
 import WeatherSettings from './weather/WeatherSettings';
 import WeatherConnectionTest from './weather/WeatherConnectionTest';
 import WeatherPreview from './weather/WeatherPreview';
 import WeatherInfo from './weather/WeatherInfo';
 import { WeatherTestResult } from '@/types/weather';
 
-interface WeatherTabProps {
-  zipCode: string;
-  onZipCodeChange: (zipCode: string) => void;
-  weatherApiKey: string;
-  onWeatherApiKeyChange: (apiKey: string) => void;
-}
+interface WeatherTabProps {}
 
-const WeatherTab = ({ zipCode, onZipCodeChange, weatherApiKey, onWeatherApiKeyChange }: WeatherTabProps) => {
+const WeatherTab = ({}: WeatherTabProps) => {
   const [testResult, setTestResult] = useState<WeatherTestResult | null>(null);
   const [showPreview, setShowPreview] = useState(false);
   const { isSecurityEnabled, hasLockedData } = useSecurity();
+  const {
+    zipCode,
+    setZipCode,
+    weatherApiKey,
+    setWeatherApiKey,
+    weatherProvider,
+    setWeatherProvider,
+    useEnhancedService,
+    setUseEnhancedService
+  } = useWeatherSettings();
 
   // Clear test results when security state changes to force re-testing with new data
   useEffect(() => {
@@ -55,9 +60,13 @@ const WeatherTab = ({ zipCode, onZipCodeChange, weatherApiKey, onWeatherApiKeyCh
         <CardContent className="space-y-4">
           <WeatherSettings
             zipCode={zipCode}
-            onZipCodeChange={onZipCodeChange}
+            onZipCodeChange={setZipCode}
             weatherApiKey={weatherApiKey}
-            onWeatherApiKeyChange={onWeatherApiKeyChange}
+            onWeatherApiKeyChange={setWeatherApiKey}
+            weatherProvider={weatherProvider}
+            onWeatherProviderChange={setWeatherProvider}
+            useEnhancedService={useEnhancedService}
+            onUseEnhancedServiceChange={setUseEnhancedService}
             onSecurityUnlock={handleSecurityUnlock}
           />
 

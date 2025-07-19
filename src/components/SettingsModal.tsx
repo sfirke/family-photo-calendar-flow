@@ -106,12 +106,7 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
 
               {/* Weather configuration content */}
               <TabsContent value="weather" className="space-y-4 mt-0">
-                <WeatherTab 
-                  zipCode={zipCode}
-                  onZipCodeChange={setZipCode}
-                  weatherApiKey={weatherApiKey}
-                  onWeatherApiKeyChange={setWeatherApiKey}
-                />
+                <WeatherTab />
               </TabsContent>
 
               {/* App updates content */}

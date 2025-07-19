@@ -12,6 +12,8 @@ import { SettingsStorage } from './settingsStorage';
 export const useWeatherSettings = () => {
   const [zipCode, setZipCode] = useState('90210');
   const [weatherApiKey, setWeatherApiKey] = useState('');
+  const [weatherProvider, setWeatherProvider] = useState('openweathermap');
+  const [useEnhancedService, setUseEnhancedService] = useState(false);
 
   // Load initial settings from storage
   useEffect(() => {
@@ -19,9 +21,13 @@ export const useWeatherSettings = () => {
       try {
         const savedZipCode = await SettingsStorage.getStorageValue('zipCode', true) || '90210';
         const savedWeatherApiKey = await SettingsStorage.getStorageValue('weatherApiKey', true) || '';
+        const savedWeatherProvider = await SettingsStorage.getStorageValue('weatherProvider', false) || 'openweathermap';
+        const savedUseEnhancedService = await SettingsStorage.getStorageValue('useEnhancedService', false);
         
         setZipCode(savedZipCode);
         setWeatherApiKey(savedWeatherApiKey);
+        setWeatherProvider(savedWeatherProvider);
+        setUseEnhancedService(savedUseEnhancedService === 'true');
       } catch (error) {
         console.warn('Failed to load weather settings:', error);
       }
@@ -39,6 +45,16 @@ export const useWeatherSettings = () => {
   useEffect(() => {
     SettingsStorage.saveSetting('weatherApiKey', weatherApiKey, true);
   }, [weatherApiKey]);
+
+  // Auto-save weather provider
+  useEffect(() => {
+    SettingsStorage.saveSetting('weatherProvider', weatherProvider, false);
+  }, [weatherProvider]);
+
+  // Auto-save enhanced service setting
+  useEffect(() => {
+    SettingsStorage.saveSetting('useEnhancedService', useEnhancedService.toString(), false);
+  }, [useEnhancedService]);
 
   /**
    * Enhanced zip code setter with progressive validation
@@ -79,5 +95,9 @@ export const useWeatherSettings = () => {
     setZipCode: setValidatedZipCode,
     weatherApiKey,
     setWeatherApiKey: setValidatedWeatherApiKey,
+    weatherProvider,
+    setWeatherProvider,
+    useEnhancedService,
+    setUseEnhancedService,
   };
 };
