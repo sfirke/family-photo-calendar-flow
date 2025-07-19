@@ -204,14 +204,14 @@ const WeatherSettings = ({
                   <span className="text-xs text-green-700 dark:text-green-300">Location Permission:</span>
                   <div className="flex items-center gap-2">
                     {locationPermission === 'granted' && (
-                      <Badge variant="secondary" className="text-xs bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100">
+                      <span className="text-xs bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100 px-2 py-1 rounded">
                         Granted
-                      </Badge>
+                      </span>
                     )}
                     {locationPermission === 'denied' && (
-                      <Badge variant="destructive" className="text-xs">
+                      <span className="text-xs bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100 px-2 py-1 rounded">
                         Denied
-                      </Badge>
+                      </span>
                     )}
                     {(locationPermission === 'prompt' || locationPermission === 'unknown') && (
                       <Button
