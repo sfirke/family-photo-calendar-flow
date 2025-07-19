@@ -2,6 +2,7 @@
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { WeatherData, WeatherForecastDay } from '@/types/weather';
+import { getWeatherIcon } from '@/utils/weatherIcons';
 
 interface WeatherPreviewProps {
   weatherData: WeatherData;
@@ -24,11 +25,16 @@ const WeatherPreview = ({ weatherData }: WeatherPreviewProps) => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <h4 className="font-medium text-gray-900 dark:text-gray-100">Current Weather</h4>
-            <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-              {weatherData.temperature}°F
-            </div>
-            <div className="text-gray-600 dark:text-gray-400">
-              {formatCondition(weatherData.condition)}
+            <div className="flex items-center gap-3">
+              {getWeatherIcon(weatherData.condition, { size: "h-8 w-8" })}
+              <div>
+                <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                  {weatherData.temperature}°F
+                </div>
+                <div className="text-gray-600 dark:text-gray-400">
+                  {formatCondition(weatherData.condition)}
+                </div>
+              </div>
             </div>
           </div>
           
@@ -39,13 +45,21 @@ const WeatherPreview = ({ weatherData }: WeatherPreviewProps) => {
                 const date = new Date(day.date);
                 const isToday = index === 0;
                 return (
-                  <div key={day.date} className="flex justify-between items-center text-sm">
-                    <span className="text-gray-600 dark:text-gray-400">
-                      {isToday ? 'Today' : date.toLocaleDateString('en-US', { weekday: 'short' })}
-                    </span>
-                    <span className="text-gray-900 dark:text-gray-100">
-                      {day.high || day.temp}°{day.low ? `/${day.low}°` : ''} {formatCondition(day.condition)}
-                    </span>
+                  <div key={day.date} className="flex justify-between items-center text-sm py-1">
+                    <div className="flex items-center gap-2">
+                      {getWeatherIcon(day.condition, { size: "h-4 w-4" })}
+                      <span className="text-gray-600 dark:text-gray-400">
+                        {isToday ? 'Today' : date.toLocaleDateString('en-US', { weekday: 'short' })}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-gray-900 dark:text-gray-100 font-medium">
+                        {day.high || day.temp}°{day.low ? `/${day.low}°` : ''}
+                      </span>
+                      <span className="text-gray-600 dark:text-gray-400 text-xs">
+                        {formatCondition(day.condition)}
+                      </span>
+                    </div>
                   </div>
                 );
               })}
