@@ -23,13 +23,28 @@ export class WeatherProviderFactory implements IWeatherProviderFactory {
   }
 
   getProvider(providerName: string): WeatherProvider {
+    console.log('WeatherProviderFactory - getProvider called with:', {
+      providerName,
+      availableProviders: Array.from(this.providers.keys()),
+      providersMap: Array.from(this.providers.entries()).map(([key, provider]) => ({
+        key,
+        name: provider.name,
+        displayName: provider.displayName
+      }))
+    });
+    
     const provider = this.providers.get(providerName);
     
     if (!provider) {
       console.warn(`Weather provider '${providerName}' not found, falling back to default`);
+      console.log('WeatherProviderFactory - using default provider');
       return this.getDefaultProvider();
     }
     
+    console.log('WeatherProviderFactory - found provider:', {
+      name: provider.name,
+      displayName: provider.displayName
+    });
     return provider;
   }
 
@@ -47,10 +62,26 @@ export class WeatherProviderFactory implements IWeatherProviderFactory {
    * Tries providers in order of preference based on forecast requirements
    */
   getProviderWithFallback(preferredProvider?: string, requiredForecastDays?: number): WeatherProvider {
+    console.log('WeatherProviderFactory - getProviderWithFallback called with:', {
+      preferredProvider,
+      requiredForecastDays,
+      availableProviders: Array.from(this.providers.keys())
+    });
+    
     // If specific provider requested, try it first
     if (preferredProvider) {
       const provider = this.providers.get(preferredProvider);
+      console.log('WeatherProviderFactory - checking preferred provider:', {
+        preferredProvider,
+        found: !!provider,
+        providerName: provider?.name,
+        displayName: provider?.displayName,
+        maxForecastDays: provider?.maxForecastDays,
+        meetsRequirement: !requiredForecastDays || (provider?.maxForecastDays || 0) >= requiredForecastDays
+      });
+      
       if (provider && (!requiredForecastDays || provider.maxForecastDays >= requiredForecastDays)) {
+        console.log('WeatherProviderFactory - using preferred provider:', provider.displayName);
         return provider;
       }
     }

@@ -41,11 +41,19 @@ export class EnhancedWeatherService {
     }
 
     try {
+      console.log('Enhanced weather service - config received:', config);
+      
       // Get appropriate provider
       const provider = weatherProviderFactory.getProviderWithFallback(
         config.provider,
         config.forecastDays
       );
+      
+      console.log('Enhanced weather service - provider selected:', {
+        name: provider.name,
+        displayName: provider.displayName,
+        maxForecastDays: provider.maxForecastDays
+      });
 
       // Prepare provider config
       const providerConfig: WeatherProviderConfig = {

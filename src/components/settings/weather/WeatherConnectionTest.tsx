@@ -83,10 +83,12 @@ const WeatherConnectionTest = ({
       
       if (useEnhancedService) {
         // Use enhanced weather service with timeout
-        console.log('Testing weather connection with enhanced service...', { 
+        console.log('WeatherConnectionTest - Testing with enhanced service...', { 
           provider: weatherProvider, 
           useManualLocation,
-          hasZipCode: !!zipCode.trim()
+          hasZipCode: !!zipCode.trim(),
+          apiKey: weatherApiKey.substring(0, 8) + '...',
+          zipCode: zipCode || 'empty'
         });
         
         // For AccuWeather with automatic location, don't send zip code
