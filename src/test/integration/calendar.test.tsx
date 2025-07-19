@@ -87,32 +87,8 @@ vi.mock('@/hooks/useLocalEvents', () => ({
         calendarName: 'Test Calendar'
       }
     ],
-    localEvents: [
-      {
-        id: 1,
-        title: 'Test Event',
-        date: new Date(),
-        time: '10:00 AM',
-        location: 'Test Location',
-        description: 'Test Description',
-        attendees: 1,
-        category: 'Work',
-        color: '#3b82f6',
-        organizer: 'Test User',
-        calendarId: 'test-calendar',
-        calendarName: 'Test Calendar'
-      }
-    ],
     isLoading: false,
-    error: null,
-    addEvent: vi.fn(),
-    updateEvent: vi.fn(),
-    deleteEvent: vi.fn(),
-    refreshEvents: vi.fn(),
-    resetToSampleEvents: vi.fn(),
-    exportEvents: vi.fn(),
-    importEvents: vi.fn(),
-    clearCache: vi.fn(),
+    forceRefresh: vi.fn(),
   })),
 }));
 
@@ -131,18 +107,44 @@ vi.mock('@/hooks/useICalCalendars', () => ({
     ],
     getICalEvents: vi.fn(() => []),
     isLoading: false,
+    syncStatus: {},
     addCalendar: vi.fn(),
     updateCalendar: vi.fn(),
-    deleteCalendar: vi.fn(),
-    refreshCalendar: vi.fn(),
-    refreshAllCalendars: vi.fn(),
+    removeCalendar: vi.fn(),
+    syncCalendar: vi.fn(),
+    syncAllCalendars: vi.fn(),
+    forceRefresh: vi.fn(),
+    isBackgroundSyncSupported: false,
+    triggerBackgroundSync: vi.fn(),
   })),
 }));
 
-// Enhanced mock for calendar selection
+// Enhanced mock for calendar selection with new interface
 vi.mock('@/hooks/useCalendarSelection', () => ({
   useCalendarSelection: vi.fn(() => ({
+    allCalendars: [
+      {
+        id: 'test-calendar',
+        name: 'Test Calendar',
+        color: '#3B82F6',
+        enabled: true,
+        url: 'https://example.com/calendar.ics',
+        lastSync: new Date().toISOString()
+      }
+    ],
+    enabledCalendars: [
+      {
+        id: 'test-calendar',
+        name: 'Test Calendar',
+        color: '#3B82F6',
+        enabled: true,
+        url: 'https://example.com/calendar.ics',
+        lastSync: new Date().toISOString()
+      }
+    ],
     selectedCalendarIds: ['test-calendar'],
+    notionEvents: [], // Legacy support - empty array
+    scrapedEvents: [],
     calendarsFromEvents: [
       {
         id: 'test-calendar',
@@ -151,15 +153,17 @@ vi.mock('@/hooks/useCalendarSelection', () => ({
         eventCount: 1,
         hasEvents: true,
         color: '#3B82F6',
-        enabled: true,
+        source: 'ical'
       }
     ],
     isLoading: false,
-    updateSelectedCalendars: vi.fn(),
     toggleCalendar: vi.fn(),
     selectAllCalendars: vi.fn(),
-    selectCalendarsWithEvents: vi.fn(),
+    deselectAllCalendars: vi.fn(),
+    setSelectedCalendarIds: vi.fn(),
     clearAllCalendars: vi.fn(),
+    selectCalendarsWithEvents: vi.fn(),
+    updateSelectedCalendars: vi.fn(),
     cleanupDeletedCalendar: vi.fn(),
     forceRefresh: vi.fn(),
   })),

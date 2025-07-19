@@ -47,6 +47,17 @@ vi.mock('@/contexts/settings/useGitHubSettings', () => ({
   })),
 }));
 
+vi.mock('@/contexts/settings/useNotionSettings', () => ({
+  useNotionSettings: vi.fn(() => ({
+    notionUrl: '',
+    setNotionUrl: vi.fn(),
+    lastSyncTime: null,
+    setLastSyncTime: vi.fn(),
+    notionCalendars: [],
+    setNotionCalendars: vi.fn(),
+  })),
+}));
+
 vi.mock('@/contexts/settings/useSettingsInitialization', () => ({
   useSettingsInitialization: vi.fn(),
 }));

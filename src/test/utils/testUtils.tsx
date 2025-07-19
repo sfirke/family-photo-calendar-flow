@@ -73,33 +73,46 @@ export const mockConsoleError = () => {
   };
 };
 
-// Enhanced mock for useLocalEvents that always returns arrays
+// Enhanced mock for useLocalEvents that matches current interface
 export const createMockUseLocalEvents = () => ({
-  googleEvents: [],
-  localEvents: [],
+  googleEvents: [], // Now returns iCal events as googleEvents
   isLoading: false,
-  refreshEvents: vi.fn(),
-  addEvent: vi.fn(),
-  updateEvent: vi.fn(),
-  deleteEvent: vi.fn(),
-  resetToSampleEvents: vi.fn(),
-  exportEvents: vi.fn(),
-  importEvents: vi.fn(),
-  clearCache: vi.fn(),
+  forceRefresh: vi.fn(),
 });
 
-// Enhanced mock for useCalendarSelection
+// Enhanced mock for useCalendarSelection that matches current interface
 export const createMockUseCalendarSelection = () => ({
+  allCalendars: [],
+  enabledCalendars: [],
   selectedCalendarIds: [],
+  notionEvents: [], // Legacy support - empty array
+  scrapedEvents: [],
   calendarsFromEvents: [],
   isLoading: false,
-  updateSelectedCalendars: vi.fn(),
   toggleCalendar: vi.fn(),
   selectAllCalendars: vi.fn(),
-  selectCalendarsWithEvents: vi.fn(),
+  deselectAllCalendars: vi.fn(),
+  setSelectedCalendarIds: vi.fn(),
   clearAllCalendars: vi.fn(),
+  selectCalendarsWithEvents: vi.fn(),
+  updateSelectedCalendars: vi.fn(),
   cleanupDeletedCalendar: vi.fn(),
   forceRefresh: vi.fn(),
+});
+
+// Enhanced mock for useIntegratedEvents that matches current interface
+export const createMockUseIntegratedEvents = () => ({
+  filteredEvents: [],
+  eventStats: {
+    googleEventCount: 0,
+    notionEventCount: 0,
+    scrapedEventCount: 0,
+    totalEvents: 0,
+    hasGoogleEvents: false,
+    hasNotionEvents: false,
+    hasScrapedEvents: false
+  },
+  selectedCalendarIds: [],
 });
 
 export * from '@testing-library/react';
