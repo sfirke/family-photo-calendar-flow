@@ -8,8 +8,10 @@ export interface WeatherData {
   windSpeed?: number;
   uvIndex?: number;
   forecast: WeatherForecastDay[];
-  lastUpdated?: string;
-  provider?: string;
+  lastUpdated: string;
+  provider: string;
+  forecastRange?: 'weekly' | 'monthly'; // Extended forecast support
+  cacheTimestamp?: number; // For cache management
 }
 
 export interface WeatherForecastDay {

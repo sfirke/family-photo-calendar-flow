@@ -35,7 +35,9 @@ export const fetchWeatherData = async (zipCode: string, apiKey: string): Promise
       location: currentData.name || 'Unknown Location',
       temperature: Math.round(currentData.main.temp),
       condition: currentData.weather[0]?.main || 'Unknown',
-      forecast: forecastData ? formatForecastData(forecastData) : []
+      forecast: forecastData ? formatForecastData(forecastData) : [],
+      lastUpdated: new Date().toISOString(),
+      provider: 'OpenWeatherMap'
     };
   } catch (error) {
     console.error('Error fetching weather data:', error);
@@ -72,7 +74,9 @@ const getMockWeatherData = (): WeatherData => ({
     { date: new Date().toISOString(), temp: 75, condition: 'Sunny' },
     { date: new Date(Date.now() + 86400000).toISOString(), temp: 73, condition: 'Cloudy' },
     { date: new Date(Date.now() + 172800000).toISOString(), temp: 71, condition: 'Rainy' }
-  ]
+  ],
+  lastUpdated: new Date().toISOString(),
+  provider: 'Mock Data'
 });
 
 // Export the WeatherData type

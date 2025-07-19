@@ -23,6 +23,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { fetchWeatherData, WeatherData } from '@/services/weatherService';
+import { enhancedWeatherService } from '@/services/enhancedWeatherService';
 import { useSettings } from './SettingsContext';
 import { IntervalManager } from '@/utils/performanceUtils';
 
@@ -31,12 +32,16 @@ interface WeatherContextType {
   weatherData: WeatherData | null;
   /** Whether weather data is currently being fetched */
   isLoading: boolean;
-  /** Get weather forecast for a specific date */
-  getWeatherForDate: (date: Date) => { temp: number; condition: string };
+  /** Get weather forecast for a specific date with high/low temps */
+  getWeatherForDate: (date: Date) => { temp: number; condition: string; highTemp?: number; lowTemp?: number };
   /** Get current weather conditions and location */
   getCurrentWeather: () => { temp: number; condition: string; location: string };
   /** Manually refresh weather data (bypasses rate limiting) */
   refreshWeather: () => Promise<void>;
+  /** Switch to enhanced weather service for extended forecasts */
+  useEnhancedService: boolean;
+  /** Toggle enhanced service usage */
+  setUseEnhancedService: (use: boolean) => void;
 }
 
 const WeatherContext = createContext<WeatherContextType | undefined>(undefined);
@@ -51,6 +56,7 @@ const WeatherContext = createContext<WeatherContextType | undefined>(undefined);
 export const WeatherProvider = ({ children }: { children: React.ReactNode }) => {
   const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [useEnhancedService, setUseEnhancedService] = useState(false);
   const { zipCode, weatherApiKey } = useSettings();
   const lastFetchRef = useRef<number>(0);
 
@@ -79,7 +85,20 @@ export const WeatherProvider = ({ children }: { children: React.ReactNode }) => 
     lastFetchRef.current = now;
     
     try {
-      const data = await fetchWeatherData(zipCode, weatherApiKey);
+      let data: WeatherData;
+      
+      if (useEnhancedService) {
+        // Use enhanced service for extended forecasts
+        data = await enhancedWeatherService.fetchWeatherData({
+          zipCode,
+          apiKey: weatherApiKey,
+          forecastDays: 30 // Request monthly forecast
+        });
+      } else {
+        // Use legacy service for backward compatibility
+        data = await fetchWeatherData(zipCode, weatherApiKey);
+      }
+      
       setWeatherData(data);
     } catch (error) {
       console.warn('Weather fetch failed, using cached data if available:', error);
@@ -122,7 +141,7 @@ export const WeatherProvider = ({ children }: { children: React.ReactNode }) => 
     return () => {
       IntervalManager.clearInterval('weather-refresh');
     };
-  }, [loadWeather]);
+  }, [loadWeather, useEnhancedService]);
 
   /**
    * Get current weather conditions with fallback
@@ -162,7 +181,7 @@ export const WeatherProvider = ({ children }: { children: React.ReactNode }) => 
     return (date: Date) => {
       if (!weatherData) {
         // Default fallback when no weather data is available
-        return { temp: 75, condition: 'Sunny' };
+        return { temp: 75, condition: 'Sunny', highTemp: 80, lowTemp: 70 };
       }
 
       const dateString = date.toISOString().split('T')[0];
@@ -171,14 +190,24 @@ export const WeatherProvider = ({ children }: { children: React.ReactNode }) => 
       if (weatherData.forecast && weatherData.forecast.length > 0) {
         const forecast = weatherData.forecast.find(f => f.date === dateString);
         if (forecast) {
-          return { temp: forecast.high || forecast.temp, condition: forecast.condition };
+          return { 
+            temp: forecast.high || forecast.temp || weatherData.temperature, 
+            condition: forecast.condition,
+            highTemp: forecast.high,
+            lowTemp: forecast.low
+          };
         }
       }
       
       // Fall back to current weather for today only
       const today = new Date().toISOString().split('T')[0];
       if (dateString === today) {
-        return { temp: weatherData.temperature, condition: weatherData.condition };
+        return { 
+          temp: weatherData.temperature, 
+          condition: weatherData.condition,
+          highTemp: weatherData.temperature + 5,
+          lowTemp: weatherData.temperature - 10
+        };
       }
       
       // Generate reasonable estimates for future dates without forecast data
@@ -186,7 +215,12 @@ export const WeatherProvider = ({ children }: { children: React.ReactNode }) => 
       const tempVariation = Math.floor(Math.random() * 11) - 5; // -5 to +5 degree variation
       const fallbackTemp = Math.max(weatherData.temperature + tempVariation, 50); // Minimum 50°F
       
-      return { temp: fallbackTemp, condition: weatherData.condition };
+      return { 
+        temp: fallbackTemp, 
+        condition: weatherData.condition,
+        highTemp: fallbackTemp + 5,
+        lowTemp: fallbackTemp - 10
+      };
     };
   }, [weatherData]);
 
@@ -201,8 +235,10 @@ export const WeatherProvider = ({ children }: { children: React.ReactNode }) => 
     isLoading,
     getWeatherForDate,
     getCurrentWeather,
-    refreshWeather
-  }), [weatherData, isLoading, getWeatherForDate, getCurrentWeather, refreshWeather]);
+    refreshWeather,
+    useEnhancedService,
+    setUseEnhancedService
+  }), [weatherData, isLoading, getWeatherForDate, getCurrentWeather, refreshWeather, useEnhancedService]);
 
   return (
     <WeatherContext.Provider value={contextValue}>
