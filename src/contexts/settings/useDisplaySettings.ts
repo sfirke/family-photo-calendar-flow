@@ -9,8 +9,8 @@ import { useState, useEffect } from 'react';
 import { settingsStorageService } from '@/services/settingsStorageService';
 
 export const useDisplaySettings = () => {
-  const [theme, setTheme] = useState<'light' | 'dark' | 'system'>('system');
-  const [defaultView, setDefaultView] = useState<'month' | 'week' | 'timeline'>('month');
+  const [theme, setTheme] = useState<'light' | 'dark' | 'system'>('light');
+  const [defaultView, setDefaultView] = useState<'month' | 'week' | 'timeline'>('timeline');
   const [isInitialized, setIsInitialized] = useState(false);
 
   // Load initial settings from tiered storage
