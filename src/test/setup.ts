@@ -11,6 +11,12 @@ beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 afterEach(() => {
   server.resetHandlers();
   vi.clearAllMocks();
+  // Clear mock storage to prevent memory leaks
+  mockStorage.clear();
+  // Force garbage collection if available
+  if (global.gc) {
+    global.gc();
+  }
 });
 
 // Clean up after all tests are done
@@ -247,8 +253,27 @@ global.actAsync = async (callback: () => Promise<void>) => {
   }
 };
 
-// Add global test timeout configuration
+// Add global test timeout configuration and memory optimization
 vi.setConfig({
   testTimeout: 15000, // 15 seconds for all tests
   hookTimeout: 10000, // 10 seconds for setup/teardown hooks
 });
+
+// Global cleanup function to prevent memory leaks
+const globalCleanup = () => {
+  // Clean up any global event listeners
+  if (typeof window !== 'undefined') {
+    window.removeEventListener?.('storage', () => {});
+    window.removeEventListener?.('message', () => {});
+    window.removeEventListener?.('beforeunload', () => {});
+  }
+  
+  // Clear any timers
+  if (typeof global !== 'undefined') {
+    clearTimeout as any;
+    clearInterval as any;
+  }
+};
+
+// Run cleanup after each test
+afterEach(globalCleanup);

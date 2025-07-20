@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import React from 'react';
 import { useBackgroundSync } from '@/hooks/useBackgroundSync';
@@ -60,6 +60,14 @@ describe('useBackgroundSync', () => {
     resetSecurityMocks();
     vi.clearAllMocks();
     localStorageMock.getItem.mockReturnValue(null);
+    // Clear any existing timers or promises
+    vi.clearAllTimers();
+  });
+
+  afterEach(() => {
+    // Cleanup any pending promises or async operations
+    vi.runOnlyPendingTimers();
+    vi.clearAllTimers();
   });
 
   it('should initialize with correct support flags', () => {
