@@ -133,14 +133,18 @@ describe('useBackgroundSync', () => {
   it('should call registerPeriodicSync without throwing', async () => {
     const { result } = renderHook(() => useBackgroundSync());
     
-    // Wait for hook to initialize
+    // Wait for all effects to complete
     await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 0));
+      await new Promise(resolve => setTimeout(resolve, 10));
     });
 
-    expect(result.current).not.toBeNull();
+    expect(result.current).toBeDefined();
+    expect(typeof result.current.registerPeriodicSync).toBe('function');
+    
     await expect(
-      act(() => result.current.registerPeriodicSync())
+      act(async () => {
+        await result.current.registerPeriodicSync();
+      })
     ).resolves.not.toThrow();
   });
 
@@ -154,13 +158,13 @@ describe('useBackgroundSync', () => {
 
     const { result } = renderHook(() => useBackgroundSync());
 
-    // Wait for the hook to initialize and effects to run
+    // Wait for effects to complete
     await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 0));
+      await new Promise(resolve => setTimeout(resolve, 10));
     });
 
     expect(result.current).toBeDefined();
-    expect(result.current).not.toBeNull();
+    expect(typeof result.current.isBackgroundSyncSupported).toBe('boolean');
     expect(result.current.isBackgroundSyncSupported).toBe(false);
     expect(result.current.isPeriodicSyncSupported).toBe(false);
 
