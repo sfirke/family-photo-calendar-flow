@@ -38,7 +38,7 @@ interface WeatherContextType {
   /** Get current weather conditions and location */
   getCurrentWeather: () => { temp: number; condition: string; location: string };
   /** Manually refresh weather data (bypasses rate limiting) */
-  refreshWeather: () => Promise<void>;
+  refreshWeather: (forceRefresh?: boolean) => Promise<void>;
 }
 
 const WeatherContext = createContext<WeatherContextType | undefined>(undefined);
@@ -86,7 +86,7 @@ export const WeatherProvider = ({ children }: { children: React.ReactNode }) => 
     lastFetchRef.current = now;
     
     try {
-      console.log('WeatherContext - Using AccuWeather service');
+      console.log('WeatherContext - Using AccuWeather service, forceRefresh:', forceRefresh);
       const { AccuWeatherProvider } = await import('@/services/weatherProviders/accuWeatherProvider');
       const provider = new AccuWeatherProvider();
       
@@ -98,6 +98,13 @@ export const WeatherProvider = ({ children }: { children: React.ReactNode }) => 
         baseUrl: '',
         rateLimit: 60,
         maxForecastDays: 15
+      });
+      
+      console.log('WeatherContext - Successfully fetched weather data:', {
+        location: weatherData.location,
+        temperature: weatherData.temperature,
+        condition: weatherData.condition,
+        forecastDays: weatherData.forecast?.length || 0
       });
       
       setWeatherData(weatherData);
@@ -116,8 +123,9 @@ export const WeatherProvider = ({ children }: { children: React.ReactNode }) => 
    * Allows users to manually refresh weather data through UI actions.
    * Bypasses rate limiting since it's user-initiated.
    */
-  const refreshWeather = useCallback(async () => {
-    await loadWeather(true);
+  const refreshWeather = useCallback(async (forceRefresh = true) => {
+    console.log('WeatherContext - Manual refresh triggered, forceRefresh:', forceRefresh);
+    await loadWeather(forceRefresh);
   }, [loadWeather]);
 
   /**

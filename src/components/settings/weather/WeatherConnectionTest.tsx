@@ -136,8 +136,9 @@ const WeatherConnectionTest = ({
           data: previewData
         });
         
-        // Refresh weather data in the main app after successful test
-        refreshWeather();
+        // Force refresh weather data in the main app after successful test
+        console.log('WeatherConnectionTest - Triggering main app weather refresh');
+        await refreshWeather(true);
       } else {
         const failedTests = [];
         if (!pwaTestResult.ipLocation.success) failedTests.push('Location detection');
@@ -209,11 +210,12 @@ const WeatherConnectionTest = ({
         
         {testResult?.success && testResult.data && (
           <Button
-            onClick={() => {
+            onClick={async () => {
               onShowPreviewToggle();
               // Also refresh weather data when showing preview
               if (!showPreview) {
-                refreshWeather();
+                console.log('WeatherConnectionTest - Refreshing weather for preview');
+                await refreshWeather(true);
               }
             }}
             variant="outline"
