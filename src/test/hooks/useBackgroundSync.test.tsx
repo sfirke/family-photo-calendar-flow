@@ -59,15 +59,12 @@ describe('useBackgroundSync', () => {
   beforeEach(() => {
     resetSecurityMocks();
     vi.clearAllMocks();
+    vi.useFakeTimers();
     localStorageMock.getItem.mockReturnValue(null);
-    // Clear any existing timers or promises
-    vi.clearAllTimers();
   });
 
   afterEach(() => {
-    // Cleanup any pending promises or async operations
-    vi.runOnlyPendingTimers();
-    vi.clearAllTimers();
+    vi.useRealTimers();
   });
 
   it('should initialize with correct support flags', () => {

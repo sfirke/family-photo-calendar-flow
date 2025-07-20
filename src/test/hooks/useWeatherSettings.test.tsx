@@ -1,18 +1,18 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
+import { renderHook, act, waitFor } from '@testing-library/react';
 import { useWeatherSettings } from '@/contexts/settings/useWeatherSettings';
 import { mockSecurityModule, resetSecurityMocks } from '../utils/securityMocks';
 
 // Apply direct module mock at the top level
 mockSecurityModule();
 
-// Mock the SettingsStorage with all static methods
-vi.mock('@/contexts/settings/settingsStorage', () => ({
-  SettingsStorage: {
-    saveSetting: vi.fn().mockResolvedValue(undefined),
+// Mock the settingsStorageService
+vi.mock('@/services/settingsStorageService', () => ({
+  settingsStorageService: {
+    setValue: vi.fn().mockResolvedValue(undefined),
     loadAllSettings: vi.fn().mockResolvedValue({}),
-    removeSetting: vi.fn().mockResolvedValue(undefined),
+    getValue: vi.fn().mockResolvedValue(''),
   },
 }));
 
@@ -30,18 +30,29 @@ vi.mock('@/utils/security/inputValidation', () => ({
 describe('useWeatherSettings', () => {
   beforeEach(() => {
     resetSecurityMocks();
+    vi.clearAllMocks();
   });
 
-  it('should initialize with default values', () => {
+  it('should initialize with default values', async () => {
     const { result } = renderHook(() => useWeatherSettings());
+
+    // Wait for async initialization
+    await waitFor(() => {
+      expect(result.current.isInitialized).toBe(true);
+    });
 
     // The hook should return empty string initially, not the localStorage default
     expect(result.current.zipCode).toBe('');
     expect(result.current.weatherApiKey).toBe('');
   });
 
-  it('should update zip code with validation', () => {
+  it('should update zip code with validation', async () => {
     const { result } = renderHook(() => useWeatherSettings());
+
+    // Wait for initialization
+    await waitFor(() => {
+      expect(result.current.isInitialized).toBe(true);
+    });
 
     act(() => {
       result.current.setZipCode('12345');
@@ -50,8 +61,13 @@ describe('useWeatherSettings', () => {
     expect(result.current.zipCode).toBe('12345');
   });
 
-  it('should update weather API key', () => {
+  it('should update weather API key', async () => {
     const { result } = renderHook(() => useWeatherSettings());
+
+    // Wait for initialization
+    await waitFor(() => {
+      expect(result.current.isInitialized).toBe(true);
+    });
 
     act(() => {
       result.current.setWeatherApiKey('test-api-key');
@@ -60,8 +76,13 @@ describe('useWeatherSettings', () => {
     expect(result.current.weatherApiKey).toBe('test-api-key');
   });
 
-  it('should allow progressive typing for zip code', () => {
+  it('should allow progressive typing for zip code', async () => {
     const { result } = renderHook(() => useWeatherSettings());
+
+    // Wait for initialization
+    await waitFor(() => {
+      expect(result.current.isInitialized).toBe(true);
+    });
 
     act(() => {
       result.current.setZipCode('9');

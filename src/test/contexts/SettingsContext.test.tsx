@@ -24,6 +24,13 @@ vi.mock('@/contexts/settings/useWeatherSettings', () => ({
     setZipCode: vi.fn(),
     weatherApiKey: '',
     setWeatherApiKey: vi.fn(),
+    locationKey: '',
+    setLocationKey: vi.fn(),
+    useManualLocation: false,
+    setUseManualLocation: vi.fn(),
+    isInitialized: true,
+    setValidatedZipCode: vi.fn(),
+    setValidatedWeatherApiKey: vi.fn(),
   })),
 }));
 
@@ -55,6 +62,10 @@ vi.mock('@/contexts/settings/useNotionSettings', () => ({
     setLastSyncTime: vi.fn(),
     notionCalendars: [],
     setNotionCalendars: vi.fn(),
+    notionToken: '',
+    setNotionToken: vi.fn(),
+    notionDatabaseId: '',
+    setNotionDatabaseId: vi.fn(),
   })),
 }));
 

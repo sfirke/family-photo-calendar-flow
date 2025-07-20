@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook } from '@testing-library/react';
+import { renderHook, waitFor } from '@testing-library/react';
 import { useLocalEvents } from '@/hooks/useLocalEvents';
 import { mockSecurityModule, resetSecurityMocks } from '../utils/securityMocks';
 
@@ -54,8 +54,12 @@ describe('useLocalEvents', () => {
     vi.clearAllMocks();
   });
 
-  it('should return iCal events as googleEvents', () => {
+  it('should return iCal events as googleEvents', async () => {
     const { result } = renderHook(() => useLocalEvents());
+
+    await waitFor(() => {
+      expect(result.current).not.toBeNull();
+    });
 
     expect(result.current.googleEvents).toHaveLength(1);
     expect(result.current.googleEvents[0]).toMatchObject({
@@ -65,20 +69,32 @@ describe('useLocalEvents', () => {
     });
   });
 
-  it('should have isLoading as false', () => {
+  it('should have isLoading as false', async () => {
     const { result } = renderHook(() => useLocalEvents());
+
+    await waitFor(() => {
+      expect(result.current).not.toBeNull();
+    });
 
     expect(result.current.isLoading).toBe(false);
   });
 
-  it('should provide forceRefresh function', () => {
+  it('should provide forceRefresh function', async () => {
     const { result } = renderHook(() => useLocalEvents());
+
+    await waitFor(() => {
+      expect(result.current).not.toBeNull();
+    });
 
     expect(typeof result.current.forceRefresh).toBe('function');
   });
 
-  it('should call forceRefresh without errors', () => {
+  it('should call forceRefresh without errors', async () => {
     const { result } = renderHook(() => useLocalEvents());
+
+    await waitFor(() => {
+      expect(result.current).not.toBeNull();
+    });
 
     expect(() => {
       result.current.forceRefresh();
