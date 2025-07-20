@@ -77,7 +77,9 @@ const WeatherTab = () => {
           />
 
           {showPreview && testResult?.success && testResult.data && (
-            <WeatherPreview weatherData={testResult.data} />
+            <div className="mt-4">
+              <WeatherPreview weatherData={testResult.data} />
+            </div>
           )}
 
           <WeatherInfo />

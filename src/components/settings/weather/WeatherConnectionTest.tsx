@@ -97,11 +97,31 @@ const WeatherConnectionTest = ({
         const locationData = pwaTestResult.ipLocation.data;
         const method = pwaTestResult.ipLocation.method;
         
+        // Transform the raw API data into the expected WeatherData format for preview
+        const previewData = locationData ? {
+          location: locationData.LocalizedName || 'Unknown Location',
+          temperature: 72, // Mock temperature since location API doesn't provide it
+          condition: 'Clear',
+          description: 'Weather data connection successful',
+          humidity: 50,
+          windSpeed: 5,
+          forecast: [
+            {
+              date: new Date().toISOString().split('T')[0],
+              high: 75,
+              low: 65,
+              condition: 'Sunny'
+            }
+          ],
+          lastUpdated: new Date().toISOString(),
+          provider: 'AccuWeather'
+        } : null;
+        
         setDetailedError(null);
         onTestResult({
           success: true,
           message: `Successfully connected! Location: ${locationData?.LocalizedName || 'Unknown'} ${method === 'proxy' ? '(via CORS proxy)' : '(direct access)'}`,
-          data: locationData
+          data: previewData
         });
         
         // Refresh weather data in the main app after successful test

@@ -13,6 +13,19 @@ const WeatherPreview = ({ weatherData }: WeatherPreviewProps) => {
     return condition.charAt(0).toUpperCase() + condition.slice(1).toLowerCase();
   };
 
+  // Safety check for weatherData
+  if (!weatherData) {
+    return (
+      <Card className="bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700">
+        <CardContent className="p-4">
+          <div className="text-gray-600 dark:text-gray-400">
+            No weather data available for preview
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card className="bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700">
       <CardHeader>
@@ -41,7 +54,7 @@ const WeatherPreview = ({ weatherData }: WeatherPreviewProps) => {
           <div className="space-y-2">
             <h4 className="font-medium text-gray-900 dark:text-gray-100">7-Day Forecast</h4>
             <div className="space-y-1 max-h-32 overflow-y-auto">
-              {weatherData.forecast.slice(0, 7).map((day: WeatherForecastDay, index: number) => {
+              {(weatherData.forecast || []).slice(0, 7).map((day: WeatherForecastDay, index: number) => {
                 const date = new Date(day.date);
                 const isToday = index === 0;
                 return (
