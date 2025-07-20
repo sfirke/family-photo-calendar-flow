@@ -268,11 +268,8 @@ const globalCleanup = () => {
     window.removeEventListener?.('beforeunload', () => {});
   }
   
-  // Clear any timers
-  if (typeof global !== 'undefined') {
-    clearTimeout as any;
-    clearInterval as any;
-  }
+  // Note: Individual tests should handle their own timer cleanup
+  // Global timer cleanup is not necessary here
 };
 
 // Run cleanup after each test
