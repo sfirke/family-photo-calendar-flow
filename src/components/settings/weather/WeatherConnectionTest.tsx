@@ -92,10 +92,13 @@ const WeatherConnectionTest = ({
         recommendations: pwaTestResult.summary.recommendations
       });
       
-      if (pwaTestResult.summary.allSuccessful) {
+      if (pwaTestResult.ipLocation.success) {
         // Get the weather data from IP location result
         const locationData = pwaTestResult.ipLocation.data;
         const method = pwaTestResult.ipLocation.method;
+        
+        // Check if current conditions or forecast failed
+        const hasPartialFailure = !pwaTestResult.currentConditions.success || !pwaTestResult.forecast.success;
         
         // Transform the raw API data into the expected WeatherData format for preview
         const previewData = locationData ? {
@@ -118,9 +121,18 @@ const WeatherConnectionTest = ({
         } : null;
         
         setDetailedError(null);
+        
+        let message = `Successfully connected! Location: ${locationData?.LocalizedName || 'Unknown'} ${method === 'proxy' ? '(via CORS proxy)' : '(direct access)'}`;
+        if (hasPartialFailure) {
+          const failedServices = [];
+          if (!pwaTestResult.currentConditions.success) failedServices.push('current conditions');
+          if (!pwaTestResult.forecast.success) failedServices.push('forecast');
+          message += ` (Warning: ${failedServices.join(' and ')} may have limited data)`;
+        }
+        
         onTestResult({
           success: true,
-          message: `Successfully connected! Location: ${locationData?.LocalizedName || 'Unknown'} ${method === 'proxy' ? '(via CORS proxy)' : '(direct access)'}`,
+          message,
           data: previewData
         });
         

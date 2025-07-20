@@ -56,17 +56,32 @@ export class WeatherCorsProxyService {
     // First try direct fetch (works in browser and development)
     try {
       console.log('WeatherCorsProxy - Trying direct fetch:', url);
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json',
-        },
-        mode: 'cors'
-      });
+      const response = await Promise.race([
+        fetch(url, {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json',
+          },
+          mode: 'cors'
+        }),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Direct fetch timeout')), 10000)
+        )
+      ]) as Response;
 
       if (response.ok) {
+        const text = await response.text();
+        // Check for "Offline" response which indicates cached failure
+        if (text === 'Offline' || text.includes('offline')) {
+          console.log('WeatherCorsProxy - Direct fetch returned "Offline", trying proxies');
+          throw new Error('Direct fetch returned offline response');
+        }
         console.log('WeatherCorsProxy - Direct fetch successful');
-        return response;
+        return new Response(text, {
+          status: response.status,
+          statusText: response.statusText,
+          headers: response.headers
+        });
       }
     } catch (error) {
       console.log('WeatherCorsProxy - Direct fetch failed, trying proxies:', error);
@@ -91,11 +106,16 @@ export class WeatherCorsProxyService {
         const proxyUrl = this.buildProxyUrl(proxyConfig, targetUrl);
         console.log('WeatherCorsProxy - Proxy URL:', proxyUrl);
 
-        const response = await fetch(proxyUrl, {
-          method: 'GET',
-          headers: this.getProxyHeaders(proxyConfig),
-          mode: 'cors'
-        });
+        const response = await Promise.race([
+          fetch(proxyUrl, {
+            method: 'GET',
+            headers: this.getProxyHeaders(proxyConfig),
+            mode: 'cors'
+          }),
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Proxy fetch timeout')), 15000)
+          )
+        ]) as Response;
 
         if (!response.ok) {
           console.log(`WeatherCorsProxy - Proxy ${i + 1} failed with status:`, response.status);
@@ -104,6 +124,12 @@ export class WeatherCorsProxyService {
 
         // Extract content based on proxy type
         const content = await this.extractResponseContent(response, proxyConfig);
+        
+        // Check for "Offline" response which indicates cached failure
+        if (content === 'Offline' || content.includes('offline')) {
+          console.log(`WeatherCorsProxy - Proxy ${i + 1} returned offline response`);
+          continue;
+        }
         
         // Validate that we got valid JSON content
         if (this.isValidWeatherResponse(content)) {
@@ -116,7 +142,7 @@ export class WeatherCorsProxyService {
             headers: { 'Content-Type': 'application/json' }
           });
         } else {
-          console.log(`WeatherCorsProxy - Proxy ${i + 1} returned invalid weather data`);
+          console.log(`WeatherCorsProxy - Proxy ${i + 1} returned invalid weather data:`, content.substring(0, 200));
           continue;
         }
 
