@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { CheckCircle, XCircle, Loader2, Key, Eye, ChevronDown, ChevronUp } from 'lucide-react';
+import { CheckCircle, XCircle, Loader2, Key, Eye, ChevronDown, ChevronUp, Smartphone } from 'lucide-react';
 import { enhancedWeatherService } from '@/services/enhancedWeatherService';
 import { useWeather } from '@/contexts/WeatherContext';
 import { useWeatherSettings } from '@/contexts/settings/useWeatherSettings';
 import { WeatherTestResult } from '@/types/weather';
+import { PWAWeatherTestService } from '@/utils/weather/pwaTestService';
 
 interface WeatherConnectionTestProps {
   zipCode: string;
@@ -33,6 +34,11 @@ const WeatherConnectionTest = ({
   const [isTestingConnection, setIsTestingConnection] = useState(false);
   const [showErrorDetails, setShowErrorDetails] = useState(false);
   const [detailedError, setDetailedError] = useState<string | null>(null);
+  const [pwaInfo, setPwaInfo] = useState<{
+    isPWA: boolean;
+    corsProxyRequired: boolean;
+    recommendations: string[];
+  } | null>(null);
   const { refreshWeather } = useWeather();
 
   const handleTestConnection = async () => {
@@ -68,41 +74,50 @@ const WeatherConnectionTest = ({
     });
 
     try {
+      // Run PWA-specific comprehensive test
+      const environmentInfo = PWAWeatherTestService.getEnvironmentInfo();
+      console.log('PWA Environment Info:', environmentInfo);
       
-      // Use AccuWeather provider directly
-      const { AccuWeatherProvider } = await import('@/services/weatherProviders/accuWeatherProvider');
-      const provider = new AccuWeatherProvider();
+      const pwaTestResult = await Promise.race([
+        PWAWeatherTestService.testWeatherConnectivity(weatherApiKey),
+        timeoutPromise
+      ]) as Awaited<ReturnType<typeof PWAWeatherTestService.testWeatherConnectivity>>;
       
-      // For automatic location, don't send zip code (use IP detection)
-      const testZipCode = useManualLocation ? zipCode : '';
+      console.log('PWA Test Results:', pwaTestResult);
       
-      
-      const fetchPromise = provider.fetchWeather(testZipCode, {
-        apiKey: weatherApiKey,
-        baseUrl: '', // Provider will use their own base URL
-        rateLimit: 60, // Default rate limit
-        maxForecastDays: 15
+      // Set PWA information
+      setPwaInfo({
+        isPWA: environmentInfo.isPWA,
+        corsProxyRequired: pwaTestResult.summary.corsProxyRequired,
+        recommendations: pwaTestResult.summary.recommendations
       });
-      const weatherData = await Promise.race([fetchPromise, timeoutPromise]) as Awaited<typeof fetchPromise>;
       
-      // Check if we got mock data (indicates API failure)
-      if (weatherData.location === 'Location not found') {
-        const errorDetails = `Provider: AccuWeather, API Key: ${weatherApiKey.substring(0, 8)}..., Location: ${zipCode || 'IP-based'}, Error: Mock data returned - API call failed`;
-        setDetailedError(errorDetails);
-        onTestResult({
-          success: false,
-          message: 'API key or location is invalid. Please check your credentials.'
-        });
-      } else {
+      if (pwaTestResult.summary.allSuccessful) {
+        // Get the weather data from IP location result
+        const locationData = pwaTestResult.ipLocation.data;
+        const method = pwaTestResult.ipLocation.method;
+        
         setDetailedError(null);
         onTestResult({
           success: true,
-          message: `Successfully connected! Location: ${weatherData.location} (AccuWeather)`,
-          data: weatherData
+          message: `Successfully connected! Location: ${locationData?.LocalizedName || 'Unknown'} ${method === 'proxy' ? '(via CORS proxy)' : '(direct access)'}`,
+          data: locationData
         });
         
         // Refresh weather data in the main app after successful test
         refreshWeather();
+      } else {
+        const failedTests = [];
+        if (!pwaTestResult.ipLocation.success) failedTests.push('Location detection');
+        if (!pwaTestResult.currentConditions.success) failedTests.push('Current conditions');
+        if (!pwaTestResult.forecast.success) failedTests.push('Weather forecast');
+        
+        const errorDetails = `Provider: AccuWeather, API Key: ${weatherApiKey.substring(0, 8)}..., Environment: ${environmentInfo.isPWA ? 'PWA Mode' : 'Browser Mode'}, Failed: ${failedTests.join(', ')}, Error: ${pwaTestResult.ipLocation.error || 'API connection failed'}`;
+        setDetailedError(errorDetails);
+        onTestResult({
+          success: false,
+          message: `Connection test failed: ${failedTests.join(', ')}`
+        });
       }
     } catch (error) {
       console.error('Weather connection test error:', error);
@@ -118,9 +133,9 @@ const WeatherConnectionTest = ({
         if (error.message.includes('timeout') || error.message.includes('Request timeout')) {
           errorMessage = 'Connection timeout - Please check your internet connection and try again';
           detailedErrorInfo += ' (Timeout after 30 seconds)';
-        } else if (error.message.includes('Load failed') || error.message.includes('fetch')) {
-          errorMessage = 'Network error - Unable to reach weather service';
-          detailedErrorInfo += ' (Network request failed - possible CORS or connectivity issue)';
+        } else if (error.message.includes('Load failed') || error.message.includes('fetch') || error.message.includes('CORS')) {
+          errorMessage = 'Network/CORS error - Using CORS proxy for PWA compatibility';
+          detailedErrorInfo += ' (Network request failed - CORS proxy will be used automatically)';
         } else if (error.message.includes('401') || error.message.includes('Unauthorized')) {
           errorMessage = 'Invalid API key - Please check your credentials';
           detailedErrorInfo += ' (401 Unauthorized)';
@@ -215,14 +230,37 @@ const WeatherConnectionTest = ({
                   <div className="text-xs font-mono bg-gray-100 dark:bg-gray-800 p-2 rounded border">
                     {detailedError}
                   </div>
-                  <div className="text-xs text-gray-600 dark:text-gray-400 mt-2">
+                   <div className="text-xs text-gray-600 dark:text-gray-400 mt-2">
                     If this error persists, please check:
                     <ul className="list-disc list-inside mt-1 space-y-1">
                       <li>Your internet connection</li>
                       <li>API key validity and permissions</li>
                        <li>Provider service status</li>
                        <li>AccuWeather API rate limits</li>
+                       <li>PWA/iOS Safari compatibility (CORS proxy enabled automatically)</li>
                     </ul>
+                   </div>
+                </div>
+              </AlertDescription>
+            </Alert>
+           )}
+          
+          {/* PWA-specific information */}
+          {pwaInfo && (
+            <Alert className="bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800">
+              <Smartphone className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+              <AlertDescription className="text-blue-700 dark:text-blue-300">
+                <div className="space-y-2">
+                  <div className="font-semibold text-sm">
+                    {pwaInfo.isPWA ? '📱 PWA Mode Detected' : '🌐 Browser Mode'}
+                  </div>
+                  <div className="text-xs space-y-1">
+                    {pwaInfo.corsProxyRequired && (
+                      <div>✅ CORS proxy enabled for PWA compatibility</div>
+                    )}
+                    {pwaInfo.recommendations.map((rec, index) => (
+                      <div key={index}>• {rec}</div>
+                    ))}
                   </div>
                 </div>
               </AlertDescription>

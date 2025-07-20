@@ -3,10 +3,13 @@
  * 
  * Implements AccuWeather API integration with support for
  * up to 30-day forecasts (depending on subscription level).
+ * 
+ * Includes CORS proxy support for iOS PWA compatibility.
  */
 
 import { WeatherProvider, WeatherData, WeatherProviderConfig } from './types';
 import { mapAccuWeatherCondition } from '@/utils/weatherIcons';
+import { weatherCorsProxy } from '@/utils/weather/corsProxyService';
 
 interface AccuWeatherLocationResponse {
   Key: string;
@@ -102,9 +105,8 @@ export class AccuWeatherProvider implements WeatherProvider {
   }
 
   private async getLocationKeyByZip(zipCode: string, apiKey: string, baseUrl: string): Promise<string> {
-    const response = await fetch(
-      `${baseUrl}/locations/v1/postalcodes/US/search?apikey=${apiKey}&q=${zipCode}`
-    );
+    const url = `${baseUrl}/locations/v1/postalcodes/US/search?apikey=${apiKey}&q=${zipCode}`;
+    const response = await weatherCorsProxy.fetchWithProxy(url);
 
     if (!response.ok) {
       throw new Error(`Zip code location lookup failed: ${response.status}`);
@@ -122,9 +124,8 @@ export class AccuWeatherProvider implements WeatherProvider {
   private async getLocationKeyByIP(apiKey: string, baseUrl: string): Promise<string> {
     const url = `${baseUrl}/locations/v1/cities/ipaddress?apikey=${apiKey}`;
     
-    
-    const response = await fetch(url);
-
+    console.log('AccuWeatherProvider - Fetching location by IP with CORS proxy support');
+    const response = await weatherCorsProxy.fetchWithProxy(url);
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -142,9 +143,8 @@ export class AccuWeatherProvider implements WeatherProvider {
   }
 
   private async getCurrentConditions(locationKey: string, apiKey: string, baseUrl: string) {
-    const response = await fetch(
-      `${baseUrl}/currentconditions/v1/${locationKey}?apikey=${apiKey}&details=true`
-    );
+    const url = `${baseUrl}/currentconditions/v1/${locationKey}?apikey=${apiKey}&details=true`;
+    const response = await weatherCorsProxy.fetchWithProxy(url);
 
     if (!response.ok) {
       throw new Error(`Current conditions failed: ${response.status}`);
@@ -174,10 +174,8 @@ export class AccuWeatherProvider implements WeatherProvider {
 
   private async getForecast(locationKey: string, apiKey: string, baseUrl: string) {
     // Get 15-day forecast as specified
-    const response = await fetch(
-      `${baseUrl}/forecasts/v1/daily/15day/${locationKey}?apikey=${apiKey}&details=true&metric=false`
-    );
-
+    const url = `${baseUrl}/forecasts/v1/daily/15day/${locationKey}?apikey=${apiKey}&details=true&metric=false`;
+    const response = await weatherCorsProxy.fetchWithProxy(url);
 
     if (!response.ok) {
       throw new Error(`15-day forecast failed: ${response.status}`);
@@ -205,13 +203,11 @@ export class AccuWeatherProvider implements WeatherProvider {
   }
 
   private async getFallbackForecast(locationKey: string, apiKey: string, baseUrl: string) {
-    
+    console.log('AccuWeatherProvider - Trying 5-day forecast fallback with CORS proxy');
     
     try {
-      const response = await fetch(
-        `${baseUrl}/forecasts/v1/daily/5day/${locationKey}?apikey=${apiKey}&details=true&metric=false`
-      );
-
+      const url = `${baseUrl}/forecasts/v1/daily/5day/${locationKey}?apikey=${apiKey}&details=true&metric=false`;
+      const response = await weatherCorsProxy.fetchWithProxy(url);
 
       if (!response.ok) {
         throw new Error(`5-day forecast failed: ${response.status}`);
@@ -257,9 +253,8 @@ export class AccuWeatherProvider implements WeatherProvider {
 
   private async getLocationName(locationKey: string, apiKey: string, baseUrl: string): Promise<string> {
     try {
-      const response = await fetch(
-        `${baseUrl}/locations/v1/${locationKey}?apikey=${apiKey}`
-      );
+      const url = `${baseUrl}/locations/v1/${locationKey}?apikey=${apiKey}`;
+      const response = await weatherCorsProxy.fetchWithProxy(url);
 
       if (response.ok) {
         const location: AccuWeatherLocationResponse = await response.json();
