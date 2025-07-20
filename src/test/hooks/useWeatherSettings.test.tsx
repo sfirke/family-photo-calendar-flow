@@ -36,10 +36,13 @@ describe('useWeatherSettings', () => {
   it('should initialize with default values', async () => {
     const { result } = renderHook(() => useWeatherSettings());
 
+    // Check that the hook is defined first
+    expect(result.current).toBeDefined();
+    
     // Wait for async initialization
     await waitFor(() => {
-      expect(result.current.isInitialized).toBe(true);
-    });
+      expect(result.current?.isInitialized).toBe(true);
+    }, { timeout: 2000 });
 
     // The hook should return empty string initially, not the localStorage default
     expect(result.current.zipCode).toBe('');
@@ -49,10 +52,13 @@ describe('useWeatherSettings', () => {
   it('should update zip code with validation', async () => {
     const { result } = renderHook(() => useWeatherSettings());
 
+    // Check that the hook is defined first
+    expect(result.current).toBeDefined();
+
     // Wait for initialization
     await waitFor(() => {
-      expect(result.current.isInitialized).toBe(true);
-    });
+      expect(result.current?.isInitialized).toBe(true);
+    }, { timeout: 2000 });
 
     act(() => {
       result.current.setZipCode('12345');
@@ -64,10 +70,13 @@ describe('useWeatherSettings', () => {
   it('should update weather API key', async () => {
     const { result } = renderHook(() => useWeatherSettings());
 
+    // Check that the hook is defined first
+    expect(result.current).toBeDefined();
+
     // Wait for initialization
     await waitFor(() => {
-      expect(result.current.isInitialized).toBe(true);
-    });
+      expect(result.current?.isInitialized).toBe(true);
+    }, { timeout: 2000 });
 
     act(() => {
       result.current.setWeatherApiKey('test-api-key');
@@ -79,10 +88,13 @@ describe('useWeatherSettings', () => {
   it('should allow progressive typing for zip code', async () => {
     const { result } = renderHook(() => useWeatherSettings());
 
+    // Check that the hook is defined first
+    expect(result.current).toBeDefined();
+
     // Wait for initialization
     await waitFor(() => {
-      expect(result.current.isInitialized).toBe(true);
-    });
+      expect(result.current?.isInitialized).toBe(true);
+    }, { timeout: 2000 });
 
     act(() => {
       result.current.setZipCode('9');

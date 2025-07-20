@@ -58,7 +58,8 @@ describe('useLocalEvents', () => {
     const { result } = renderHook(() => useLocalEvents());
 
     await waitFor(() => {
-      expect(result.current).not.toBeNull();
+      expect(result.current).toBeDefined();
+      expect(result.current.googleEvents).toBeDefined();
     });
 
     expect(result.current.googleEvents).toHaveLength(1);
@@ -73,7 +74,8 @@ describe('useLocalEvents', () => {
     const { result } = renderHook(() => useLocalEvents());
 
     await waitFor(() => {
-      expect(result.current).not.toBeNull();
+      expect(result.current).toBeDefined();
+      expect(result.current.isLoading).toBeDefined();
     });
 
     expect(result.current.isLoading).toBe(false);
@@ -83,7 +85,8 @@ describe('useLocalEvents', () => {
     const { result } = renderHook(() => useLocalEvents());
 
     await waitFor(() => {
-      expect(result.current).not.toBeNull();
+      expect(result.current).toBeDefined();
+      expect(result.current.forceRefresh).toBeDefined();
     });
 
     expect(typeof result.current.forceRefresh).toBe('function');
@@ -93,7 +96,8 @@ describe('useLocalEvents', () => {
     const { result } = renderHook(() => useLocalEvents());
 
     await waitFor(() => {
-      expect(result.current).not.toBeNull();
+      expect(result.current).toBeDefined();
+      expect(result.current.forceRefresh).toBeDefined();
     });
 
     expect(() => {
