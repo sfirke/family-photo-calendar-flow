@@ -1,6 +1,9 @@
 
 import React, { useEffect } from 'react';
 import { useUpdateManager } from '@/hooks/useUpdateManager';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { RefreshCw } from 'lucide-react';
 import GitHubRepositorySettings from './update/GitHubRepositorySettings';
 import VersionInfoCard from './update/VersionInfoCard';
 import UpdateStatusCard from './update/UpdateStatusCard';
@@ -22,6 +25,10 @@ const UpdateTab = () => {
     installUpdate,
     openReleaseNotes
   } = useUpdateManager();
+
+  const handleRefreshApp = () => {
+    window.location.reload();
+  };
 
   useEffect(() => {
     loadCurrentInfo();
@@ -63,6 +70,26 @@ const UpdateTab = () => {
 
       {/* Information */}
       <UpdateInfoSection />
+
+      {/* Manual Refresh */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Manual Refresh</CardTitle>
+          <CardDescription>
+            Refresh the application to reload all components and clear cache
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button 
+            onClick={handleRefreshApp}
+            variant="outline"
+            className="w-full"
+          >
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Refresh Application
+          </Button>
+        </CardContent>
+      </Card>
     </div>
   );
 };
