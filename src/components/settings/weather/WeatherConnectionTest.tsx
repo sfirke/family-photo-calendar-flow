@@ -209,7 +209,13 @@ const WeatherConnectionTest = ({
         
         {testResult?.success && testResult.data && (
           <Button
-            onClick={onShowPreviewToggle}
+            onClick={() => {
+              onShowPreviewToggle();
+              // Also refresh weather data when showing preview
+              if (!showPreview) {
+                refreshWeather();
+              }
+            }}
             variant="outline"
             className="border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
           >
