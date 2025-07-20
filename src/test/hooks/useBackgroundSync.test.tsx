@@ -42,14 +42,15 @@ Object.defineProperty(navigator, 'serviceWorker', {
   configurable: true,
 });
 
-// Mock ServiceWorkerRegistration prototype
+// Mock ServiceWorkerRegistration with proper prototype
+const MockServiceWorkerRegistration = function() {};
+MockServiceWorkerRegistration.prototype = {
+  sync: true,
+  periodicSync: true,
+};
+
 Object.defineProperty(window, 'ServiceWorkerRegistration', {
-  value: {
-    prototype: {
-      sync: true,
-      periodicSync: true,
-    }
-  },
+  value: MockServiceWorkerRegistration,
   configurable: true,
 });
 
