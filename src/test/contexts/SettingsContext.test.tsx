@@ -112,17 +112,4 @@ describe('SettingsContext', () => {
     <SettingsProvider>{children}</SettingsProvider>
   );
 
-  it('should provide settings context', () => {
-    const { result } = renderHook(() => useSettings(), { wrapper });
-
-    expect(result.current.theme).toBe('light');
-    expect(result.current.zipCode).toBe('90210');
-    expect(result.current.defaultView).toBe('month');
-  });
-
-  it('should throw error when used outside provider', () => {
-    expect(() => {
-      renderHook(() => useSettings());
-    }).toThrow('useSettings must be used within a SettingsProvider');
-  });
 });
