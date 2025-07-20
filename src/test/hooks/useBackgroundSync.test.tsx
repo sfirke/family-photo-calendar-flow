@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
+import React from 'react';
 import { useBackgroundSync } from '@/hooks/useBackgroundSync';
 import { mockSecurityModule, resetSecurityMocks } from '../utils/securityMocks';
 
@@ -139,6 +140,7 @@ describe('useBackgroundSync', () => {
       await new Promise(resolve => setTimeout(resolve, 10));
     });
 
+    expect(result.current).not.toBeNull();
     expect(result.current).toBeDefined();
     expect(typeof result.current.registerPeriodicSync).toBe('function');
     
@@ -154,6 +156,7 @@ describe('useBackgroundSync', () => {
     const originalServiceWorker = navigator.serviceWorker;
     const originalSWRegistration = window.ServiceWorkerRegistration;
     
+    // Delete the properties before rendering the hook
     delete (navigator as any).serviceWorker;
     delete (window as any).ServiceWorkerRegistration;
 
@@ -161,15 +164,16 @@ describe('useBackgroundSync', () => {
 
     // Wait for effects to complete
     await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise(resolve => setTimeout(resolve, 50));
     });
 
+    expect(result.current).not.toBeNull();
     expect(result.current).toBeDefined();
     expect(typeof result.current.isBackgroundSyncSupported).toBe('boolean');
     expect(result.current.isBackgroundSyncSupported).toBe(false);
     expect(result.current.isPeriodicSyncSupported).toBe(false);
 
-    // Restore ServiceWorker
+    // Restore ServiceWorker support for other tests
     Object.defineProperty(navigator, 'serviceWorker', {
       value: originalServiceWorker,
       configurable: true,
