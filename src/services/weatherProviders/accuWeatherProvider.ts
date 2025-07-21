@@ -67,39 +67,68 @@ export class AccuWeatherProvider implements WeatherProvider {
 
   async fetchWeather(zipCode: string, config: WeatherProviderConfig): Promise<WeatherData> {
     const baseUrl = 'https://dataservice.accuweather.com';
-    
+    console.log('AccuWeatherProvider - Starting enhanced weather fetch');
     
     try {
-      // Get location key - use IP detection if no zip code provided
+      // Get location key with enhanced error handling
       const locationKey = zipCode && zipCode.trim() 
         ? await this.getLocationKeyByZip(zipCode, config.apiKey, baseUrl)
         : await this.getLocationKeyByIP(config.apiKey, baseUrl);
       
+      console.log(`AccuWeatherProvider - Using location key: ${locationKey}`);
       
+      // Fetch current conditions and forecast concurrently
+      const [currentData, forecastData] = await Promise.allSettled([
+        this.getCurrentConditions(locationKey, config.apiKey, baseUrl),
+        this.getForecast(locationKey, config.apiKey, baseUrl)
+      ]);
       
-      // Fetch current conditions
-      const currentData = await this.getCurrentConditions(locationKey, config.apiKey, baseUrl);
+      // Handle current conditions result
+      if (currentData.status === 'rejected') {
+        console.error('AccuWeatherProvider - Current conditions failed:', currentData.reason);
+        throw new Error(`Failed to fetch current conditions: ${currentData.reason}`);
+      }
       
+      // Handle forecast result (allow partial failure)
+      let forecast = [];
+      if (forecastData.status === 'fulfilled') {
+        forecast = forecastData.value;
+      } else {
+        console.warn('AccuWeatherProvider - Forecast failed, using minimal forecast:', forecastData.reason);
+        forecast = this.getMinimalForecast();
+      }
       
-      // Fetch 15-day forecast
-      const forecastData = await this.getForecast(locationKey, config.apiKey, baseUrl);
-      
-      
-      
-      return {
-        location: currentData.location,
-        temperature: currentData.temperature,
-        condition: currentData.condition,
-        description: currentData.description,
-        humidity: currentData.humidity,
-        windSpeed: currentData.windSpeed,
-        uvIndex: currentData.uvIndex,
-        forecast: forecastData,
+      const result = {
+        location: currentData.value.location,
+        temperature: currentData.value.temperature,
+        condition: currentData.value.condition,
+        description: currentData.value.description,
+        humidity: currentData.value.humidity,
+        windSpeed: currentData.value.windSpeed,
+        uvIndex: currentData.value.uvIndex,
+        forecast: forecast,
         lastUpdated: new Date().toISOString(),
         provider: this.displayName
       };
+      
+      console.log('AccuWeatherProvider - Successfully fetched weather data');
+      return result;
     } catch (error) {
-      console.error('AccuWeather API error:', error);
+      console.error('AccuWeatherProvider - API error:', error);
+      
+      // Enhanced error messages for common issues
+      if (error instanceof Error) {
+        if (error.message.includes('401') || error.message.includes('403')) {
+          throw new Error('Invalid AccuWeather API key or exceeded rate limit');
+        }
+        if (error.message.includes('404')) {
+          throw new Error('Location not found - please check your zip code');
+        }
+        if (error.message.includes('timeout') || error.message.includes('CORS')) {
+          throw new Error('Weather service temporarily unavailable - please try again');
+        }
+      }
+      
       throw error;
     }
   }

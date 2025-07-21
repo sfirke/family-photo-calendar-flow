@@ -11,36 +11,101 @@ export interface WeatherProxyConfig {
   requiresJsonResponse: boolean;
   responseProperty?: string;
   supportsParams?: boolean;
+  region?: 'global' | 'us' | 'eu' | 'asia';
+  reliability?: 'high' | 'medium' | 'low';
+  timeout?: number;
+  headers?: Record<string, string>;
 }
 
-// Weather-specific CORS proxies optimized for API calls
+interface ProxyStats {
+  successCount: number;
+  failureCount: number;
+  lastUsed: number;
+  avgResponseTime: number;
+  isBlacklisted: boolean;
+  blacklistUntil?: number;
+}
+
+// Enhanced weather-specific CORS proxies with geographic distribution
 export const WEATHER_CORS_PROXIES: WeatherProxyConfig[] = [
+  // High reliability proxies
   { 
     url: 'https://api.allorigins.win/get?url=', 
     requiresJsonResponse: true, 
     responseProperty: 'contents',
-    supportsParams: true
+    supportsParams: true,
+    region: 'global',
+    reliability: 'high',
+    timeout: 12000
+  },
+  { 
+    url: 'https://proxy.cors.sh/', 
+    requiresJsonResponse: false,
+    supportsParams: true,
+    region: 'global',
+    reliability: 'high',
+    timeout: 10000
   },
   { 
     url: 'https://api.codetabs.com/v1/proxy?quest=', 
     requiresJsonResponse: false,
-    supportsParams: true
+    supportsParams: true,
+    region: 'global',
+    reliability: 'medium',
+    timeout: 15000
+  },
+  // Alternative high-performance proxies
+  { 
+    url: 'https://corsproxy.io/?', 
+    requiresJsonResponse: false,
+    supportsParams: true,
+    region: 'us',
+    reliability: 'high',
+    timeout: 8000
+  },
+  { 
+    url: 'https://cors-proxy.fringe.zone/get?url=', 
+    requiresJsonResponse: true,
+    responseProperty: 'data',
+    supportsParams: true,
+    region: 'us',
+    reliability: 'medium',
+    timeout: 12000
+  },
+  // European proxies for better geographic distribution
+  { 
+    url: 'https://cors.eu.org/', 
+    requiresJsonResponse: false,
+    supportsParams: true,
+    region: 'eu',
+    reliability: 'medium',
+    timeout: 10000
+  },
+  // Fallback proxies (lower reliability but still useful)
+  { 
+    url: 'https://thingproxy.freeboard.io/fetch/', 
+    requiresJsonResponse: false,
+    supportsParams: true,
+    region: 'global',
+    reliability: 'low',
+    timeout: 20000
   },
   { 
     url: 'https://cors-anywhere.herokuapp.com/', 
     requiresJsonResponse: false,
-    supportsParams: true
-  },
-  { 
-    url: 'https://thingproxy.freeboard.io/fetch/', 
-    requiresJsonResponse: false,
-    supportsParams: true
+    supportsParams: true,
+    region: 'us',
+    reliability: 'low',
+    timeout: 25000
   }
 ];
 
 export class WeatherCorsProxyService {
   private static instance: WeatherCorsProxyService;
-  private proxyIndex = 0;
+  private proxyStats: Map<string, ProxyStats> = new Map();
+  private lastSuccessfulProxy?: WeatherProxyConfig;
+  private maxRetries = 3;
+  private retryDelayMs = 1000;
 
   static getInstance(): WeatherCorsProxyService {
     if (!WeatherCorsProxyService.instance) {
@@ -49,34 +114,50 @@ export class WeatherCorsProxyService {
     return WeatherCorsProxyService.instance;
   }
 
+  constructor() {
+    // Initialize stats for all proxies
+    WEATHER_CORS_PROXIES.forEach(proxy => {
+      this.proxyStats.set(proxy.url, {
+        successCount: 0,
+        failureCount: 0,
+        lastUsed: 0,
+        avgResponseTime: 0,
+        isBlacklisted: false
+      });
+    });
+  }
+
   /**
-   * Attempt to fetch weather data with CORS proxy fallback
+   * Attempt to fetch weather data with enhanced CORS proxy fallback
    */
   async fetchWithProxy(url: string): Promise<Response> {
+    console.log('WeatherCorsProxy - Starting enhanced fetch for:', url);
+    
     // First try direct fetch (works in browser and development)
     try {
-      console.log('WeatherCorsProxy - Trying direct fetch:', url);
+      console.log('WeatherCorsProxy - Trying direct fetch');
+      const startTime = Date.now();
       const response = await Promise.race([
         fetch(url, {
           method: 'GET',
           headers: {
             'Accept': 'application/json',
+            'User-Agent': 'Weather-App/1.0'
           },
           mode: 'cors'
         }),
         new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Direct fetch timeout')), 10000)
+          setTimeout(() => reject(new Error('Direct fetch timeout')), 8000)
         )
       ]) as Response;
 
       if (response.ok) {
         const text = await response.text();
-        // Check for "Offline" response which indicates cached failure
         if (text === 'Offline' || text.includes('offline')) {
           console.log('WeatherCorsProxy - Direct fetch returned "Offline", trying proxies');
           throw new Error('Direct fetch returned offline response');
         }
-        console.log('WeatherCorsProxy - Direct fetch successful');
+        console.log(`WeatherCorsProxy - Direct fetch successful in ${Date.now() - startTime}ms`);
         return new Response(text, {
           status: response.status,
           statusText: response.statusText,
@@ -84,77 +165,183 @@ export class WeatherCorsProxyService {
         });
       }
     } catch (error) {
-      console.log('WeatherCorsProxy - Direct fetch failed, trying proxies:', error);
+      console.log('WeatherCorsProxy - Direct fetch failed, trying smart proxy selection:', error);
     }
 
-    // If direct fetch fails, try proxy services
-    return this.tryProxyServices(url);
+    // Use smart proxy selection with retry logic
+    return this.trySmartProxySelection(url);
   }
 
   /**
-   * Try proxy services sequentially
+   * Smart proxy selection with success rate tracking and retry logic
    */
-  private async tryProxyServices(targetUrl: string): Promise<Response> {
+  private async trySmartProxySelection(targetUrl: string): Promise<Response> {
+    // Clean blacklisted proxies
+    this.cleanBlacklist();
+    
+    // Get available proxies sorted by performance
+    const sortedProxies = this.getSortedProxies();
+    
+    console.log(`WeatherCorsProxy - Trying ${sortedProxies.length} available proxies with smart selection`);
+    
     let lastError: Error | null = null;
-
-    for (let i = 0; i < WEATHER_CORS_PROXIES.length; i++) {
-      const proxyConfig = WEATHER_CORS_PROXIES[i];
+    
+    for (let attempt = 0; attempt < this.maxRetries; attempt++) {
+      if (attempt > 0) {
+        console.log(`WeatherCorsProxy - Retry attempt ${attempt + 1}/${this.maxRetries}`);
+        await this.delay(this.retryDelayMs * Math.pow(2, attempt)); // Exponential backoff
+      }
       
-      try {
-        console.log(`WeatherCorsProxy - Trying proxy ${i + 1}/${WEATHER_CORS_PROXIES.length}:`, proxyConfig.url);
+      for (const proxy of sortedProxies) {
+        const stats = this.proxyStats.get(proxy.url);
+        if (!stats || stats.isBlacklisted) continue;
         
-        const proxyUrl = this.buildProxyUrl(proxyConfig, targetUrl);
-        console.log('WeatherCorsProxy - Proxy URL:', proxyUrl);
-
-        const response = await Promise.race([
-          fetch(proxyUrl, {
-            method: 'GET',
-            headers: this.getProxyHeaders(proxyConfig),
-            mode: 'cors'
-          }),
-          new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Proxy fetch timeout')), 15000)
-          )
-        ]) as Response;
-
-        if (!response.ok) {
-          console.log(`WeatherCorsProxy - Proxy ${i + 1} failed with status:`, response.status);
-          continue;
-        }
-
-        // Extract content based on proxy type
-        const content = await this.extractResponseContent(response, proxyConfig);
-        
-        // Check for "Offline" response which indicates cached failure
-        if (content === 'Offline' || content.includes('offline')) {
-          console.log(`WeatherCorsProxy - Proxy ${i + 1} returned offline response`);
-          continue;
-        }
-        
-        // Validate that we got valid JSON content
-        if (this.isValidWeatherResponse(content)) {
-          console.log(`WeatherCorsProxy - Proxy ${i + 1} successful`);
+        try {
+          const result = await this.tryProxy(proxy, targetUrl);
+          if (result) {
+            this.recordSuccess(proxy.url, Date.now() - performance.now());
+            this.lastSuccessfulProxy = proxy;
+            console.log(`WeatherCorsProxy - Success with ${proxy.url} (reliability: ${proxy.reliability})`);
+            return result;
+          }
+        } catch (error) {
+          console.log(`WeatherCorsProxy - Failed with ${proxy.url}:`, error);
+          this.recordFailure(proxy.url);
+          lastError = error as Error;
           
-          // Create a Response object from the extracted content
-          return new Response(content, {
-            status: 200,
-            statusText: 'OK',
-            headers: { 'Content-Type': 'application/json' }
-          });
-        } else {
-          console.log(`WeatherCorsProxy - Proxy ${i + 1} returned invalid weather data:`, content.substring(0, 200));
-          continue;
+          // Blacklist if too many failures
+          if (stats && stats.failureCount >= 3) {
+            this.blacklistProxy(proxy.url);
+          }
         }
-
-      } catch (error) {
-        console.log(`WeatherCorsProxy - Proxy ${i + 1} failed:`, error);
-        lastError = error as Error;
-        continue;
       }
     }
+    
+    throw new Error(`All enhanced CORS proxies failed after ${this.maxRetries} attempts. Last error: ${lastError?.message || 'Unknown error'}`);
+  }
 
-    // All proxies failed
-    throw new Error(`All CORS proxies failed. Last error: ${lastError?.message || 'Unknown error'}`);
+  private async tryProxy(proxy: WeatherProxyConfig, targetUrl: string): Promise<Response | null> {
+    const startTime = Date.now();
+    const timeout = proxy.timeout || 15000;
+    
+    console.log(`WeatherCorsProxy - Trying ${proxy.url} (${proxy.region}, ${proxy.reliability})`);
+    
+    const proxyUrl = this.buildProxyUrl(proxy, targetUrl);
+    const headers = this.getProxyHeaders(proxy);
+    
+    const response = await Promise.race([
+      fetch(proxyUrl, {
+        method: 'GET',
+        headers,
+        mode: 'cors'
+      }),
+      new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Proxy timeout')), timeout)
+      )
+    ]) as Response;
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const content = await this.extractResponseContent(response, proxy);
+    
+    if (content === 'Offline' || content.includes('offline')) {
+      throw new Error('Proxy returned offline response');
+    }
+    
+    if (!this.isValidWeatherResponse(content)) {
+      throw new Error('Invalid weather response format');
+    }
+    
+    const responseTime = Date.now() - startTime;
+    console.log(`WeatherCorsProxy - ${proxy.url} responded in ${responseTime}ms`);
+    
+    return new Response(content, {
+      status: 200,
+      statusText: 'OK',
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+
+  private getSortedProxies(): WeatherProxyConfig[] {
+    const now = Date.now();
+    
+    return [...WEATHER_CORS_PROXIES].sort((a, b) => {
+      const statsA = this.proxyStats.get(a.url);
+      const statsB = this.proxyStats.get(b.url);
+      
+      // Prioritize last successful proxy
+      if (this.lastSuccessfulProxy?.url === a.url) return -1;
+      if (this.lastSuccessfulProxy?.url === b.url) return 1;
+      
+      // Filter out blacklisted
+      if (statsA?.isBlacklisted) return 1;
+      if (statsB?.isBlacklisted) return -1;
+      
+      // Prioritize by reliability tier
+      const reliabilityOrder = { 'high': 0, 'medium': 1, 'low': 2 };
+      const reliabilityDiff = (reliabilityOrder[a.reliability || 'medium']) - (reliabilityOrder[b.reliability || 'medium']);
+      if (reliabilityDiff !== 0) return reliabilityDiff;
+      
+      // Then by success rate
+      const successRateA = this.getSuccessRate(statsA);
+      const successRateB = this.getSuccessRate(statsB);
+      if (successRateA !== successRateB) return successRateB - successRateA;
+      
+      // Finally by recent usage (prefer fresh proxies)
+      const recencyA = now - (statsA?.lastUsed || 0);
+      const recencyB = now - (statsB?.lastUsed || 0);
+      return recencyB - recencyA;
+    });
+  }
+
+  private getSuccessRate(stats?: ProxyStats): number {
+    if (!stats || (stats.successCount + stats.failureCount) === 0) return 0.5; // Neutral for untested
+    return stats.successCount / (stats.successCount + stats.failureCount);
+  }
+
+  private recordSuccess(proxyUrl: string, responseTime: number): void {
+    const stats = this.proxyStats.get(proxyUrl);
+    if (stats) {
+      stats.successCount++;
+      stats.lastUsed = Date.now();
+      stats.avgResponseTime = (stats.avgResponseTime + responseTime) / 2;
+      stats.isBlacklisted = false;
+      stats.blacklistUntil = undefined;
+    }
+  }
+
+  private recordFailure(proxyUrl: string): void {
+    const stats = this.proxyStats.get(proxyUrl);
+    if (stats) {
+      stats.failureCount++;
+      stats.lastUsed = Date.now();
+    }
+  }
+
+  private blacklistProxy(proxyUrl: string): void {
+    const stats = this.proxyStats.get(proxyUrl);
+    if (stats) {
+      stats.isBlacklisted = true;
+      stats.blacklistUntil = Date.now() + (5 * 60 * 1000); // 5 minutes
+      console.log(`WeatherCorsProxy - Blacklisted ${proxyUrl} for 5 minutes`);
+    }
+  }
+
+  private cleanBlacklist(): void {
+    const now = Date.now();
+    for (const [url, stats] of this.proxyStats.entries()) {
+      if (stats.isBlacklisted && stats.blacklistUntil && now > stats.blacklistUntil) {
+        stats.isBlacklisted = false;
+        stats.blacklistUntil = undefined;
+        console.log(`WeatherCorsProxy - Removed ${url} from blacklist`);
+      }
+    }
+  }
+
+  private delay(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
   }
 
   private buildProxyUrl(proxyConfig: WeatherProxyConfig, targetUrl: string): string {
@@ -210,10 +397,48 @@ export class WeatherCorsProxyService {
   }
 
   /**
-   * Reset proxy rotation (useful for testing)
+   * Reset proxy statistics (useful for testing)
    */
-  resetProxyRotation(): void {
-    this.proxyIndex = 0;
+  resetProxyStats(): void {
+    this.proxyStats.clear();
+    this.lastSuccessfulProxy = undefined;
+    WEATHER_CORS_PROXIES.forEach(proxy => {
+      this.proxyStats.set(proxy.url, {
+        successCount: 0,
+        failureCount: 0,
+        lastUsed: 0,
+        avgResponseTime: 0,
+        isBlacklisted: false
+      });
+    });
+    console.log('WeatherCorsProxy - Reset all proxy statistics');
+  }
+
+  /**
+   * Get proxy performance statistics
+   */
+  getProxyStats(): Map<string, ProxyStats> {
+    return new Map(this.proxyStats);
+  }
+
+  /**
+   * Force retry a blacklisted proxy
+   */
+  clearBlacklist(proxyUrl?: string): void {
+    if (proxyUrl) {
+      const stats = this.proxyStats.get(proxyUrl);
+      if (stats) {
+        stats.isBlacklisted = false;
+        stats.blacklistUntil = undefined;
+        console.log(`WeatherCorsProxy - Cleared blacklist for ${proxyUrl}`);
+      }
+    } else {
+      for (const stats of this.proxyStats.values()) {
+        stats.isBlacklisted = false;
+        stats.blacklistUntil = undefined;
+      }
+      console.log('WeatherCorsProxy - Cleared all blacklists');
+    }
   }
 }
 
