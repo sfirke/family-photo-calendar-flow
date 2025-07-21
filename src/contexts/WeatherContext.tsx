@@ -30,10 +30,17 @@ import { IntervalManager } from '@/utils/performanceUtils';
 
 // Weather data cache with 6-hour expiry
 const WEATHER_CACHE_KEY = 'weather_data_cache';
+const ACCUWEATHER_RAW_CACHE_KEY = 'accuweather_raw_cache';
 const CACHE_EXPIRY_HOURS = 6;
 
 interface WeatherCache {
   data: WeatherData;
+  timestamp: number;
+  expiresAt: number;
+}
+
+interface AccuWeatherRawCache {
+  rawData: any;
   timestamp: number;
   expiresAt: number;
 }
@@ -47,9 +54,47 @@ function saveWeatherToCache(weatherData: WeatherData) {
       expiresAt: now + (CACHE_EXPIRY_HOURS * 60 * 60 * 1000)
     };
     localStorage.setItem(WEATHER_CACHE_KEY, JSON.stringify(cache));
-    console.log('Weather data cached successfully');
+    console.log('WeatherContext - Weather data cached to localStorage successfully');
   } catch (error) {
-    console.warn('Failed to cache weather data:', error);
+    console.warn('WeatherContext - Failed to cache weather data:', error);
+  }
+}
+
+function saveAccuWeatherRawToCache(rawData: any) {
+  try {
+    const now = Date.now();
+    const cache: AccuWeatherRawCache = {
+      rawData,
+      timestamp: now,
+      expiresAt: now + (CACHE_EXPIRY_HOURS * 60 * 60 * 1000)
+    };
+    localStorage.setItem(ACCUWEATHER_RAW_CACHE_KEY, JSON.stringify(cache));
+    console.log('WeatherContext - AccuWeather raw data cached to localStorage successfully');
+  } catch (error) {
+    console.warn('WeatherContext - Failed to cache AccuWeather raw data:', error);
+  }
+}
+
+function loadAccuWeatherRawFromCache(): any | null {
+  try {
+    const cached = localStorage.getItem(ACCUWEATHER_RAW_CACHE_KEY);
+    if (!cached) return null;
+    
+    const cache: AccuWeatherRawCache = JSON.parse(cached);
+    const now = Date.now();
+    
+    // Check if cache is still valid
+    if (now > cache.expiresAt) {
+      localStorage.removeItem(ACCUWEATHER_RAW_CACHE_KEY);
+      console.log('WeatherContext - AccuWeather raw cache expired, removed');
+      return null;
+    }
+    
+    console.log('WeatherContext - Loaded AccuWeather raw data from cache');
+    return cache.rawData;
+  } catch (error) {
+    console.warn('WeatherContext - Failed to load AccuWeather raw data from cache:', error);
+    return null;
   }
 }
 

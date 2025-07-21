@@ -54,6 +54,11 @@ export class AccuWeatherProvider implements WeatherProvider {
         forecastCount: data.forecast?.DailyForecasts?.length || 0
       });
 
+      // Cache the raw AccuWeather response data immediately after successful API call
+      if (data && !data.error) {
+        this.cacheAccuWeatherRawData(data);
+      }
+
       // Transform the server response to our WeatherData format
       const weatherData: WeatherData = {
         location: this.extractLocationName(data),
@@ -77,7 +82,26 @@ export class AccuWeatherProvider implements WeatherProvider {
       return weatherData;
 
     } catch (error) {
-      console.error('AccuWeatherProvider - API error:', error);
+      console.error('AccuWeatherProvider - API error, checking cached data:', error);
+      
+      // Try to use cached AccuWeather raw data when API fails
+      const cachedRawData = this.loadAccuWeatherRawFromCache();
+      if (cachedRawData) {
+        console.log('AccuWeatherProvider - Using cached AccuWeather raw data as fallback');
+        const weatherData: WeatherData = {
+          location: this.extractLocationName(cachedRawData),
+          temperature: this.extractTemperature(cachedRawData),
+          condition: this.extractCondition(cachedRawData),
+          description: this.extractDescription(cachedRawData),
+          humidity: this.extractHumidity(cachedRawData),
+          windSpeed: this.extractWindSpeed(cachedRawData),
+          uvIndex: this.extractUVIndex(cachedRawData),
+          forecast: this.extractForecast(cachedRawData),
+          lastUpdated: cachedRawData.lastUpdated || new Date().toISOString(),
+          provider: `${this.displayName} (Cached)`
+        };
+        return weatherData;
+      }
       
       // Enhanced error messages for common issues
       if (error instanceof Error) {
@@ -96,6 +120,47 @@ export class AccuWeatherProvider implements WeatherProvider {
       }
       
       throw error;
+    }
+  }
+
+  private cacheAccuWeatherRawData(data: any): void {
+    try {
+      const ACCUWEATHER_RAW_CACHE_KEY = 'accuweather_raw_cache';
+      const CACHE_EXPIRY_HOURS = 6;
+      const now = Date.now();
+      const cache = {
+        rawData: data,
+        timestamp: now,
+        expiresAt: now + (CACHE_EXPIRY_HOURS * 60 * 60 * 1000)
+      };
+      localStorage.setItem(ACCUWEATHER_RAW_CACHE_KEY, JSON.stringify(cache));
+      console.log('AccuWeatherProvider - Raw AccuWeather data cached to localStorage successfully');
+    } catch (error) {
+      console.warn('AccuWeatherProvider - Failed to cache raw AccuWeather data:', error);
+    }
+  }
+
+  private loadAccuWeatherRawFromCache(): any | null {
+    try {
+      const ACCUWEATHER_RAW_CACHE_KEY = 'accuweather_raw_cache';
+      const cached = localStorage.getItem(ACCUWEATHER_RAW_CACHE_KEY);
+      if (!cached) return null;
+      
+      const cache = JSON.parse(cached);
+      const now = Date.now();
+      
+      // Check if cache is still valid
+      if (now > cache.expiresAt) {
+        localStorage.removeItem(ACCUWEATHER_RAW_CACHE_KEY);
+        console.log('AccuWeatherProvider - Raw AccuWeather cache expired, removed');
+        return null;
+      }
+      
+      console.log('AccuWeatherProvider - Loaded raw AccuWeather data from cache');
+      return cache.rawData;
+    } catch (error) {
+      console.warn('AccuWeatherProvider - Failed to load raw AccuWeather data from cache:', error);
+      return null;
     }
   }
 
