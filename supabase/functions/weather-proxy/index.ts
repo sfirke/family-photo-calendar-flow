@@ -209,6 +209,11 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
+    // Log the incoming request for debugging
+    console.log(`Weather proxy request: zipCode="${zipCode || 'empty'}", hasApiKey=${!!apiKey}, locationKey="${locationKey || 'none'}"`);
+    
+    // zipCode can be empty - we'll use IP-based location detection in that case
+
     // Check rate limiting
     if (isRateLimited(apiKey)) {
       console.log(`Rate limit exceeded for API key: ${apiKey.substring(0, 8)}...`);

@@ -169,13 +169,15 @@ export const WeatherProvider = ({ children }: { children: React.ReactNode }) => 
         location: weatherData.location,
         temperature: weatherData.temperature,
         condition: weatherData.condition,
-        forecastDays: weatherData.forecast?.length || 0
+        forecastDays: weatherData.forecast?.length || 0,
+        provider: weatherData.provider
       });
       
-      setWeatherData(weatherData);
-      
-      // Cache the fresh weather data
+      // Immediately cache the fresh weather data before setting state
       saveWeatherToCache(weatherData);
+      console.log('WeatherContext - Weather data cached successfully');
+      
+      setWeatherData(weatherData);
     } catch (error) {
       console.warn('Weather fetch failed, using cached data if available:', error);
       

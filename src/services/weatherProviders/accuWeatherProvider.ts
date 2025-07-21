@@ -15,13 +15,17 @@ export class AccuWeatherProvider implements WeatherProvider {
   maxForecastDays = 30;
   requiresApiKey = true;
 
-  async fetchWeather(zipCode: string, config: WeatherProviderConfig): Promise<WeatherData> {
+  async fetchWeather(location: string, config: WeatherProviderConfig): Promise<WeatherData> {
     console.log('AccuWeatherProvider - Fetching weather via Supabase edge function');
+    console.log('AccuWeatherProvider - Request params:', { 
+      location: location || '(empty - will use IP)', 
+      hasApiKey: !!config.apiKey 
+    });
     
     try {
       const { data, error } = await supabase.functions.invoke('weather-proxy', {
         body: {
-          zipCode: zipCode.trim(),
+          zipCode: location || '', // Send empty string for IP-based location
           apiKey: config.apiKey
         }
       });
@@ -37,10 +41,18 @@ export class AccuWeatherProvider implements WeatherProvider {
 
       // If there's an error in the response data
       if (data.error) {
+        console.error('AccuWeatherProvider - API error response:', data.error);
         throw new Error(data.error);
       }
 
-      console.log('AccuWeatherProvider - Raw response:', data);
+      console.log('AccuWeatherProvider - Raw response received:', {
+        hasData: !!data,
+        location: data.locationName,
+        cached: data.cached,
+        hasCurrentData: !!data.current,
+        hasForecastData: !!data.forecast,
+        forecastCount: data.forecast?.DailyForecasts?.length || 0
+      });
 
       // Transform the server response to our WeatherData format
       const weatherData: WeatherData = {
