@@ -111,9 +111,9 @@ async function fetchCurrentConditions(locationKey: string, apiKey: string): Prom
 }
 
 async function fetchForecast(locationKey: string, apiKey: string): Promise<any> {
-  const url = `http://dataservice.accuweather.com/forecasts/v1/daily/5day/${locationKey}?apikey=${apiKey}&details=true&metric=false`;
+  const url = `http://dataservice.accuweather.com/forecasts/v1/daily/15day/${locationKey}?apikey=${apiKey}&details=true&metric=false`;
   
-  console.log(`Fetching 5-day forecast for location: ${locationKey}`);
+  console.log(`Fetching 15-day forecast for location: ${locationKey}`);
   
   const response = await fetch(url);
   if (!response.ok) {
