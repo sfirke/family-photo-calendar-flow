@@ -56,7 +56,12 @@ export class AccuWeatherProvider implements WeatherProvider {
         provider: this.displayName
       };
 
-      console.log('AccuWeatherProvider - Transformed weather data:', weatherData);
+      console.log('AccuWeatherProvider - Transformed weather data:', {
+        location: weatherData.location,
+        temperature: weatherData.temperature,
+        condition: weatherData.condition,
+        forecastCount: weatherData.forecast.length
+      });
       return weatherData;
 
     } catch (error) {
@@ -83,7 +88,12 @@ export class AccuWeatherProvider implements WeatherProvider {
   }
 
   private extractLocationName(data: any): string {
-    // Try to get location from current conditions first, then fall back
+    // Try to get location from the edge function response first
+    if (data.locationName) {
+      return data.locationName;
+    }
+    
+    // Try to get location from current conditions
     if (data.current?.locationName) {
       return data.current.locationName;
     }

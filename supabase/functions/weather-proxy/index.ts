@@ -76,7 +76,7 @@ function setCachedData(cacheKey: string, data: any): void {
   console.log(`Data cached for key: ${cacheKey}`);
 }
 
-async function getLocationKey(zipCode: string, apiKey: string): Promise<string> {
+async function getLocationKey(zipCode: string, apiKey: string): Promise<{ key: string; locationName: string }> {
   const url = `http://dataservice.accuweather.com/locations/v1/postalcodes/search?apikey=${apiKey}&q=${zipCode}`;
   
   console.log(`Fetching location key for zip: ${zipCode}`);
@@ -91,9 +91,32 @@ async function getLocationKey(zipCode: string, apiKey: string): Promise<string> 
     throw new Error(`No location found for zip code: ${zipCode}`);
   }
 
-  const locationKey = locations[0].Key;
-  console.log(`Location key found: ${locationKey} for zip: ${zipCode}`);
-  return locationKey;
+  const location = locations[0];
+  const locationKey = location.Key;
+  const locationName = `${location.LocalizedName}, ${location.AdministrativeArea.LocalizedName}`;
+  console.log(`Location key found: ${locationKey} for ${locationName}`);
+  return { key: locationKey, locationName };
+}
+
+async function getLocationByIP(apiKey: string): Promise<{ key: string; locationName: string }> {
+  const url = `http://dataservice.accuweather.com/locations/v1/cities/ipaddress?apikey=${apiKey}`;
+  
+  console.log(`Fetching location key via IP address`);
+  
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Failed to get location via IP: ${response.status} ${response.statusText}`);
+  }
+
+  const location = await response.json();
+  if (!location || !location.Key) {
+    throw new Error(`Could not determine location from IP address`);
+  }
+
+  const locationKey = location.Key;
+  const locationName = `${location.LocalizedName}, ${location.AdministrativeArea.LocalizedName}`;
+  console.log(`Location key found via IP: ${locationKey} for ${locationName}`);
+  return { key: locationKey, locationName };
 }
 
 async function fetchCurrentConditions(locationKey: string, apiKey: string): Promise<any> {
@@ -125,10 +148,21 @@ async function fetchForecast(locationKey: string, apiKey: string): Promise<any> 
 
 async function fetchWeatherData(zipCode: string, apiKey: string, providedLocationKey?: string): Promise<any> {
   let locationKey = providedLocationKey;
+  let locationName = '';
 
   // Get location key if not provided
   if (!locationKey) {
-    locationKey = await getLocationKey(zipCode, apiKey);
+    if (zipCode && zipCode.trim() !== '') {
+      // Use provided zip code
+      const locationData = await getLocationKey(zipCode, apiKey);
+      locationKey = locationData.key;
+      locationName = locationData.locationName;
+    } else {
+      // Use IP-based location detection
+      const locationData = await getLocationByIP(apiKey);
+      locationKey = locationData.key;
+      locationName = locationData.locationName;
+    }
   }
 
   // Fetch both current conditions and forecast concurrently
@@ -139,6 +173,7 @@ async function fetchWeatherData(zipCode: string, apiKey: string, providedLocatio
 
   return {
     locationKey,
+    locationName,
     current: currentConditions,
     forecast: forecast,
     lastUpdated: new Date().toISOString()
@@ -164,9 +199,9 @@ const handler = async (req: Request): Promise<Response> => {
   try {
     const { zipCode, apiKey, locationKey }: WeatherRequest = await req.json();
 
-    if (!zipCode || !apiKey) {
+    if (!apiKey) {
       return new Response(
-        JSON.stringify({ error: 'Missing required parameters: zipCode and apiKey' }),
+        JSON.stringify({ error: 'Missing required parameter: apiKey' }),
         { 
           status: 400, 
           headers: { 'Content-Type': 'application/json', ...corsHeaders } 
@@ -186,7 +221,7 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    const cacheKey = getCacheKey(zipCode, apiKey);
+    const cacheKey = getCacheKey(zipCode || 'ip_location', apiKey);
 
     // Check cache first
     const cachedData = getCachedData(cacheKey);
@@ -205,7 +240,7 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Fetch fresh data
-    console.log(`Fetching fresh weather data for zip: ${zipCode}`);
+    console.log(`Fetching fresh weather data for ${zipCode || 'IP location'}`);
     const weatherData = await fetchWeatherData(zipCode, apiKey, locationKey);
 
     // Cache the data

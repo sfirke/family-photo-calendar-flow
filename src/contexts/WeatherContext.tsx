@@ -28,6 +28,54 @@ import { useWeatherSettings } from '@/contexts/settings/useWeatherSettings';
 import { WeatherData } from '@/types/weather';
 import { IntervalManager } from '@/utils/performanceUtils';
 
+// Weather data cache with 6-hour expiry
+const WEATHER_CACHE_KEY = 'weather_data_cache';
+const CACHE_EXPIRY_HOURS = 6;
+
+interface WeatherCache {
+  data: WeatherData;
+  timestamp: number;
+  expiresAt: number;
+}
+
+function saveWeatherToCache(weatherData: WeatherData) {
+  try {
+    const now = Date.now();
+    const cache: WeatherCache = {
+      data: weatherData,
+      timestamp: now,
+      expiresAt: now + (CACHE_EXPIRY_HOURS * 60 * 60 * 1000)
+    };
+    localStorage.setItem(WEATHER_CACHE_KEY, JSON.stringify(cache));
+    console.log('Weather data cached successfully');
+  } catch (error) {
+    console.warn('Failed to cache weather data:', error);
+  }
+}
+
+function loadWeatherFromCache(): WeatherData | null {
+  try {
+    const cached = localStorage.getItem(WEATHER_CACHE_KEY);
+    if (!cached) return null;
+    
+    const cache: WeatherCache = JSON.parse(cached);
+    const now = Date.now();
+    
+    // Check if cache is still valid
+    if (now > cache.expiresAt) {
+      localStorage.removeItem(WEATHER_CACHE_KEY);
+      console.log('Weather cache expired, removed');
+      return null;
+    }
+    
+    console.log('Loaded weather data from cache');
+    return cache.data;
+  } catch (error) {
+    console.warn('Failed to load weather from cache:', error);
+    return null;
+  }
+}
+
 interface WeatherContextType {
   /** Current weather data object or null if not loaded */
   weatherData: WeatherData | null;
@@ -60,6 +108,23 @@ export const WeatherProvider = ({ children }: { children: React.ReactNode }) => 
     useManualLocation 
   } = useWeatherSettings();
   const lastFetchRef = useRef<number>(0);
+  const initialLoadRef = useRef<boolean>(false);
+
+  // Load cached weather data on mount
+  useEffect(() => {
+    if (!initialLoadRef.current) {
+      const cachedWeather = loadWeatherFromCache();
+      if (cachedWeather) {
+        setWeatherData(cachedWeather);
+        console.log('WeatherContext - Loaded cached weather data:', {
+          location: cachedWeather.location,
+          temperature: cachedWeather.temperature,
+          condition: cachedWeather.condition
+        });
+      }
+      initialLoadRef.current = true;
+    }
+  }, []);
 
   /**
    * Optimized weather loading function with rate limiting and error recovery
@@ -108,6 +173,9 @@ export const WeatherProvider = ({ children }: { children: React.ReactNode }) => 
       });
       
       setWeatherData(weatherData);
+      
+      // Cache the fresh weather data
+      saveWeatherToCache(weatherData);
     } catch (error) {
       console.warn('Weather fetch failed, using cached data if available:', error);
       
