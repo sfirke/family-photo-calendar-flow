@@ -19,9 +19,11 @@ const WeatherWidget = () => {
   }
   const currentWeather = getCurrentWeather();
   return <div className="flex items-center gap-3 text-white">
-      {getWeatherIcon(currentWeather.condition, { size: "h-6 w-6" })}
+      {getWeatherIcon(currentWeather.condition, {
+      size: "h-6 w-6"
+    })}
       <div>
-        <div className="text-2xl font-light">{currentWeather.temp}°F</div>
+        <div className="text-6xl font-light">{currentWeather.temp}°F</div>
         <div className="text-sm text-white/70">
           {currentWeather.condition} • {currentWeather.location}
         </div>
