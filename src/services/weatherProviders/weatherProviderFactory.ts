@@ -8,6 +8,7 @@
 import { WeatherProvider, WeatherProviderFactory as IWeatherProviderFactory, WeatherProviderName } from './types';
 import { OpenWeatherMapProvider } from './openWeatherMapProvider';
 import { AccuWeatherProvider } from './accuWeatherProvider';
+import { DirectAccuWeatherProvider } from './directAccuWeatherProvider';
 
 export class WeatherProviderFactory implements IWeatherProviderFactory {
   private providers: Map<string, WeatherProvider> = new Map();
@@ -16,6 +17,7 @@ export class WeatherProviderFactory implements IWeatherProviderFactory {
     // Register all available providers
     this.registerProvider(new OpenWeatherMapProvider());
     this.registerProvider(new AccuWeatherProvider());
+    this.registerProvider(new DirectAccuWeatherProvider());
   }
 
   private registerProvider(provider: WeatherProvider): void {
@@ -53,8 +55,8 @@ export class WeatherProviderFactory implements IWeatherProviderFactory {
   }
 
   getDefaultProvider(): WeatherProvider {
-    // AccuWeather as primary choice due to 30-day forecast capability
-    return this.providers.get('accuweather') || this.providers.get('openweathermap')!;
+    // Direct AccuWeather as primary choice (no Supabase dependency), fallback to regular AccuWeather
+    return this.providers.get('accuweather-direct') || this.providers.get('accuweather') || this.providers.get('openweathermap')!;
   }
 
   /**

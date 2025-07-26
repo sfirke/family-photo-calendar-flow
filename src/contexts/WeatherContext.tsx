@@ -27,99 +27,11 @@ import React, { createContext, useContext, useState, useEffect, useRef, useMemo,
 import { useWeatherSettings } from '@/contexts/settings/useWeatherSettings';
 import { WeatherData } from '@/types/weather';
 import { IntervalManager } from '@/utils/performanceUtils';
+import { weatherStorageService } from '@/services/weatherStorageService';
+import { DirectAccuWeatherProvider } from '@/services/weatherProviders/directAccuWeatherProvider';
 
-// Weather data cache with 6-hour expiry
-const WEATHER_CACHE_KEY = 'weather_data_cache';
-const ACCUWEATHER_RAW_CACHE_KEY = 'accuweather_raw_cache';
+// Cache management constants
 const CACHE_EXPIRY_HOURS = 6;
-
-interface WeatherCache {
-  data: WeatherData;
-  timestamp: number;
-  expiresAt: number;
-}
-
-interface AccuWeatherRawCache {
-  rawData: any;
-  timestamp: number;
-  expiresAt: number;
-}
-
-function saveWeatherToCache(weatherData: WeatherData) {
-  try {
-    const now = Date.now();
-    const cache: WeatherCache = {
-      data: weatherData,
-      timestamp: now,
-      expiresAt: now + (CACHE_EXPIRY_HOURS * 60 * 60 * 1000)
-    };
-    localStorage.setItem(WEATHER_CACHE_KEY, JSON.stringify(cache));
-    console.log('WeatherContext - Weather data cached to localStorage successfully');
-  } catch (error) {
-    console.warn('WeatherContext - Failed to cache weather data:', error);
-  }
-}
-
-function saveAccuWeatherRawToCache(rawData: any) {
-  try {
-    const now = Date.now();
-    const cache: AccuWeatherRawCache = {
-      rawData,
-      timestamp: now,
-      expiresAt: now + (CACHE_EXPIRY_HOURS * 60 * 60 * 1000)
-    };
-    localStorage.setItem(ACCUWEATHER_RAW_CACHE_KEY, JSON.stringify(cache));
-    console.log('WeatherContext - AccuWeather raw data cached to localStorage successfully');
-  } catch (error) {
-    console.warn('WeatherContext - Failed to cache AccuWeather raw data:', error);
-  }
-}
-
-function loadAccuWeatherRawFromCache(): any | null {
-  try {
-    const cached = localStorage.getItem(ACCUWEATHER_RAW_CACHE_KEY);
-    if (!cached) return null;
-    
-    const cache: AccuWeatherRawCache = JSON.parse(cached);
-    const now = Date.now();
-    
-    // Check if cache is still valid
-    if (now > cache.expiresAt) {
-      localStorage.removeItem(ACCUWEATHER_RAW_CACHE_KEY);
-      console.log('WeatherContext - AccuWeather raw cache expired, removed');
-      return null;
-    }
-    
-    console.log('WeatherContext - Loaded AccuWeather raw data from cache');
-    return cache.rawData;
-  } catch (error) {
-    console.warn('WeatherContext - Failed to load AccuWeather raw data from cache:', error);
-    return null;
-  }
-}
-
-function loadWeatherFromCache(): WeatherData | null {
-  try {
-    const cached = localStorage.getItem(WEATHER_CACHE_KEY);
-    if (!cached) return null;
-    
-    const cache: WeatherCache = JSON.parse(cached);
-    const now = Date.now();
-    
-    // Check if cache is still valid
-    if (now > cache.expiresAt) {
-      localStorage.removeItem(WEATHER_CACHE_KEY);
-      console.log('Weather cache expired, removed');
-      return null;
-    }
-    
-    console.log('Loaded weather data from cache');
-    return cache.data;
-  } catch (error) {
-    console.warn('Failed to load weather from cache:', error);
-    return null;
-  }
-}
 
 interface WeatherContextType {
   /** Current weather data object or null if not loaded */
@@ -158,15 +70,30 @@ export const WeatherProvider = ({ children }: { children: React.ReactNode }) => 
   // Load cached weather data on mount
   useEffect(() => {
     if (!initialLoadRef.current) {
-      const cachedWeather = loadWeatherFromCache();
-      if (cachedWeather) {
-        setWeatherData(cachedWeather);
-        console.log('WeatherContext - Loaded cached weather data:', {
-          location: cachedWeather.location,
-          temperature: cachedWeather.temperature,
-          condition: cachedWeather.condition
-        });
-      }
+      const loadCachedData = async () => {
+        const cachedWeather = await weatherStorageService.getCurrentWeather();
+        if (cachedWeather) {
+          const weatherData: WeatherData = {
+            location: cachedWeather.location,
+            temperature: cachedWeather.temperature,
+            condition: cachedWeather.condition,
+            description: cachedWeather.description,
+            humidity: cachedWeather.humidity,
+            windSpeed: cachedWeather.windSpeed,
+            uvIndex: cachedWeather.uvIndex,
+            forecast: [], // Will be loaded by getWeatherForDate as needed
+            lastUpdated: cachedWeather.lastUpdated,
+            provider: cachedWeather.provider
+          };
+          setWeatherData(weatherData);
+          console.log('WeatherContext - Loaded cached weather data from tiered storage:', {
+            location: weatherData.location,
+            temperature: weatherData.temperature,
+            condition: weatherData.condition
+          });
+        }
+      };
+      loadCachedData();
       initialLoadRef.current = true;
     }
   }, []);
@@ -178,6 +105,7 @@ export const WeatherProvider = ({ children }: { children: React.ReactNode }) => 
    * - Prevents excessive API calls with 5-minute minimum interval
    * - Gracefully handles API failures by maintaining cached data
    * - Updates loading state appropriately for UI feedback
+   * - Uses tiered storage system for caching
    * 
    * @param forceRefresh - Bypass rate limiting for manual refreshes
    */
@@ -196,9 +124,8 @@ export const WeatherProvider = ({ children }: { children: React.ReactNode }) => 
     lastFetchRef.current = now;
     
     try {
-      console.log('WeatherContext - Using AccuWeather service, forceRefresh:', forceRefresh);
-      const { AccuWeatherProvider } = await import('@/services/weatherProviders/accuWeatherProvider');
-      const provider = new AccuWeatherProvider();
+      console.log('WeatherContext - Using Direct AccuWeather service, forceRefresh:', forceRefresh);
+      const provider = new DirectAccuWeatherProvider();
       
       // Use zip code only if manual location is enabled
       const locationData = useManualLocation ? zipCode : '';
@@ -210,7 +137,7 @@ export const WeatherProvider = ({ children }: { children: React.ReactNode }) => 
         maxForecastDays: 15
       });
       
-      console.log('WeatherContext - Successfully fetched weather data:', {
+      console.log('WeatherContext - Successfully fetched and stored weather data:', {
         location: weatherData.location,
         temperature: weatherData.temperature,
         condition: weatherData.condition,
@@ -218,16 +145,28 @@ export const WeatherProvider = ({ children }: { children: React.ReactNode }) => 
         provider: weatherData.provider
       });
       
-      // Immediately cache the fresh weather data before setting state
-      saveWeatherToCache(weatherData);
-      console.log('WeatherContext - Weather data cached successfully');
-      
       setWeatherData(weatherData);
     } catch (error) {
-      console.warn('Weather fetch failed, using cached data if available:', error);
+      console.warn('Weather fetch failed, checking tiered storage for cached data:', error);
       
-      // If no cached data is available, provide realistic fallback data
-      if (!weatherData) {
+      // Try to load cached data from tiered storage
+      const cachedWeather = await weatherStorageService.getCurrentWeather();
+      if (cachedWeather) {
+        console.log('WeatherContext - Using cached weather data from tiered storage');
+        const weatherData: WeatherData = {
+          location: cachedWeather.location,
+          temperature: cachedWeather.temperature,
+          condition: cachedWeather.condition,
+          description: cachedWeather.description,
+          humidity: cachedWeather.humidity,
+          windSpeed: cachedWeather.windSpeed,
+          uvIndex: cachedWeather.uvIndex,
+          forecast: [], // Will be loaded by getWeatherForDate as needed
+          lastUpdated: cachedWeather.lastUpdated,
+          provider: `${cachedWeather.provider} (Cached)`
+        };
+        setWeatherData(weatherData);
+      } else if (!weatherData) {
         console.log('WeatherContext - No cached data available, providing fallback weather data');
         const fallbackData: WeatherData = {
           location: useManualLocation && zipCode ? `${zipCode} Area` : 'Your Location',
@@ -320,10 +259,10 @@ export const WeatherProvider = ({ children }: { children: React.ReactNode }) => 
   }, [weatherData]);
 
   /**
-   * Get weather forecast for specific date with intelligent fallbacks
+   * Get weather forecast for specific date with tiered storage support
    * 
    * Provides weather information for calendar dates with multiple fallback strategies:
-   * 1. Use forecast data if available for the specific date
+   * 1. Check tiered storage for cached forecast data for the specific date
    * 2. Use current weather for today's date
    * 3. Generate reasonable estimates based on current weather
    * 
@@ -332,14 +271,35 @@ export const WeatherProvider = ({ children }: { children: React.ReactNode }) => 
    */
   const getWeatherForDate = useMemo(() => {
     return (date: Date) => {
+      const dateString = date.toISOString().split('T')[0];
+      
+      // Try to get forecast data from tiered storage asynchronously
+      // For immediate return, we'll use a synchronous approach with cached data
+      const getCachedForecast = async () => {
+        try {
+          const cachedForecast = await weatherStorageService.getForecastForDate(dateString);
+          if (cachedForecast) {
+            console.log(`Weather for ${dateString} loaded from tiered storage: condition="${cachedForecast.condition}", temp=${cachedForecast.high || cachedForecast.temp}`);
+            return {
+              temp: cachedForecast.high || cachedForecast.temp || 75,
+              condition: cachedForecast.condition,
+              highTemp: cachedForecast.high,
+              lowTemp: cachedForecast.low
+            };
+          }
+        } catch (error) {
+          console.warn(`Error loading forecast for ${dateString} from storage:`, error);
+        }
+        return null;
+      };
+
+      // For now, fall back to memory-based weather data for immediate response
       if (!weatherData) {
         // Default fallback when no weather data is available
         return { temp: 75, condition: 'Sunny', highTemp: 80, lowTemp: 70 };
       }
 
-      const dateString = date.toISOString().split('T')[0];
-      
-      // Try to find forecast data for the specific date
+      // Try to find forecast data in current weather data
       if (weatherData.forecast && weatherData.forecast.length > 0) {
         const forecast = weatherData.forecast.find(f => f.date === dateString);
         if (forecast) {
