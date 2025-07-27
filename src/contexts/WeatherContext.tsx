@@ -28,7 +28,7 @@ import { useWeatherSettings } from '@/contexts/settings/useWeatherSettings';
 import { WeatherData } from '@/types/weather';
 import { IntervalManager } from '@/utils/performanceUtils';
 import { weatherStorageService } from '@/services/weatherStorageService';
-import { DirectAccuWeatherProvider } from '@/services/weatherProviders/directAccuWeatherProvider';
+import { AccuWeatherProvider } from '@/services/weatherProviders/accuWeatherProvider';
 
 // Cache management constants
 const CACHE_EXPIRY_HOURS = 6;
@@ -73,6 +73,25 @@ export const WeatherProvider = ({ children }: { children: React.ReactNode }) => 
       const loadCachedData = async () => {
         const cachedWeather = await weatherStorageService.getCurrentWeather();
         if (cachedWeather) {
+          // Load forecast data from tiered storage
+          const forecastData = [];
+          for (let i = 0; i < 15; i++) {
+            const date = new Date();
+            date.setDate(date.getDate() + i);
+            const dateStr = date.toISOString().split('T')[0];
+            const cachedForecast = await weatherStorageService.getForecastForDate(dateStr);
+            if (cachedForecast) {
+              forecastData.push({
+                date: cachedForecast.date,
+                high: cachedForecast.high,
+                low: cachedForecast.low,
+                temp: cachedForecast.temp,
+                condition: cachedForecast.condition,
+                description: cachedForecast.description
+              });
+            }
+          }
+
           const weatherData: WeatherData = {
             location: cachedWeather.location,
             temperature: cachedWeather.temperature,
@@ -81,7 +100,7 @@ export const WeatherProvider = ({ children }: { children: React.ReactNode }) => 
             humidity: cachedWeather.humidity,
             windSpeed: cachedWeather.windSpeed,
             uvIndex: cachedWeather.uvIndex,
-            forecast: [], // Will be loaded by getWeatherForDate as needed
+            forecast: forecastData,
             lastUpdated: cachedWeather.lastUpdated,
             provider: cachedWeather.provider
           };
@@ -124,8 +143,8 @@ export const WeatherProvider = ({ children }: { children: React.ReactNode }) => 
     lastFetchRef.current = now;
     
     try {
-      console.log('WeatherContext - Using Direct AccuWeather service, forceRefresh:', forceRefresh);
-      const provider = new DirectAccuWeatherProvider();
+      console.log('WeatherContext - Using AccuWeather service via Supabase edge function, forceRefresh:', forceRefresh);
+      const provider = new AccuWeatherProvider();
       
       // Use zip code only if manual location is enabled
       const locationData = useManualLocation ? zipCode : '';
@@ -153,6 +172,26 @@ export const WeatherProvider = ({ children }: { children: React.ReactNode }) => 
       const cachedWeather = await weatherStorageService.getCurrentWeather();
       if (cachedWeather) {
         console.log('WeatherContext - Using cached weather data from tiered storage');
+        
+        // Load forecast data from tiered storage
+        const forecastData = [];
+        for (let i = 0; i < 15; i++) {
+          const date = new Date();
+          date.setDate(date.getDate() + i);
+          const dateStr = date.toISOString().split('T')[0];
+          const cachedForecast = await weatherStorageService.getForecastForDate(dateStr);
+          if (cachedForecast) {
+            forecastData.push({
+              date: cachedForecast.date,
+              high: cachedForecast.high,
+              low: cachedForecast.low,
+              temp: cachedForecast.temp,
+              condition: cachedForecast.condition,
+              description: cachedForecast.description
+            });
+          }
+        }
+
         const weatherData: WeatherData = {
           location: cachedWeather.location,
           temperature: cachedWeather.temperature,
@@ -161,7 +200,7 @@ export const WeatherProvider = ({ children }: { children: React.ReactNode }) => 
           humidity: cachedWeather.humidity,
           windSpeed: cachedWeather.windSpeed,
           uvIndex: cachedWeather.uvIndex,
-          forecast: [], // Will be loaded by getWeatherForDate as needed
+          forecast: forecastData,
           lastUpdated: cachedWeather.lastUpdated,
           provider: `${cachedWeather.provider} (Cached)`
         };
@@ -272,34 +311,14 @@ export const WeatherProvider = ({ children }: { children: React.ReactNode }) => 
   const getWeatherForDate = useMemo(() => {
     return (date: Date) => {
       const dateString = date.toISOString().split('T')[0];
-      
-      // Try to get forecast data from tiered storage asynchronously
-      // For immediate return, we'll use a synchronous approach with cached data
-      const getCachedForecast = async () => {
-        try {
-          const cachedForecast = await weatherStorageService.getForecastForDate(dateString);
-          if (cachedForecast) {
-            console.log(`Weather for ${dateString} loaded from tiered storage: condition="${cachedForecast.condition}", temp=${cachedForecast.high || cachedForecast.temp}`);
-            return {
-              temp: cachedForecast.high || cachedForecast.temp || 75,
-              condition: cachedForecast.condition,
-              highTemp: cachedForecast.high,
-              lowTemp: cachedForecast.low
-            };
-          }
-        } catch (error) {
-          console.warn(`Error loading forecast for ${dateString} from storage:`, error);
-        }
-        return null;
-      };
 
-      // For now, fall back to memory-based weather data for immediate response
+      // For immediate response, use memory-based weather data first
       if (!weatherData) {
         // Default fallback when no weather data is available
         return { temp: 75, condition: 'Sunny', highTemp: 80, lowTemp: 70 };
       }
 
-      // Try to find forecast data in current weather data
+      // Try to find forecast data in current weather data (which now includes tiered storage data)
       if (weatherData.forecast && weatherData.forecast.length > 0) {
         const forecast = weatherData.forecast.find(f => f.date === dateString);
         if (forecast) {

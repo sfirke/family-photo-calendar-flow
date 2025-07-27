@@ -8,6 +8,7 @@
 import { WeatherProvider, WeatherData, WeatherProviderConfig } from './types';
 import { mapAccuWeatherCondition } from '@/utils/weatherIcons';
 import { supabase } from '@/integrations/supabase/client';
+import { weatherStorageService } from '@/services/weatherStorageService';
 
 export class AccuWeatherProvider implements WeatherProvider {
   name = 'accuweather';
@@ -54,9 +55,9 @@ export class AccuWeatherProvider implements WeatherProvider {
         forecastCount: data.forecast?.DailyForecasts?.length || 0
       });
 
-      // Cache the raw AccuWeather response data immediately after successful API call
+      // Store in tiered storage system immediately after successful API call
       if (data && !data.error) {
-        this.cacheAccuWeatherRawData(data);
+        await this.storeWeatherDataInTieredStorage(data, location);
       }
 
       // Transform the server response to our WeatherData format
@@ -82,12 +83,12 @@ export class AccuWeatherProvider implements WeatherProvider {
       return weatherData;
 
     } catch (error) {
-      console.error('AccuWeatherProvider - API error, checking cached data:', error);
+      console.error('AccuWeatherProvider - API error, checking tiered storage:', error);
       
-      // Try to use cached AccuWeather raw data when API fails
-      const cachedRawData = this.loadAccuWeatherRawFromCache();
+      // Try to use tiered storage data when API fails
+      const cachedRawData = await weatherStorageService.getRawAccuWeatherData();
       if (cachedRawData) {
-        console.log('AccuWeatherProvider - Using cached AccuWeather raw data as fallback');
+        console.log('AccuWeatherProvider - Using tiered storage raw data as fallback');
         const weatherData: WeatherData = {
           location: this.extractLocationName(cachedRawData),
           temperature: this.extractTemperature(cachedRawData),
@@ -123,44 +124,42 @@ export class AccuWeatherProvider implements WeatherProvider {
     }
   }
 
-  private cacheAccuWeatherRawData(data: any): void {
+  private async storeWeatherDataInTieredStorage(data: any, location: string): Promise<void> {
     try {
-      const ACCUWEATHER_RAW_CACHE_KEY = 'accuweather_raw_cache';
-      const CACHE_EXPIRY_HOURS = 6;
-      const now = Date.now();
-      const cache = {
-        rawData: data,
-        timestamp: now,
-        expiresAt: now + (CACHE_EXPIRY_HOURS * 60 * 60 * 1000)
+      // Store raw data
+      await weatherStorageService.saveRawAccuWeatherData(data);
+      
+      // Transform and store current weather data
+      const transformedWeatherData: WeatherData = {
+        location: this.extractLocationName(data),
+        temperature: this.extractTemperature(data),
+        condition: this.extractCondition(data),
+        description: this.extractDescription(data),
+        humidity: this.extractHumidity(data),
+        windSpeed: this.extractWindSpeed(data),
+        uvIndex: this.extractUVIndex(data),
+        forecast: this.extractForecast(data),
+        lastUpdated: data.lastUpdated || new Date().toISOString(),
+        provider: this.displayName
       };
-      localStorage.setItem(ACCUWEATHER_RAW_CACHE_KEY, JSON.stringify(cache));
-      console.log('AccuWeatherProvider - Raw AccuWeather data cached to localStorage successfully');
-    } catch (error) {
-      console.warn('AccuWeatherProvider - Failed to cache raw AccuWeather data:', error);
-    }
-  }
-
-  private loadAccuWeatherRawFromCache(): any | null {
-    try {
-      const ACCUWEATHER_RAW_CACHE_KEY = 'accuweather_raw_cache';
-      const cached = localStorage.getItem(ACCUWEATHER_RAW_CACHE_KEY);
-      if (!cached) return null;
+      await weatherStorageService.saveCurrentWeather(transformedWeatherData);
       
-      const cache = JSON.parse(cached);
-      const now = Date.now();
-      
-      // Check if cache is still valid
-      if (now > cache.expiresAt) {
-        localStorage.removeItem(ACCUWEATHER_RAW_CACHE_KEY);
-        console.log('AccuWeatherProvider - Raw AccuWeather cache expired, removed');
-        return null;
+      // Store forecast data
+      if (data.forecast?.DailyForecasts && Array.isArray(data.forecast.DailyForecasts)) {
+        const forecasts = data.forecast.DailyForecasts.map((day: any) => ({
+          date: new Date(day.Date).toISOString().split('T')[0],
+          high: Math.round(day.Temperature.Maximum.Value),
+          low: Math.round(day.Temperature.Minimum.Value),
+          condition: this.mapCondition(day.Day.IconPhrase),
+          description: day.Day.LongPhrase || day.Day.IconPhrase
+        }));
+        
+        await weatherStorageService.saveForecastData(forecasts);
       }
       
-      console.log('AccuWeatherProvider - Loaded raw AccuWeather data from cache');
-      return cache.rawData;
+      console.log('AccuWeatherProvider - Weather data stored in tiered storage system');
     } catch (error) {
-      console.warn('AccuWeatherProvider - Failed to load raw AccuWeather data from cache:', error);
-      return null;
+      console.warn('AccuWeatherProvider - Failed to store weather data in tiered storage:', error);
     }
   }
 

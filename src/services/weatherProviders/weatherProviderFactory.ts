@@ -55,8 +55,8 @@ export class WeatherProviderFactory implements IWeatherProviderFactory {
   }
 
   getDefaultProvider(): WeatherProvider {
-    // Direct AccuWeather as primary choice (no Supabase dependency), fallback to regular AccuWeather
-    return this.providers.get('accuweather-direct') || this.providers.get('accuweather') || this.providers.get('openweathermap')!;
+    // AccuWeather (Supabase) as primary choice, fallback to direct AccuWeather then OpenWeatherMap
+    return this.providers.get('accuweather') || this.providers.get('accuweather-direct') || this.providers.get('openweathermap')!;
   }
 
   /**
