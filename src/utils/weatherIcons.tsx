@@ -149,3 +149,26 @@ export const mapAccuWeatherCondition = (accuWeatherCondition: string): string =>
   
   return 'Clear'; // Default fallback
 };
+
+// National Weather Service condition mapping
+export const mapNWSCondition = (condition: string): string => {
+  const normalizedCondition = condition.toLowerCase();
+  
+  // National Weather Service condition mapping
+  if (normalizedCondition.includes('sunny') || normalizedCondition.includes('clear')) return 'Clear';
+  if (normalizedCondition.includes('fair')) return 'Clear';
+  if (normalizedCondition.includes('partly cloudy') || normalizedCondition.includes('partly sunny')) return 'Partly Cloudy';
+  if (normalizedCondition.includes('mostly cloudy') || normalizedCondition.includes('mostly sunny')) return 'Partly Cloudy';
+  if (normalizedCondition.includes('cloudy') || normalizedCondition.includes('overcast')) return 'Cloudy';
+  if (normalizedCondition.includes('rain') || normalizedCondition.includes('showers')) return 'Rain';
+  if (normalizedCondition.includes('light rain') || normalizedCondition.includes('chance rain')) return 'Drizzle';
+  if (normalizedCondition.includes('thunderstorm') || normalizedCondition.includes('thunder')) return 'Thunderstorm';
+  if (normalizedCondition.includes('snow') || normalizedCondition.includes('flurries')) return 'Snow';
+  if (normalizedCondition.includes('fog') || normalizedCondition.includes('mist') || normalizedCondition.includes('haze')) return 'Fog';
+  if (normalizedCondition.includes('windy') || normalizedCondition.includes('breezy')) return 'Wind';
+  if (normalizedCondition.includes('drizzle')) return 'Drizzle';
+  if (normalizedCondition.includes('sleet') || normalizedCondition.includes('ice')) return 'Snow';
+  
+  // Default fallback
+  return 'Clear';
+};

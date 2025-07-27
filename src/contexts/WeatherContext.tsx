@@ -28,7 +28,7 @@ import { useWeatherSettings } from '@/contexts/settings/useWeatherSettings';
 import { WeatherData } from '@/types/weather';
 import { IntervalManager } from '@/utils/performanceUtils';
 import { weatherStorageService } from '@/services/weatherStorageService';
-import { AccuWeatherProvider } from '@/services/weatherProviders/accuWeatherProvider';
+import { NWSProvider } from '@/services/weatherProviders/nwsProvider';
 
 // Cache management constants
 const CACHE_EXPIRY_HOURS = 6;
@@ -59,9 +59,7 @@ export const WeatherProvider = ({ children }: { children: React.ReactNode }) => 
   const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { 
-    zipCode, 
-    weatherApiKey, 
-    locationKey,
+    coordinates, 
     useManualLocation 
   } = useWeatherSettings();
   const lastFetchRef = useRef<number>(0);
@@ -129,7 +127,7 @@ export const WeatherProvider = ({ children }: { children: React.ReactNode }) => 
    * @param forceRefresh - Bypass rate limiting for manual refreshes
    */
   const loadWeather = useCallback(async (forceRefresh = false) => {
-    if (!weatherApiKey) return;
+    if (!coordinates && useManualLocation) return;
     
     const now = Date.now();
     const timeSinceLastFetch = now - lastFetchRef.current;
@@ -143,17 +141,31 @@ export const WeatherProvider = ({ children }: { children: React.ReactNode }) => 
     lastFetchRef.current = now;
     
     try {
-      console.log('WeatherContext - Using AccuWeather service via Supabase edge function, forceRefresh:', forceRefresh);
-      const provider = new AccuWeatherProvider();
+      console.log('WeatherContext - Using National Weather Service API, forceRefresh:', forceRefresh);
+      const provider = new NWSProvider();
       
-      // Use zip code only if manual location is enabled
-      const locationData = useManualLocation ? zipCode : '';
+      // Use coordinates if manual location is enabled, otherwise use geolocation
+      let locationData = '';
+      if (useManualLocation && coordinates) {
+        locationData = coordinates;
+      } else {
+        // Try to get current location via geolocation
+        try {
+          const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 10000 });
+          });
+          locationData = `${position.coords.latitude},${position.coords.longitude}`;
+        } catch (geoError) {
+          console.warn('Failed to get geolocation, using default coordinates:', geoError);
+          locationData = '39.8283,-98.5795'; // Geographic center of US as fallback
+        }
+      }
       
       const weatherData = await provider.fetchWeather(locationData, {
-        apiKey: weatherApiKey,
+        apiKey: '', // NWS doesn't require an API key
         baseUrl: '',
         rateLimit: 60,
-        maxForecastDays: 15
+        maxForecastDays: 7
       });
       
       console.log('WeatherContext - Successfully fetched and stored weather data:', {
@@ -208,7 +220,7 @@ export const WeatherProvider = ({ children }: { children: React.ReactNode }) => 
       } else if (!weatherData) {
         console.log('WeatherContext - No cached data available, providing fallback weather data');
         const fallbackData: WeatherData = {
-          location: useManualLocation && zipCode ? `${zipCode} Area` : 'Your Location',
+          location: useManualLocation && coordinates ? coordinates : 'Your Location',
           temperature: 72,
           condition: 'Partly Cloudy',
           description: 'Weather data temporarily unavailable',
@@ -237,7 +249,7 @@ export const WeatherProvider = ({ children }: { children: React.ReactNode }) => 
     } finally {
       setIsLoading(false);
     }
-  }, [zipCode, weatherApiKey, useManualLocation]);
+  }, [coordinates, useManualLocation]);
 
   /**
    * Exposed refresh function for manual weather updates

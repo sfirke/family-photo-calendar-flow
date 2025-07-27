@@ -8,6 +8,7 @@ export { weatherProviderFactory } from './weatherProviderFactory';
 export { OpenWeatherMapProvider } from './openWeatherMapProvider';
 export { AccuWeatherProvider } from './accuWeatherProvider';
 export { DirectAccuWeatherProvider } from './directAccuWeatherProvider';
+export { NWSProvider } from './nwsProvider';
 
 export type {
   WeatherProvider,

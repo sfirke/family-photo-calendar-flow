@@ -38,8 +38,7 @@ export const SettingsProvider = ({ children }: { children: React.ReactNode }) =>
   useSettingsInitialization({
     setTheme: displaySettings.setTheme,
     setDefaultView: displaySettings.setDefaultView,
-    setZipCode: weatherSettings.setZipCode,
-    setWeatherApiKey: weatherSettings.setWeatherApiKey,
+    setCoordinates: weatherSettings.setCoordinates,
     setUseManualLocation: weatherSettings.setUseManualLocation,
     setPublicAlbumUrl: photoSettings.setPublicAlbumUrl,
     setGithubOwner: githubSettings.setGithubOwner,

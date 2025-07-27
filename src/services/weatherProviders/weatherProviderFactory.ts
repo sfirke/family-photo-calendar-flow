@@ -9,12 +9,14 @@ import { WeatherProvider, WeatherProviderFactory as IWeatherProviderFactory, Wea
 import { OpenWeatherMapProvider } from './openWeatherMapProvider';
 import { AccuWeatherProvider } from './accuWeatherProvider';
 import { DirectAccuWeatherProvider } from './directAccuWeatherProvider';
+import { NWSProvider } from './nwsProvider';
 
 export class WeatherProviderFactory implements IWeatherProviderFactory {
   private providers: Map<string, WeatherProvider> = new Map();
 
   constructor() {
     // Register all available providers
+    this.registerProvider(new NWSProvider());
     this.registerProvider(new OpenWeatherMapProvider());
     this.registerProvider(new AccuWeatherProvider());
     this.registerProvider(new DirectAccuWeatherProvider());
@@ -55,8 +57,8 @@ export class WeatherProviderFactory implements IWeatherProviderFactory {
   }
 
   getDefaultProvider(): WeatherProvider {
-    // AccuWeather (Supabase) as primary choice, fallback to direct AccuWeather then OpenWeatherMap
-    return this.providers.get('accuweather') || this.providers.get('accuweather-direct') || this.providers.get('openweathermap')!;
+    // NWS as primary choice (free), fallback to AccuWeather then others
+    return this.providers.get('nws') || this.providers.get('accuweather') || this.providers.get('openweathermap')!;
   }
 
   /**

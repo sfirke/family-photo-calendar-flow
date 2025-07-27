@@ -2,29 +2,24 @@ import React, { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { Shield, MapPin, Lock, AlertTriangle } from 'lucide-react';
+import { MapPin, Lock, AlertTriangle, Navigation } from 'lucide-react';
 import { useSecurity } from '@/contexts/SecurityContext';
 
 interface WeatherSettingsProps {
-  zipCode: string;
-  onZipCodeChange: (zipCode: string) => void;
-  weatherApiKey: string;
-  onWeatherApiKeyChange: (apiKey: string) => void;
-  onSecurityUnlock?: () => void;
+  coordinates: string;
+  onCoordinatesChange: (coordinates: string) => void;
   onUseManualLocationChange: (useManual: boolean) => void;
 }
 
 const WeatherSettings = ({
-  zipCode,
-  onZipCodeChange,
-  weatherApiKey,
-  onWeatherApiKeyChange,
-  onSecurityUnlock,
+  coordinates,
+  onCoordinatesChange,
   onUseManualLocationChange
 }: WeatherSettingsProps) => {
-  const { isSecurityEnabled, hasLockedData } = useSecurity();
+  const { isSecurityEnabled } = useSecurity();
   const [useManualLocation, setUseManualLocation] = useState(false);
   const [locationPermission, setLocationPermission] = useState<'granted' | 'denied' | 'prompt' | 'unknown'>('unknown');
+  const [currentLocation, setCurrentLocation] = useState<string>('');
 
   // Load manual location preference from localStorage
   useEffect(() => {
@@ -36,14 +31,8 @@ const WeatherSettings = ({
     }
   }, [onUseManualLocationChange]);
 
-  const fieldsDisabled = false;
-
-  const handleZipCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    onZipCodeChange(e.target.value);
-  };
-
-  const handleApiKeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    onWeatherApiKeyChange(e.target.value);
+  const handleCoordinatesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    onCoordinatesChange(e.target.value);
   };
 
   const checkLocationPermission = async () => {
@@ -87,12 +76,14 @@ const WeatherSettings = ({
       });
 
       setLocationPermission('granted');
+      const coords = `${position.coords.latitude.toFixed(4)},${position.coords.longitude.toFixed(4)}`;
+      setCurrentLocation(coords);
       setUseManualLocation(false);
       onUseManualLocationChange(false);
       localStorage.setItem('useManualLocation', 'false');
     } catch (error) {
       setLocationPermission('denied');
-      alert('Location access denied. You can still use manual location entry.');
+      alert('Location access denied. You can still use manual coordinates entry.');
     }
   };
 
@@ -103,77 +94,20 @@ const WeatherSettings = ({
     localStorage.setItem('useManualLocation', newValue.toString());
   };
 
-  const handleUnlockSecurity = async () => {
-    onSecurityUnlock?.();
-  };
-
   useEffect(() => {
     checkLocationPermission();
   }, []);
 
   return (
     <div className="space-y-4">
-      {/* API Key */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <Label htmlFor="apikey" className="text-gray-700 dark:text-gray-300">
-            AccuWeather API Key
-          </Label>
-          {isSecurityEnabled && (
-            <div className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
-              <Lock className="h-3 w-3" />
-              <span>Encrypted</span>
-            </div>
-          )}
+      {/* Weather Service Info */}
+      <div className="p-4 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg">
+        <div className="flex items-center gap-2">
+          <MapPin className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+          <h4 className="font-medium text-blue-800 dark:text-blue-200">National Weather Service</h4>
         </div>
-        
-        {hasLockedData && !weatherApiKey ? (
-          <div className="space-y-2">
-            <div className="p-3 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg">
-              <div className="flex items-center gap-2 text-blue-800 dark:text-blue-200">
-                <Lock className="h-4 w-4" />
-                <span className="text-sm">Encrypted weather settings detected. Unlock to access.</span>
-              </div>
-            </div>
-            <Button 
-              onClick={handleUnlockSecurity}
-              variant="outline"
-              size="sm"
-              className="w-full"
-            >
-              <Lock className="h-4 w-4 mr-2" />
-              Unlock Security to Access Weather Settings
-            </Button>
-          </div>
-        ) : (
-          <>
-            <Input
-              id="apikey"
-              type="password"
-              placeholder="Enter your AccuWeather API key"
-              value={weatherApiKey}
-              onChange={handleApiKeyChange}
-              disabled={fieldsDisabled}
-              className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100"
-            />
-            {isSecurityEnabled && (
-              <p className="text-xs text-green-600 dark:text-green-400">
-                Your API key will be encrypted automatically when saved.
-              </p>
-            )}
-          </>
-        )}
-        
-        <p className="text-xs text-gray-600 dark:text-gray-400">
-          Get your free API key from{' '}
-          <a 
-            href="https://developer.accuweather.com/" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="text-blue-600 dark:text-blue-400 hover:underline"
-          >
-            AccuWeather Developer Portal
-          </a>
+        <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
+          Using the free National Weather Service API. No API key required.
         </p>
       </div>
 
@@ -188,12 +122,12 @@ const WeatherSettings = ({
           <div className="flex items-center justify-between">
             <div>
               <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                {useManualLocation ? 'Manual Location Entry' : 'Automatic Location (IP-based)'}
+                {useManualLocation ? 'Manual Coordinates Entry' : 'Automatic Location Detection'}
               </div>
               <div className="text-xs text-gray-600 dark:text-gray-400">
                 {useManualLocation 
-                  ? 'Using zip code for weather location'
-                  : 'Using IP address to detect location automatically'
+                  ? 'Using manually entered latitude and longitude'
+                  : 'Using browser geolocation for current position'
                 }
               </div>
             </div>
@@ -228,14 +162,21 @@ const WeatherSettings = ({
                       size="sm"
                       className="text-xs py-1 px-2 h-auto"
                     >
+                      <Navigation className="h-3 w-3 mr-1" />
                       Request Permission
                     </Button>
                   )}
                 </div>
               </div>
               
+              {currentLocation && (
+                <div className="text-xs text-gray-600 dark:text-gray-400">
+                  Current location: {currentLocation}
+                </div>
+              )}
+              
               <div className="text-xs text-gray-600 dark:text-gray-400">
-                Automatic location uses IP address geolocation and doesn't require browser location permission.
+                Automatic location uses your browser's geolocation to get current coordinates.
               </div>
             </div>
           )}
@@ -243,19 +184,19 @@ const WeatherSettings = ({
           {useManualLocation && (
             <div className="mt-3 pt-3 border-t border-green-200 dark:border-green-700">
               <div className="text-xs text-green-700 dark:text-green-300">
-                Manual location entry enabled. Enter your zip code below.
+                Manual coordinates entry enabled. Enter latitude and longitude below.
               </div>
             </div>
           )}
         </div>
       </div>
 
-      {/* Zip Code */}
+      {/* Coordinates Input */}
       {useManualLocation && (
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <Label htmlFor="zipcode" className="text-gray-700 dark:text-gray-300">
-              Zip Code (Manual Override)
+            <Label htmlFor="coordinates" className="text-gray-700 dark:text-gray-300">
+              Coordinates (Latitude, Longitude)
             </Label>
             {isSecurityEnabled && (
               <div className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
@@ -265,35 +206,33 @@ const WeatherSettings = ({
             )}
           </div>
           <Input
-            id="zipcode"
-            placeholder="Enter zip code to override automatic location"
-            value={zipCode}
-            onChange={handleZipCodeChange}
+            id="coordinates"
+            placeholder="39.8283,-98.5795 (latitude,longitude)"
+            value={coordinates}
+            onChange={handleCoordinatesChange}
             className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100"
           />
           {isSecurityEnabled && (
             <p className="text-xs text-green-600 dark:text-green-400">
-              Your zip code will be encrypted automatically when saved.
+              Your coordinates will be encrypted automatically when saved.
             </p>
           )}
           <p className="text-xs text-amber-600 dark:text-amber-400">
-            Manual location will override automatic IP-based detection.
+            Format: latitude,longitude (e.g., 39.8283,-98.5795). You can find coordinates on Google Maps.
           </p>
         </div>
       )}
 
-      {/* Security Notice */}
-      {!isSecurityEnabled && !hasLockedData && (
-        <div className="p-3 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 rounded-lg">
-          <div className="flex items-start gap-2">
-            <Shield className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5" />
-            <div className="text-sm text-amber-800 dark:text-amber-200">
-              <p className="font-medium">Security Notice</p>
-              <p>Your API key is stored unencrypted. Enable security in the Security tab for enhanced protection.</p>
-            </div>
+      {/* Help Text */}
+      <div className="p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg">
+        <div className="flex items-start gap-2">
+          <AlertTriangle className="h-4 w-4 text-gray-600 dark:text-gray-400 mt-0.5" />
+          <div className="text-sm text-gray-700 dark:text-gray-300">
+            <p className="font-medium">About National Weather Service</p>
+            <p>The NWS provides free, accurate weather data for the United States. No API key or registration required.</p>
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 };

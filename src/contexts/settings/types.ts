@@ -17,14 +17,10 @@ export interface SettingsContextType {
   setDefaultView: (view: 'month' | 'week' | 'timeline') => void;
   
   // Weather Settings (Sensitive - encrypted when possible)
-  /** User's zip code for weather location */
-  zipCode: string;
-  /** Update zip code with validation */
-  setZipCode: (zipCode: string) => void;
-  /** AccuWeather API key */
-  weatherApiKey: string;
-  /** Update weather API key with validation */
-  setWeatherApiKey: (apiKey: string) => void;
+  /** User's coordinates for weather location */
+  coordinates: string;
+  /** Update coordinates with validation */
+  setCoordinates: (coordinates: string) => void;
   
   // Photo Settings (Sensitive - encrypted when possible)
   /** Google Photos public album URL */
