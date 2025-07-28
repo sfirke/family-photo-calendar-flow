@@ -21,15 +21,13 @@ interface LoadedSettings {
   defaultView?: 'month' | 'week' | 'timeline' | null;
   backgroundDuration?: string | null;
   selectedAlbum?: string | null;
-  zipCode?: string | null;
-  weatherApiKey?: string | null;
+  coordinates?: string | null;
   publicAlbumUrl?: string | null;
   githubOwner?: string | null;
   githubRepo?: string | null;
   notionToken?: string | null;
   notionDatabaseId?: string | null;
   useManualLocation?: string | null;
-  accuWeatherApiKey?: string | null;
   weatherProvider?: string | null;
 }
 
@@ -42,14 +40,12 @@ class SettingsStorageService {
 
   // Sensitive keys that should use secure storage
   private sensitiveKeys = new Set([
-    'weatherApiKey',
-    'accuWeatherApiKey', 
     'notionToken',
     'notion_token',
     'publicAlbumUrl',
     'githubOwner',
     'githubRepo',
-    'zipCode',
+    'coordinates',
     'notion_database_id',
     'notionDatabaseId'
   ]);
@@ -231,7 +227,7 @@ class SettingsStorageService {
     try {
       const settingsKeys = [
         'theme', 'defaultView', 'backgroundDuration', 'selectedAlbum',
-        'zipCode', 'weatherApiKey', 'accuWeatherApiKey', 'weatherProvider',
+        'coordinates', 'weatherProvider',
         'publicAlbumUrl', 'githubOwner', 'githubRepo', 
         'notionToken', 'notion_token', 'notionDatabaseId', 'notion_database_id',
         'useManualLocation'

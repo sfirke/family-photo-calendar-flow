@@ -12,8 +12,7 @@ import { SettingsStorage } from './settingsStorage';
 interface InitializationProps {
   setTheme: (theme: 'light' | 'dark' | 'system') => void;
   setDefaultView: (view: 'month' | 'week' | 'timeline') => void;
-  setZipCode: (zipCode: string) => void;
-  setWeatherApiKey: (apiKey: string) => void;
+  setCoordinates: (coordinates: string) => void;
   setUseManualLocation: (useManual: boolean) => void;
   setPublicAlbumUrl: (url: string) => void;
   setGithubOwner: (owner: string) => void;
@@ -60,11 +59,8 @@ export const useSettingsInitialization = (props: InitializationProps) => {
         }
 
         // Apply sensitive settings
-        if (settings.zipCode) {
-          props.setZipCode(settings.zipCode);
-        }
-        if (settings.weatherApiKey) {
-          props.setWeatherApiKey(settings.weatherApiKey);
+        if (settings.coordinates) {
+          props.setCoordinates(settings.coordinates);
         }
         if (settings.useManualLocation !== undefined) {
           props.setUseManualLocation(settings.useManualLocation === 'true');

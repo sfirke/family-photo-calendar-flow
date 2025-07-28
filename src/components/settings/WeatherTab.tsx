@@ -15,12 +15,10 @@ const WeatherTab = () => {
   const [useManualLocation, setUseManualLocation] = useState(false);
   const { isSecurityEnabled, hasLockedData } = useSecurity();
   const {
-    zipCode,
-    setZipCode,
-    weatherApiKey,
-    setWeatherApiKey,
-    locationKey,
-    setLocationKey
+    coordinates,
+    setCoordinates,
+    useManualLocation: weatherUseManualLocation,
+    setUseManualLocation: setWeatherUseManualLocation
   } = useWeatherSettings();
 
   // Clear test results when security state changes to force re-testing with new data
@@ -56,24 +54,18 @@ const WeatherTab = () => {
         </CardHeader>
         <CardContent className="space-y-4">
           <WeatherSettings
-            zipCode={zipCode}
-            onZipCodeChange={setZipCode}
-            weatherApiKey={weatherApiKey}
-            onWeatherApiKeyChange={setWeatherApiKey}
-            onSecurityUnlock={handleSecurityUnlock}
-            onUseManualLocationChange={setUseManualLocation}
+            coordinates={coordinates}
+            onCoordinatesChange={setCoordinates}
+            onUseManualLocationChange={setWeatherUseManualLocation}
           />
 
           <WeatherConnectionTest
-            zipCode={zipCode}
-            weatherApiKey={weatherApiKey}
+            coordinates={coordinates}
             onTestResult={setTestResult}
             onShowPreviewToggle={() => setShowPreview(!showPreview)}
             showPreview={showPreview}
             testResult={testResult}
-            useManualLocation={useManualLocation}
-            locationKey={locationKey}
-            onLocationKeyChange={setLocationKey}
+            useManualLocation={weatherUseManualLocation}
           />
 
           {showPreview && testResult?.success && testResult.data && (

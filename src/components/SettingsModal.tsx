@@ -55,11 +55,7 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
     theme, 
     setTheme, 
     defaultView, 
-    setDefaultView, 
-    zipCode, 
-    setZipCode,
-    weatherApiKey,
-    setWeatherApiKey
+    setDefaultView
   } = useSettings();
   
   const { handleThemeChange } = useSettingsModal();

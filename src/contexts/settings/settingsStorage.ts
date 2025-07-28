@@ -14,9 +14,7 @@ interface LoadedSettings {
   defaultView?: 'month' | 'week' | 'timeline' | null;
   backgroundDuration?: string | null;
   selectedAlbum?: string | null;
-  zipCode?: string | null;
-  weatherApiKey?: string | null;
-  accuWeatherApiKey?: string | null;
+  coordinates?: string | null;
   weatherProvider?: string | null;
   useManualLocation?: string | null;
   publicAlbumUrl?: string | null;
@@ -81,9 +79,7 @@ export class SettingsStorage {
         defaultView: localStorage.getItem('defaultView') as 'month' | 'week' | 'timeline' | null,
         backgroundDuration: localStorage.getItem('backgroundDuration'),
         selectedAlbum: localStorage.getItem('selectedAlbum'),
-        zipCode: localStorage.getItem('zipCode'),
-        weatherApiKey: localStorage.getItem('weatherApiKey'),
-        accuWeatherApiKey: localStorage.getItem('accuWeatherApiKey'),
+        coordinates: localStorage.getItem('coordinates'),
         weatherProvider: localStorage.getItem('weatherProvider'),
         useManualLocation: localStorage.getItem('useManualLocation'),
         publicAlbumUrl: localStorage.getItem('publicAlbumUrl'),
@@ -99,7 +95,7 @@ export class SettingsStorage {
    * Migrate sensitive settings from localStorage to secure storage
    */
   private static async migrateSensitiveSettings() {
-    const sensitiveKeys = ['zipCode', 'weatherApiKey', 'accuWeatherApiKey', 'publicAlbumUrl', 'githubOwner', 'githubRepo', 'notion_token', 'notion_database_id'];
+    const sensitiveKeys = ['coordinates', 'publicAlbumUrl', 'githubOwner', 'githubRepo', 'notion_token', 'notion_database_id'];
     
     for (const key of sensitiveKeys) {
       const oldValue = localStorage.getItem(key);
