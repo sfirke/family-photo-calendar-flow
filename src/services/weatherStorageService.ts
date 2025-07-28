@@ -40,7 +40,7 @@ interface ForecastDayData {
   expiresAt: number;
 }
 
-interface AccuWeatherRawData {
+interface NWSRawData {
   id: string;
   rawData: any;
   timestamp: number;
@@ -53,7 +53,7 @@ class WeatherStorageService {
   private dbVersion = 1;
   private currentWeatherStore = 'current_weather';
   private forecastStore = 'forecast_data';
-  private rawDataStore = 'raw_accuweather';
+  private rawDataStore = 'raw_nws';
   private db: IDBDatabase | null = null;
   
   private readonly CACHE_EXPIRY_HOURS = 6;
@@ -91,7 +91,7 @@ class WeatherStorageService {
           forecastStore.createIndex('timestamp', 'timestamp', { unique: false });
         }
         
-        // Raw AccuWeather data store
+        // Raw NWS data store
         if (!db.objectStoreNames.contains(this.rawDataStore)) {
           const rawStore = db.createObjectStore(this.rawDataStore, { keyPath: 'id' });
           rawStore.createIndex('timestamp', 'timestamp', { unique: false });
@@ -181,32 +181,32 @@ class WeatherStorageService {
   }
 
   /**
-   * Save raw AccuWeather API response data
+   * Save raw NWS API response data
    */
-  async saveRawAccuWeatherData(rawData: any): Promise<void> {
+  async saveRawNWSData(rawData: any): Promise<void> {
     try {
       const now = Date.now();
-      const rawRecord: AccuWeatherRawData = {
-        id: 'accuweather_raw',
+      const rawRecord: NWSRawData = {
+        id: 'nws_raw',
         rawData,
         timestamp: now,
         expiresAt: now + this.CACHE_EXPIRY_MS
       };
 
       // 1. Save to memory cache
-      this.cache.set('accuweather_raw', rawRecord);
-      console.log('📡 Raw AccuWeather data cached in memory');
+      this.cache.set('nws_raw', rawRecord);
+      console.log('📡 Raw NWS data cached in memory');
 
       // 2. Save to localStorage
-      localStorage.setItem('accuweather_raw_cache', JSON.stringify(rawRecord));
-      console.log('💾 Raw AccuWeather data saved to localStorage');
+      localStorage.setItem('nws_raw_cache', JSON.stringify(rawRecord));
+      console.log('💾 Raw NWS data saved to localStorage');
 
       // 3. Save to IndexedDB
       await this.saveRawDataToIndexedDB(rawRecord);
-      console.log('🗃️ Raw AccuWeather data saved to IndexedDB');
+      console.log('🗃️ Raw NWS data saved to IndexedDB');
 
     } catch (error) {
-      console.error('Error saving raw AccuWeather data:', error);
+      console.error('Error saving raw NWS data:', error);
       throw error;
     }
   }
@@ -290,24 +290,24 @@ class WeatherStorageService {
   }
 
   /**
-   * Get raw AccuWeather data for fallback processing
+   * Get raw NWS data for fallback processing
    */
-  async getRawAccuWeatherData(): Promise<any | null> {
+  async getRawNWSData(): Promise<any | null> {
     try {
       // 1. Check memory cache first
-      const cached = this.cache.get('accuweather_raw');
+      const cached = this.cache.get('nws_raw');
       if (cached && cached.expiresAt > Date.now()) {
-        console.log('⚡ Raw AccuWeather data loaded from memory cache');
+        console.log('⚡ Raw NWS data loaded from memory cache');
         return cached.rawData;
       }
 
       // 2. Check localStorage
-      const localData = localStorage.getItem('accuweather_raw_cache');
+      const localData = localStorage.getItem('nws_raw_cache');
       if (localData) {
-        const parsed: AccuWeatherRawData = JSON.parse(localData);
+        const parsed: NWSRawData = JSON.parse(localData);
         if (parsed.expiresAt > Date.now()) {
-          this.cache.set('accuweather_raw', parsed);
-          console.log('💾 Raw AccuWeather data loaded from localStorage');
+          this.cache.set('nws_raw', parsed);
+          console.log('💾 Raw NWS data loaded from localStorage');
           return parsed.rawData;
         }
       }
@@ -315,15 +315,15 @@ class WeatherStorageService {
       // 3. Check IndexedDB
       const dbData = await this.getRawDataFromIndexedDB();
       if (dbData && dbData.expiresAt > Date.now()) {
-        this.cache.set('accuweather_raw', dbData);
-        localStorage.setItem('accuweather_raw_cache', JSON.stringify(dbData));
-        console.log('🗃️ Raw AccuWeather data loaded from IndexedDB');
+        this.cache.set('nws_raw', dbData);
+        localStorage.setItem('nws_raw_cache', JSON.stringify(dbData));
+        console.log('🗃️ Raw NWS data loaded from IndexedDB');
         return dbData.rawData;
       }
 
       return null;
     } catch (error) {
-      console.error('Error getting raw AccuWeather data:', error);
+      console.error('Error getting raw NWS data:', error);
       return null;
     }
   }
@@ -339,7 +339,7 @@ class WeatherStorageService {
       // Clear localStorage
       localStorage.removeItem('weather_current');
       localStorage.removeItem('weather_forecast');
-      localStorage.removeItem('accuweather_raw_cache');
+      localStorage.removeItem('nws_raw_cache');
 
       // Clear IndexedDB stores
       await this.clearIndexedDBStore(this.currentWeatherStore);
@@ -392,7 +392,7 @@ class WeatherStorageService {
     });
   }
 
-  private async saveRawDataToIndexedDB(data: AccuWeatherRawData): Promise<void> {
+  private async saveRawDataToIndexedDB(data: NWSRawData): Promise<void> {
     await this.initDB();
     if (!this.db) return;
 
@@ -434,14 +434,14 @@ class WeatherStorageService {
     });
   }
 
-  private async getRawDataFromIndexedDB(): Promise<AccuWeatherRawData | null> {
+  private async getRawDataFromIndexedDB(): Promise<NWSRawData | null> {
     await this.initDB();
     if (!this.db) return null;
 
     return new Promise((resolve, reject) => {
       const transaction = this.db!.transaction([this.rawDataStore], 'readonly');
       const store = transaction.objectStore(this.rawDataStore);
-      const request = store.get('accuweather_raw');
+      const request = store.get('nws_raw');
 
       request.onerror = () => reject(request.error);
       request.onsuccess = () => resolve(request.result || null);
@@ -464,4 +464,4 @@ class WeatherStorageService {
 }
 
 export const weatherStorageService = new WeatherStorageService();
-export type { CurrentWeatherData, ForecastDayData, AccuWeatherRawData };
+export type { CurrentWeatherData, ForecastDayData, NWSRawData };

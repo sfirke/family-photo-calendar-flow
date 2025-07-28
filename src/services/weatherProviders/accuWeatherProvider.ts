@@ -86,7 +86,7 @@ export class AccuWeatherProvider implements WeatherProvider {
       console.error('AccuWeatherProvider - API error, checking tiered storage:', error);
       
       // Try to use tiered storage data when API fails
-      const cachedRawData = await weatherStorageService.getRawAccuWeatherData();
+      const cachedRawData = await weatherStorageService.getRawNWSData();
       if (cachedRawData) {
         console.log('AccuWeatherProvider - Using tiered storage raw data as fallback');
         const weatherData: WeatherData = {
@@ -127,7 +127,7 @@ export class AccuWeatherProvider implements WeatherProvider {
   private async storeWeatherDataInTieredStorage(data: any, location: string): Promise<void> {
     try {
       // Store raw data
-      await weatherStorageService.saveRawAccuWeatherData(data);
+      await weatherStorageService.saveRawNWSData(data);
       
       // Transform and store current weather data
       const transformedWeatherData: WeatherData = {

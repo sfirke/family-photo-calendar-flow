@@ -51,7 +51,7 @@ export class DirectAccuWeatherProvider implements WeatherProvider {
       };
       
       // Cache raw data immediately after successful API calls
-      await weatherStorageService.saveRawAccuWeatherData(rawData);
+      await weatherStorageService.saveRawNWSData(rawData);
 
       // Transform to our standard format
       const weatherData: WeatherData = {
