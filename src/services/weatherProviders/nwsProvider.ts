@@ -222,6 +222,10 @@ export class NWSProvider implements WeatherProvider {
     
     if (pointsData?.properties?.relativeLocation?.properties) {
       const location = pointsData.properties.relativeLocation.properties;
+      // Use name property and truncate at comma if it exists
+      if (location.name) {
+        return location.name.split(',')[0];
+      }
       return `${location.city}, ${location.state}`;
     }
     
