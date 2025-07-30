@@ -11,7 +11,6 @@ import { PerformanceMonitor, IntervalManager, displayOptimizations } from '@/uti
 import { Event } from '@/types/calendar';
 import { NotionScrapedEvent } from '@/services/NotionPageScraper';
 import { useNotionScrapedCalendars } from '@/hooks/useNotionScrapedCalendars';
-
 const Index = () => {
   const [currentBg, setCurrentBg] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
@@ -24,8 +23,9 @@ const Index = () => {
     backgroundDuration,
     publicAlbumUrl
   } = useSettings();
-  const { events: notionEvents } = useNotionScrapedCalendars();
-
+  const {
+    events: notionEvents
+  } = useNotionScrapedCalendars();
   const handleNotionEventClick = (event: Event) => {
     // Find the corresponding NotionScrapedEvent
     const notionEvent = notionEvents.find(ne => ne.id === event.id);
@@ -97,7 +97,6 @@ const Index = () => {
   // Background image loading with ALL cached photos
   const loadBackgroundImages = useCallback(async () => {
     console.log('🖼️ Index.tsx - loadBackgroundImages called with publicAlbumUrl:', publicAlbumUrl);
-    
     if (publicAlbumUrl && publicAlbumUrl.trim() !== '') {
       try {
         // First try to get ALL cached photos
@@ -106,7 +105,6 @@ const Index = () => {
         } = await import('@/utils/photosCache');
         const cachedPhotos = photosCache.getRandomizedPhotos(); // Get ALL photos, no limit
         console.log('🖼️ Index.tsx - Cached photos found:', cachedPhotos.length);
-        
         if (cachedPhotos.length > 0) {
           setBackgroundImages(cachedPhotos);
           setCurrentBg(0);
@@ -182,9 +180,7 @@ const Index = () => {
       minute: '2-digit'
     });
   }, [currentTime]);
-
-  return (
-    <div className="min-h-screen relative overflow-hidden flex flex-col">
+  return <div className="min-h-screen relative overflow-hidden flex flex-col">
       {/* Background Image with seamless fade transitions */}
       <div className="fixed inset-0 w-full h-full" style={backgroundStyle} />
       
@@ -203,7 +199,7 @@ const Index = () => {
           
           {/* Responsive Time Display */}
           <div className="relative z-10 flex items-baseline gap-1 sm:gap-2 mb-2 sm:mb-0">
-            <h1 className="text-white/90 font-semibold text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl">
+            <h1 className="text-white/90 font-semibold text-4xl sm:text-5xl lg:text-7xl xl:text-8xl md:text-7xl">
               {formattedTime.replace(/ [AP]M/, '')}
             </h1>
             <span className="text-white/90 font-semibold text-xl sm:text-2xl md:text-3xl lg:text-4xl">
@@ -220,32 +216,19 @@ const Index = () => {
         {/* Main Content - Responsive top padding to account for fixed header */}
         <main className="px-3 sm:px-4 md:px-6 pb-3 sm:pb-4 md:pb-6 pt-20 sm:pt-24 md:pt-28 lg:pt-32 flex-1 flex flex-col overflow-visible">
           <div className="flex-1">
-            <Calendar 
-              onNotionEventClick={handleNotionEventClick}
-            />
+            <Calendar onNotionEventClick={handleNotionEventClick} />
           </div>
         </main>
       </div>
 
       {/* Responsive Settings Button - Fixed in lower right corner */}
-      <Button 
-        variant="ghost" 
-        size="sm" 
-        onClick={() => setShowSettings(true)} 
-        className="fixed bottom-3 right-3 sm:bottom-4 sm:right-4 md:bottom-6 md:right-6 z-20 text-white hover:bg-white/20 bg-black/20 backdrop-blur-sm border border-white/20 h-10 w-10 sm:h-11 sm:w-11 p-0"
-      >
+      <Button variant="ghost" size="sm" onClick={() => setShowSettings(true)} className="fixed bottom-3 right-3 sm:bottom-4 sm:right-4 md:bottom-6 md:right-6 z-20 text-white hover:bg-white/20 bg-black/20 backdrop-blur-sm border border-white/20 h-10 w-10 sm:h-11 sm:w-11 p-0">
         <Settings className="h-4 w-4 sm:h-5 sm:w-5" />
       </Button>
 
       <SettingsModal open={showSettings} onOpenChange={setShowSettings} />
 
-      <NotionEventModal
-        open={isNotionModalOpen}
-        onOpenChange={setIsNotionModalOpen}
-        event={selectedNotionEvent}
-      />
-    </div>
-  );
+      <NotionEventModal open={isNotionModalOpen} onOpenChange={setIsNotionModalOpen} event={selectedNotionEvent} />
+    </div>;
 };
-
 export default Index;
