@@ -6,8 +6,14 @@ import { useWeather } from '@/contexts/WeatherContext';
 const WeatherWidget = () => {
   const {
     getCurrentWeather,
-    isLoading
+    isLoading,
+    refreshWeather
   } = useWeather();
+  
+  // Refresh weather data to get updated location name
+  React.useEffect(() => {
+    refreshWeather(true);
+  }, []);
   if (isLoading) {
     return <div className="flex items-center gap-3 text-white">
         <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
