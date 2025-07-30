@@ -216,6 +216,10 @@ export class NWSProvider implements WeatherProvider {
   }
 
   private extractLocationName(pointsData: any, currentData?: any): string {
+    if (currentData?.properties?.name) {
+      return currentData.properties.name.split(',')[0];
+    }
+    
     if (currentData?.properties?.station) {
       return currentData.properties.station;
     }
