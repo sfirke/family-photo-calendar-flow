@@ -26,7 +26,7 @@ const WeatherWidget = () => {
   const currentWeather = getCurrentWeather();
   return <div className="flex items-center gap-3 text-white">
       {getWeatherIcon(currentWeather.condition, {
-      size: "h-6 w-6"
+      size: "h-8 w-8"
     })}
       <div>
         <div className="text-6xl font-light">{currentWeather.temp}°F</div>
