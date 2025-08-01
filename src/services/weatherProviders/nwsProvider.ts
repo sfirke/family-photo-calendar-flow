@@ -61,11 +61,12 @@ export class NWSProvider implements WeatherProvider {
 
       // Step 4: Get current observations
       let currentData = null;
+      let stationsData = null;
       try {
         console.log('NWSProvider - Fetching observation stations from:', observationStationsUrl);
         const stationsResponse = await fetch(observationStationsUrl);
         if (stationsResponse.ok) {
-          const stationsData = await stationsResponse.json();
+          stationsData = await stationsResponse.json();
           const stations = stationsData.features;
           
           if (stations && stations.length > 0) {
@@ -98,13 +99,14 @@ export class NWSProvider implements WeatherProvider {
         points: pointsData,
         forecast: forecastData,
         current: currentData,
+        stations: stationsData,
         lastUpdated: new Date().toISOString()
       };
       await this.storeWeatherDataInTieredStorage(rawData, coordinates);
 
       // Transform data to our WeatherData format
       const weatherData: WeatherData = {
-        location: this.extractLocationName(pointsData, currentData),
+        location: this.extractLocationName(pointsData, currentData, stationsData),
         temperature: this.extractTemperature(currentData, forecastData),
         condition: this.extractCondition(currentData, forecastData),
         description: this.extractDescription(currentData, forecastData),
@@ -133,7 +135,7 @@ export class NWSProvider implements WeatherProvider {
       if (cachedRawData && cachedRawData.points) {
         console.log('NWSProvider - Using tiered storage raw data as fallback');
         const weatherData: WeatherData = {
-          location: this.extractLocationName(cachedRawData.points, cachedRawData.current),
+          location: this.extractLocationName(cachedRawData.points, cachedRawData.current, cachedRawData.stations),
           temperature: this.extractTemperature(cachedRawData.current, cachedRawData.forecast),
           condition: this.extractCondition(cachedRawData.current, cachedRawData.forecast),
           description: this.extractDescription(cachedRawData.current, cachedRawData.forecast),
@@ -158,7 +160,7 @@ export class NWSProvider implements WeatherProvider {
       
       // Transform and store current weather data
       const transformedWeatherData: WeatherData = {
-        location: this.extractLocationName(data.points, data.current),
+        location: this.extractLocationName(data.points, data.current, data.stations),
         temperature: this.extractTemperature(data.current, data.forecast),
         condition: this.extractCondition(data.current, data.forecast),
         description: this.extractDescription(data.current, data.forecast),
@@ -215,7 +217,12 @@ export class NWSProvider implements WeatherProvider {
     return Array.from(dailyForecasts.values()).slice(0, this.maxForecastDays);
   }
 
-  private extractLocationName(pointsData: any, currentData?: any): string {
+  private extractLocationName(pointsData: any, currentData?: any, stationsData?: any): string {
+    // Use station name from stations API if available
+    if (stationsData?.features?.[0]?.properties?.name) {
+      return stationsData.features[0].properties.name;
+    }
+    
     if (currentData?.properties?.name) {
       return currentData.properties.name.split(',')[0];
     }
