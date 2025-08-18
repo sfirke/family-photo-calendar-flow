@@ -34,8 +34,8 @@ A sophisticated, privacy-focused family calendar application built with React an
 
 ### 🌤️ Weather Integration
 - **Weather Overlays**: See weather information on calendar dates
-- **Multiple Providers**: Support for various weather API services
-- **Location-Based**: Automatically shows weather for your zip code
+- **National Weather Service Only**: Simplified to a single free provider (no API key required)
+- **Location-Based**: Automatic geolocation with optional manual coordinates
 - **Forecast Display**: Extended weather forecasts for planning
 
 ### 📸 Photo Backgrounds
@@ -164,21 +164,25 @@ npm run build && npm run preview
 3. **Update Notifications**: Customize toast and notification settings
 
 ### Weather Setup
-1. **Get API Key**: Sign up for a weather service (OpenWeatherMap, WeatherAPI, etc.)
-2. **Configure Location**: Enter your zip code in Settings → Weather
-3. **Add API Key**: Enter your API key (will be encrypted if security is enabled)
+
+1. **Automatic Location**: Allow browser geolocation when prompted (no API key needed)
+2. **Manual Coordinates (Optional)**: Enter latitude,longitude in Settings → Weather
+3. **Privacy**: Coordinates are stored locally (encrypted if security enabled)
 
 ### Google Photos Setup
+
 1. **Create Public Album**: Make a Google Photos album publicly shareable
 2. **Copy Album URL**: Get the public sharing link
 3. **Configure in App**: Settings → Photos → Album URL
 
 ### Calendar Feeds
+
 1. **Get iCal URLs**: From Google Calendar, Outlook, or other providers
 2. **Add Feeds**: Settings → Calendars → Add Calendar Feed
 3. **Sync Settings**: Configure automatic sync intervals
 
 ### Security Setup
+
 1. **Enable Security**: Settings → Security → Enable Security
 2. **Set Password**: Choose a strong password (minimum 8 characters)
 3. **Confirm Setup**: Your sensitive data will now be encrypted
@@ -186,7 +190,8 @@ npm run build && npm run preview
 ## 🔧 Development
 
 ### Project Structure
-```
+
+```text
 src/
 ├── components/          # React components
 │   ├── ui/             # Reusable UI components
@@ -208,12 +213,14 @@ src/
 ### Key Components
 
 #### Security System
+
 - `SecurityContext.tsx` - Global security state management
 - `secureStorage.ts` - Encrypted localStorage wrapper
 - `encryption.ts` - Web Crypto API utilities
 - `inputValidation.ts` - Input sanitization and validation
 
 #### Update Management System
+
 - `versionManager.ts` - Version tracking and comparison utilities
 - `upstreamVersionManager.ts` - GitHub API integration and upstream checking
 - `updateManager.ts` - Centralized update detection and management
@@ -222,15 +229,18 @@ src/
 - `UpdateTab.tsx` - Settings panel for update management
 
 #### Calendar System
+
 - `Calendar.tsx` - Main calendar component
 - `useLocalEvents.tsx` - Local event management
 - `useICalCalendars.tsx` - External calendar feeds
 
 #### Settings System
+
 - `SettingsModal.tsx` - Main configuration interface
 - `SettingsContext.tsx` - Settings state management
 
 ### Testing
+
 ```bash
 # Run tests
 npm test
@@ -243,6 +253,7 @@ npm run test:e2e
 ```
 
 ### Code Style
+
 - **ESLint** - Code linting and formatting
 - **Prettier** - Code formatting
 - **TypeScript** - Strict type checking enabled
@@ -250,24 +261,28 @@ npm run test:e2e
 ## 🔐 Security Model
 
 ### Encryption Details
+
 - **Algorithm**: AES-256-GCM (authenticated encryption)
 - **Key Derivation**: PBKDF2 with SHA-256 (100,000 iterations)
 - **Salt**: Unique 128-bit random salt per user
 - **IV**: Random 96-bit initialization vector per encryption
 
 ### Input Security
+
 - **Sanitization**: HTML and script tag removal from user inputs
 - **URL Validation**: Protocol validation and path traversal prevention
 - **API Key Validation**: Format validation and secure storage
 - **XSS Prevention**: Content Security Policy and input filtering
 
 ### Data Protection
+
 - **API Keys**: Weather and calendar service keys encrypted
 - **Personal Data**: Zip codes and album URLs encrypted
 - **Session Security**: Encryption keys exist only in memory
 - **Local Storage**: All data remains on user's device
 
 ### Threat Model
+
 - **Protects Against**: Local storage inspection, device theft, XSS attacks, injection attacks
 - **Limitations**: Not protected against malware or browser vulnerabilities
 - **Recovery**: No password recovery - users must remember passwords
@@ -275,12 +290,14 @@ npm run test:e2e
 ## 🔄 Update Management
 
 ### Update Detection System
+
 - **Service Worker Updates**: Immediate updates for app changes
 - **GitHub Releases**: Upstream updates from the official repository
 - **Automatic Checking**: Hourly checks for GitHub releases
 - **Smart Caching**: Intelligent caching with configurable refresh intervals
 
 ### Update Process
+
 1. **Background Detection**: Automatic checking during app usage
 2. **User Notification**: Toast notifications and persistent update cards
 3. **Release Information**: Display of release notes and version details
@@ -288,6 +305,7 @@ npm run test:e2e
 5. **External Updates**: Direct links to GitHub releases for major updates
 
 ### Version Management
+
 - **Semantic Versioning**: Proper version comparison (major.minor.patch)
 - **Version Tracking**: Local version storage and comparison
 - **Update Types**: Classification of updates as major, minor, or patch
@@ -296,11 +314,13 @@ npm run test:e2e
 ## 🌐 Deployment
 
 ### Lovable Platform (Recommended)
+
 1. **Publish**: Click "Publish" in the Lovable editor
 2. **Custom Domain**: Configure your domain in Project Settings
 3. **SSL**: Automatic HTTPS certificate provisioning
 
 ### Self-Hosting
+
 ```bash
 # Build for production
 npm run build
@@ -310,11 +330,13 @@ npm run build
 ```
 
 ### Update Configuration for Self-Hosting
+
 1. **GitHub Repository**: Update repository details in `upstreamVersionManager.ts`
 2. **Version File**: Ensure `public/version.json` is updated during build
 3. **Service Worker**: Configure service worker for your domain
 
 ### Docker Deployment
+
 ```dockerfile
 FROM nginx:alpine
 COPY dist/ /usr/share/nginx/html/
@@ -324,12 +346,14 @@ EXPOSE 80
 ## 🤝 Contributing
 
 ### Development Setup
+
 1. **Fork the repository**
 2. **Create feature branch**: `git checkout -b feature/amazing-feature`
 3. **Install dependencies**: `npm install`
 4. **Start development**: `npm run dev`
 
 ### Code Guidelines
+
 - **TypeScript**: Use strict typing, avoid `any`
 - **Components**: Keep components small and focused
 - **Hooks**: Extract complex logic into custom hooks
@@ -339,6 +363,7 @@ EXPOSE 80
 - **Testing**: Add tests for new features
 
 ### Pull Request Process
+
 1. **Update Documentation**: README, code comments, and type definitions
 2. **Test Changes**: Ensure all tests pass
 3. **Security Review**: Review any security-related changes carefully
@@ -346,6 +371,7 @@ EXPOSE 80
 5. **Performance Check**: Verify no performance regressions
 
 ### Security Contributions
+
 - **Encryption Changes**: Require careful review and testing
 - **Input Validation**: Test against common attack vectors
 - **Key Management**: Follow established patterns
@@ -359,6 +385,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 🆘 Support
 
 ### Common Issues
+
 - **Web Crypto API**: Requires HTTPS in production
 - **Storage Limits**: Browser localStorage ~5-10MB limit
 - **Calendar Sync**: Check CORS policies for external feeds
@@ -367,6 +394,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **Security Errors**: Verify encryption setup and password complexity
 
 ### Getting Help
+
 - **Issues**: GitHub Issues for bug reports
 - **Discussions**: GitHub Discussions for questions
 - **Security**: Email security issues privately
@@ -387,4 +415,4 @@ See [CHANGELOG.md](CHANGELOG.md) for detailed version history and updates.
 
 ---
 
-**Built with ❤️ for families who value privacy, security, and functionality**
+Built with ❤️ for families who value privacy, security, and functionality.

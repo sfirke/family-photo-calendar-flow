@@ -17,7 +17,7 @@ export const SecurityProvider = ({ children }: { children: React.ReactNode }) =>
       setHasLockedData(false);
       return;
     }
-    const encryptedKeys = ['secure_zipCode_encrypted', 'secure_weatherApiKey_encrypted', 'secure_publicAlbumUrl_encrypted'];
+  const encryptedKeys = ['secure_publicAlbumUrl_encrypted']; // Removed obsolete weather zip/api key entries
     const hasEncryptedData = encryptedKeys.some(key => safeLocalStorage.getItem(key) === 'true');
     const isLocked = hasEncryptedData && !isSecurityEnabled;
     setHasLockedData(isLocked);

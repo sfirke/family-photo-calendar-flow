@@ -63,10 +63,4 @@ export interface WeatherProvider {
   };
 }
 
-export interface WeatherProviderFactory {
-  getProvider(providerName: string): WeatherProvider;
-  listProviders(): string[];
-  getDefaultProvider(): WeatherProvider;
-}
-
-export type WeatherProviderName = 'openweathermap' | 'accuweather' | 'weatherapi' | 'nws';
+export type WeatherProviderName = 'nws';

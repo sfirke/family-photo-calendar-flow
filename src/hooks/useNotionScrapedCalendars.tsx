@@ -7,7 +7,14 @@ import { useState, useEffect, useCallback } from 'react';
 import { NotionScrapedCalendar, notionScrapedEventsStorage } from '@/services/notionScrapedEventsStorage';
 import { NotionScrapedEvent } from '@/services/NotionPageScraper';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
+// Supabase removal: formerly used supabase.functions.invoke('notion-api')
+// Replaced with direct Notion API client usage.
+// NOTE: If CORS errors arise in the browser, consider adding a lightweight
+// proxy service or adjusting the NotionAPIClient to use a different proxy.
+import { notionAPIClient } from '@/services/NotionAPIClient';
+import type { QueryDatabaseResponse, PageObjectResponse, DatabaseObjectResponse } from '@notionhq/client/build/src/api-endpoints';
+import { notionPageScraper } from '@/services/NotionPageScraper';
+import { RateLimiter, createDebounce } from '@/lib/rateLimiter';
 import { CalendarRefreshUtils } from '@/hooks/useCalendarRefresh';
 
 import { useBackgroundSync } from './useBackgroundSync';
@@ -52,6 +59,9 @@ export const useNotionScrapedCalendars = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [syncStatus, setSyncStatus] = useState<NotionScrapedSyncStatus>({});
   const { toast } = useToast();
+  // Client-side rate limiter & debouncers
+  const notionRateLimiterRef = useState(() => new RateLimiter({ capacity: 4, windowMs: 10_000 }))[0];
+  const debouncedSyncRef = useState(() => new Map<string, ReturnType<typeof createDebounce>>())[0];
   
   const { 
     registerBackgroundSync, 
@@ -154,8 +164,108 @@ export const useNotionScrapedCalendars = () => {
     }
   }, [loadCalendars, loadEvents, toast]);
 
-  // Sync a single calendar using Notion API
-  const syncCalendar = useCallback(async (calendar: NotionScrapedCalendar) => {
+  // Transform a Notion query response into internal NotionApiEvent objects
+  const transformQueryResponse = useCallback((query: QueryDatabaseResponse): NotionApiEvent[] => {
+    const events: NotionApiEvent[] = [];
+    if (!Array.isArray(query.results)) return events;
+    for (const raw of query.results) {
+      const page = raw as PageObjectResponse;
+      if (page.object !== 'page' || !page.properties) continue;
+      // Find title property
+      let title = page.id;
+      for (const propKey of Object.keys(page.properties)) {
+        const prop: any = (page.properties as any)[propKey];
+        if (prop?.type === 'title' && Array.isArray(prop.title) && prop.title.length) {
+          title = prop.title.map((t: any) => t?.plain_text || '').join('').trim() || title;
+          break;
+        }
+      }
+      // Find date property (first 'date' type)
+      let datePropKey: string | undefined;
+      let dateStart: string | undefined;
+      let dateEnd: string | undefined;
+      for (const propKey of Object.keys(page.properties)) {
+        const prop: any = (page.properties as any)[propKey];
+        if (prop?.type === 'date' && prop.date?.start) {
+          datePropKey = propKey;
+          dateStart = prop.date.start;
+          dateEnd = prop.date.end;
+          break;
+        }
+      }
+      if (!dateStart) continue; // skip pages without a date
+      // Build simplified properties map limited to supported primitive types
+      const simplified: NotionPropertyMap = {};
+      for (const propKey of Object.keys(page.properties)) {
+        const prop: any = (page.properties as any)[propKey];
+        switch (prop?.type) {
+          case 'title':
+            simplified[propKey] = { type: 'title', title: prop.title?.map((t: any) => ({ plain_text: t.plain_text })) } as NotionTitleProperty;
+            break;
+          case 'rich_text':
+            simplified[propKey] = { type: 'rich_text', rich_text: prop.rich_text?.map((t: any) => ({ plain_text: t.plain_text })) } as NotionRichTextProperty;
+            break;
+          case 'select':
+            simplified[propKey] = { type: 'select', select: prop.select ? { name: prop.select.name } : null } as NotionSelectProperty;
+            break;
+          case 'multi_select':
+            simplified[propKey] = { type: 'multi_select', multi_select: prop.multi_select?.map((o: any) => ({ name: o.name })) } as NotionMultiSelectProperty;
+            break;
+          case 'date':
+            simplified[propKey] = { type: 'date', date: { start: prop.date?.start, end: prop.date?.end } } as NotionDateProperty;
+            break;
+          default:
+            break; // ignore other property types to keep payload light
+        }
+      }
+      events.push({
+        id: page.id,
+        title,
+        date: dateStart,
+        endDate: dateEnd,
+        description: undefined,
+        location: undefined,
+        status: undefined,
+        categories: undefined,
+        priority: undefined,
+        properties: simplified,
+        sourceUrl: undefined,
+        scrapedAt: new Date().toISOString(),
+        customProperties: undefined,
+      });
+    }
+    return events;
+  }, []);
+
+  // Fetch database metadata (title etc.)
+  const getDatabaseMetadata = useCallback(async (databaseId: string, token: string): Promise<Record<string, unknown>> => {
+    try {
+      const db = await notionAPIClient.getDatabase(databaseId, token) as DatabaseObjectResponse;
+      const titleParts = (db.title || []).map(t => (t as any).plain_text || '').join('').trim();
+      return {
+        databaseTitle: titleParts || 'Notion Database',
+        lastFetched: new Date().toISOString(),
+        databaseId: db.id,
+      };
+    } catch (e) {
+      console.warn('Failed to fetch database metadata', e);
+      return {};
+    }
+  }, []);
+
+  // Sync a single calendar using direct Notion API
+  const MIN_FRESHNESS_MS = 60_000; // 1 minute freshness window
+
+  const performSyncCalendar = useCallback(async (calendar: NotionScrapedCalendar) => {
+    // Skip if recently synced within freshness window
+    if (calendar.lastSync) {
+      const last = new Date(calendar.lastSync).getTime();
+      if (!Number.isNaN(last) && Date.now() - last < MIN_FRESHNESS_MS) {
+        // Mark as success without hitting API again
+        setSyncStatus(prev => ({ ...prev, [calendar.id]: 'success' }));
+        return;
+      }
+    }
     if (!calendar.metadata?.token) {
       throw new Error('Notion integration token is required for this calendar');
     }
@@ -169,25 +279,15 @@ export const useNotionScrapedCalendars = () => {
     try {
   // debug removed: syncing Notion calendar start
       
-      // Call the Notion API edge function
-      const { data, error } = await supabase.functions.invoke('notion-api', {
-        body: {
-          action: 'query',
-          token: calendar.metadata.token,
-          databaseId: calendar.metadata.databaseId,
-        }
-      });
-
-      if (error) {
-        throw new Error(error.message || 'Failed to sync with Notion API');
+      // Direct Notion API query
+      const queryResponse = await notionAPIClient.queryDatabase(
+        calendar.metadata.databaseId,
+        calendar.metadata.token
+      );
+      const apiEvents: NotionApiEvent[] = transformQueryResponse(queryResponse);
+      if (apiEvents.length === 0) {
+        console.warn('No events returned from Notion database query');
       }
-
-      if (!data.success) {
-        throw new Error(data.error || 'Failed to fetch events from Notion');
-      }
-
-      // Transform API events to our format
-  const apiEvents: NotionApiEvent[] = (data.events as NotionApiEvent[]) || [];
   const notionEvents: NotionScrapedEvent[] = apiEvents.map((event) => {
         // Extract calendar name from properties to use as title
   const calendarNameProperty = event.properties?.['calendar name'] || event.properties?.['Calendar Name'];
@@ -317,12 +417,13 @@ export const useNotionScrapedCalendars = () => {
   // debug removed: sync stats summary
 
       // Update calendar metadata
+      const dbMeta = await getDatabaseMetadata(calendar.metadata.databaseId!, calendar.metadata.token!);
       await updateCalendar(calendar.id, {
         lastSync: new Date().toISOString(),
         eventCount: notionEvents.length,
         metadata: {
           ...calendar.metadata,
-          ...data.metadata
+          ...dbMeta
         }
       });
 
@@ -358,8 +459,36 @@ export const useNotionScrapedCalendars = () => {
     }
   }, [updateCalendar, loadEvents, toast]);
 
+  // Public API with rate limiting + per-calendar debounce
+  const syncCalendar = useCallback(async (calendar: NotionScrapedCalendar) => {
+    if (!notionRateLimiterRef.tryRemove()) {
+      toast({
+        title: 'Rate Limited',
+        description: 'Too many Notion syncs quickly. Please wait a few seconds.',
+        variant: 'destructive'
+      });
+      return;
+    }
+    let debounced = debouncedSyncRef.get(calendar.id);
+    if (!debounced) {
+      debounced = createDebounce(async () => {
+        try { await performSyncCalendar(calendar); } catch { /* handled internally */ }
+      }, 500);
+      debouncedSyncRef.set(calendar.id, debounced);
+    }
+    debounced();
+  }, [performSyncCalendar, debouncedSyncRef, notionRateLimiterRef, toast]);
+
   // Sync all enabled calendars
   const syncAllCalendars = useCallback(async () => {
+    if (!notionRateLimiterRef.tryRemove()) {
+      toast({
+        title: 'Rate Limited',
+        description: 'Bulk sync throttled. Try again shortly.',
+        variant: 'destructive'
+      });
+      return;
+    }
     setIsLoading(true);
     const enabledCalendars = calendars.filter(cal => cal.enabled);
     let successCount = 0;
@@ -369,7 +498,7 @@ export const useNotionScrapedCalendars = () => {
       await Promise.all(
         enabledCalendars.map(async (calendar) => {
           try {
-            await syncCalendar(calendar);
+            await performSyncCalendar(calendar);
             successCount++;
           } catch (error) {
             console.error(`Failed to sync calendar ${calendar.name}:`, error);
@@ -393,61 +522,29 @@ export const useNotionScrapedCalendars = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [calendars, syncCalendar, toast]);
+  }, [calendars, performSyncCalendar, toast]);
 
   // Validate a Notion integration and database
   const validateNotionUrl = useCallback(async (url: string, token?: string): Promise<{ isValid: boolean; error?: string }> => {
+    if (!token) return { isValid: false, error: 'Notion integration token is required' };
+    const parsed = notionPageScraper.parseNotionUrl(url);
+    if (!parsed) return { isValid: false, error: 'Invalid Notion database URL' };
     try {
-  // debug removed: validating Notion integration
-      
-      if (!token) {
-        return { isValid: false, error: 'Notion integration token is required' };
-      }
-
-      // Call the edge function to validate
-      const { data, error } = await supabase.functions.invoke('notion-api', {
-        body: {
-          action: 'validate',
-          token,
-          url,
-        }
-      });
-
-      if (error) {
-        return { isValid: false, error: error.message || 'Validation failed' };
-      }
-
-      if (data.success) {
-  // debug removed: validation success
-        return { isValid: true };
-      } else {
-  console.warn('Validation failed');
-        return { isValid: false, error: data.error || 'Unable to access the Notion database' };
-      }
-    } catch (error) {
-      console.error('URL validation error:', error);
-      return {
-        isValid: false,
-        error: error instanceof Error ? error.message : 'Unknown validation error occurred'
-      };
+      await notionAPIClient.getDatabase(parsed.blockId, token);
+      return { isValid: true };
+    } catch (err) {
+      return { isValid: false, error: err instanceof Error ? err.message : 'Validation failed' };
     }
   }, []);
 
   // Test database access
   const testDatabaseAccess = useCallback(async (token: string, databaseId: string) => {
-    const { data, error } = await supabase.functions.invoke('notion-api', {
-      body: {
-        action: 'test',
-        token,
-        databaseId,
-      }
-    });
-
-    if (error) {
-      throw new Error(error.message || 'Failed to test database access');
+    try {
+      const db = await notionAPIClient.getDatabase(databaseId, token);
+      return { success: true, id: (db as any).id };
+    } catch (e) {
+      throw new Error(e instanceof Error ? e.message : 'Failed to test database access');
     }
-
-    return data;
   }, []);
 
   // Get events for filtering

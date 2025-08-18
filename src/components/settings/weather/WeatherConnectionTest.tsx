@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { CheckCircle, XCircle, Loader2, Key, Eye, ChevronDown, ChevronUp, Smartphone } from 'lucide-react';
-import { enhancedWeatherService } from '@/services/enhancedWeatherService';
 import { useWeather } from '@/contexts/weather/WeatherContext';
 import { useWeatherSettings } from '@/contexts/settings/useWeatherSettings';
 import { WeatherTestResult } from '@/types/weather';

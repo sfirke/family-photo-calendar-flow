@@ -25,31 +25,46 @@ interface ProxyResponse {
 }
 
 export class NotionAPIClient {
-  private readonly corsProxy = 'https://api.allorigins.win/raw';
+  // Direct Notion REST base (used in production only when behind a trusted proxy we control)
   private readonly baseURL = 'https://api.notion.com/v1';
-  
+
+  // Determine runtime environment capabilities
+  private get useDevProxy(): boolean {
+    // In Vite dev we expose a local proxy at /notion -> https://api.notion.com/v1
+    return typeof window !== 'undefined' && !!(import.meta as any).env?.DEV;
+  }
+
+  private resolveUrl(endpoint: string): string {
+    if (this.useDevProxy) {
+      // Use relative path so browser hits Vite dev server (avoids CORS)
+      return `/notion${endpoint}`;
+    }
+    // In production the static site cannot call Notion API directly (CORS + secret exposure).
+    // A serverless proxy must be provided; we point to baseURL so that if user deploys behind
+    // a reverse proxy it will work. Otherwise request will fail with clear error.
+    return `${this.baseURL}${endpoint}`;
+  }
+
   private async makeRequest<T = unknown>(endpoint: string, token: string, options: RequestInit = {}): Promise<T> {
-    const url = `${this.baseURL}${endpoint}`;
-    
-    // Prepare headers
-    const headers = {
+    const url = this.resolveUrl(endpoint);
+
+    // Prepare headers (Authorization is required by Notion; okay in dev since user supplies their own token locally)
+    const headers: Record<string, string> = {
       'Authorization': `Bearer ${token}`,
       'Notion-Version': '2022-06-28',
       'Content-Type': 'application/json',
-      ...options.headers,
+      ...(options.headers as Record<string, string> | undefined),
     };
 
-    // Use CORS proxy for the request
-    const proxyUrl = `${this.corsProxy}?url=${encodeURIComponent(url)}`;
-    
+    // If not using dev proxy AND running in browser, warn about likely CORS failure
+    if (!this.useDevProxy && typeof window !== 'undefined') {
+      console.warn('[NotionAPIClient] Direct browser call to Notion API – this will likely fail due to CORS. Configure a serverless proxy or deploy with one.');
+    }
+
     try {
-      const response = await fetch(proxyUrl, {
+      const response = await fetch(url, {
         method: options.method || 'GET',
-        headers: {
-          ...headers,
-          // Remove Authorization from proxy headers and add it to the proxied request
-          'X-Requested-With': 'XMLHttpRequest',
-        },
+        headers,
         body: options.body,
       });
 
@@ -57,8 +72,8 @@ export class NotionAPIClient {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
-  const data = await response.json();
-  return data as T;
+      const data = await response.json();
+      return data as T;
     } catch (error) {
       console.error(`Notion API request failed for ${endpoint}:`, error);
       throw this.handleError(error);
