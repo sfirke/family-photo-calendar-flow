@@ -16,32 +16,41 @@ export const useGitHubSettings = () => {
 
   // Load initial settings from tiered storage
   useEffect(() => {
+    if (typeof window === 'undefined' || typeof document === 'undefined') {
+      setIsInitialized(true);
+      return;
+    }
+    let cancelled = false;
     const loadSettings = async () => {
       try {
         const savedGithubOwner = await settingsStorageService.getValue('githubOwner') || '';
         const savedGithubRepo = await settingsStorageService.getValue('githubRepo') || '';
-        
-        setGithubOwner(savedGithubOwner);
-        setGithubRepo(savedGithubRepo);
+        if (!cancelled) {
+          setGithubOwner(savedGithubOwner);
+          setGithubRepo(savedGithubRepo);
+        }
       } catch (error) {
-        console.warn('Failed to load GitHub settings from tiered storage:', error);
-        // Fallback to localStorage for compatibility
-        try {
-          if (typeof localStorage !== 'undefined') {
-            const fallbackOwner = localStorage.getItem('githubOwner') || '';
-            const fallbackRepo = localStorage.getItem('githubRepo') || '';
-            setGithubOwner(fallbackOwner);
-            setGithubRepo(fallbackRepo);
+        if (!cancelled) {
+          console.warn('Failed to load GitHub settings from tiered storage:', error);
+          try {
+            if (typeof localStorage !== 'undefined') {
+              const fallbackOwner = localStorage.getItem('githubOwner') || '';
+              const fallbackRepo = localStorage.getItem('githubRepo') || '';
+              if (!cancelled) {
+                setGithubOwner(fallbackOwner);
+                setGithubRepo(fallbackRepo);
+              }
+            }
+          } catch (fallbackError) {
+            console.warn('Failed to load GitHub settings from fallback:', fallbackError);
           }
-        } catch (fallbackError) {
-          console.warn('Failed to load GitHub settings from fallback:', fallbackError);
         }
       } finally {
-        setIsInitialized(true);
+        if (!cancelled) setIsInitialized(true);
       }
     };
-    
     loadSettings();
+    return () => { cancelled = true; };
   }, []);
 
   // Auto-save GitHub owner to tiered storage (only after initialization)

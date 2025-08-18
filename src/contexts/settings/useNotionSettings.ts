@@ -19,31 +19,43 @@ export const useNotionSettings = () => {
 
   // Load initial settings from tiered storage
   useEffect(() => {
+    // If running in a non-browser environment (e.g. SSR or after jsdom teardown), skip async work
+    if (typeof window === 'undefined' || typeof document === 'undefined') {
+      setIsInitialized(true);
+      return;
+    }
+
+    let cancelled = false;
     const loadSettings = async () => {
       try {
         const savedToken = await settingsStorageService.getValue(NOTION_TOKEN_KEY) || '';
         const savedDatabaseId = await settingsStorageService.getValue(NOTION_DATABASE_ID_KEY) || '';
-        
-        setNotionTokenState(savedToken);
-        setNotionDatabaseIdState(savedDatabaseId);
+        if (!cancelled) {
+          setNotionTokenState(savedToken);
+          setNotionDatabaseIdState(savedDatabaseId);
+        }
       } catch (error) {
-        console.warn('Failed to load Notion settings from tiered storage:', error);
-        // Fallback to localStorage for compatibility
-        try {
-          const fallbackToken = safeLocalStorage.getItem(NOTION_TOKEN_KEY) || '';
-          const fallbackDatabaseId = safeLocalStorage.getItem(NOTION_DATABASE_ID_KEY) || '';
-          
-          setNotionTokenState(fallbackToken);
-          setNotionDatabaseIdState(fallbackDatabaseId);
-        } catch (fallbackError) {
-          console.warn('Failed to load Notion settings from fallback:', fallbackError);
+        if (!cancelled) {
+          console.warn('Failed to load Notion settings from tiered storage:', error);
+          // Fallback to localStorage for compatibility
+          try {
+            const fallbackToken = safeLocalStorage.getItem(NOTION_TOKEN_KEY) || '';
+            const fallbackDatabaseId = safeLocalStorage.getItem(NOTION_DATABASE_ID_KEY) || '';
+            if (!cancelled) {
+              setNotionTokenState(fallbackToken);
+              setNotionDatabaseIdState(fallbackDatabaseId);
+            }
+          } catch (fallbackError) {
+            console.warn('Failed to load Notion settings from fallback:', fallbackError);
+          }
         }
       } finally {
-        setIsInitialized(true);
+        if (!cancelled) setIsInitialized(true);
       }
     };
-    
+
     loadSettings();
+    return () => { cancelled = true; };
   }, []);
 
   const setNotionToken = async (token: string) => {

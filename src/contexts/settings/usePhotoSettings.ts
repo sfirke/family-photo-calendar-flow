@@ -18,38 +18,44 @@ export const usePhotoSettings = () => {
 
   // Load initial settings from tiered storage
   useEffect(() => {
+    if (typeof window === 'undefined' || typeof document === 'undefined') {
+      setIsInitialized(true);
+      return;
+    }
+
+    let cancelled = false;
     const loadSettings = async () => {
       try {
         const savedUrl = await settingsStorageService.getValue('publicAlbumUrl') || '';
         const savedDuration = await settingsStorageService.getValue('backgroundDuration') || '30';
         const savedAlbum = await settingsStorageService.getValue('selectedAlbum');
-        
-  // debug removed: loading saved settings details
-        
-        setPublicAlbumUrl(savedUrl);
-        setBackgroundDuration(parseInt(savedDuration) || 30);
-        setSelectedAlbum(savedAlbum);
+        if (!cancelled) {
+          setPublicAlbumUrl(savedUrl);
+          setBackgroundDuration(parseInt(savedDuration) || 30);
+          setSelectedAlbum(savedAlbum);
+        }
       } catch (error) {
-        console.warn('Failed to load photo settings from tiered storage:', error);
-        // Fallback to localStorage for compatibility
-        try {
-          const fallbackUrl = safeLocalStorage.getItem('publicAlbumUrl') || '';
-          const fallbackDuration = parseInt(safeLocalStorage.getItem('backgroundDuration') || '30');
-          const fallbackAlbum = safeLocalStorage.getItem('selectedAlbum');
-          
-          // debug removed: loading fallback from localStorage
-          setPublicAlbumUrl(fallbackUrl);
-          setBackgroundDuration(fallbackDuration);
-          setSelectedAlbum(fallbackAlbum);
-        } catch (fallbackError) {
-          console.warn('Failed to load photo settings from fallback:', fallbackError);
+        if (!cancelled) {
+          console.warn('Failed to load photo settings from tiered storage:', error);
+          try {
+            const fallbackUrl = safeLocalStorage.getItem('publicAlbumUrl') || '';
+            const fallbackDuration = parseInt(safeLocalStorage.getItem('backgroundDuration') || '30');
+            const fallbackAlbum = safeLocalStorage.getItem('selectedAlbum');
+            if (!cancelled) {
+              setPublicAlbumUrl(fallbackUrl);
+              setBackgroundDuration(fallbackDuration);
+              setSelectedAlbum(fallbackAlbum);
+            }
+          } catch (fallbackError) {
+            console.warn('Failed to load photo settings from fallback:', fallbackError);
+          }
         }
       } finally {
-        setIsInitialized(true);
+        if (!cancelled) setIsInitialized(true);
       }
     };
-
     loadSettings();
+    return () => { cancelled = true; };
   }, []);
 
   // Auto-save public album URL to tiered storage (only after initialization)
