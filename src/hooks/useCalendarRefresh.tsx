@@ -25,7 +25,7 @@ export const useCalendarRefresh = () => {
    * Trigger a calendar refresh event
    */
   const triggerRefresh = useCallback((refreshData: CalendarRefreshEvent) => {
-    console.log('📱 Calendar refresh triggered:', refreshData);
+  // debug removed: calendar refresh triggered
     
     const customEvent = new CustomEvent(CALENDAR_REFRESH_EVENT, {
       detail: refreshData
@@ -42,7 +42,7 @@ export const useCalendarRefresh = () => {
   const useRefreshListener = (callback: (event: CalendarRefreshEvent) => void) => {
     useEffect(() => {
       const handleRefresh = (event: CustomEvent<CalendarRefreshEvent>) => {
-        console.log('📱 Calendar refresh event received:', event.detail);
+  // debug removed: calendar refresh event received
         callback(event.detail);
       };
 

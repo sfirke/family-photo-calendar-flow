@@ -91,7 +91,7 @@ class SettingsStorageService {
       // 1. Check in-memory cache first
       const cached = this.cache.get(key);
       if (cached) {
-        console.log(`📄 Settings cache hit for ${key}`);
+        // debug removed: settings cache hit
         return cached.value;
       }
 
@@ -103,7 +103,7 @@ class SettingsStorageService {
         try {
           value = await secureStorage.retrieve(key, 'defaultPassword');
           if (value) {
-            console.log(`🔐 Settings loaded from secure storage for ${key}`);
+            // debug removed: loaded from secure storage
           }
         } catch (error) {
           console.warn(`Failed to load ${key} from secure storage:`, error);
@@ -114,7 +114,7 @@ class SettingsStorageService {
       if (!value) {
         value = localStorage.getItem(key);
         if (value) {
-          console.log(`💾 Settings loaded from localStorage for ${key}`);
+          // debug removed: loaded from localStorage
         }
       }
 
@@ -122,7 +122,7 @@ class SettingsStorageService {
       if (!value) {
         value = await this.getFromIndexedDB(key);
         if (value) {
-          console.log(`🗃️ Settings loaded from IndexedDB for ${key}`);
+          // debug removed: loaded from IndexedDB
           // Populate localStorage with the value for faster future access
           if (isSensitive && secureStorage.exists('test')) {
             try {
@@ -167,27 +167,27 @@ class SettingsStorageService {
       };
 
       // 1. Update cache immediately
-      this.cache.set(key, settingsItem);
-      console.log(`📝 Settings cached for ${key}`);
+  this.cache.set(key, settingsItem);
+  // debug removed: settings cached
 
       // 2. Save to localStorage/secure storage
       if (isSensitive && secureStorage.exists('test')) {
         try {
           await secureStorage.store(key, value, 'defaultPassword');
           localStorage.removeItem(key); // Remove unencrypted version
-          console.log(`🔐 Settings saved to secure storage for ${key}`);
+          // debug removed: saved to secure storage
         } catch (error) {
           console.warn(`Failed to save ${key} securely, using localStorage:`, error);
           localStorage.setItem(key, value);
         }
       } else {
         localStorage.setItem(key, value);
-        console.log(`💾 Settings saved to localStorage for ${key}`);
+        // debug removed: saved to localStorage
       }
 
       // 3. Save to IndexedDB for persistence
-      await this.saveToIndexedDB(settingsItem);
-      console.log(`🗃️ Settings saved to IndexedDB for ${key}`);
+  await this.saveToIndexedDB(settingsItem);
+  // debug removed: saved to IndexedDB
 
     } catch (error) {
       console.error(`Error saving setting ${key}:`, error);
@@ -213,7 +213,7 @@ class SettingsStorageService {
       // Remove from IndexedDB
       await this.removeFromIndexedDB(key);
 
-      console.log(`🗑️ Settings removed for ${key}`);
+  // debug removed: settings removed
     } catch (error) {
       console.error(`Error removing setting ${key}:`, error);
       throw error;
@@ -246,7 +246,7 @@ class SettingsStorageService {
         }
       }
 
-      console.log('📊 All settings loaded using tiered storage approach');
+  // debug removed: all settings loaded
       return settings;
     } catch (error) {
       console.error('Error loading all settings:', error);
@@ -327,8 +327,8 @@ class SettingsStorageService {
    * Clear all cached settings (useful for testing or logout)
    */
   clearCache(): void {
-    this.cache.clear();
-    console.log('🧹 Settings cache cleared');
+  this.cache.clear();
+  // debug removed: settings cache cleared
   }
 
   /**
@@ -351,7 +351,7 @@ class SettingsStorageService {
       await this.getValue(key);
     }
     
-    console.log('⚡ Common settings preloaded into cache');
+  // debug removed: common settings preloaded
   }
 }
 

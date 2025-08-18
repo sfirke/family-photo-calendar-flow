@@ -122,16 +122,16 @@ class WeatherStorageService {
       };
 
       // 1. Save to memory cache
-      this.cache.set('current_weather', currentData);
-      console.log('💨 Current weather cached in memory');
+  this.cache.set('current_weather', currentData);
+  // debug removed: current weather cached in memory
 
       // 2. Save to localStorage
-      localStorage.setItem('weather_current', JSON.stringify(currentData));
-      console.log('💾 Current weather saved to localStorage');
+  localStorage.setItem('weather_current', JSON.stringify(currentData));
+  // debug removed: current weather saved to localStorage
 
       // 3. Save to IndexedDB
-      await this.saveCurrentWeatherToIndexedDB(currentData);
-      console.log('🗃️ Current weather saved to IndexedDB');
+  await this.saveCurrentWeatherToIndexedDB(currentData);
+  // debug removed: current weather saved to IndexedDB
 
     } catch (error) {
       console.error('Error saving current weather:', error);
@@ -164,15 +164,15 @@ class WeatherStorageService {
       forecastData.forEach(day => {
         this.cache.set(`forecast_${day.date}`, day);
       });
-      console.log(`🌤️ ${forecastData.length} forecast days cached in memory`);
+      // debug removed: forecast days cached in memory
 
       // 2. Save to localStorage
-      localStorage.setItem('weather_forecast', JSON.stringify(forecastData));
-      console.log('💾 Forecast data saved to localStorage');
+  localStorage.setItem('weather_forecast', JSON.stringify(forecastData));
+  // debug removed: forecast data saved to localStorage
 
       // 3. Save to IndexedDB
-      await this.saveForecastToIndexedDB(forecastData);
-      console.log(`🗃️ ${forecastData.length} forecast days saved to IndexedDB`);
+  await this.saveForecastToIndexedDB(forecastData);
+  // debug removed: forecast days saved to IndexedDB
 
     } catch (error) {
       console.error('Error saving forecast data:', error);
@@ -194,16 +194,16 @@ class WeatherStorageService {
       };
 
       // 1. Save to memory cache
-      this.cache.set('nws_raw', rawRecord);
-      console.log('📡 Raw NWS data cached in memory');
+  this.cache.set('nws_raw', rawRecord);
+  // debug removed: raw NWS data cached in memory
 
       // 2. Save to localStorage
-      localStorage.setItem('nws_raw_cache', JSON.stringify(rawRecord));
-      console.log('💾 Raw NWS data saved to localStorage');
+  localStorage.setItem('nws_raw_cache', JSON.stringify(rawRecord));
+  // debug removed: raw NWS data saved to localStorage
 
       // 3. Save to IndexedDB
-      await this.saveRawDataToIndexedDB(rawRecord);
-      console.log('🗃️ Raw NWS data saved to IndexedDB');
+  await this.saveRawDataToIndexedDB(rawRecord);
+  // debug removed: raw NWS data saved to IndexedDB
 
     } catch (error) {
       console.error('Error saving raw NWS data:', error);
@@ -219,17 +219,17 @@ class WeatherStorageService {
       // 1. Check memory cache first
       const cached = this.cache.get('current_weather');
       if (cached && cached.expiresAt > Date.now()) {
-        console.log('⚡ Current weather loaded from memory cache');
+        // debug removed: current weather loaded from memory
         return cached;
       }
 
       // 2. Check localStorage
       const localData = localStorage.getItem('weather_current');
-      if (localData) {
+    if (localData) {
         const parsed: CurrentWeatherData = JSON.parse(localData);
         if (parsed.expiresAt > Date.now()) {
           this.cache.set('current_weather', parsed);
-          console.log('💾 Current weather loaded from localStorage');
+      // debug removed: current weather loaded from localStorage
           return parsed;
         }
       }
@@ -239,7 +239,7 @@ class WeatherStorageService {
       if (dbData && dbData.expiresAt > Date.now()) {
         this.cache.set('current_weather', dbData);
         localStorage.setItem('weather_current', JSON.stringify(dbData));
-        console.log('🗃️ Current weather loaded from IndexedDB');
+        // debug removed: current weather loaded from IndexedDB
         return dbData;
       }
 
@@ -258,18 +258,18 @@ class WeatherStorageService {
       // 1. Check memory cache first
       const cached = this.cache.get(`forecast_${date}`);
       if (cached && cached.expiresAt > Date.now()) {
-        console.log(`⚡ Forecast for ${date} loaded from memory cache`);
+        // debug removed: forecast loaded from memory
         return cached;
       }
 
       // 2. Check localStorage
       const localData = localStorage.getItem('weather_forecast');
-      if (localData) {
+    if (localData) {
         const forecastArray: ForecastDayData[] = JSON.parse(localData);
         const dayData = forecastArray.find(day => day.date === date);
         if (dayData && dayData.expiresAt > Date.now()) {
           this.cache.set(`forecast_${date}`, dayData);
-          console.log(`💾 Forecast for ${date} loaded from localStorage`);
+      // debug removed: forecast loaded from localStorage
           return dayData;
         }
       }
@@ -278,7 +278,7 @@ class WeatherStorageService {
       const dbData = await this.getForecastFromIndexedDB(date);
       if (dbData && dbData.expiresAt > Date.now()) {
         this.cache.set(`forecast_${date}`, dbData);
-        console.log(`🗃️ Forecast for ${date} loaded from IndexedDB`);
+        // debug removed: forecast loaded from IndexedDB
         return dbData;
       }
 
@@ -297,17 +297,17 @@ class WeatherStorageService {
       // 1. Check memory cache first
       const cached = this.cache.get('nws_raw');
       if (cached && cached.expiresAt > Date.now()) {
-        console.log('⚡ Raw NWS data loaded from memory cache');
+        // debug removed: raw NWS data loaded from memory
         return cached.rawData;
       }
 
       // 2. Check localStorage
       const localData = localStorage.getItem('nws_raw_cache');
-      if (localData) {
+    if (localData) {
         const parsed: NWSRawData = JSON.parse(localData);
         if (parsed.expiresAt > Date.now()) {
           this.cache.set('nws_raw', parsed);
-          console.log('💾 Raw NWS data loaded from localStorage');
+      // debug removed: raw NWS data loaded from localStorage
           return parsed.rawData;
         }
       }
@@ -317,7 +317,7 @@ class WeatherStorageService {
       if (dbData && dbData.expiresAt > Date.now()) {
         this.cache.set('nws_raw', dbData);
         localStorage.setItem('nws_raw_cache', JSON.stringify(dbData));
-        console.log('🗃️ Raw NWS data loaded from IndexedDB');
+        // debug removed: raw NWS data loaded from IndexedDB
         return dbData.rawData;
       }
 
@@ -346,7 +346,7 @@ class WeatherStorageService {
       await this.clearIndexedDBStore(this.forecastStore);
       await this.clearIndexedDBStore(this.rawDataStore);
 
-      console.log('🧹 All weather data cleared from storage');
+  // debug removed: all weather data cleared
     } catch (error) {
       console.error('Error clearing weather data:', error);
       throw error;

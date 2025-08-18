@@ -56,7 +56,7 @@ class NotionScrapedEventsStorage {
                 eventsStore.createIndex('priority', 'priority', { unique: false });
               }
             } catch (error) {
-              console.log('Indexes may already exist:', error);
+              console.warn('Indexes may already exist');
             }
           }
         }

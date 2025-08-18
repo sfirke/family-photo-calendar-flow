@@ -106,7 +106,7 @@ const NotionScrapedSettings = ({ selectedCalendarIds, onToggleSelection }: Notio
   };
 
   const handleToggleSelection = (calendarId: string, selected: boolean) => {
-    console.log('NotionScrapedSettings - Toggle selection:', { calendarId, selected });
+    // debug removed: notion scraped settings toggle selection
     onToggleSelection(calendarId, selected);
   };
 
@@ -114,13 +114,7 @@ const NotionScrapedSettings = ({ selectedCalendarIds, onToggleSelection }: Notio
   const totalEvents = calendars.reduce((sum, cal) => sum + (cal.eventCount || 0), 0);
   const selectedCount = calendars.filter(cal => selectedCalendarIds.includes(cal.id)).length;
 
-  console.log('NotionScrapedSettings - Render state:', {
-    calendarsCount: calendars.length,
-    enabledCount: enabledCalendars.length,
-    totalEvents,
-    selectedCount,
-    selectedCalendarIds
-  });
+  // debug removed: notion scraped settings render state
 
   return (
     <div className="space-y-4">

@@ -14,13 +14,7 @@ const CalendarSelectorButton = React.forwardRef<HTMLButtonElement, CalendarSelec
   ({ selectedCount, totalCount, disabled = false, onClick }, ref) => {
     
     const handleClick = (e?: React.MouseEvent<HTMLButtonElement>) => {
-      console.log('CalendarSelectorButton - Button clicked!', {
-        selectedCount,
-        totalCount,
-        disabled,
-        event: e?.type || 'no-event',
-        hasEvent: !!e
-      });
+  // debug removed: calendar selector button click
       
       // Prevent default if event exists
       if (e) {

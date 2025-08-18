@@ -131,11 +131,11 @@ export class WeatherCorsProxyService {
    * Attempt to fetch weather data with enhanced CORS proxy fallback
    */
   async fetchWithProxy(url: string): Promise<Response> {
-    console.log('WeatherCorsProxy - Starting enhanced fetch for:', url);
+  // debug removed: starting enhanced fetch
     
     // First try direct fetch (works in browser and development)
     try {
-      console.log('WeatherCorsProxy - Trying direct fetch');
+  // debug removed: trying direct fetch
       const startTime = Date.now();
       const response = await Promise.race([
         fetch(url, {
@@ -154,10 +154,10 @@ export class WeatherCorsProxyService {
       if (response.ok) {
         const text = await response.text();
         if (text === 'Offline' || text.includes('offline')) {
-          console.log('WeatherCorsProxy - Direct fetch returned "Offline", trying proxies');
+          // debug removed: direct fetch returned offline indicator
           throw new Error('Direct fetch returned offline response');
         }
-        console.log(`WeatherCorsProxy - Direct fetch successful in ${Date.now() - startTime}ms`);
+  // debug removed: direct fetch success timing
         return new Response(text, {
           status: response.status,
           statusText: response.statusText,
@@ -165,7 +165,7 @@ export class WeatherCorsProxyService {
         });
       }
     } catch (error) {
-      console.log('WeatherCorsProxy - Direct fetch failed, trying smart proxy selection:', error);
+      // debug removed: direct fetch failed
     }
 
     // Use smart proxy selection with retry logic
@@ -182,13 +182,13 @@ export class WeatherCorsProxyService {
     // Get available proxies sorted by performance
     const sortedProxies = this.getSortedProxies();
     
-    console.log(`WeatherCorsProxy - Trying ${sortedProxies.length} available proxies with smart selection`);
+  // debug removed: proxy trial count
     
     let lastError: Error | null = null;
     
     for (let attempt = 0; attempt < this.maxRetries; attempt++) {
       if (attempt > 0) {
-        console.log(`WeatherCorsProxy - Retry attempt ${attempt + 1}/${this.maxRetries}`);
+  // debug removed: retry attempt
         await this.delay(this.retryDelayMs * Math.pow(2, attempt)); // Exponential backoff
       }
       
@@ -201,11 +201,11 @@ export class WeatherCorsProxyService {
           if (result) {
             this.recordSuccess(proxy.url, Date.now() - performance.now());
             this.lastSuccessfulProxy = proxy;
-            console.log(`WeatherCorsProxy - Success with ${proxy.url} (reliability: ${proxy.reliability})`);
+            // debug removed: proxy success
             return result;
           }
         } catch (error) {
-          console.log(`WeatherCorsProxy - Failed with ${proxy.url}:`, error);
+          // debug removed: proxy failure
           this.recordFailure(proxy.url);
           lastError = error as Error;
           
@@ -224,7 +224,7 @@ export class WeatherCorsProxyService {
     const startTime = Date.now();
     const timeout = proxy.timeout || 15000;
     
-    console.log(`WeatherCorsProxy - Trying ${proxy.url} (${proxy.region}, ${proxy.reliability})`);
+  // debug removed: attempting proxy fetch
     
     const proxyUrl = this.buildProxyUrl(proxy, targetUrl);
     const headers = this.getProxyHeaders(proxy);
@@ -255,7 +255,7 @@ export class WeatherCorsProxyService {
     }
     
     const responseTime = Date.now() - startTime;
-    console.log(`WeatherCorsProxy - ${proxy.url} responded in ${responseTime}ms`);
+  // debug removed: proxy response time
     
     return new Response(content, {
       status: 200,
@@ -325,7 +325,7 @@ export class WeatherCorsProxyService {
     if (stats) {
       stats.isBlacklisted = true;
       stats.blacklistUntil = Date.now() + (5 * 60 * 1000); // 5 minutes
-      console.log(`WeatherCorsProxy - Blacklisted ${proxyUrl} for 5 minutes`);
+  // debug removed: proxy blacklisted
     }
   }
 
@@ -335,7 +335,7 @@ export class WeatherCorsProxyService {
       if (stats.isBlacklisted && stats.blacklistUntil && now > stats.blacklistUntil) {
         stats.isBlacklisted = false;
         stats.blacklistUntil = undefined;
-        console.log(`WeatherCorsProxy - Removed ${url} from blacklist`);
+  // debug removed: removed from blacklist
       }
     }
   }
@@ -411,7 +411,7 @@ export class WeatherCorsProxyService {
         isBlacklisted: false
       });
     });
-    console.log('WeatherCorsProxy - Reset all proxy statistics');
+  // debug removed: reset proxy statistics
   }
 
   /**
@@ -430,14 +430,14 @@ export class WeatherCorsProxyService {
       if (stats) {
         stats.isBlacklisted = false;
         stats.blacklistUntil = undefined;
-        console.log(`WeatherCorsProxy - Cleared blacklist for ${proxyUrl}`);
+  // debug removed: cleared single proxy blacklist
       }
     } else {
       for (const stats of this.proxyStats.values()) {
         stats.isBlacklisted = false;
         stats.blacklistUntil = undefined;
       }
-      console.log('WeatherCorsProxy - Cleared all blacklists');
+  // debug removed: cleared all proxy blacklists
     }
   }
 }

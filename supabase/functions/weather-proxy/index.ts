@@ -1,3 +1,4 @@
+// Deno edge function (ambient types provided in custom declarations)
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 
 const corsHeaders = {
@@ -62,7 +63,7 @@ function getCachedData(cacheKey: string): any | null {
     return null;
   }
 
-  console.log(`Cache hit for key: ${cacheKey}`);
+  // debug removed: cache hit
   return cached.data;
 }
 
@@ -73,13 +74,13 @@ function setCachedData(cacheKey: string, data: any): void {
     timestamp: now,
     expiresAt: now + CACHE_TTL
   });
-  console.log(`Data cached for key: ${cacheKey}`);
+  // debug removed: data cached
 }
 
 async function getLocationKey(zipCode: string, apiKey: string): Promise<{ key: string; locationName: string }> {
   const url = `http://dataservice.accuweather.com/locations/v1/postalcodes/search?apikey=${apiKey}&q=${zipCode}`;
   
-  console.log(`Fetching location key for zip: ${zipCode}`);
+  // debug removed: fetching location key
   
   const response = await fetch(url);
   if (!response.ok) {
@@ -94,14 +95,14 @@ async function getLocationKey(zipCode: string, apiKey: string): Promise<{ key: s
   const location = locations[0];
   const locationKey = location.Key;
   const locationName = `${location.LocalizedName}, ${location.AdministrativeArea.LocalizedName}`;
-  console.log(`Location key found: ${locationKey} for ${locationName}`);
+  // debug removed: location key found
   return { key: locationKey, locationName };
 }
 
 async function getLocationByIP(apiKey: string): Promise<{ key: string; locationName: string }> {
   const url = `http://dataservice.accuweather.com/locations/v1/cities/ipaddress?apikey=${apiKey}`;
   
-  console.log(`Fetching location key via IP address`);
+  // debug removed: fetching location key via IP
   
   const response = await fetch(url);
   if (!response.ok) {
@@ -115,14 +116,14 @@ async function getLocationByIP(apiKey: string): Promise<{ key: string; locationN
 
   const locationKey = location.Key;
   const locationName = `${location.LocalizedName}, ${location.AdministrativeArea.LocalizedName}`;
-  console.log(`Location key found via IP: ${locationKey} for ${locationName}`);
+  // debug removed: location key found via IP
   return { key: locationKey, locationName };
 }
 
 async function fetchCurrentConditions(locationKey: string, apiKey: string): Promise<any> {
   const url = `http://dataservice.accuweather.com/currentconditions/v1/${locationKey}?apikey=${apiKey}&details=true`;
   
-  console.log(`Fetching current conditions for location: ${locationKey}`);
+  // debug removed: fetching current conditions
   
   const response = await fetch(url);
   if (!response.ok) {
@@ -136,7 +137,7 @@ async function fetchCurrentConditions(locationKey: string, apiKey: string): Prom
 async function fetchForecast(locationKey: string, apiKey: string): Promise<any> {
   const url = `http://dataservice.accuweather.com/forecasts/v1/daily/15day/${locationKey}?apikey=${apiKey}&details=true&metric=false`;
   
-  console.log(`Fetching 15-day forecast for location: ${locationKey}`);
+  // debug removed: fetching 15-day forecast
   
   const response = await fetch(url);
   if (!response.ok) {
@@ -210,13 +211,13 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Log the incoming request for debugging
-    console.log(`Weather proxy request: zipCode="${zipCode || 'empty'}", hasApiKey=${!!apiKey}, locationKey="${locationKey || 'none'}"`);
+  // debug removed: incoming request details
     
     // zipCode can be empty - we'll use IP-based location detection in that case
 
     // Check rate limiting
     if (isRateLimited(apiKey)) {
-      console.log(`Rate limit exceeded for API key: ${apiKey.substring(0, 8)}...`);
+  console.warn(`Weather proxy rate limit exceeded for API key: ${apiKey.substring(0, 8)}...`);
       return new Response(
         JSON.stringify({ error: 'Rate limit exceeded. Please try again later.' }),
         { 
@@ -245,7 +246,7 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Fetch fresh data
-    console.log(`Fetching fresh weather data for ${zipCode || 'IP location'}`);
+  // debug removed: fetching fresh weather data
     const weatherData = await fetchWeatherData(zipCode, apiKey, locationKey);
 
     // Cache the data

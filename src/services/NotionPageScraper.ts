@@ -68,9 +68,7 @@ class NotionPageScraper {
       // Wait for DOM to fully load before parsing
       await this.waitForDOMLoad();
 
-      if (options.debug) {
-        console.log('🐛 DEBUG MODE: Parsing with enhanced debug information...');
-      }
+  // debug removed: parsing with enhanced info when options.debug
 
       // Use enhanced table parser with or without debug
       const parseResult = this.parseHtmlForStructuredEvents(htmlContent, pageUrl, options.debug);
@@ -92,7 +90,6 @@ class NotionPageScraper {
 
       if (options.debug && 'debugInfo' in parseResult) {
         result.debugInfo = parseResult.debugInfo;
-        console.log('🐛 DEBUG INFO:', result.debugInfo);
       }
 
       return result;
@@ -161,13 +158,9 @@ class NotionPageScraper {
       let parseResult;
       if (debug) {
         parseResult = notionTableParser.parseWithDebug(doc, sourceUrl);
-        console.log(`🐛 DEBUG: Successfully parsed ${parseResult.events.length} events from ${parseResult.metadata.viewType} view`);
       } else {
         parseResult = notionTableParser.parseTableStructure(doc, sourceUrl);
-        console.log(`✅ Successfully parsed ${parseResult.events.length} events from ${parseResult.metadata.viewType} view`);
       }
-      
-      console.log(`📋 Column mappings:`, parseResult.columnMappings);
 
       // Fallback to legacy parsing if no structured events found
       if (parseResult.events.length === 0) {

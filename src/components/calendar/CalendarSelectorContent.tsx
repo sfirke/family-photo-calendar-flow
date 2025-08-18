@@ -70,8 +70,7 @@ const CalendarSelectorContent = ({
             variant="outline"
             size="sm"
             onClick={() => {
-              // This will be handled by the settings modal when it's integrated
-              console.log('Open settings to configure calendars');
+              // debug removed: open settings to configure calendars
             }}
             className="text-xs bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-300 dark:border-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900/30"
           >
@@ -136,7 +135,7 @@ const CalendarSelectorContent = ({
                 id={`calendar-${calendar.id}`}
                 checked={isSelected}
                 onCheckedChange={(checked) => {
-                  console.log('Calendar checkbox toggled:', calendar.id, checked);
+                  // debug removed: calendar checkbox toggled
                   onCalendarToggle(calendar.id, checked === true);
                 }}
                 className="data-[state=checked]:bg-blue-600 dark:data-[state=checked]:bg-blue-500 data-[state=checked]:border-blue-600 dark:data-[state=checked]:border-blue-500 border-gray-300 dark:border-gray-600"

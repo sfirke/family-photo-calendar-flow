@@ -103,11 +103,7 @@ export const WeatherProvider = ({ children }: { children: React.ReactNode }) => 
             provider: cachedWeather.provider
           };
           setWeatherData(weatherData);
-          console.log('WeatherContext - Loaded cached weather data from tiered storage:', {
-            location: weatherData.location,
-            temperature: weatherData.temperature,
-            condition: weatherData.condition
-          });
+          // debug log removed: loaded cached weather data
         }
       };
       loadCachedData();
@@ -141,7 +137,7 @@ export const WeatherProvider = ({ children }: { children: React.ReactNode }) => 
     lastFetchRef.current = now;
     
     try {
-      console.log('WeatherContext - Using National Weather Service API, forceRefresh:', forceRefresh);
+  // debug log removed: starting NWS fetch
       const provider = new NWSProvider();
       
       // Use coordinates if manual location is enabled, otherwise use geolocation
@@ -168,13 +164,7 @@ export const WeatherProvider = ({ children }: { children: React.ReactNode }) => 
         maxForecastDays: 7
       });
       
-      console.log('WeatherContext - Successfully fetched and stored weather data:', {
-        location: weatherData.location,
-        temperature: weatherData.temperature,
-        condition: weatherData.condition,
-        forecastDays: weatherData.forecast?.length || 0,
-        provider: weatherData.provider
-      });
+  // debug log removed: successful fetch summary
       
       setWeatherData(weatherData);
     } catch (error) {
@@ -183,7 +173,7 @@ export const WeatherProvider = ({ children }: { children: React.ReactNode }) => 
       // Try to load cached data from tiered storage
       const cachedWeather = await weatherStorageService.getCurrentWeather();
       if (cachedWeather) {
-        console.log('WeatherContext - Using cached weather data from tiered storage');
+  // debug log removed: using cached weather data
         
         // Load forecast data from tiered storage
         const forecastData = [];
@@ -218,7 +208,7 @@ export const WeatherProvider = ({ children }: { children: React.ReactNode }) => 
         };
         setWeatherData(weatherData);
       } else if (!weatherData) {
-        console.log('WeatherContext - No cached data available, providing fallback weather data');
+  // debug log removed: providing fallback weather data
         const fallbackData: WeatherData = {
           location: useManualLocation && coordinates ? coordinates : 'Your Location',
           temperature: 72,
@@ -258,7 +248,7 @@ export const WeatherProvider = ({ children }: { children: React.ReactNode }) => 
    * Bypasses rate limiting since it's user-initiated.
    */
   const refreshWeather = useCallback(async (forceRefresh = true) => {
-    console.log('WeatherContext - Manual refresh triggered, forceRefresh:', forceRefresh);
+  // debug log removed: manual refresh trigger
     await loadWeather(forceRefresh);
   }, [loadWeather]);
 
@@ -334,7 +324,7 @@ export const WeatherProvider = ({ children }: { children: React.ReactNode }) => 
       if (weatherData.forecast && weatherData.forecast.length > 0) {
         const forecast = weatherData.forecast.find(f => f.date === dateString);
         if (forecast) {
-          console.log(`Weather for ${dateString}: condition="${forecast.condition}", temp=${forecast.high || forecast.temp}`);
+          // debug log removed: per-date forecast access
           return { 
             temp: forecast.high || forecast.temp || weatherData.temperature, 
             condition: forecast.condition,

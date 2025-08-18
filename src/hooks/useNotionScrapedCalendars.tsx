@@ -66,9 +66,9 @@ export const useNotionScrapedCalendars = () => {
   // Load events from IndexedDB
   const loadEvents = useCallback(async () => {
     try {
-      const storedEvents = await notionScrapedEventsStorage.getAllEvents();
-      setEvents(storedEvents);
-      console.log('Loaded Notion events:', storedEvents.length);
+  const storedEvents = await notionScrapedEventsStorage.getAllEvents();
+  setEvents(storedEvents);
+  // debug removed: loaded Notion events count
     } catch (error) {
       console.error('Error loading Notion events:', error);
     }
@@ -154,7 +154,7 @@ export const useNotionScrapedCalendars = () => {
     setSyncStatus(prev => ({ ...prev, [calendar.id]: 'syncing' }));
 
     try {
-      console.log(`🔄 Syncing Notion calendar: ${calendar.name}`);
+  // debug removed: syncing Notion calendar start
       
       // Call the Notion API edge function
       const { data, error } = await supabase.functions.invoke('notion-api', {
@@ -229,11 +229,7 @@ export const useNotionScrapedCalendars = () => {
         }
         const scrapedDate = new Date(event.scrapedAt);
         
-        console.log(`Processing Notion event "${eventTitle}":`, {
-          originalDate: event.date,
-          parsedDate: eventDate,
-          localDateString: eventDate.toDateString()
-        });
+  // debug removed: processing individual Notion event
 
         return {
           id: event.id,
@@ -289,14 +285,7 @@ export const useNotionScrapedCalendars = () => {
           
           if (hasChanges) {
             updatedCount++;
-            console.log(`Updating event "${newEvent.title}":`, {
-              titleChanged: existingEvent.title !== newEvent.title,
-              descChanged: existingEvent.description !== newEvent.description,
-              locationChanged: existingEvent.location !== newEvent.location,
-              statusChanged: existingEvent.status !== newEvent.status,
-              timeChanged: existingEvent.time !== newEvent.time,
-              dateChanged: new Date(existingEvent.date).getTime() !== new Date(newEvent.date).getTime()
-            });
+            // debug removed: updating existing event details
             return { ...newEvent, scrapedAt: new Date() }; // Update scrapedAt timestamp
           } else {
             unchangedCount++;
@@ -312,7 +301,7 @@ export const useNotionScrapedCalendars = () => {
       // Save updated events to IndexedDB
       await notionScrapedEventsStorage.saveEvents(calendar.id, processedEvents);
       
-      console.log(`Notion sync details: ${newCount} new, ${updatedCount} updated, ${unchangedCount} unchanged, ${removedCount} removed`);
+  // debug removed: sync stats summary
 
       // Update calendar metadata
       await updateCalendar(calendar.id, {
@@ -334,7 +323,7 @@ export const useNotionScrapedCalendars = () => {
         description: `Successfully synced ${notionEvents.length} events from ${calendar.name}`,
       });
 
-      console.log(`✅ Synced ${notionEvents.length} events from Notion calendar: ${calendar.name}`);
+  // debug removed: successful Notion sync summary
       
       // Trigger calendar refresh event
       CalendarRefreshUtils.triggerNotionRefresh(calendar.id, notionEvents.length, true, `Synced ${notionEvents.length} events`);
@@ -396,7 +385,7 @@ export const useNotionScrapedCalendars = () => {
   // Validate a Notion integration and database
   const validateNotionUrl = useCallback(async (url: string, token?: string): Promise<{ isValid: boolean; error?: string }> => {
     try {
-      console.log('Validating Notion integration and database...');
+  // debug removed: validating Notion integration
       
       if (!token) {
         return { isValid: false, error: 'Notion integration token is required' };
@@ -416,10 +405,10 @@ export const useNotionScrapedCalendars = () => {
       }
 
       if (data.success) {
-        console.log('Validation successful');
+  // debug removed: validation success
         return { isValid: true };
       } else {
-        console.log('Validation failed:', data.error);
+  console.warn('Validation failed');
         return { isValid: false, error: data.error || 'Unable to access the Notion database' };
       }
     } catch (error) {
@@ -460,7 +449,7 @@ export const useNotionScrapedCalendars = () => {
         try {
           await registerBackgroundSync();
           await registerPeriodicSync();
-          console.log('Background sync initialized for Notion calendars');
+          // debug removed: background sync initialized for Notion calendars
         } catch (error) {
           console.error('Failed to initialize background sync for Notion calendars:', error);
         }

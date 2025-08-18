@@ -13,17 +13,13 @@ export const useLocalEvents = () => {
     // Let useIntegratedEvents handle all filtering logic
     const iCalEvents = getICalEvents();
     
-    console.log('🔄 useLocalEvents - Loading all iCal events:', {
-      totalEvents: iCalEvents.length,
-      calendarsCount: iCalCalendars.length,
-      refreshKey
-    });
+  // debug removed: loading all iCal events
     
     setGoogleEvents(iCalEvents);
   }, [iCalCalendars, getICalEvents, refreshKey]);
 
   const forceRefresh = () => {
-    console.log('🔄 useLocalEvents - Force refresh triggered');
+  // debug removed: force refresh triggered
     if (iCalForceRefresh) {
       iCalForceRefresh();
     }

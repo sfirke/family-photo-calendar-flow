@@ -23,16 +23,7 @@ export const useIntegratedEvents = (googleEvents: Event[] = [], refreshKey?: num
   const safeSelectedCalendarIds = Array.isArray(selectedCalendarIds) ? selectedCalendarIds : [];
   const safeEnabledCalendarIds = Array.isArray(enabledCalendarIds) ? enabledCalendarIds : [];
   
-  console.log('📈 useIntegratedEvents - Input state:', {
-    googleEvents: safeGoogleEvents.length,
-    notionEvents: safeNotionEvents.length,
-    scrapedEvents: safeScrapedEvents.length,
-    selectedCalendarIds: safeSelectedCalendarIds.length,
-    enabledCalendarIds: safeEnabledCalendarIds.length,
-    selectedIds: safeSelectedCalendarIds,
-    enabledIds: safeEnabledCalendarIds,
-    refreshKey
-  });
+  // debug removed: input state snapshot
   
   const { filteredEvents, hasGoogleEvents, hasNotionEvents, hasScrapedEvents } = useEventFiltering({
     googleEvents: safeGoogleEvents,
@@ -58,16 +49,12 @@ export const useIntegratedEvents = (googleEvents: Event[] = [], refreshKey?: num
       hasScrapedEvents
     };
     
-    console.log('📈 useIntegratedEvents - Event stats calculated:', stats);
+  // debug removed: event stats calculated
     
     return stats;
   }, [safeGoogleEvents.length, safeNotionEvents.length, safeScrapedEvents.length, filteredEvents, hasGoogleEvents, hasNotionEvents, hasScrapedEvents]); // Remove refreshKey dependency
 
-  console.log('📈 useIntegratedEvents - Final output:', {
-    filteredEventsCount: Array.isArray(filteredEvents) ? filteredEvents.length : 0,
-    selectedCalendarIds: safeSelectedCalendarIds,
-    enabledCalendarIds: safeEnabledCalendarIds
-  });
+  // debug removed: final output summary
 
   return {
     filteredEvents: Array.isArray(filteredEvents) ? filteredEvents : [],

@@ -35,14 +35,14 @@ export const useSettingsInitialization = (props: InitializationProps) => {
   useEffect(() => {
     const initializeSettings = async () => {
       try {
-        console.log('🔧 Initializing settings from tiered storage...');
+  // debug removed: initializing settings
         
         // Preload cache for common settings
         await SettingsStorage.preloadCache();
         
         // Load all settings using tiered storage
         const settings = await SettingsStorage.loadAllSettings();
-        console.log('🔧 Loaded settings from tiered storage:', settings);
+  // debug removed: loaded settings
 
         // Apply non-sensitive settings
         if (settings.theme) {
@@ -81,7 +81,7 @@ export const useSettingsInitialization = (props: InitializationProps) => {
           props.setNotionDatabaseId(settings.notionDatabaseId);
         }
 
-        console.log('✅ Settings initialization completed');
+  // debug removed: settings initialization completed
       } catch (error) {
         console.error('❌ Settings initialization failed:', error);
       } finally {

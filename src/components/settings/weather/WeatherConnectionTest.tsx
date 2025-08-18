@@ -59,7 +59,7 @@ const WeatherConnectionTest = ({
 
     try {
       // Test NWS weather API connection
-      console.log('Testing NWS Weather API connection...');
+  // debug removed: testing NWS Weather API connection
       
       // Use actual weather service to test connection
       const testResult = await refreshWeather(true);
@@ -155,7 +155,7 @@ const WeatherConnectionTest = ({
               onShowPreviewToggle();
               // Also refresh weather data when showing preview
               if (!showPreview) {
-                console.log('WeatherConnectionTest - Refreshing weather for preview');
+                // debug removed: refreshing weather for preview
                 await refreshWeather(true);
               }
             }}

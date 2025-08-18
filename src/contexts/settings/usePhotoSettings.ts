@@ -23,10 +23,7 @@ export const usePhotoSettings = () => {
         const savedDuration = await settingsStorageService.getValue('backgroundDuration') || '30';
         const savedAlbum = await settingsStorageService.getValue('selectedAlbum');
         
-        console.log('🖼️ usePhotoSettings - Loading saved settings from tiered storage:');
-        console.log('🖼️ savedUrl:', savedUrl);
-        console.log('🖼️ savedDuration:', savedDuration);
-        console.log('🖼️ savedAlbum:', savedAlbum);
+  // debug removed: loading saved settings details
         
         setPublicAlbumUrl(savedUrl);
         setBackgroundDuration(parseInt(savedDuration) || 30);
@@ -39,7 +36,7 @@ export const usePhotoSettings = () => {
           const fallbackDuration = parseInt(localStorage.getItem('backgroundDuration') || '30');
           const fallbackAlbum = localStorage.getItem('selectedAlbum');
           
-          console.log('🖼️ usePhotoSettings - Loading fallback settings from localStorage');
+          // debug removed: loading fallback from localStorage
           setPublicAlbumUrl(fallbackUrl);
           setBackgroundDuration(fallbackDuration);
           setSelectedAlbum(fallbackAlbum);
@@ -58,7 +55,7 @@ export const usePhotoSettings = () => {
   useEffect(() => {
     if (!isInitialized) return;
     
-    console.log('🖼️ usePhotoSettings - Auto-saving publicAlbumUrl to tiered storage:', publicAlbumUrl);
+  // debug removed: auto-saving album url
     settingsStorageService.setValue('publicAlbumUrl', publicAlbumUrl).catch(error => {
       console.warn('Failed to save publicAlbumUrl to tiered storage:', error);
       localStorage.setItem('publicAlbumUrl', publicAlbumUrl);
@@ -96,12 +93,10 @@ export const usePhotoSettings = () => {
    * Enhanced public album URL setter with input validation
    */
   const setValidatedPublicAlbumUrl = (url: string) => {
-    console.log('🖼️ usePhotoSettings - setValidatedPublicAlbumUrl called with:', url);
-    console.log('🖼️ usePhotoSettings - URL type:', typeof url);
-    console.log('🖼️ usePhotoSettings - URL length:', url?.length);
+  // debug removed: setValidatedPublicAlbumUrl diagnostics
     
     // Always set the URL, even if empty - let the Google Photos hook handle validation
-    console.log('🖼️ usePhotoSettings - Setting URL directly (validation moved to useGooglePhotos)');
+  // debug removed: setting url directly
     setPublicAlbumUrl(url);
   };
 

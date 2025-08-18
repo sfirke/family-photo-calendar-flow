@@ -28,7 +28,7 @@ class PerformanceTracker {
     const duration = performance.now() - entry.startTime;
     entry.duration = duration;
     
-    console.log(`Performance: ${name} took ${duration.toFixed(2)}ms`);
+  // debug removed: performance timing
     return duration;
   }
 
@@ -68,8 +68,7 @@ export const measureComponentRender = <T>(
 };
 
 export const logRenderMetrics = (): void => {
-  const metrics = performanceTracker.getMetrics();
-  console.table(metrics);
+  // debug removed: render metrics output suppressed
 };
 
 // Export additional utilities needed by other components
@@ -81,7 +80,7 @@ export class PerformanceMonitor {
     if (this.isMonitoring) return;
     
     this.isMonitoring = true;
-    console.log('Performance monitoring started');
+  // debug removed: performance monitoring started
     
     // Monitor performance every 30 seconds
     this.monitoringInterval = window.setInterval(() => {
@@ -97,13 +96,13 @@ export class PerformanceMonitor {
       window.clearInterval(this.monitoringInterval);
       this.monitoringInterval = null;
     }
-    console.log('Performance monitoring stopped');
+  // debug removed: performance monitoring stopped
   }
 
   static trackPageLoad(): void {
     window.addEventListener('load', () => {
       const loadTime = performance.now();
-      console.log(`Page loaded in ${loadTime.toFixed(2)}ms`);
+  // debug removed: page load time
     });
   }
 }
@@ -138,15 +137,15 @@ export class IntervalManager {
 
 export const displayOptimizations = {
   enableVirtualization: () => {
-    console.log('Virtual scrolling enabled for large lists');
+  // debug removed: virtual scrolling enabled
   },
   
   enableImageLazyLoading: () => {
-    console.log('Lazy loading enabled for images');
+  // debug removed: lazy loading enabled
   },
 
   enableBurnInPrevention: (): number => {
-    console.log('Burn-in prevention enabled');
+  // debug removed: burn-in prevention enabled
     // Return a dummy interval ID for cleanup
     return window.setInterval(() => {
       // Subtle pixel shifting to prevent burn-in
@@ -154,7 +153,7 @@ export const displayOptimizations = {
   },
 
   enableOLEDOptimization: () => {
-    console.log('OLED optimization enabled');
+  // debug removed: oled optimization enabled
     // Apply dark mode optimizations for OLED displays
     document.documentElement.style.setProperty('--oled-black', '#000000');
   },
@@ -163,11 +162,11 @@ export const displayOptimizations = {
     const hour = new Date().getHours();
     if (hour >= 22 || hour <= 6) {
       // Night mode adjustments
-      console.log('Applying night mode optimizations');
+  // debug removed: night mode optimizations
       document.documentElement.style.setProperty('--night-brightness', '0.8');
     } else {
       // Day mode adjustments
-      console.log('Applying day mode optimizations');
+  // debug removed: day mode optimizations
       document.documentElement.style.setProperty('--night-brightness', '1.0');
     }
   }

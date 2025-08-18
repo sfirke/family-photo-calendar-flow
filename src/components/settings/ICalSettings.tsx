@@ -55,9 +55,7 @@ const ICalSettings = ({
 
   // Debug logging for calendar state
   useEffect(() => {
-    console.log('ICalSettings - Current calendars from hook:', calendars);
-    console.log('ICalSettings - Calendars from events:', calendarsFromEvents);
-    console.log('ICalSettings - Selected calendar IDs:', selectedCalendarIds);
+    // debug removed: iCal settings state snapshot
   }, [calendars, calendarsFromEvents, selectedCalendarIds]);
 
   // Filter calendars to only show iCal/ICS feeds (exclude Notion calendars)
@@ -67,11 +65,7 @@ const ICalSettings = ({
     // Only add calendars from IndexedDB that have URLs (are actual iCal feeds)
     calendars.forEach(cal => {
       if (cal.url && cal.url.trim() !== '') {
-        console.log('Processing iCal calendar from IndexedDB:', {
-          id: cal.id,
-          name: cal.name,
-          url: cal.url
-        });
+  // debug removed: processing iCal calendar from IndexedDB
         calendarMap.set(cal.id, {
           ...cal,
           source: 'config',
@@ -87,10 +81,7 @@ const ICalSettings = ({
           eventCal.id !== 'local_calendar' && 
           !eventCal.id.startsWith('notion_') &&
           !eventCal.id.includes('scraped')) {
-        console.log('Processing orphaned iCal calendar from events:', {
-          id: eventCal.id,
-          name: eventCal.summary
-        });
+  // debug removed: processing orphaned iCal calendar from events
         calendarMap.set(eventCal.id, {
           id: eventCal.id,
           name: eventCal.summary,
@@ -106,12 +97,7 @@ const ICalSettings = ({
     });
     
     const result = Array.from(calendarMap.values()).sort((a, b) => a.name.localeCompare(b.name));
-    console.log('Filtered iCal-only calendars:', result.map(cal => ({
-      id: cal.id,
-      name: cal.name,
-      url: cal.url,
-      source: cal.source
-    })));
+  // debug removed: filtered iCal-only calendars list
     return result;
   }, [calendars, calendarsFromEvents]);
 
@@ -136,14 +122,14 @@ const ICalSettings = ({
     }
     
     try {
-      console.log('Adding calendar with data:', newCalendar);
+  // debug removed: adding calendar
       const calendar = await addCalendar({
         name: newCalendar.name,
         url: newCalendar.url,
         color: newCalendar.color,
         enabled: newCalendar.enabled
       });
-      console.log('Calendar added successfully:', calendar);
+  // debug removed: calendar added successfully
 
       // Force refresh the calendar selection immediately after adding
       forceRefresh();
@@ -187,7 +173,7 @@ const ICalSettings = ({
   };
 
   const handleSync = async (calendar: ICalCalendar) => {
-    console.log('Attempting to sync calendar:', calendar);
+  // debug removed: attempting to sync calendar
     if (!calendar.url || calendar.url.trim() === '') {
       toast({
         title: "Cannot sync",
@@ -408,7 +394,7 @@ const ICalSettings = ({
                 onSync={handleSync}
                 onRemove={handleRemove}
                 onToggleSelection={(calendarId: string, selected: boolean) => {
-                  console.log('ICalSettings - Toggle selection:', { calendarId, selected });
+                  // debug removed: toggle selection
                   toggleCalendar(calendarId, selected);
                 }}
               />

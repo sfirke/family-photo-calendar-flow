@@ -19,16 +19,11 @@ export class DirectAccuWeatherProvider implements WeatherProvider {
   private readonly corsProxyUrl = 'https://api.allorigins.win/raw?url=';
 
   async fetchWeather(location: string, config: WeatherProviderConfig): Promise<WeatherData> {
-    console.log('DirectAccuWeatherProvider - Fetching weather data directly');
-    console.log('DirectAccuWeatherProvider - Request params:', { 
-      location: location || '(will use IP geolocation)', 
-      hasApiKey: !!config.apiKey 
-    });
+  // debug removed: fetchWeather invocation details
     
     try {
       // Step 1: Get location key
-      const locationKey = await this.getLocationKey(location, config.apiKey);
-      console.log('DirectAccuWeatherProvider - Location key:', locationKey);
+  const locationKey = await this.getLocationKey(location, config.apiKey);
 
       // Step 2: Fetch current conditions and forecast in parallel
       const [currentData, forecastData] = await Promise.all([
@@ -36,11 +31,7 @@ export class DirectAccuWeatherProvider implements WeatherProvider {
         this.fetchForecast(locationKey, config.apiKey)
       ]);
 
-      console.log('DirectAccuWeatherProvider - Raw data received:', {
-        hasCurrentData: !!currentData,
-        hasForecastData: !!forecastData,
-        forecastCount: forecastData?.DailyForecasts?.length || 0
-      });
+  // debug removed: raw data received
 
       // Store raw data for caching and fallback
       const rawData = {
@@ -71,12 +62,7 @@ export class DirectAccuWeatherProvider implements WeatherProvider {
       await weatherStorageService.saveCurrentWeather(weatherData);
       await weatherStorageService.saveForecastData(weatherData.forecast);
 
-      console.log('DirectAccuWeatherProvider - Weather data processed and stored:', {
-        location: weatherData.location,
-        temperature: weatherData.temperature,
-        condition: weatherData.condition,
-        forecastCount: weatherData.forecast.length
-      });
+  // debug removed: processed weather data summary
 
       return weatherData;
 
@@ -86,7 +72,7 @@ export class DirectAccuWeatherProvider implements WeatherProvider {
       // Try to use cached data when API fails
       const cachedData = await this.loadFromCache();
       if (cachedData) {
-        console.log('DirectAccuWeatherProvider - Using cached data as fallback');
+  // debug removed: using cached data fallback
         return cachedData;
       }
       

@@ -30,7 +30,7 @@ export class PWAWeatherTestService {
       recommendations: string[];
     };
   }> {
-    console.log('🧪 PWA Weather Test - Starting comprehensive connectivity test');
+  // debug removed: starting comprehensive connectivity test
     
     const results = {
       ipLocation: await this.testIPLocation(apiKey),
@@ -45,16 +45,9 @@ export class PWAWeatherTestService {
       results.forecast = await this.testForecast(locationKey, apiKey);
     }
 
-    const summary = this.generateTestSummary(results);
-    
-    console.log('🧪 PWA Weather Test - Results:', {
-      ipLocation: results.ipLocation.success,
-      currentConditions: results.currentConditions.success,
-      forecast: results.forecast.success,
-      corsRequired: summary.corsProxyRequired
-    });
-
-    return { ...results, summary };
+  const summary = this.generateTestSummary(results);
+  // debug removed: test results object
+  return { ...results, summary };
   }
 
   /**
@@ -85,7 +78,7 @@ export class PWAWeatherTestService {
    * Test a specific endpoint with both direct and proxy methods
    */
   private static async testEndpoint(url: string, endpointName: string): Promise<PWATestResult> {
-    console.log(`🧪 Testing ${endpointName}:`, url);
+  // debug removed: testing endpoint
     
     const startTime = Date.now();
     
@@ -98,7 +91,7 @@ export class PWAWeatherTestService {
         const data = await response.json();
         const method = this.determineMethodUsed(response);
         
-        console.log(`✅ ${endpointName} successful via ${method}`);
+  // debug removed: endpoint success
         
         return {
           success: true,
@@ -117,7 +110,7 @@ export class PWAWeatherTestService {
       }
     } catch (error) {
       const responseTime = Date.now() - startTime;
-      console.log(`❌ ${endpointName} failed:`, error);
+  // debug removed: endpoint failed
       
       return {
         success: false,

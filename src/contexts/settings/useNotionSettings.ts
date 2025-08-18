@@ -70,7 +70,7 @@ export const useNotionSettings = () => {
   // Legacy initialization method for backwards compatibility
   const initializeNotionSettings = async () => {
     // This is now handled by the useEffect above, but kept for API compatibility
-    console.log('initializeNotionSettings called - settings are now auto-loaded');
+  // debug removed: initializeNotionSettings invoked
   };
 
   return {

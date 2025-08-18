@@ -78,14 +78,14 @@ export class NotionTableParser {
   private debugInfo: NotionDebugInfo | null = null;
 
   parseTableStructure(doc: Document, sourceUrl: string): TableParseResult {
-    console.log('🔍 Starting enhanced table structure parsing with modern data selectors');
+  // debug removed: starting enhanced table structure parsing
     
     // Try modern data-attribute parsing first
     let parseResult = this.parseModernNotionStructure(doc, sourceUrl);
     
     // Fallback to legacy CSS class parsing
     if (!parseResult || parseResult.events.length === 0) {
-      console.log('📋 Falling back to legacy CSS class parsing');
+  // debug removed: falling back to legacy CSS class parsing
       parseResult = this.parseLegacyNotionStructure(doc, sourceUrl);
     }
 
@@ -110,7 +110,7 @@ export class NotionTableParser {
       parsingStrategy: { strategy: 'modern-data-attributes', elementsFound: 0, successRate: 0 }
     };
 
-    console.log('🐛 DEBUG MODE: Starting enhanced table structure parsing');
+  // debug removed: debug mode starting enhanced parsing
     
     const parseResult = this.parseTableStructure(doc, sourceUrl);
     
@@ -131,16 +131,16 @@ export class NotionTableParser {
 
   private logDebug(message: string, data?: unknown) {
     if (this.debugMode) {
-      console.log(`🐛 DEBUG: ${message}`, data || '');
+      // debug removed: console.log suppressed
     }
   }
 
   private parseModernNotionStructure(doc: Document, sourceUrl: string): TableParseResult | null {
-    console.log('🔬 Attempting modern data-attribute parsing');
+    // debug removed: attempting modern data-attribute parsing
     
     // Find all elements with data-block-id (these are rows)
     const rowElements = doc.querySelectorAll(this.modernSelectors.dataBlockRows);
-    console.log(`📊 Found ${rowElements.length} elements with data-block-id`);
+  // debug removed: found data-block-id elements
 
     if (this.debugMode && this.debugInfo) {
       this.debugInfo.foundElements.totalBlockElements = rowElements.length;
@@ -162,7 +162,7 @@ export class NotionTableParser {
       const cellElements = row.querySelectorAll(this.modernSelectors.columnCells);
       
       if (cellElements.length === 0) {
-        console.log(`⚠️  Row ${rowIndex} has no column cells, skipping`);
+  // debug removed: row has no column cells, skipping
         this.logDebug(`Row ${rowIndex} has no column cells, skipping`);
         return;
       }
@@ -185,7 +185,7 @@ export class NotionTableParser {
 
       const cellData = sortedCells.map(cell => (cell.textContent || '').trim());
       
-      console.log(`📋 Row ${rowIndex}: Found ${cellData.length} cells:`, cellData);
+  // debug removed: row cell data
       this.logDebug(`Row ${rowIndex}: Found ${cellData.length} cells`, cellData);
 
       // Track all rows in debug mode
@@ -204,7 +204,7 @@ export class NotionTableParser {
       if (isFirstRow && cellData.some(cell => cell.length > 0)) {
         headers = cellData.map((cell, index) => cell || `Column ${index + 1}`);
         columnMappings = this.createColumnMappings(headers);
-        console.log('📋 Headers identified:', headers);
+  // debug removed: headers identified
         this.logDebug('Headers identified', headers);
         
         if (this.debugMode && this.debugInfo) {
@@ -233,7 +233,7 @@ export class NotionTableParser {
         const event = this.createEventFromRowData(cellData, headers, columnMappings, sourceUrl, rowIndex);
         if (event) {
           events.push(event);
-          console.log(`✅ Created event from row ${rowIndex}:`, event.title);
+          // debug removed: created event from row
           this.logDebug(`Created event from row ${rowIndex}`, { title: event.title, date: event.date });
           
           if (this.debugMode && this.debugInfo) {
@@ -268,19 +268,19 @@ export class NotionTableParser {
   }
 
   private parseLegacyNotionStructure(doc: Document, sourceUrl: string): TableParseResult | null {
-    console.log('🔄 Attempting legacy CSS class parsing');
+  // debug removed: attempting legacy css parsing
     
     // Try to find legacy Notion table structure
     const tableView = doc.querySelector(this.modernSelectors.fallbackTable);
     if (!tableView) {
-      console.log('❌ No legacy table structure found');
+  // debug removed: no legacy table structure found
       return null;
     }
 
     const events: NotionScrapedEvent[] = [];
     const rowElements = tableView.querySelectorAll(this.modernSelectors.fallbackRows);
     
-    console.log(`📊 Found ${rowElements.length} legacy table rows`);
+  // debug removed: legacy row count
 
     // Extract headers (first row or dedicated header)
     const firstRow = rowElements[0];
@@ -294,11 +294,11 @@ export class NotionTableParser {
     ).filter(header => header.length > 0);
 
     if (headers.length === 0) {
-      console.log('❌ No headers found in legacy structure');
+  // debug removed: no headers found
       return null;
     }
 
-    console.log('📋 Legacy headers found:', headers);
+  // debug removed: legacy headers found
     const columnMappings = this.createColumnMappings(headers);
 
     // Process data rows (skip header row)
@@ -440,7 +440,7 @@ export class NotionTableParser {
 
     // Validate required fields
     if (!eventData.date || !eventData.title) {
-      console.log(`⚠️  Skipping row ${rowIndex}: missing required date or title`);
+  // debug removed: skipping invalid row
       return null;
     }
 

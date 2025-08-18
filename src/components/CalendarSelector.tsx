@@ -19,43 +19,31 @@ const CalendarSelector = () => {
   } = useCalendarSelection();
 
   const handleCalendarToggle = (calendarId: string, checked: boolean) => {
-    console.log('CalendarSelector - Toggling calendar:', calendarId, checked);
     toggleCalendar(calendarId, checked);
   };
 
   const handleSelectAll = () => {
-    console.log('CalendarSelector - Select all calendars');
     selectAllCalendars();
   };
 
   const handleSelectWithEvents = () => {
-    console.log('CalendarSelector - Select calendars with events');
     selectCalendarsWithEvents();
   };
 
   const handleClearAll = () => {
-    console.log('CalendarSelector - Clear all calendars');
     clearAllCalendars();
   };
 
   const handleButtonClick = () => {
-    console.log('CalendarSelector - Button clicked, toggling popover. Current state:', isOpen);
     setIsOpen(!isOpen);
   };
 
   const handleOpenChange = (open: boolean) => {
-    console.log('CalendarSelector - Popover open state changed:', open);
     setIsOpen(open);
   };
 
   // Add debugging logs
-  console.log('CalendarSelector - State:', {
-    isLoading,
-    calendarsCount: calendarsFromEvents.length,
-    selectedCount: selectedCalendarIds.length,
-    isOpen,
-    calendars: calendarsFromEvents.map(cal => ({ id: cal.id, name: cal.summary, hasEvents: cal.hasEvents }))
-  });
+  // debug logs removed
 
   if (isLoading) {
     return (
@@ -68,7 +56,7 @@ const CalendarSelector = () => {
     );
   }
 
-  console.log('CalendarSelector - Rendering dropdown with calendars:', calendarsFromEvents.length, 'selected:', selectedCalendarIds.length, 'isOpen:', isOpen);
+  // debug logs removed
 
   return (
     <Popover open={isOpen} onOpenChange={handleOpenChange}>
@@ -85,7 +73,7 @@ const CalendarSelector = () => {
         align="start"
         sideOffset={4}
         onOpenAutoFocus={(e) => {
-          console.log('CalendarSelector - Popover opened and focused');
+          // no-op (removed debug)
         }}
       >
         <CalendarSelectorContent

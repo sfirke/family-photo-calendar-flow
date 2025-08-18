@@ -16,8 +16,7 @@ export class NWSProvider implements WeatherProvider {
   requiresApiKey = false;
 
   async fetchWeather(coordinates: string, config: WeatherProviderConfig): Promise<WeatherData> {
-    console.log('NWSProvider - Fetching weather from NWS API');
-    console.log('NWSProvider - Request params:', { coordinates });
+  // debug removed: fetchWeather invocation details
     
     if (!coordinates) {
       throw new Error('Coordinates are required for National Weather Service API');
@@ -31,16 +30,14 @@ export class NWSProvider implements WeatherProvider {
 
     try {
       // Step 1: Get grid point data for the coordinates
-      const pointsUrl = `https://api.weather.gov/points/${lat},${lon}`;
-      console.log('NWSProvider - Fetching grid points from:', pointsUrl);
+  const pointsUrl = `https://api.weather.gov/points/${lat},${lon}`;
       
       const pointsResponse = await fetch(pointsUrl);
       if (!pointsResponse.ok) {
         throw new Error(`Failed to get grid points: ${pointsResponse.status} ${pointsResponse.statusText}`);
       }
       
-      const pointsData = await pointsResponse.json();
-      console.log('NWSProvider - Grid points data:', pointsData);
+  const pointsData = await pointsResponse.json();
 
       // Step 2: Get current conditions and forecast URLs
       const forecastUrl = pointsData.properties.forecast;
@@ -50,20 +47,19 @@ export class NWSProvider implements WeatherProvider {
       const gridY = pointsData.properties.gridY;
 
       // Step 3: Get forecast data
-      console.log('NWSProvider - Fetching forecast from:', forecastUrl);
+  // debug removed: fetching forecast
       const forecastResponse = await fetch(forecastUrl);
       if (!forecastResponse.ok) {
         throw new Error(`Failed to get forecast: ${forecastResponse.status} ${forecastResponse.statusText}`);
       }
       
-      const forecastData = await forecastResponse.json();
-      console.log('NWSProvider - Forecast data:', forecastData);
+  const forecastData = await forecastResponse.json();
 
       // Step 4: Get current observations
       let currentData = null;
       let stationsData = null;
       try {
-        console.log('NWSProvider - Fetching observation stations from:', observationStationsUrl);
+  // debug removed: fetching observation stations
         const stationsResponse = await fetch(observationStationsUrl);
         if (stationsResponse.ok) {
           stationsData = await stationsResponse.json();
@@ -75,12 +71,10 @@ export class NWSProvider implements WeatherProvider {
               try {
                 const stationId = stations[i].properties.stationIdentifier;
                 const observationsUrl = `https://api.weather.gov/stations/${stationId}/observations/latest`;
-                console.log('NWSProvider - Fetching current observations from:', observationsUrl);
                 
                 const observationResponse = await fetch(observationsUrl);
                 if (observationResponse.ok) {
                   currentData = await observationResponse.json();
-                  console.log('NWSProvider - Current observations:', currentData);
                   break; // Success, stop trying other stations
                 }
               } catch (error) {
@@ -118,12 +112,7 @@ export class NWSProvider implements WeatherProvider {
         provider: this.displayName
       };
 
-      console.log('NWSProvider - Transformed weather data:', {
-        location: weatherData.location,
-        temperature: weatherData.temperature,
-        condition: weatherData.condition,
-        forecastCount: weatherData.forecast.length
-      });
+  // debug removed: transformed weather data summary
 
       return weatherData;
 
@@ -133,7 +122,7 @@ export class NWSProvider implements WeatherProvider {
       // Try to use tiered storage data when API fails
       const cachedRawData = await weatherStorageService.getRawNWSData();
       if (cachedRawData && cachedRawData.points) {
-        console.log('NWSProvider - Using tiered storage raw data as fallback');
+  // debug removed: using tiered storage fallback
         const weatherData: WeatherData = {
           location: this.extractLocationName(cachedRawData.points, cachedRawData.current, cachedRawData.stations),
           temperature: this.extractTemperature(cachedRawData.current, cachedRawData.forecast),
@@ -179,7 +168,7 @@ export class NWSProvider implements WeatherProvider {
         await weatherStorageService.saveForecastData(forecasts);
       }
       
-      console.log('NWSProvider - Weather data stored in tiered storage system');
+  // debug removed: weather data stored in tiered storage
     } catch (error) {
       console.warn('NWSProvider - Failed to store weather data in tiered storage:', error);
     }

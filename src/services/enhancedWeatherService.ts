@@ -41,7 +41,7 @@ export class EnhancedWeatherService {
     }
 
     try {
-      console.log('Enhanced weather service - config received:', config);
+  // debug removed: enhanced weather service config received
       
       // Get appropriate provider
       const provider = weatherProviderFactory.getProviderWithFallback(
@@ -49,11 +49,7 @@ export class EnhancedWeatherService {
         config.forecastDays
       );
       
-      console.log('Enhanced weather service - provider selected:', {
-        name: provider.name,
-        displayName: provider.displayName,
-        maxForecastDays: provider.maxForecastDays
-      });
+  // debug removed: provider selected details
 
       // Prepare provider config
       const providerConfig: WeatherProviderConfig = {
@@ -78,7 +74,7 @@ export class EnhancedWeatherService {
       
       // Try fallback to cached data
       if (cached) {
-        console.log('Returning stale cached data due to API error');
+  console.warn('Returning stale cached weather data due to API error');
         return cached.data;
       }
       

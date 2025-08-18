@@ -1,4 +1,4 @@
-
+// Deno edge function (ambient types provided in custom declarations)
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
@@ -48,18 +48,14 @@ interface NotionQueryBody {
 }
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
-
   try {
     const { action, token, databaseId, url } = await req.json()
-
     if (!token) {
       throw new Error('Notion integration token is required')
     }
-
     switch (action) {
       case 'validate':
         return await validateNotionAccess(token, databaseId, url)
@@ -73,9 +69,9 @@ serve(async (req) => {
   } catch (error) {
     console.error('Notion API error:', error)
     return new Response(
-      JSON.stringify({ 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Unknown error occurred' 
+      JSON.stringify({
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
       }),
       {
         status: 500,
@@ -350,17 +346,14 @@ function transformPageToEvent(page: NotionPage, databaseId: string): CalendarEve
 
     // Must have a date to be a valid calendar event
     if (!date) {
-      console.log(`Skipping event "${title}" - no date found`)
+      // debug removed: skipping event without date
       return null
     }
-
-    // Filter out events with invalid titles
     if (!title || title.trim() === '' || title.toLowerCase() === 'untitled') {
-      console.log(`Skipping event with invalid title: "${title}"`)
+      // debug removed: skipping event with invalid title
       return null
     }
-
-    console.log(`Processing Notion event: "${title}", date: ${date}, time: ${time || 'undefined (all-day)'}`)
+    // debug removed: processing notion event
 
     return {
       id: `notion_${page.id}`,

@@ -88,7 +88,7 @@ export const useBackgroundSync = () => {
   // Register for background sync
   const registerBackgroundSync = useCallback(async (): Promise<boolean> => {
     if (!isBackgroundSyncSupported) {
-      console.log('Background sync not supported');
+      console.warn('Background sync not supported');
       return false;
     }
 
@@ -115,7 +115,7 @@ export const useBackgroundSync = () => {
   // Register for periodic background sync
   const registerPeriodicSync = useCallback(async (): Promise<boolean> => {
     if (!isPeriodicSyncSupported) {
-      console.log('Periodic sync not supported');
+      console.warn('Periodic sync not supported');
       return false;
     }
 

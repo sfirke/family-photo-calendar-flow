@@ -5,10 +5,7 @@ import { extractImagesFromHtml } from './imageExtractor';
 import { CORS_PROXIES, buildProxyUrl, getProxyHeaders, extractResponseContent } from './corsProxies';
 
 export const fetchAlbumImages = async (albumUrl: string): Promise<string[]> => {
-  console.log('🖼️ Google Photos Fetcher - Starting album fetch');
-  console.log('🖼️ Album URL:', albumUrl);
-  console.log('🖼️ Album URL type:', typeof albumUrl);
-  console.log('🖼️ Album URL length:', albumUrl?.length);
+  // debug removed: album fetch start and url diagnostics
   
   // Add performance timing
   const startTime = Date.now();
@@ -16,18 +13,18 @@ export const fetchAlbumImages = async (albumUrl: string): Promise<string[]> => {
   // Handle shortened URLs by trying to expand them first
   let workingUrl = albumUrl;
   if (albumUrl.includes('photos.app.goo.gl')) {
-    console.log('🖼️ Detected shortened Google Photos URL, attempting to expand...');
+  // debug removed: detected shortened url
     const expandedUrl = await tryExpandShortenedUrl(albumUrl);
     if (expandedUrl) {
       workingUrl = expandedUrl;
-      console.log('🖼️ Expanded URL:', workingUrl);
+  // debug removed: expanded url
     } else {
-      console.log('🖼️ Could not expand URL, proceeding with original');
+  // debug removed: expansion failed, using original
     }
   }
   
   const albumId = extractAlbumIdFromUrl(workingUrl);
-  console.log('🖼️ Extracted Album ID:', albumId);
+  // debug removed: extracted album id
   
   if (!albumId) {
     console.error('🖼️ Failed to extract album ID from URL:', workingUrl);
@@ -37,12 +34,12 @@ export const fetchAlbumImages = async (albumUrl: string): Promise<string[]> => {
   // First try direct access (might work in some cases)
   const directImages = await tryDirectAccess(workingUrl);
   if (directImages.length > 0) {
-    console.log(`🖼️ Direct access successful in ${Date.now() - startTime}ms`);
+  // debug removed: direct access success timing
     return directImages;
   }
   
   // Try each proxy service
-  console.log('🖼️ Direct access failed, trying proxy services...');
+  // debug removed: direct access failed, trying proxies
   return await tryProxyServices(workingUrl);
 };
 
@@ -55,11 +52,11 @@ const tryExpandShortenedUrl = async (shortenedUrl: string): Promise<string | nul
     });
     
     if (response.url && response.url !== shortenedUrl) {
-      console.log('🖼️ Successfully expanded shortened URL');
+  // debug removed: url expanded successfully
       return response.url;
     }
   } catch (error) {
-    console.log('🖼️ Failed to expand shortened URL:', error);
+  // debug removed: failed to expand shortened url
   }
   
   return null;
@@ -79,12 +76,12 @@ const tryDirectAccess = async (albumUrl: string): Promise<string[]> => {
       const html = await directResponse.text();
       const images = extractImagesFromHtml(html);
       if (images.length > 0) {
-        console.log(`Found ${images.length} images via direct access`);
+  // debug removed: images found via direct access
         return images;
       }
     }
   } catch (error) {
-    console.log('Direct access failed, trying proxy services...');
+  // debug removed: direct access failed, proxies next
   }
   
   return [];
@@ -93,7 +90,7 @@ const tryDirectAccess = async (albumUrl: string): Promise<string[]> => {
 const tryProxyServices = async (albumUrl: string): Promise<string[]> => {
   for (let i = 0; i < CORS_PROXIES.length; i++) {
     const proxyConfig = CORS_PROXIES[i];
-    console.log(`Trying proxy ${i + 1}/${CORS_PROXIES.length}: ${proxyConfig.url}`);
+  // debug removed: trying proxy attempt
     
     try {
       const fetchUrl = buildProxyUrl(proxyConfig, albumUrl);
@@ -105,30 +102,30 @@ const tryProxyServices = async (albumUrl: string): Promise<string[]> => {
       const response = await fetch(fetchUrl, fetchOptions);
       
       if (!response.ok) {
-        console.log(`Proxy ${i + 1} failed with status ${response.status}`);
+  // debug removed: proxy failed status
         continue;
       }
       
       const html = await extractResponseContent(response, proxyConfig);
       
-      console.log(`Fetched album HTML via proxy ${i + 1}, length:`, html.length);
+  // debug removed: fetched album html length
       
       if (html.length < 1000) {
-        console.log(`Proxy ${i + 1} returned insufficient content`);
+  // debug removed: insufficient content
         continue;
       }
       
       const images = extractImagesFromHtml(html);
       
       if (images.length > 0) {
-        console.log(`Found ${images.length} images via proxy ${i + 1}`);
+  // debug removed: images found via proxy
         return images;
       }
       
-      console.log(`Proxy ${i + 1} returned no images, trying next...`);
+  // debug removed: proxy returned no images
       
     } catch (error) {
-      console.log(`Proxy ${i + 1} failed:`, error);
+  // debug removed: proxy failure error
       continue;
     }
   }

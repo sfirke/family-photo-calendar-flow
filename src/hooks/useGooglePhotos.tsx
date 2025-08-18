@@ -17,9 +17,7 @@ export const useGooglePhotos = () => {
 
   // Add debug logging for publicAlbumUrl
   useEffect(() => {
-    console.log('🖼️ useGooglePhotos - publicAlbumUrl changed:', publicAlbumUrl);
-    console.log('🖼️ useGooglePhotos - publicAlbumUrl type:', typeof publicAlbumUrl);
-    console.log('🖼️ useGooglePhotos - publicAlbumUrl length:', publicAlbumUrl?.length);
+    // debug removed: publicAlbumUrl change tracing
   }, [publicAlbumUrl]);
 
   const loadPhotosFromCache = useCallback(() => {
@@ -33,13 +31,10 @@ export const useGooglePhotos = () => {
   }, [publicAlbumUrl]);
 
   const fetchPhotos = useCallback(async (albumUrl: string, forceRefresh: boolean = false) => {
-    console.log('🖼️ fetchPhotos called with albumUrl:', albumUrl);
-    console.log('🖼️ fetchPhotos - albumUrl type:', typeof albumUrl);
-    console.log('🖼️ fetchPhotos - albumUrl length:', albumUrl?.length);
-    console.log('🖼️ fetchPhotos - forceRefresh:', forceRefresh);
+  // debug removed: fetchPhotos invocation details
     
     if (!albumUrl || albumUrl.trim() === '') {
-      console.log('🖼️ No album URL provided, clearing images');
+  // debug removed: no album URL provided
       setImages([]);
       setError(null);
       return;
@@ -47,12 +42,12 @@ export const useGooglePhotos = () => {
 
     // Normalize the URL by trimming whitespace
     const normalizedUrl = albumUrl.trim();
-    console.log('🖼️ fetchPhotos - normalized URL:', normalizedUrl);
+  // debug removed: normalized URL
 
     // Check cache first unless forcing refresh
     if (!forceRefresh && !photosCache.shouldRefresh(normalizedUrl)) {
       if (loadPhotosFromCache()) {
-        console.log('🖼️ fetchPhotos - loaded from cache successfully');
+  // debug removed: loaded from cache successfully
         return;
       }
     }
@@ -61,7 +56,7 @@ export const useGooglePhotos = () => {
     setError(null);
 
     try {
-      console.log('🖼️ Validating Google Photos URL:', normalizedUrl);
+  // debug removed: validating URL
       
       // Validate URL format before attempting to fetch
       if (!validateGooglePhotosUrl(normalizedUrl)) {
@@ -69,11 +64,10 @@ export const useGooglePhotos = () => {
         throw new Error('Invalid Google Photos album URL format. Please ensure the URL is a valid Google Photos share link.');
       }
 
-      console.log('🖼️ URL validation passed, fetching images...');
-      console.log('🖼️ About to call fetchAlbumImages with URL:', normalizedUrl);
+  // debug removed: URL validation passed, fetching images
       
       const fetchedImages = await fetchAlbumImages(normalizedUrl);
-      console.log('🖼️ fetchAlbumImages returned:', fetchedImages?.length, 'images');
+  // debug removed: fetchAlbumImages result length
       
       if (fetchedImages && fetchedImages.length > 0) {
         // Randomize ALL photos before caching (no limit)
@@ -90,7 +84,7 @@ export const useGooglePhotos = () => {
           description: `Successfully loaded ${fetchedImages.length} photos from the album.`,
         });
       } else {
-        console.log('🖼️ No images returned from fetchAlbumImages');
+  // debug removed: no images returned
         setImages([]);
         toast({
           title: "No photos found",
@@ -124,7 +118,7 @@ export const useGooglePhotos = () => {
   }, [loadPhotosFromCache, toast]);
 
   const refreshPhotos = useCallback(() => {
-    console.log('🖼️ refreshPhotos called with publicAlbumUrl:', publicAlbumUrl);
+  // debug removed: refreshPhotos called
     if (publicAlbumUrl && publicAlbumUrl.trim() !== '') {
       fetchPhotos(publicAlbumUrl, true);
     }
@@ -132,12 +126,10 @@ export const useGooglePhotos = () => {
 
   const testAlbumConnection = useCallback(async (testUrl: string): Promise<boolean> => {
     try {
-      console.log('🖼️ Testing album connection with URL:', testUrl);
-      console.log('🖼️ testAlbumConnection - URL type:', typeof testUrl);
-      console.log('🖼️ testAlbumConnection - URL length:', testUrl?.length);
+  // debug removed: testing album connection
       
       const normalizedTestUrl = testUrl.trim();
-      console.log('🖼️ testAlbumConnection - normalized URL:', normalizedTestUrl);
+  // debug removed: normalized test URL
       
       if (!validateGooglePhotosUrl(normalizedTestUrl)) {
         console.error('🖼️ Test URL validation failed for:', normalizedTestUrl);
@@ -145,10 +137,10 @@ export const useGooglePhotos = () => {
       }
 
       setIsLoading(true);
-      console.log('🖼️ About to test fetchAlbumImages with URL:', normalizedTestUrl);
+  // debug removed: about to test fetch
       
       const testImages = await fetchAlbumImages(normalizedTestUrl);
-      console.log('🖼️ Test fetchAlbumImages returned:', testImages?.length, 'images');
+  // debug removed: test fetch result length
       
       if (testImages && testImages.length > 0) {
         toast({
@@ -157,7 +149,7 @@ export const useGooglePhotos = () => {
         });
         return true;
       } else {
-        console.log('🖼️ Test returned no images');
+  // debug removed: test returned no images
         toast({
           title: "No photos found",
           description: "The album appears to be empty or inaccessible.",
@@ -203,15 +195,13 @@ export const useGooglePhotos = () => {
 
   // Load photos on mount and when album URL changes
   useEffect(() => {
-    console.log('🖼️ useEffect triggered - publicAlbumUrl:', publicAlbumUrl);
-    console.log('🖼️ useEffect - publicAlbumUrl type:', typeof publicAlbumUrl);
-    console.log('🖼️ useEffect - publicAlbumUrl length:', publicAlbumUrl?.length);
+  // debug removed: album URL effect trigger
     
     if (publicAlbumUrl && publicAlbumUrl.trim() !== '') {
-      console.log('🖼️ useEffect - calling fetchPhotos');
+  // debug removed: calling fetchPhotos
       fetchPhotos(publicAlbumUrl);
     } else {
-      console.log('🖼️ No valid publicAlbumUrl, clearing state');
+  // debug removed: clearing state due to invalid URL
       setImages([]);
       setError(null);
       setLastFetch(null);

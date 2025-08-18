@@ -17,11 +17,7 @@ export class AccuWeatherProvider implements WeatherProvider {
   requiresApiKey = true;
 
   async fetchWeather(location: string, config: WeatherProviderConfig): Promise<WeatherData> {
-    console.log('AccuWeatherProvider - Fetching weather via Supabase edge function');
-    console.log('AccuWeatherProvider - Request params:', { 
-      location: location || '(empty - will use IP)', 
-      hasApiKey: !!config.apiKey 
-    });
+  // debug removed: fetchWeather invocation details
     
     try {
       const { data, error } = await supabase.functions.invoke('weather-proxy', {
@@ -46,14 +42,7 @@ export class AccuWeatherProvider implements WeatherProvider {
         throw new Error(data.error);
       }
 
-      console.log('AccuWeatherProvider - Raw response received:', {
-        hasData: !!data,
-        location: data.locationName,
-        cached: data.cached,
-        hasCurrentData: !!data.current,
-        hasForecastData: !!data.forecast,
-        forecastCount: data.forecast?.DailyForecasts?.length || 0
-      });
+  // debug removed: raw response summary
 
       // Store in tiered storage system immediately after successful API call
       if (data && !data.error) {
@@ -74,12 +63,7 @@ export class AccuWeatherProvider implements WeatherProvider {
         provider: this.displayName
       };
 
-      console.log('AccuWeatherProvider - Transformed weather data:', {
-        location: weatherData.location,
-        temperature: weatherData.temperature,
-        condition: weatherData.condition,
-        forecastCount: weatherData.forecast.length
-      });
+  // debug removed: transformed weather data summary
       return weatherData;
 
     } catch (error) {
@@ -88,7 +72,7 @@ export class AccuWeatherProvider implements WeatherProvider {
       // Try to use tiered storage data when API fails
       const cachedRawData = await weatherStorageService.getRawNWSData();
       if (cachedRawData) {
-        console.log('AccuWeatherProvider - Using tiered storage raw data as fallback');
+  // debug removed: using tiered storage fallback
         const weatherData: WeatherData = {
           location: this.extractLocationName(cachedRawData),
           temperature: this.extractTemperature(cachedRawData),
@@ -157,7 +141,7 @@ export class AccuWeatherProvider implements WeatherProvider {
         await weatherStorageService.saveForecastData(forecasts);
       }
       
-      console.log('AccuWeatherProvider - Weather data stored in tiered storage system');
+  // debug removed: weather data stored in tiered storage
     } catch (error) {
       console.warn('AccuWeatherProvider - Failed to store weather data in tiered storage:', error);
     }

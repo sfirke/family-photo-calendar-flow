@@ -122,7 +122,7 @@ export const useICalCalendars = () => {
         currentDate.setDate(currentDate.getDate() + 1);
       }
       
-      console.log(`Generated ${occurrences.length} occurrences for multi-day event: ${event.summary}`);
+  // debug removed: generated multi-day occurrences
     } catch (error) {
       console.warn('Error generating multi-day occurrences:', error);
       const eventDate = event.startDate ? event.startDate.toJSDate() : new Date();
@@ -184,9 +184,7 @@ export const useICalCalendars = () => {
   // Load calendars from IndexedDB
   const loadCalendars = useCallback(async () => {
     try {
-      console.log('Loading calendars from IndexedDB');
-      const storedCalendars = await calendarStorageService.getAllCalendars();
-      console.log('Loaded calendars from IndexedDB:', storedCalendars);
+  const storedCalendars = await calendarStorageService.getAllCalendars();
       setCalendars(storedCalendars);
       return storedCalendars;
     } catch (error) {
@@ -198,12 +196,9 @@ export const useICalCalendars = () => {
 
   // Update an existing calendar
   const updateCalendar = useCallback(async (id: string, updates: Partial<ICalCalendar>) => {
-    console.log('Updating calendar:', id, 'with updates:', updates);
-    
     try {
       await calendarStorageService.updateCalendar(id, updates);
       await loadCalendars(); // Refresh the state
-      console.log('Calendar updated successfully in IndexedDB');
     } catch (error) {
       console.error('Error updating calendar in IndexedDB:', error);
       throw new Error('Failed to update calendar');
@@ -235,11 +230,7 @@ export const useICalCalendars = () => {
       const filteredExisting = existingEvents.filter((event: any) => event.calendarId !== calendarId);
       
       // Track sync changes for better reporting
-      const existingCalendarEvents = existingEvents.filter((event: any) => event.calendarId === calendarId);
-      const newCount = allEvents.length - existingCalendarEvents.length;
-      const removedCount = Math.max(0, existingCalendarEvents.length - allEvents.length);
-      
-      console.log(`iCal sync for ${calendar.name}: ${allEvents.length} total events, ${newCount > 0 ? newCount + ' new' : ''} ${removedCount > 0 ? removedCount + ' removed' : ''}`);
+  // debug removed: sync counts for iCal calendar
       
       const combinedEvents = [...filteredExisting, ...allEvents];
       localStorage.setItem(ICAL_EVENTS_KEY, JSON.stringify(combinedEvents));
@@ -250,7 +241,7 @@ export const useICalCalendars = () => {
         eventCount: allEvents.length
       });
 
-      console.log(`Background sync processed ${allEvents.length} events for ${calendar.name}`);
+  // debug removed: background sync processed events
       
       // Trigger calendar refresh event for background sync
       CalendarRefreshUtils.triggerICalRefresh(calendarId, allEvents.length, true, `Background sync completed`);
@@ -266,7 +257,7 @@ export const useICalCalendars = () => {
         try {
           await registerBackgroundSync();
           await registerPeriodicSync();
-          console.log('Background sync initialized for calendar feeds');
+          // debug removed: background sync initialized for calendar feeds
         } catch (error) {
           console.error('Failed to initialize background sync:', error);
         }
@@ -300,8 +291,6 @@ export const useICalCalendars = () => {
 
   // Add a new iCal calendar
   const addCalendar = useCallback(async (calendar: Omit<ICalCalendar, 'id'>) => {
-    console.log('Adding new calendar with URL:', calendar.url);
-    
     if (!calendar.name || !calendar.url) {
       throw new Error('Calendar name and URL are required');
     }
@@ -336,8 +325,6 @@ export const useICalCalendars = () => {
       eventCount: 0
     };
     
-    console.log('New calendar object created with URL:', newCalendar.url);
-    
     try {
       await calendarStorageService.addCalendar(newCalendar);
       await loadCalendars(); // Refresh the state
@@ -347,7 +334,6 @@ export const useICalCalendars = () => {
         await triggerBackgroundSync();
       }
       
-      console.log('Calendar added successfully to IndexedDB');
       return newCalendar;
     } catch (error) {
       console.error('Error saving calendar to IndexedDB:', error);
@@ -357,8 +343,6 @@ export const useICalCalendars = () => {
 
   // Remove a calendar and clean up all related data
   const removeCalendar = useCallback(async (id: string) => {
-    console.log('Removing calendar:', id);
-    
     try {
       await calendarStorageService.deleteCalendar(id);
       
@@ -379,7 +363,7 @@ export const useICalCalendars = () => {
           const events = JSON.parse(storedEvents);
           const filteredEvents = events.filter((event: any) => event.calendarId !== id);
           localStorage.setItem(ICAL_EVENTS_KEY, JSON.stringify(filteredEvents));
-          console.log('Calendar events removed from localStorage');
+          // debug removed: calendar events removed from localStorage
         }
       } catch (error) {
         console.error('Error removing calendar events:', error);
@@ -388,7 +372,7 @@ export const useICalCalendars = () => {
       // Force a refresh to ensure everything is in sync
       await loadCalendars();
       
-      console.log(`Calendar ${id} completely removed from IndexedDB and UI`);
+  // debug removed: calendar fully removed
     } catch (error) {
       console.error('Error removing calendar from IndexedDB:', error);
       throw new Error('Failed to remove calendar');
@@ -410,14 +394,14 @@ export const useICalCalendars = () => {
     const lowerData = data.toLowerCase().trim();
     
     if (data.length < 50 && errorIndicators.some(indicator => lowerData.includes(indicator))) {
-      console.log('Data appears to be an error message:', data.substring(0, 100));
+  console.warn('Potential iCal error message detected');
       return false;
     }
 
     const hasVCalendar = lowerData.includes('begin:vcalendar');
     
     if (!hasVCalendar) {
-      console.log('Data does not contain BEGIN:VCALENDAR');
+  console.warn('iCal data missing BEGIN:VCALENDAR');
       return false;
     }
 
@@ -425,8 +409,6 @@ export const useICalCalendars = () => {
   };
 
   const fetchICalData = async (url: string): Promise<string> => {
-    console.log('Attempting to fetch iCal from:', url);
-    
     try {
       const response = await fetch(url, {
         mode: 'cors',
@@ -438,22 +420,20 @@ export const useICalCalendars = () => {
       
       if (response.ok) {
         const data = await response.text();
-        console.log('Direct fetch successful, data length:', data.length);
         
         if (isValidICalData(data)) {
           return data;
         } else {
-          console.log('Direct fetch returned invalid iCal data');
+      console.warn('Direct fetch returned invalid iCal data');
         }
       }
     } catch (error) {
-      console.log('Direct fetch failed, trying proxies:', error);
+    console.warn('Direct fetch failed, trying proxies');
     }
 
     for (let i = 0; i < CORS_PROXIES.length; i++) {
       try {
         const proxyUrl = CORS_PROXIES[i](url);
-        console.log(`Trying proxy ${i + 1}/${CORS_PROXIES.length}:`, proxyUrl);
         
         const response = await fetch(proxyUrl, {
           headers: {
@@ -463,18 +443,17 @@ export const useICalCalendars = () => {
 
         if (response.ok) {
           const data = await response.text();
-          console.log(`Proxy ${i + 1} successful, data length:`, data.length);
           
           if (isValidICalData(data)) {
             return data;
           } else {
-            console.log(`Proxy ${i + 1} returned invalid iCal data:`, data.substring(0, 100));
+            console.warn(`Proxy ${i + 1} returned invalid iCal data`);
           }
         } else {
-          console.log(`Proxy ${i + 1} failed with status:`, response.status);
+          console.warn(`Proxy ${i + 1} failed with status ${response.status}`);
         }
       } catch (error) {
-        console.log(`Proxy ${i + 1} failed:`, error);
+        console.warn(`Proxy ${i + 1} failed`);
       }
     }
 
@@ -486,8 +465,6 @@ export const useICalCalendars = () => {
     setSyncStatus(prev => ({ ...prev, [calendar.id]: 'syncing' }));
 
     try {
-      console.log('Syncing calendar:', calendar.name, 'with URL:', calendar.url);
-      
       if (!calendar.url || calendar.url.trim() === '') {
         throw new Error('Calendar does not have a valid URL for syncing.');
       }
@@ -498,8 +475,6 @@ export const useICalCalendars = () => {
         throw new Error('Received empty calendar data');
       }
 
-      console.log('Parsing iCal data, length:', icalData.length);
-      
       let jcalData;
       try {
         jcalData = ICAL.parse(icalData);
@@ -511,7 +486,7 @@ export const useICalCalendars = () => {
       const vcalendar = new ICAL.Component(jcalData);
       const vevents = vcalendar.getAllSubcomponents('vevent');
 
-      console.log(`Processing ${vevents.length} events from calendar`);
+  // debug removed: processing events count
 
       const allEvents: any[] = [];
       vevents.forEach((vevent) => {
@@ -520,7 +495,7 @@ export const useICalCalendars = () => {
         allEvents.push(...eventOccurrences);
       });
 
-      console.log(`Expanded ${vevents.length} calendar events to ${allEvents.length} occurrences`);
+  // debug removed: expansion details
 
       try {
         const existingEvents = JSON.parse(localStorage.getItem(ICAL_EVENTS_KEY) || '[]');
@@ -571,7 +546,7 @@ export const useICalCalendars = () => {
         const combinedEvents = [...filteredExisting, ...updatedEvents];
         localStorage.setItem(ICAL_EVENTS_KEY, JSON.stringify(combinedEvents));
         
-        console.log(`Calendar sync complete: ${newCount} new events, ${updatedCount} updated events, ${existingEventMap.size} removed events`);
+  // debug removed: calendar sync counts
       } catch (error) {
         console.error('Error storing iCal events:', error);
       }
@@ -582,7 +557,7 @@ export const useICalCalendars = () => {
       });
 
       setSyncStatus(prev => ({ ...prev, [calendar.id]: 'success' }));
-      console.log(`Successfully synced ${allEvents.length} event occurrences from ${calendar.name}`);
+  // debug removed: successful sync summary
       
       // Trigger calendar refresh event
       CalendarRefreshUtils.triggerICalRefresh(calendar.id, allEvents.length, true, `Synced ${allEvents.length} events`);
@@ -610,7 +585,7 @@ export const useICalCalendars = () => {
       try {
         const success = await triggerBackgroundSync();
         if (success) {
-          console.log('Background sync triggered for all calendars');
+          // debug removed: background sync trigger for all calendars
           return;
         }
       } catch (error) {
@@ -641,7 +616,6 @@ export const useICalCalendars = () => {
   const getICalEvents = useCallback(() => {
     try {
       const stored = localStorage.getItem(ICAL_EVENTS_KEY);
-      console.log('Loading iCal events from localStorage:', stored ? 'Found events' : 'No events');
       
       if (stored) {
         const events = JSON.parse(stored);
@@ -649,7 +623,6 @@ export const useICalCalendars = () => {
           ...event,
           date: new Date(event.date)
         }));
-        console.log(`Loaded ${processedEvents.length} iCal events`);
         return processedEvents;
       }
       return [];
@@ -660,13 +633,11 @@ export const useICalCalendars = () => {
   }, []);
 
   const forceRefresh = useCallback(() => {
-    console.log('Force refreshing iCal calendars');
     loadCalendars();
     processSyncQueue();
   }, [loadCalendars, processSyncQueue]);
 
   useEffect(() => {
-    console.log('useICalCalendars hook initializing');
     loadCalendars();
   }, [loadCalendars]);
 

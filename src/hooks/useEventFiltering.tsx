@@ -43,18 +43,11 @@ const convertScrapedEventToEvent = (scrapedEvent: NotionScrapedEvent): Event => 
   // If time is undefined, null, or empty, treat as all-day
   if (!eventTime || eventTime.trim() === '') {
     eventTime = 'All day';
-    console.log(`Converting scraped event "${scrapedEvent.title}" as all-day (no time specified)`);
+    // debug removed: converting scraped event to all-day
   } else {
-    console.log(`Converting scraped event "${scrapedEvent.title}" with time: ${eventTime}`);
+    // debug removed: converting scraped event with time
   }
-  
-  console.log('Converting scraped event:', {
-    id: scrapedEvent.id,
-    title: scrapedEvent.title,
-    calendarId: calendarId,
-    time: eventTime,
-    isAllDay: !scrapedEvent.time || scrapedEvent.time.trim() === ''
-  });
+  // debug removed: scraped event conversion details
 
   return {
     id: scrapedEvent.id,
@@ -81,15 +74,7 @@ export const useEventFiltering = ({
   enabledCalendarIds = []
 }: UseEventFilteringProps) => {
   const filteredEvents = useMemo(() => {
-    console.log('🔍 useEventFiltering - Starting filtering with inputs:', {
-      googleEvents: googleEvents.length,
-      notionEvents: notionEvents.length,
-      scrapedEvents: scrapedEvents.length,
-      selectedCalendarIds: selectedCalendarIds.length,
-      enabledCalendarIds: enabledCalendarIds.length,
-      selectedIds: selectedCalendarIds,
-      enabledIds: enabledCalendarIds
-    });
+  // debug removed: starting filtering inputs snapshot
 
     // Ensure all arrays are properly initialized
     const safeGoogleEvents = Array.isArray(googleEvents) ? googleEvents : [];
@@ -98,22 +83,16 @@ export const useEventFiltering = ({
     const safeSelectedCalendarIds = Array.isArray(selectedCalendarIds) ? selectedCalendarIds : [];
     const safeEnabledCalendarIds = Array.isArray(enabledCalendarIds) ? enabledCalendarIds : [];
 
-    console.log('🔍 useEventFiltering - Safe arrays:', {
-      googleEvents: safeGoogleEvents.length,
-      notionEvents: safeNotionEvents.length,
-      scrapedEvents: safeScrapedEvents.length,
-      selectedCalendarIds: safeSelectedCalendarIds.length,
-      enabledCalendarIds: safeEnabledCalendarIds.length
-    });
+  // debug removed: safe arrays lengths
 
     // Convert Notion events to Event format
     const convertedNotionEvents = safeNotionEvents.map(convertNotionEventToEvent);
     
     // Convert scraped events to Event format with enhanced logging
     const convertedScrapedEvents = safeScrapedEvents.map(event => {
-      const convertedEvent = convertScrapedEventToEvent(event);
-      console.log(`Scraped event conversion - Original time: "${event.time}", Converted time: "${convertedEvent.time}"`);
-      return convertedEvent;
+  const convertedEvent = convertScrapedEventToEvent(event);
+  // debug removed: scraped event conversion comparison
+  return convertedEvent;
     });
     
     // Combine all event sources
@@ -121,16 +100,7 @@ export const useEventFiltering = ({
     const hasNotionEvents = convertedNotionEvents.length > 0;
     const hasScrapedEvents = convertedScrapedEvents.length > 0;
     
-    console.log('🔍 useEventFiltering - Event source availability:', {
-      hasICalEvents,
-      hasNotionEvents,
-      hasScrapedEvents,
-      scrapedEventsDetail: convertedScrapedEvents.map(e => ({ 
-        title: e.title, 
-        time: e.time, 
-        calendarId: e.calendarId 
-      }))
-    });
+  // debug removed: event source availability
     
     let baseEvents: Event[] = [];
     
@@ -147,13 +117,7 @@ export const useEventFiltering = ({
     // Add scraped Notion events if available
     if (hasScrapedEvents) {
       baseEvents = [...baseEvents, ...convertedScrapedEvents];
-      console.log('Added scraped events:', convertedScrapedEvents.map(e => ({ 
-        id: e.id, 
-        title: e.title, 
-        calendarId: e.calendarId,
-        time: e.time,
-        isAllDay: e.time === 'All day' || !e.time || e.time.trim() === ''
-      })));
+  // debug removed: added scraped events list
     }
     
     // Use sample events only if no real events are available
@@ -161,14 +125,7 @@ export const useEventFiltering = ({
       baseEvents = sampleEvents;
     }
 
-    console.log('🔍 useEventFiltering - Total base events before filtering:', {
-      count: baseEvents.length,
-      byCalendar: baseEvents.reduce((acc, event) => {
-        const calId = event.calendarId || 'unknown';
-        acc[calId] = (acc[calId] || 0) + 1;
-        return acc;
-      }, {} as Record<string, number>)
-    });
+  // debug removed: base events count before filtering
 
     // Filter events by BOTH sync status (enabled) AND visibility selection
     const filtered = baseEvents.filter(event => {
@@ -182,59 +139,29 @@ export const useEventFiltering = ({
       // First check: Calendar must be enabled for sync (if we have enabled calendar info)
       if (safeEnabledCalendarIds.length > 0) {
         const isEnabledForSync = safeEnabledCalendarIds.includes(eventCalendarId);
-        if (!isEnabledForSync) {
-          console.log('🔍 useEventFiltering - Event filtered out (sync disabled):', {
-            title: event.title,
-            calendarId: eventCalendarId,
-            source: event.source,
-            enabledCalendarIds: safeEnabledCalendarIds,
-            isNotionEvent: event.source === 'notion'
-          });
+  if (!isEnabledForSync) {
           return false;
         }
       }
       
       // Second check: Calendar must be selected for visibility
       // If no calendars are selected, show nothing (user has explicitly deselected all)
-      if (safeSelectedCalendarIds.length === 0) {
-        console.log('🔍 useEventFiltering - No calendars selected, hiding all events');
+  if (safeSelectedCalendarIds.length === 0) {
         return false;
       }
       
       const isSelectedForVisibility = safeSelectedCalendarIds.includes(eventCalendarId);
       
       if (!isSelectedForVisibility) {
-        console.log('🔍 useEventFiltering - Event filtered out (visibility unchecked):', {
-          title: event.title,
-          calendarId: eventCalendarId,
-          selectedCalendarIds: safeSelectedCalendarIds
-        });
         return false;
       }
       
-      console.log('🔍 useEventFiltering - Event passed all checks:', {
-        title: event.title,
-        calendarId: eventCalendarId,
-        source: event.source
-      });
+      // debug removed: event passed all checks
       
       return true;
     });
 
-    console.log('🔍 useEventFiltering - Filtering complete:', {
-      totalFiltered: filtered.length,
-      bySource: {
-        ical: filtered.filter(e => e.source === 'ical').length,
-        notion: filtered.filter(e => e.source === 'notion').length,
-        local: filtered.filter(e => e.source === 'local').length
-      },
-      byCalendar: filtered.reduce((acc, event) => {
-        const calId = event.calendarId || 'unknown';
-        acc[calId] = (acc[calId] || 0) + 1;
-        return acc;
-      }, {} as Record<string, number>),
-      allDayEvents: filtered.filter(e => !e.time || e.time === 'All day' || e.time.toLowerCase().includes('all day')).length
-    });
+    // debug removed: filtering complete summary
 
     return filtered;
   }, [googleEvents, notionEvents, scrapedEvents, selectedCalendarIds, enabledCalendarIds]);

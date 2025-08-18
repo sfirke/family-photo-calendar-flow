@@ -30,8 +30,6 @@ const Calendar = ({ onNotionEventClick }: CalendarProps) => {
 
   // Listen for calendar refresh events
   useRefreshListener((refreshEvent) => {
-    console.log('📱 Calendar received refresh event:', refreshEvent);
-    
     // Force refresh of local events when sync completes
     if (forceRefresh) {
       forceRefresh();
@@ -46,16 +44,7 @@ const Calendar = ({ onNotionEventClick }: CalendarProps) => {
     }, 100);
   });
 
-  // Log whenever filteredEvents changes to verify UI updates
-  console.log('🖥️ Calendar - Render with events:', {
-    filteredEventsCount: filteredEvents.length,
-    eventStats,
-    view,
-    timestamp: new Date().toISOString()
-  });
-
-  // Always show the calendar header - let CalendarSelector handle its own state
-  console.log('🖥️ Calendar - Event stats:', eventStats);
+  // (debug removed) previously logged filteredEvents and eventStats
 
   return (
     <div className="space-y-6" key={`calendar-${refreshKey}`}>

@@ -58,7 +58,7 @@ class NotionService {
   // Test database access and get properties
   async testDatabaseAccess(databaseId: string, token: string): Promise<DatabaseTestResult> {
     try {
-      console.log(`🧪 Testing database access for ID: ${databaseId}`);
+      // debug removed: testing database access
       
       // Get database metadata
       const database = await notionAPIClient.getDatabase(databaseId, token);
@@ -115,7 +115,7 @@ class NotionService {
     }
 
     try {
-      console.log('🔐 Getting Notion integration info...');
+      // debug removed: getting integration info
       const userInfo = await notionAPIClient.getIntegrationInfo(token);
       
       return {
@@ -325,7 +325,7 @@ class NotionService {
 
   async validateToken(token: string): Promise<boolean> {
     try {
-      console.log('🔐 Validating Notion token...');
+      // debug removed: validating Notion token
       
       if (!this.validateTokenFormat(token)) {
         console.error('❌ Invalid token format');
@@ -333,7 +333,7 @@ class NotionService {
       }
 
       const isValid = await notionAPIClient.validateToken(token);
-      console.log('✅ Notion token validation successful');
+  // debug removed: token validation successful
       return isValid;
     } catch (error) {
       console.error('❌ Notion token validation failed:', error);
@@ -352,7 +352,7 @@ class NotionService {
       await notionAPIClient.getDatabase(pageId, token);
       return { hasAccess: true, resourceType: 'database' };
     } catch (error) {
-      console.log('Database access failed, trying page...');
+      // debug removed: database access failed, trying page
     }
 
     // Try page
@@ -360,7 +360,7 @@ class NotionService {
       await notionAPIClient.getPage(pageId, token);
       return { hasAccess: true, resourceType: 'page' };
     } catch (error) {
-      console.log('Page access failed');
+      // debug removed: page access failed
     }
 
     return { 

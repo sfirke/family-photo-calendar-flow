@@ -30,7 +30,7 @@ export const useCalendarSelection = () => {
         if (Array.isArray(parsed)) {
           setSelectedCalendarIds(parsed);
           setHasUserMadeSelection(true);
-          console.log('📦 useCalendarSelection - Loaded from localStorage:', parsed);
+          // debug removed: loaded selected calendar IDs from localStorage
         }
       } catch (error) {
         console.error('Failed to parse stored selectedCalendarIds:', error);
@@ -42,7 +42,7 @@ export const useCalendarSelection = () => {
   useEffect(() => {
     if (hasUserMadeSelection && selectedCalendarIds.length >= 0) {
       localStorage.setItem('selectedCalendarIds', JSON.stringify(selectedCalendarIds));
-      console.log('💾 useCalendarSelection - Saved to localStorage:', selectedCalendarIds);
+  // debug removed: saved selected calendar IDs to localStorage
     }
   }, [selectedCalendarIds, hasUserMadeSelection]);
   
@@ -52,7 +52,7 @@ export const useCalendarSelection = () => {
 
   // Listen for calendar refresh events to update data
   useRefreshListener((refreshEvent) => {
-    console.log('📊 useCalendarSelection received refresh event:', refreshEvent);
+  // debug removed: received refresh event
     setRefreshKey(prev => prev + 1);
   });
 
@@ -61,10 +61,7 @@ export const useCalendarSelection = () => {
     const safeICalCalendars = Array.isArray(iCalCalendars) ? iCalCalendars : [];
     const safeScrapedCalendars = Array.isArray(scrapedCalendars) ? scrapedCalendars : [];
     
-    console.log('Calendar counts:', {
-      iCal: safeICalCalendars.length,
-      scraped: safeScrapedCalendars.length
-    });
+  // debug removed: calendar counts
     
     return [
       ...safeICalCalendars,
@@ -85,10 +82,7 @@ export const useCalendarSelection = () => {
     // Get iCal events to count them per calendar
     const iCalEvents = getICalEvents ? getICalEvents() : [];
     
-    console.log('Event counts:', {
-      iCal: iCalEvents.length,
-      scraped: scrapedEvents.length
-    });
+  // debug removed: event counts
 
     // Convert all calendars to CalendarFromEvents format with proper event counting and source attribution
     const calendarList: CalendarFromEvents[] = allCalendars.map(cal => {
@@ -114,12 +108,7 @@ export const useCalendarSelection = () => {
         hasEvents = eventCount > 0;
       }
 
-      console.log(`Calendar ${cal.name} (${cal.id}):`, {
-        source,
-        eventCount,
-        hasEvents,
-        type: 'type' in cal ? cal.type : 'no-type'
-      });
+  // debug removed: calendar event summary
 
       return {
         id: cal?.id || '',
@@ -147,14 +136,14 @@ export const useCalendarSelection = () => {
     
     // Only auto-select if there are calendars with events AND user hasn't made any explicit selections
     if (enabledWithEventsIds.length > 0 && selectedCalendarIds.length === 0 && !hasUserMadeSelection) {
-      console.log('🔄 Initial auto-selecting calendars with events:', enabledWithEventsIds);
+  // debug removed: initial auto-select of calendars with events
       setSelectedCalendarIds(enabledWithEventsIds);
     }
   }, [calendarsFromEvents, enabledCalendars, hasUserMadeSelection, selectedCalendarIds.length]);
 
   // Toggle calendar (support both 1 and 2 parameter versions)
   const toggleCalendar = useCallback((calendarId: string, checked?: boolean) => {
-    console.log('🔄 toggleCalendar called:', { calendarId, checked });
+  // debug removed: toggleCalendar invocation
     
     // Mark that user has made an explicit selection
     setHasUserMadeSelection(true);
@@ -179,13 +168,7 @@ export const useCalendarSelection = () => {
         }
       }
       
-      console.log('🔄 toggleCalendar state change:', {
-        calendarId,
-        checked,
-        before: safePrev,
-        after: newSelected,
-        action: typeof checked === 'boolean' ? (checked ? 'select' : 'deselect') : 'toggle'
-      });
+  // debug removed: toggleCalendar state change details
       
       return newSelected;
     });
@@ -195,7 +178,7 @@ export const useCalendarSelection = () => {
     if (!Array.isArray(enabledCalendars)) return;
     setHasUserMadeSelection(true);
     const enabledIds = enabledCalendars.map(cal => cal?.id).filter(Boolean);
-    console.log('🔄 selectAllCalendars called:', enabledIds);
+  // debug removed: selectAllCalendars called
     setSelectedCalendarIds(enabledIds);
   }, [enabledCalendars]);
 
@@ -206,25 +189,25 @@ export const useCalendarSelection = () => {
       .filter(cal => cal?.hasEvents)
       .map(cal => cal?.id)
       .filter(Boolean);
-    console.log('🔄 selectCalendarsWithEvents called:', calendarsWithEventsIds);
+  // debug removed: selectCalendarsWithEvents called
     setSelectedCalendarIds(calendarsWithEventsIds);
   }, [calendarsFromEvents]);
 
   const clearAllCalendars = useCallback(() => {
-    console.log('🔄 clearAllCalendars called');
+  // debug removed: clearAllCalendars called
     setHasUserMadeSelection(true);
     setSelectedCalendarIds([]);
   }, []);
 
   const updateSelectedCalendars = useCallback((newSelectedIds: string[]) => {
     const safeNewSelectedIds = Array.isArray(newSelectedIds) ? newSelectedIds : [];
-    console.log('🔄 updateSelectedCalendars called:', safeNewSelectedIds);
+  // debug removed: updateSelectedCalendars invoked
     setHasUserMadeSelection(true);
     setSelectedCalendarIds(safeNewSelectedIds);
   }, []);
 
   const cleanupDeletedCalendar = useCallback((calendarId: string) => {
-    console.log('🔄 cleanupDeletedCalendar called:', calendarId);
+  // debug removed: cleanupDeletedCalendar called
     setSelectedCalendarIds(prev => {
       const safePrev = Array.isArray(prev) ? prev : [];
       return safePrev.filter(id => id !== calendarId);
@@ -232,7 +215,7 @@ export const useCalendarSelection = () => {
   }, []);
 
   const forceRefresh = useCallback(() => {
-    console.log('🔄 forceRefresh called');
+  // debug removed: forceRefresh called
     setRefreshKey(prev => prev + 1);
   }, []);
 
@@ -243,11 +226,7 @@ export const useCalendarSelection = () => {
   const safeSelectedCalendarIds = Array.isArray(selectedCalendarIds) ? selectedCalendarIds : [];
 
   // Add logging for current state
-  console.log('📊 useCalendarSelection current state:', {
-    selectedCalendarIds: safeSelectedCalendarIds,
-    calendarsFromEventsCount: calendarsFromEvents.length,
-    isLoading
-  });
+  // debug removed: current state snapshot
 
   return {
     allCalendars,
