@@ -10,6 +10,48 @@ import { mapAccuWeatherCondition } from '@/utils/weatherIcons';
 import { supabase } from '@/integrations/supabase/client';
 import { weatherStorageService } from '@/services/weatherStorageService';
 
+// Minimal AccuWeather types (only fields we actually use). Keep loose (optional props) to avoid over-commitment.
+interface AccuWeatherCurrentConditions {
+  Temperature?: { Imperial?: { Value?: number } };
+  WeatherText?: string;
+  RelativeHumidity?: number;
+  Wind?: { Speed?: { Imperial?: { Value?: number } } };
+  UVIndex?: number;
+  locationName?: string; // injected by edge function sometimes
+  [key: string]: unknown;
+}
+
+interface AccuWeatherDailyForecastDayPart {
+  IconPhrase?: string;
+  LongPhrase?: string;
+  RelativeHumidity?: { Average?: number };
+  Wind?: { Speed?: { Value?: number } };
+  UVIndex?: number;
+  [key: string]: unknown;
+}
+
+interface AccuWeatherDailyForecastEntry {
+  Date: string; // ISO
+  Temperature: { Maximum: { Value: number }; Minimum: { Value: number } };
+  Day: AccuWeatherDailyForecastDayPart;
+  Night?: AccuWeatherDailyForecastDayPart;
+  [key: string]: unknown;
+}
+
+interface AccuWeatherForecastData {
+  DailyForecasts?: AccuWeatherDailyForecastEntry[];
+  [key: string]: unknown;
+}
+
+interface AccuWeatherEdgeResponse {
+  current?: AccuWeatherCurrentConditions;
+  forecast?: AccuWeatherForecastData;
+  locationName?: string;
+  lastUpdated?: string;
+  error?: string;
+  [key: string]: unknown; // tolerate additional fields
+}
+
 export class AccuWeatherProvider implements WeatherProvider {
   name = 'accuweather';
   displayName = 'AccuWeather';
@@ -20,7 +62,7 @@ export class AccuWeatherProvider implements WeatherProvider {
   // debug removed: fetchWeather invocation details
     
     try {
-      const { data, error } = await supabase.functions.invoke('weather-proxy', {
+  const { data, error } = await supabase.functions.invoke<AccuWeatherEdgeResponse>('weather-proxy', {
         body: {
           zipCode: location || '', // Send empty string for IP-based location
           apiKey: config.apiKey
@@ -73,16 +115,17 @@ export class AccuWeatherProvider implements WeatherProvider {
       const cachedRawData = await weatherStorageService.getRawNWSData();
       if (cachedRawData) {
   // debug removed: using tiered storage fallback
+        const edgeData = cachedRawData as AccuWeatherEdgeResponse; // safe best-effort cast
         const weatherData: WeatherData = {
-          location: this.extractLocationName(cachedRawData),
-          temperature: this.extractTemperature(cachedRawData),
-          condition: this.extractCondition(cachedRawData),
-          description: this.extractDescription(cachedRawData),
-          humidity: this.extractHumidity(cachedRawData),
-          windSpeed: this.extractWindSpeed(cachedRawData),
-          uvIndex: this.extractUVIndex(cachedRawData),
-          forecast: this.extractForecast(cachedRawData),
-          lastUpdated: cachedRawData.lastUpdated || new Date().toISOString(),
+          location: this.extractLocationName(edgeData),
+          temperature: this.extractTemperature(edgeData),
+          condition: this.extractCondition(edgeData),
+          description: this.extractDescription(edgeData),
+          humidity: this.extractHumidity(edgeData),
+          windSpeed: this.extractWindSpeed(edgeData),
+          uvIndex: this.extractUVIndex(edgeData),
+          forecast: this.extractForecast(edgeData),
+          lastUpdated: edgeData.lastUpdated || new Date().toISOString(),
           provider: `${this.displayName} (Cached)`
         };
         return weatherData;
@@ -108,7 +151,7 @@ export class AccuWeatherProvider implements WeatherProvider {
     }
   }
 
-  private async storeWeatherDataInTieredStorage(data: any, location: string): Promise<void> {
+  private async storeWeatherDataInTieredStorage(data: AccuWeatherEdgeResponse, location: string): Promise<void> {
     try {
       // Store raw data
       await weatherStorageService.saveRawNWSData(data);
@@ -130,12 +173,12 @@ export class AccuWeatherProvider implements WeatherProvider {
       
       // Store forecast data
       if (data.forecast?.DailyForecasts && Array.isArray(data.forecast.DailyForecasts)) {
-        const forecasts = data.forecast.DailyForecasts.map((day: any) => ({
+        const forecasts = data.forecast.DailyForecasts.map((day) => ({
           date: new Date(day.Date).toISOString().split('T')[0],
-          high: Math.round(day.Temperature.Maximum.Value),
-          low: Math.round(day.Temperature.Minimum.Value),
-          condition: this.mapCondition(day.Day.IconPhrase),
-          description: day.Day.LongPhrase || day.Day.IconPhrase
+            high: Math.round(day.Temperature.Maximum.Value),
+            low: Math.round(day.Temperature.Minimum.Value),
+            condition: this.mapCondition(day.Day.IconPhrase || ''),
+            description: day.Day.LongPhrase || day.Day.IconPhrase || ''
         }));
         
         await weatherStorageService.saveForecastData(forecasts);
@@ -147,7 +190,7 @@ export class AccuWeatherProvider implements WeatherProvider {
     }
   }
 
-  private extractLocationName(data: any): string {
+  private extractLocationName(data: AccuWeatherEdgeResponse): string {
     // Try to get location from the edge function response first
     if (data.locationName) {
       return data.locationName;
@@ -162,49 +205,49 @@ export class AccuWeatherProvider implements WeatherProvider {
     return 'Current Location';
   }
 
-  private extractTemperature(data: any): number {
+  private extractTemperature(data: AccuWeatherEdgeResponse): number {
     if (data.current?.Temperature?.Imperial?.Value) {
       return Math.round(data.current.Temperature.Imperial.Value);
     }
     return 72; // Fallback temperature
   }
 
-  private extractCondition(data: any): string {
+  private extractCondition(data: AccuWeatherEdgeResponse): string {
     if (data.current?.WeatherText) {
       return this.mapCondition(data.current.WeatherText);
     }
     return 'Clear';
   }
 
-  private extractDescription(data: any): string {
+  private extractDescription(data: AccuWeatherEdgeResponse): string {
     if (data.current?.WeatherText) {
       return data.current.WeatherText;
     }
     return 'Weather conditions unavailable';
   }
 
-  private extractHumidity(data: any): number {
+  private extractHumidity(data: AccuWeatherEdgeResponse): number {
     if (data.current?.RelativeHumidity !== undefined) {
       return data.current.RelativeHumidity;
     }
     return 50; // Fallback humidity
   }
 
-  private extractWindSpeed(data: any): number {
+  private extractWindSpeed(data: AccuWeatherEdgeResponse): number {
     if (data.current?.Wind?.Speed?.Imperial?.Value !== undefined) {
       return data.current.Wind.Speed.Imperial.Value;
     }
     return 5; // Fallback wind speed
   }
 
-  private extractUVIndex(data: any): number {
+  private extractUVIndex(data: AccuWeatherEdgeResponse): number {
     if (data.current?.UVIndex !== undefined) {
       return data.current.UVIndex;
     }
     return 3; // Fallback UV index
   }
 
-  private extractForecast(data: any): Array<{
+  private extractForecast(data: AccuWeatherEdgeResponse): Array<{
     date: string;
     high: number;
     low: number;
@@ -212,12 +255,12 @@ export class AccuWeatherProvider implements WeatherProvider {
     description: string;
   }> {
     if (data.forecast?.DailyForecasts && Array.isArray(data.forecast.DailyForecasts)) {
-      return data.forecast.DailyForecasts.map((day: any) => ({
+      return data.forecast.DailyForecasts.map((day) => ({
         date: new Date(day.Date).toISOString().split('T')[0],
         high: Math.round(day.Temperature.Maximum.Value),
         low: Math.round(day.Temperature.Minimum.Value),
-        condition: this.mapCondition(day.Day.IconPhrase),
-        description: day.Day.LongPhrase || day.Day.IconPhrase
+        condition: this.mapCondition(day.Day.IconPhrase || ''),
+        description: day.Day.LongPhrase || day.Day.IconPhrase || ''
       }));
     }
 

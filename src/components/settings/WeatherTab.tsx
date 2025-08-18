@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { CloudSun } from 'lucide-react';
-import { useSecurity } from '@/contexts/SecurityContext';
+import { useSecurity } from '@/contexts/security/SecurityContext';
 import { useWeatherSettings } from '@/contexts/settings/useWeatherSettings';
 import WeatherSettings from './weather/WeatherSettings';
 import WeatherConnectionTest from './weather/WeatherConnectionTest';

@@ -12,8 +12,16 @@ interface WeatherRequest {
   locationKey?: string;
 }
 
-interface CachedWeatherData {
-  data: any;
+// Minimal AccuWeather response fragments we rely on
+interface AccuLocationArea { LocalizedName?: string }
+interface AccuLocationResult { Key: string; LocalizedName: string; AdministrativeArea: AccuLocationArea }
+interface AccuIPLocationResult { Key?: string; LocalizedName?: string; AdministrativeArea?: AccuLocationArea }
+interface AccuCurrentConditions { WeatherText?: string; Temperature?: unknown; [k: string]: unknown }
+interface AccuForecastDaily { Date?: string; [k: string]: unknown }
+interface AccuForecastResponse { DailyForecasts?: AccuForecastDaily[]; [k: string]: unknown }
+
+interface CachedWeatherData<T = unknown> {
+  data: T;
   timestamp: number;
   expiresAt: number;
 }
@@ -53,7 +61,7 @@ function getCacheKey(zipCode: string, apiKey: string): string {
   return `${zipCode}_${apiKey}`;
 }
 
-function getCachedData(cacheKey: string): any | null {
+function getCachedData<T = unknown>(cacheKey: string): T | null {
   const cached = weatherCache.get(cacheKey);
   if (!cached) return null;
 
@@ -64,10 +72,10 @@ function getCachedData(cacheKey: string): any | null {
   }
 
   // debug removed: cache hit
-  return cached.data;
+  return cached.data as T;
 }
 
-function setCachedData(cacheKey: string, data: any): void {
+function setCachedData<T>(cacheKey: string, data: T): void {
   const now = Date.now();
   weatherCache.set(cacheKey, {
     data,
@@ -87,14 +95,15 @@ async function getLocationKey(zipCode: string, apiKey: string): Promise<{ key: s
     throw new Error(`Failed to get location key: ${response.status} ${response.statusText}`);
   }
 
-  const locations = await response.json();
-  if (!locations || locations.length === 0) {
+  const locations = await response.json() as AccuLocationResult[];
+  if (!locations || !Array.isArray(locations) || locations.length === 0) {
     throw new Error(`No location found for zip code: ${zipCode}`);
   }
 
   const location = locations[0];
   const locationKey = location.Key;
-  const locationName = `${location.LocalizedName}, ${location.AdministrativeArea.LocalizedName}`;
+  const adminName = location.AdministrativeArea?.LocalizedName || '';
+  const locationName = `${location.LocalizedName}, ${adminName}`.trim();
   // debug removed: location key found
   return { key: locationKey, locationName };
 }
@@ -109,18 +118,19 @@ async function getLocationByIP(apiKey: string): Promise<{ key: string; locationN
     throw new Error(`Failed to get location via IP: ${response.status} ${response.statusText}`);
   }
 
-  const location = await response.json();
+  const location = await response.json() as AccuIPLocationResult;
   if (!location || !location.Key) {
     throw new Error(`Could not determine location from IP address`);
   }
 
   const locationKey = location.Key;
-  const locationName = `${location.LocalizedName}, ${location.AdministrativeArea.LocalizedName}`;
+  const adminName = location.AdministrativeArea?.LocalizedName || '';
+  const locationName = `${location.LocalizedName || ''}, ${adminName}`.trim();
   // debug removed: location key found via IP
   return { key: locationKey, locationName };
 }
 
-async function fetchCurrentConditions(locationKey: string, apiKey: string): Promise<any> {
+async function fetchCurrentConditions(locationKey: string, apiKey: string): Promise<AccuCurrentConditions | null> {
   const url = `http://dataservice.accuweather.com/currentconditions/v1/${locationKey}?apikey=${apiKey}&details=true`;
   
   // debug removed: fetching current conditions
@@ -130,11 +140,14 @@ async function fetchCurrentConditions(locationKey: string, apiKey: string): Prom
     throw new Error(`Failed to fetch current conditions: ${response.status} ${response.statusText}`);
   }
 
-  const data = await response.json();
-  return data[0] || null;
+  const data = await response.json() as AccuCurrentConditions[] | unknown;
+  if (Array.isArray(data)) {
+    return (data[0] as AccuCurrentConditions) || null;
+  }
+  return null;
 }
 
-async function fetchForecast(locationKey: string, apiKey: string): Promise<any> {
+async function fetchForecast(locationKey: string, apiKey: string): Promise<AccuForecastResponse> {
   const url = `http://dataservice.accuweather.com/forecasts/v1/daily/15day/${locationKey}?apikey=${apiKey}&details=true&metric=false`;
   
   // debug removed: fetching 15-day forecast
@@ -144,10 +157,18 @@ async function fetchForecast(locationKey: string, apiKey: string): Promise<any> 
     throw new Error(`Failed to fetch forecast: ${response.status} ${response.statusText}`);
   }
 
-  return await response.json();
+  return await response.json() as AccuForecastResponse;
 }
 
-async function fetchWeatherData(zipCode: string, apiKey: string, providedLocationKey?: string): Promise<any> {
+interface WeatherDataPayload {
+  locationKey: string;
+  locationName: string;
+  current: AccuCurrentConditions | null;
+  forecast: AccuForecastResponse;
+  lastUpdated: string;
+}
+
+async function fetchWeatherData(zipCode: string, apiKey: string, providedLocationKey?: string): Promise<WeatherDataPayload> {
   let locationKey = providedLocationKey;
   let locationName = '';
 
@@ -270,20 +291,20 @@ const handler = async (req: Request): Promise<Response> => {
       }
     );
 
-  } catch (error: any) {
+  } catch (error) {
     console.error('Weather proxy error:', error);
     
     // Provide more specific error messages
     let errorMessage = 'Failed to fetch weather data';
     let statusCode = 500;
 
-    if (error.message.includes('location key')) {
+  if (errorMessage.includes('location key')) {
       errorMessage = 'Invalid zip code or location not found';
       statusCode = 400;
-    } else if (error.message.includes('401') || error.message.includes('403')) {
+  } else if (errorMessage.includes('401') || errorMessage.includes('403')) {
       errorMessage = 'Invalid API key or access denied';
       statusCode = 401;
-    } else if (error.message.includes('429')) {
+  } else if (errorMessage.includes('429')) {
       errorMessage = 'API rate limit exceeded. Please try again later.';
       statusCode = 429;
     }
@@ -291,7 +312,7 @@ const handler = async (req: Request): Promise<Response> => {
     return new Response(
       JSON.stringify({ 
         error: errorMessage, 
-        details: error.message,
+    details: errorMessage,
         timestamp: new Date().toISOString()
       }),
       { 

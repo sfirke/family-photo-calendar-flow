@@ -3,35 +3,33 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Download, X } from 'lucide-react';
-import { showInstallPrompt, isInstalled } from '@/utils/pwa';
+import { showInstallPrompt, isInstalled, pwaManager } from '@/utils/pwa';
 
 const InstallPrompt = () => {
   const [showPrompt, setShowPrompt] = useState(false);
   const [canInstall, setCanInstall] = useState(false);
 
   useEffect(() => {
-    // Check if app is already installed
-    if (isInstalled()) {
-      return;
-    }
+    if (isInstalled()) return;
 
-    // Check if install prompt is available
-    const handleBeforeInstall = (e: Event) => {
-      e.preventDefault();
-      setCanInstall(true);
-      
-      // Show prompt after a delay
-      setTimeout(() => {
-        setShowPrompt(true);
-      }, 5000);
-    };
-
-    window.addEventListener('beforeinstallprompt', handleBeforeInstall);
+    let timeoutId: number | null = null;
+    const unsubscribe = pwaManager.onInstallStateChange?.((state) => {
+      if (state.isInstallable && !state.isInstalled) {
+        setCanInstall(true);
+        if (!sessionStorage.getItem('installPromptDismissed') && !showPrompt) {
+          timeoutId = window.setTimeout(() => setShowPrompt(true), 4000);
+        }
+      } else {
+        setCanInstall(false);
+      }
+    });
 
     return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
+      if (timeoutId) window.clearTimeout(timeoutId);
+      // no explicit unsubscribe since onInstallStateChange overwrites callback
+      pwaManager.onInstallStateChange(() => {});
     };
-  }, []);
+  }, [showPrompt]);
 
   const handleInstall = async () => {
     const accepted = await showInstallPrompt();

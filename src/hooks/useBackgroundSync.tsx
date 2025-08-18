@@ -83,7 +83,7 @@ export const useBackgroundSync = () => {
         navigator.serviceWorker.removeEventListener('message', handleMessage);
       };
     }
-  }, [toast]);
+  }, [toast, processSyncQueue]);
 
   // Register for background sync
   const registerBackgroundSync = useCallback(async (): Promise<boolean> => {

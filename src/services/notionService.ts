@@ -1,4 +1,5 @@
-import { NotionEvent, NotionPage } from '@/types/notion';
+import { NotionEvent, NotionPage, NotionDatabase, DatabaseTestResult } from '@/types/notion';
+import type { PageObjectResponse } from '@notionhq/client/build/src/api-endpoints';
 import { notionAPIClient } from './NotionAPIClient';
 
 interface NotionIntegrationInfo {
@@ -22,13 +23,18 @@ interface DatabaseProperties {
   };
 }
 
-interface DatabaseTestResult {
-  success: boolean;
-  database?: any;
-  properties?: DatabaseProperties;
-  samplePages?: any[];
-  error?: string;
+// Narrow fragments for property access to avoid pervasive any casts
+interface RichTextFragment { plain_text?: string }
+interface TitleProperty { type: 'title'; title: RichTextFragment[] }
+interface RichTextProperty { type: 'rich_text'; rich_text: RichTextFragment[] }
+interface SelectProperty { type: 'select'; select: { name?: string } | null }
+interface DateProperty { type: 'date'; date: { start?: string } | null }
+
+function isPageObjectResponse(obj: unknown): obj is PageObjectResponse {
+  return !!obj && typeof obj === 'object' && (obj as { object?: string }).object === 'page';
 }
+
+// Deprecated local DatabaseTestResult replaced by shared type
 
 class NotionService {
   private validateTokenFormat(token: string): boolean {
@@ -67,22 +73,26 @@ class NotionService {
       const properties: DatabaseProperties = {};
       for (const [key, prop] of Object.entries(database.properties || {})) {
         if (prop && typeof prop === 'object' && 'type' in prop) {
+          const typed = prop as { id?: string; type: string };
           properties[key] = {
-            id: (prop as any).id || key,
+            id: typed.id || key,
             name: key,
-            type: (prop as any).type
+            type: typed.type
           };
         }
       }
 
       // Query for sample pages (limit to 3 for preview)
-      const queryResult = await notionAPIClient.queryDatabase(databaseId, token);
+  const queryResult = await notionAPIClient.queryDatabase(databaseId, token) as { results?: unknown[] };
+      const samplePages: PageObjectResponse[] = (queryResult.results || [])
+        .filter((r): r is PageObjectResponse => isPageObjectResponse(r))
+        .slice(0, 3);
 
       return {
         success: true,
         database,
         properties,
-        samplePages: queryResult.results?.slice(0, 3) || [],
+        samplePages,
       };
     } catch (error) {
       console.error('Database test failed:', error);
@@ -95,10 +105,10 @@ class NotionService {
 
   // Get database with full query capability
   async queryDatabaseFull(databaseId: string, token: string, options: {
-    filter?: any;
-    sorts?: any[];
+  filter?: Record<string, unknown>;
+  sorts?: Array<Record<string, unknown>>;
     pageSize?: number;
-  } = {}): Promise<any> {
+  } = {}): Promise<unknown> {
     try {
       const { filter, sorts } = options;
       
@@ -137,7 +147,7 @@ class NotionService {
     }
   }
 
-  async getPage(pageId: string, token: string): Promise<any> {
+  async getPage(pageId: string, token: string): Promise<NotionPage> {
     try {
       return await notionAPIClient.getPage(pageId, token);
     } catch (error) {
@@ -146,7 +156,7 @@ class NotionService {
     }
   }
 
-  async getDatabase(databaseId: string, token: string): Promise<any> {
+  async getDatabase(databaseId: string, token: string): Promise<NotionDatabase> {
     try {
       return await notionAPIClient.getDatabase(databaseId, token);
     } catch (error) {
@@ -155,7 +165,7 @@ class NotionService {
     }
   }
 
-  async queryDatabase(databaseId: string, token: string, filter?: any): Promise<any> {
+  async queryDatabase(databaseId: string, token: string, filter?: Record<string, unknown>): Promise<unknown> {
     try {
       return await notionAPIClient.queryDatabase(databaseId, token, filter);
     } catch (error) {
@@ -207,23 +217,19 @@ class NotionService {
     });
   }
 
-  private extractTitle(page: any): string {
+  private extractTitle(page: NotionPage): string {
     const properties = page.properties;
     
     // First, look for a "Calendar Name" property
     for (const [key, property] of Object.entries(properties)) {
       if (key.toLowerCase().includes('calendar') && key.toLowerCase().includes('name')) {
         if (property && typeof property === 'object' && 'type' in property) {
-          if (property.type === 'rich_text' && 'rich_text' in property && property.rich_text) {
-            const richTextArray = property.rich_text as any[];
-            if (Array.isArray(richTextArray)) {
-              const titleText = richTextArray
-                .map((text: any) => text.plain_text)
-                .join('');
-              if (titleText && titleText.trim()) return titleText.trim();
-            }
-          } else if (property.type === 'select' && 'select' in property && property.select) {
-            const selectValue = (property as any).select.name;
+          if (property.type === 'rich_text' && 'rich_text' in property && Array.isArray((property as RichTextProperty).rich_text)) {
+            const richTextArray = (property as RichTextProperty).rich_text;
+            const titleText = richTextArray.map(t => t.plain_text || '').join('');
+            if (titleText && titleText.trim()) return titleText.trim();
+          } else if (property.type === 'select' && 'select' in property && (property as SelectProperty).select?.name) {
+            const selectValue = (property as SelectProperty).select?.name;
             if (selectValue && selectValue.trim()) return selectValue.trim();
           }
         }
@@ -232,14 +238,11 @@ class NotionService {
     
     // Then find title property as fallback
     for (const [key, property] of Object.entries(properties)) {
-      if (property && typeof property === 'object' && 'type' in property && property.type === 'title' && 'title' in property && property.title) {
-        // Add proper type assertion and array check
-        const titleArray = property.title as any[];
-        if (Array.isArray(titleArray)) {
-          const titleText = titleArray
-            .map((text: any) => text.plain_text)
-            .join('');
-          if (titleText && titleText.trim()) return titleText.trim();
+      if (property && typeof property === 'object' && 'type' in property && property.type === 'title' && 'title' in property) {
+        const titleProp = property as TitleProperty;
+        if (Array.isArray(titleProp.title)) {
+          const titleText = titleProp.title.map(t => t.plain_text || '').join('');
+            if (titleText && titleText.trim()) return titleText.trim();
         }
       }
     }
@@ -247,46 +250,46 @@ class NotionService {
     return 'Untitled';
   }
 
-  private extractDate(page: any): Date {
+  private extractDate(page: NotionPage): Date {
     const properties = page.properties;
     
     // Look for date properties
     for (const [key, property] of Object.entries(properties)) {
-      if (property && typeof property === 'object' && 'type' in property && property.type === 'date' && 'date' in property && (property as any).date?.start) {
-        return new Date((property as any).date.start);
+      if (property && typeof property === 'object' && 'type' in property && property.type === 'date' && 'date' in property) {
+        const dateProp = property as DateProperty;
+        if (dateProp.date?.start) return new Date(dateProp.date.start);
       }
     }
     
     return new Date(page.created_time);
   }
 
-  private extractTime(page: any): string | null {
+  private extractTime(page: NotionPage): string | null {
     const properties = page.properties;
     
     // Look for date properties with time
     for (const [key, property] of Object.entries(properties)) {
-      if (property && typeof property === 'object' && 'type' in property && property.type === 'date' && 'date' in property && (property as any).date?.start) {
-        const dateString = (property as any).date.start;
-        const timeMatch = dateString.match(/T(\d{2}:\d{2})/);
-        return timeMatch ? timeMatch[1] : null;
+      if (property && typeof property === 'object' && 'type' in property && property.type === 'date' && 'date' in property) {
+        const dateProp = property as DateProperty;
+        if (dateProp.date?.start) {
+          const timeMatch = dateProp.date.start.match(/T(\d{2}:\d{2})/);
+          return timeMatch ? timeMatch[1] : null;
+        }
       }
     }
     
     return null;
   }
 
-  private extractDescription(page: any): string {
+  private extractDescription(page: NotionPage): string {
     const properties = page.properties;
     
     // Look for rich text properties that might contain description
     for (const [key, property] of Object.entries(properties)) {
-      if (property && typeof property === 'object' && 'type' in property && property.type === 'rich_text' && 'rich_text' in property && (property as any).rich_text) {
-        // Add proper type assertion and array check
-        const richTextArray = (property as any).rich_text as any[];
-        if (Array.isArray(richTextArray)) {
-          const description = richTextArray
-            .map((text: any) => text.plain_text)
-            .join('');
+      if (property && typeof property === 'object' && 'type' in property && property.type === 'rich_text' && 'rich_text' in property) {
+        const richProp = property as RichTextProperty;
+        if (Array.isArray(richProp.rich_text)) {
+          const description = richProp.rich_text.map(t => t.plain_text || '').join('');
           if (description) return description;
         }
       }
@@ -295,7 +298,7 @@ class NotionService {
     return '';
   }
 
-  private extractLocation(page: any): string {
+  private extractLocation(page: NotionPage): string {
     const properties = page.properties;
     
     // Look for properties that might contain location info
@@ -303,19 +306,17 @@ class NotionService {
       const keyLower = key.toLowerCase();
       
       if (keyLower.includes('location')) {
-        if (property && typeof property === 'object' && 'type' in property && property.type === 'rich_text' && 'rich_text' in property && (property as any).rich_text) {
-          // Add proper type assertion and array check
-          const richTextArray = (property as any).rich_text as any[];
-          if (Array.isArray(richTextArray)) {
-            const location = richTextArray
-              .map((text: any) => text.plain_text)
-              .join('');
-            if (location) return location;
+        if (property && typeof property === 'object' && 'type' in property) {
+          if (property.type === 'rich_text' && 'rich_text' in property) {
+            const richProp = property as RichTextProperty;
+            if (Array.isArray(richProp.rich_text)) {
+              const location = richProp.rich_text.map(t => t.plain_text || '').join('');
+              if (location) return location;
+            }
+          } else if (property.type === 'select' && 'select' in property) {
+            const selectProp = property as SelectProperty;
+            return selectProp.select?.name || '';
           }
-        }
-        
-        if (property && typeof property === 'object' && 'type' in property && property.type === 'select' && 'select' in property && (property as any).select) {
-          return (property as any).select.name || '';
         }
       }
     }

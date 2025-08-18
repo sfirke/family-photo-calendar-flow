@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
+import { generateOccurrenceId } from '@/utils/icalEventUtils';
 import ICAL from 'ical.js';
-import { calendarStorageService, CalendarFeed } from '@/services/calendarStorage';
+import { calendarStorageService } from '@/services/calendarStorage';
 import { useBackgroundSync } from './useBackgroundSync';
 import { CalendarRefreshUtils } from './useCalendarRefresh';
 
@@ -14,6 +15,23 @@ export interface ICalCalendar {
   eventCount?: number;
 }
 
+export interface ICalEventOccurrence {
+  id: string;
+  title: string;
+  time: string;
+  location: string;
+  attendees: number;
+  category: 'Personal';
+  color: string;
+  description: string;
+  organizer: string;
+  date: Date;
+  calendarId: string;
+  calendarName: string;
+  source: 'ical';
+  isMultiDay: boolean;
+}
+
 const ICAL_EVENTS_KEY = 'family_calendar_ical_events';
 
 // Multiple CORS proxy options for better reliability
@@ -24,10 +42,89 @@ const CORS_PROXIES = [
   (url: string) => `https://cors.bridged.cc/${url}`,
 ];
 
+// Optional custom proxy (e.g. Supabase Edge Function or self-hosted) configured via Vite env
+// Provide a URL where the raw ICS feed can be fetched with ?url= encoded param or path style
+const CUSTOM_ICAL_PROXY = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_ICAL_PROXY_URL) || '';
+
+// Basic normalization & sanity validation to avoid sending obviously invalid tokens like 'Family'
+const normalizeICalUrl = (raw: string): { url: string; valid: boolean; reason?: string } => {
+  if (!raw) return { url: raw, valid: false, reason: 'Empty URL' };
+  let trimmed = raw.trim();
+  // Remove surrounding angle brackets sometimes copied from mail clients
+  if (trimmed.startsWith('<') && trimmed.endsWith('>')) {
+    trimmed = trimmed.slice(1, -1).trim();
+  }
+  // If no scheme but looks like domain/path, prepend https://
+  if (!/^https?:\/\//i.test(trimmed) && /[.]/.test(trimmed.split(/[\s/?#]/)[0])) {
+    trimmed = 'https://' + trimmed;
+  }
+  // Reject if contains whitespace (likely copy error)
+  if (/\s/.test(trimmed)) {
+    return { url: trimmed, valid: false, reason: 'Whitespace detected in URL' };
+  }
+  try {
+    const u = new URL(trimmed);
+    if (!u.hostname.includes('.')) {
+      return { url: trimmed, valid: false, reason: 'Hostname missing dot' };
+    }
+    return { url: u.toString(), valid: true };
+  } catch {
+    return { url: trimmed, valid: false, reason: 'Malformed URL' };
+  }
+};
+
 export const useICalCalendars = () => {
   const [calendars, setCalendars] = useState<ICalCalendar[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [syncStatus, setSyncStatus] = useState<{ [key: string]: string }>({});
+  type SyncState = '' | 'syncing' | 'success' | 'error';
+  const [syncStatus, setSyncStatus] = useState<Record<string, SyncState>>({});
+  // Deterministic occurrence ID generation for better update detection
+
+  // Deterministic ID for already stored event objects (no UID available)
+  interface LegacyStoredEventLike {
+    id?: string;
+    calendarId: string;
+    title: string;
+    date: string | Date;
+    isMultiDay?: boolean;
+    [k: string]: unknown;
+  }
+
+  // Minimal shape used for deterministic ID regeneration when legacy events lacked UID
+  const generateStoredEventId = useCallback((e: LegacyStoredEventLike): string => {
+    const dateObj = typeof e.date === 'string' ? new Date(e.date) : e.date;
+    // Cast only the tiny piece we need instead of whole event as any
+    const pseudoEvent: Pick<ICAL.Event, 'uid' | 'summary'> = { uid: undefined as unknown as string, summary: e.title as unknown as string };
+    return generateOccurrenceId(pseudoEvent, { id: e.calendarId }, dateObj, !!e.isMultiDay);
+  }, []);
+
+  // One-time migration of legacy random IDs to deterministic IDs
+  useEffect(() => {
+    try {
+      const storedRaw = localStorage.getItem(ICAL_EVENTS_KEY);
+      if (!storedRaw) return;
+  const parsed: LegacyStoredEventLike[] = JSON.parse(storedRaw) as LegacyStoredEventLike[];
+      let changed = false;
+      const migrated = parsed.map(ev => {
+        if (ev && typeof ev === 'object') {
+          const hasDeterministic = typeof ev.id === 'string' && ev.id.startsWith('ical_');
+          if (!hasDeterministic && ev.calendarId && ev.title && ev.date) {
+            const newId = generateStoredEventId({ calendarId: ev.calendarId, title: ev.title, date: ev.date, isMultiDay: ev.isMultiDay });
+            if (newId !== ev.id) {
+              changed = true;
+              return { ...ev, id: newId };
+            }
+          }
+        }
+        return ev;
+      });
+      if (changed) {
+        localStorage.setItem(ICAL_EVENTS_KEY, JSON.stringify(migrated));
+      }
+    } catch (mErr) {
+      console.warn('iCal legacy ID migration failed:', mErr);
+    }
+  }, [generateStoredEventId]);
   const { 
     registerBackgroundSync, 
     registerPeriodicSync, 
@@ -37,12 +134,12 @@ export const useICalCalendars = () => {
   } = useBackgroundSync();
 
   // Helper functions defined first to avoid temporal dead zone issues
-  const isEventInCurrentYear = (eventDate: Date): boolean => {
+  const isEventInCurrentYear = useCallback((eventDate: Date): boolean => {
     const currentYear = new Date().getFullYear();
     return eventDate.getFullYear() === currentYear;
-  };
+  }, []);
 
-  const isMultiDayEvent = (event: ICAL.Event): boolean => {
+  const isMultiDayEvent = useCallback((event: ICAL.Event): boolean => {
     try {
       if (!event.startDate || !event.endDate) {
         return false;
@@ -63,9 +160,9 @@ export const useICalCalendars = () => {
       console.warn('Error checking if event is multi-day:', error);
       return false;
     }
-  };
+  }, []);
 
-  const createEventObject = (event: ICAL.Event, calendar: ICalCalendar, eventDate: Date, isRecurring: boolean, isMultiDay: boolean) => {
+  const createEventObject = useCallback((event: ICAL.Event, calendar: ICalCalendar, eventDate: Date, isRecurring: boolean, isMultiDay: boolean): ICalEventOccurrence => {
     let timeString = 'All day';
     
     try {
@@ -83,15 +180,15 @@ export const useICalCalendars = () => {
       timeString = `${timeString} (Recurring)`;
     }
 
-    return {
-      id: `${Date.now()}-${Math.random()}`,
-      title: event.summary || 'Untitled Event',
+  return {
+      id: generateOccurrenceId(event, calendar, eventDate, isMultiDay),
+      title: (event.summary as string) || 'Untitled Event',
       time: timeString,
-      location: event.location || '',
+      location: (event.location as string) || '',
       attendees: 0,
       category: 'Personal' as const,
       color: calendar.color,
-      description: event.description || '',
+      description: (event.description as string) || '',
       organizer: calendar.name,
       date: eventDate,
       calendarId: calendar.id,
@@ -99,10 +196,10 @@ export const useICalCalendars = () => {
       source: 'ical',
       isMultiDay: isMultiDay
     };
-  };
+  }, []);
 
-  const generateMultiDayOccurrences = (event: ICAL.Event, calendar: ICalCalendar): any[] => {
-    const occurrences: any[] = [];
+  const generateMultiDayOccurrences = useCallback((event: ICAL.Event, calendar: ICalCalendar): ICalEventOccurrence[] => {
+    const occurrences: ICalEventOccurrence[] = [];
     
     try {
       if (!isMultiDayEvent(event)) {
@@ -132,14 +229,14 @@ export const useICalCalendars = () => {
     }
 
     return occurrences;
-  };
+  }, [createEventObject, isMultiDayEvent, isEventInCurrentYear]);
 
   // Function to expand recurring events
-  const expandRecurringEvent = useCallback((event: ICAL.Event, calendar: ICalCalendar): any[] => {
+  const expandRecurringEvent = useCallback((event: ICAL.Event, calendar: ICalCalendar): ICalEventOccurrence[] => {
     const currentYear = new Date().getFullYear();
     const yearStart = new Date(currentYear, 0, 1);
     const yearEnd = new Date(currentYear, 11, 31);
-    const occurrences: any[] = [];
+  const occurrences: ICalEventOccurrence[] = [];
 
     try {
       if (event.isRecurring()) {
@@ -179,7 +276,7 @@ export const useICalCalendars = () => {
     }
 
     return occurrences;
-  }, []);
+  }, [generateMultiDayOccurrences, isMultiDayEvent, createEventObject, isEventInCurrentYear]);
 
   // Load calendars from IndexedDB
   const loadCalendars = useCallback(async () => {
@@ -205,7 +302,8 @@ export const useICalCalendars = () => {
     }
   }, [loadCalendars]);
 
-  const processBackgroundSyncData = useCallback((syncData: any) => {
+  interface BackgroundSyncData { calendarId: string; icalData: string; syncTime: string }
+  const processBackgroundSyncData = useCallback((syncData: BackgroundSyncData) => {
     try {
       const { calendarId, icalData, syncTime } = syncData;
       
@@ -218,7 +316,7 @@ export const useICalCalendars = () => {
       const vcalendar = new ICAL.Component(jcalData);
       const vevents = vcalendar.getAllSubcomponents('vevent');
 
-      const allEvents: any[] = [];
+  const allEvents: ICalEventOccurrence[] = [];
       vevents.forEach((vevent) => {
         const event = new ICAL.Event(vevent);
         const eventOccurrences = expandRecurringEvent(event, calendar);
@@ -226,8 +324,8 @@ export const useICalCalendars = () => {
       });
 
       // Update events in localStorage
-      const existingEvents = JSON.parse(localStorage.getItem(ICAL_EVENTS_KEY) || '[]');
-      const filteredExisting = existingEvents.filter((event: any) => event.calendarId !== calendarId);
+  const existingEvents: ICalEventOccurrence[] = JSON.parse(localStorage.getItem(ICAL_EVENTS_KEY) || '[]');
+  const filteredExisting = existingEvents.filter((event) => event.calendarId !== calendarId);
       
       // Track sync changes for better reporting
   // debug removed: sync counts for iCal calendar
@@ -273,7 +371,7 @@ export const useICalCalendars = () => {
       const { syncQueue } = event.detail;
       
       // Process background sync results
-      syncQueue.forEach((syncData: any) => {
+  syncQueue.forEach((syncData: BackgroundSyncData) => {
         try {
           processBackgroundSyncData(syncData);
         } catch (error) {
@@ -360,8 +458,8 @@ export const useICalCalendars = () => {
       try {
         const storedEvents = localStorage.getItem(ICAL_EVENTS_KEY);
         if (storedEvents) {
-          const events = JSON.parse(storedEvents);
-          const filteredEvents = events.filter((event: any) => event.calendarId !== id);
+          const events: ICalEventOccurrence[] = JSON.parse(storedEvents) as ICalEventOccurrence[];
+          const filteredEvents = events.filter((event) => event.calendarId !== id);
           localStorage.setItem(ICAL_EVENTS_KEY, JSON.stringify(filteredEvents));
           // debug removed: calendar events removed from localStorage
         }
@@ -380,7 +478,7 @@ export const useICalCalendars = () => {
   }, [loadCalendars]);
 
   // Validate iCal data format
-  const isValidICalData = (data: string): boolean => {
+  const isValidICalData = useCallback((data: string): boolean => {
     if (!data || typeof data !== 'string') {
       return false;
     }
@@ -406,11 +504,17 @@ export const useICalCalendars = () => {
     }
 
     return true;
-  };
+  }, []);
 
-  const fetchICalData = async (url: string): Promise<string> => {
+  const fetchICalData = useCallback(async (url: string): Promise<string> => {
+    // Normalize / validate upfront
+    const { url: normalized, valid, reason } = normalizeICalUrl(url);
+    if (!valid) {
+      throw new Error(`Invalid iCal URL: ${reason || 'Unknown reason'}`);
+    }
+    const targetUrl = normalized;
     try {
-      const response = await fetch(url, {
+      const response = await fetch(targetUrl, {
         mode: 'cors',
         headers: {
           'Accept': 'text/calendar, text/plain, */*',
@@ -431,9 +535,31 @@ export const useICalCalendars = () => {
     console.warn('Direct fetch failed, trying proxies');
     }
 
+    // Try custom proxy first if configured
+    if (CUSTOM_ICAL_PROXY) {
+      try {
+        const proxyEndpoint = CUSTOM_ICAL_PROXY.includes('{url}')
+          ? CUSTOM_ICAL_PROXY.replace('{url}', encodeURIComponent(targetUrl))
+          : `${CUSTOM_ICAL_PROXY}${CUSTOM_ICAL_PROXY.includes('?') ? '&' : '?'}url=${encodeURIComponent(targetUrl)}`;
+        const proxyResp = await fetch(proxyEndpoint, { headers: { 'Accept': 'text/calendar, text/plain, */*' } });
+        if (proxyResp.ok) {
+          const data = await proxyResp.text();
+          if (isValidICalData(data)) {
+            return data;
+          } else {
+            console.warn('Custom proxy returned invalid iCal data');
+          }
+        } else {
+          console.warn('Custom proxy request failed with status', proxyResp.status);
+        }
+      } catch (e) {
+        console.warn('Custom proxy request failed');
+      }
+    }
+
     for (let i = 0; i < CORS_PROXIES.length; i++) {
       try {
-        const proxyUrl = CORS_PROXIES[i](url);
+        const proxyUrl = CORS_PROXIES[i](targetUrl);
         
         const response = await fetch(proxyUrl, {
           headers: {
@@ -458,7 +584,7 @@ export const useICalCalendars = () => {
     }
 
     throw new Error('All fetch methods failed or returned invalid data. Please check if the iCal URL is publicly accessible and returns valid calendar data.');
-  };
+  }, [isValidICalData]);
 
   const syncCalendar = useCallback(async (calendar: ICalCalendar) => {
     setIsLoading(true);
@@ -488,7 +614,7 @@ export const useICalCalendars = () => {
 
   // debug removed: processing events count
 
-      const allEvents: any[] = [];
+  const allEvents: ICalEventOccurrence[] = [];
       vevents.forEach((vevent) => {
         const event = new ICAL.Event(vevent);
         const eventOccurrences = expandRecurringEvent(event, calendar);
@@ -498,23 +624,26 @@ export const useICalCalendars = () => {
   // debug removed: expansion details
 
       try {
-        const existingEvents = JSON.parse(localStorage.getItem(ICAL_EVENTS_KEY) || '[]');
-        const filteredExisting = existingEvents.filter((event: any) => event.calendarId !== calendar.id);
+  const existingEvents = JSON.parse(localStorage.getItem(ICAL_EVENTS_KEY) || '[]') as (ICalEventOccurrence & { date: string | Date })[];
+  const filteredExisting = existingEvents.filter((event) => event.calendarId !== calendar.id);
         
         // Create a map for efficient event comparison by a stable identifier
-        const existingEventMap = new Map();
+  const existingEventMap = new Map<string, ICalEventOccurrence & { date: string | Date }>();
         filteredExisting.forEach(event => {
-          existingEventMap.set(`${event.calendarId}-${event.title}-${event.date}`, event);
+          // Support both legacy random ids and new deterministic ids
+          const legacyKey = `${event.calendarId}-${event.title}-${event.date}`;
+          existingEventMap.set(legacyKey, event);
+          if (event.id) existingEventMap.set(String(event.id), event);
         });
         
         // Track which events are new, updated, or unchanged
-        const updatedEvents: any[] = [];
+  const updatedEvents: ICalEventOccurrence[] = [];
         let newCount = 0;
         let updatedCount = 0;
         
         allEvents.forEach(newEvent => {
           const eventKey = `${newEvent.calendarId}-${newEvent.title}-${newEvent.date}`;
-          const existingEvent = existingEventMap.get(eventKey);
+          const existingEvent = existingEventMap.get(newEvent.id) || existingEventMap.get(eventKey);
           
           if (!existingEvent) {
             // New event
@@ -539,6 +668,7 @@ export const useICalCalendars = () => {
             
             // Remove from map to track which events were deleted
             existingEventMap.delete(eventKey);
+            existingEventMap.delete(newEvent.id);
           }
         });
         
@@ -575,7 +705,7 @@ export const useICalCalendars = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [updateCalendar]); // Only include updateCalendar
+  }, [updateCalendar, expandRecurringEvent, fetchICalData]);
 
   const syncAllCalendars = useCallback(async () => {
     const enabledCalendars = calendars.filter(cal => cal.enabled);
@@ -613,17 +743,13 @@ export const useICalCalendars = () => {
     );
   }, [calendars, syncCalendar, isBackgroundSyncSupported, triggerBackgroundSync]);
 
-  const getICalEvents = useCallback(() => {
+  const getICalEvents = useCallback((): ICalEventOccurrence[] => {
     try {
       const stored = localStorage.getItem(ICAL_EVENTS_KEY);
       
       if (stored) {
-        const events = JSON.parse(stored);
-        const processedEvents = events.map((event: any) => ({
-          ...event,
-          date: new Date(event.date)
-        }));
-        return processedEvents;
+        const events: (ICalEventOccurrence & { date: string | Date })[] = JSON.parse(stored);
+        return events.map(ev => ({ ...ev, date: new Date(ev.date) }));
       }
       return [];
     } catch (error) {

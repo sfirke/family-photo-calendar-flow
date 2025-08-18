@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { useTheme } from '@/contexts/ThemeContext';
+import { useTheme } from '@/contexts/theme/ThemeContext';
 import { getVersionInfo } from '@/utils/versionManager';
 import { VersionInfo } from '@/types/ical';
 

@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Shield, Lock, Unlock, AlertTriangle } from 'lucide-react';
-import { useSecurity } from '@/contexts/SecurityContext';
+import { useSecurity } from '@/contexts/security/SecurityContext';
 import { useToast } from '@/hooks/use-toast';
 
 interface SecurityModalProps {

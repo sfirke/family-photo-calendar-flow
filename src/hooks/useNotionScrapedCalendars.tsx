@@ -12,21 +12,34 @@ import { CalendarRefreshUtils } from '@/hooks/useCalendarRefresh';
 
 import { useBackgroundSync } from './useBackgroundSync';
 
+// Narrowed property fragment types to avoid any usage
+interface NotionRichTextFragment { plain_text?: string }
+interface NotionSelectOption { name?: string }
+interface NotionMultiSelectOption { name?: string }
+interface NotionPropertyBase { type: string }
+interface NotionTitleProperty extends NotionPropertyBase { type: 'title'; title?: NotionRichTextFragment[] }
+interface NotionRichTextProperty extends NotionPropertyBase { type: 'rich_text'; rich_text?: NotionRichTextFragment[] }
+interface NotionSelectProperty extends NotionPropertyBase { type: 'select'; select?: NotionSelectOption | null }
+interface NotionMultiSelectProperty extends NotionPropertyBase { type: 'multi_select'; multi_select?: NotionMultiSelectOption[] }
+interface NotionDateProperty extends NotionPropertyBase { type: 'date'; date?: { start?: string; end?: string } | null }
+type NotionPrimitiveProperty = NotionTitleProperty | NotionRichTextProperty | NotionSelectProperty | NotionMultiSelectProperty | NotionDateProperty;
+type NotionPropertyMap = Record<string, NotionPrimitiveProperty | undefined>;
+
 interface NotionApiEvent {
   id: string;
   title: string;
-  date: string;
+  date: string; // ISO date or YYYY-MM-DD
   time?: string;
   description?: string;
   location?: string;
   status?: string;
   categories?: string[];
   priority?: string;
-  properties?: Record<string, any>;
+  properties?: NotionPropertyMap;
   sourceUrl?: string;
   scrapedAt?: string;
   endDate?: string;
-  customProperties?: Record<string, any>;
+  customProperties?: Record<string, unknown>;
 }
 
 export interface NotionScrapedSyncStatus {
@@ -174,14 +187,14 @@ export const useNotionScrapedCalendars = () => {
       }
 
       // Transform API events to our format
-      const apiEvents: NotionApiEvent[] = data.events || [];
-      const notionEvents: NotionScrapedEvent[] = apiEvents.map((event: NotionApiEvent) => {
+  const apiEvents: NotionApiEvent[] = (data.events as NotionApiEvent[]) || [];
+  const notionEvents: NotionScrapedEvent[] = apiEvents.map((event) => {
         // Extract calendar name from properties to use as title
-        const calendarNameProperty = event.properties?.['calendar name'] || event.properties?.['Calendar Name'];
-        const eventTitle = calendarNameProperty?.title?.[0]?.plain_text || 
-                          calendarNameProperty?.rich_text?.[0]?.plain_text ||
-                          calendarNameProperty?.select?.name ||
-                          event.title;
+  const calendarNameProperty = event.properties?.['calendar name'] || event.properties?.['Calendar Name'];
+  const eventTitle = (calendarNameProperty && calendarNameProperty.type === 'title' && calendarNameProperty.title?.[0]?.plain_text) ||
+         (calendarNameProperty && calendarNameProperty.type === 'rich_text' && calendarNameProperty.rich_text?.[0]?.plain_text) ||
+         (calendarNameProperty && calendarNameProperty.type === 'select' && calendarNameProperty.select?.name) ||
+         event.title;
 
         // Build description with recipe, notes, and ingredients
         let enhancedDescription = event.description || '';
@@ -194,14 +207,14 @@ export const useNotionScrapedCalendars = () => {
             const property = event.properties[columnName] || event.properties[columnName.charAt(0).toUpperCase() + columnName.slice(1)];
             if (property) {
               let value = '';
-              if (property.rich_text && Array.isArray(property.rich_text)) {
-                value = property.rich_text.map((text: any) => text.plain_text || '').join('');
-              } else if (property.title && Array.isArray(property.title)) {
-                value = property.title.map((text: any) => text.plain_text || '').join('');
-              } else if (property.select?.name) {
+              if (property.type === 'rich_text' && property.rich_text && Array.isArray(property.rich_text)) {
+                value = property.rich_text.map((text) => text.plain_text || '').join('');
+              } else if (property.type === 'title' && property.title && Array.isArray(property.title)) {
+                value = property.title.map((text) => text.plain_text || '').join('');
+              } else if (property.type === 'select' && property.select?.name) {
                 value = property.select.name;
-              } else if (property.multi_select && Array.isArray(property.multi_select)) {
-                value = property.multi_select.map((option: any) => option.name).join(', ');
+              } else if (property.type === 'multi_select' && property.multi_select && Array.isArray(property.multi_select)) {
+                value = property.multi_select.map((option) => option.name || '').join(', ');
               }
               
               if (value.trim()) {
@@ -262,12 +275,12 @@ export const useNotionScrapedCalendars = () => {
       let updatedCount = 0;
       let unchangedCount = 0;
       
-      const existingEventMap = new Map();
+  const existingEventMap = new Map<string, NotionScrapedEvent>();
       existingEvents.forEach(event => {
         existingEventMap.set(event.id, event);
       });
       
-      const processedEvents = notionEvents.map(newEvent => {
+  const processedEvents = notionEvents.map(newEvent => {
         const existingEvent = existingEventMap.get(newEvent.id);
         
         if (!existingEvent) {
@@ -295,7 +308,7 @@ export const useNotionScrapedCalendars = () => {
       });
       
       // Calculate removed events
-      const newEventIds = new Set(notionEvents.map(e => e.id));
+  const newEventIds = new Set<string>(notionEvents.map(e => e.id));
       const removedCount = existingEvents.length - existingEvents.filter(e => newEventIds.has(e.id)).length;
       
       // Save updated events to IndexedDB

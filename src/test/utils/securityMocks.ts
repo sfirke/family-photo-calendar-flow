@@ -17,8 +17,8 @@ export const setupDirectSecurityMock = (customValues = {}) => {
   const mockValues = { ...mockSecurityContextValue, ...customValues };
   
   // Import the module dynamically to spy on it
-  return vi.doMock('@/contexts/SecurityContext', async () => {
-    const actual = await vi.importActual('@/contexts/SecurityContext');
+  return vi.doMock('@/contexts/security/SecurityContext', async () => {
+    const actual = await vi.importActual('@/contexts/security/SecurityContext');
     return {
       ...actual,
       useSecurity: vi.fn(() => mockValues),
@@ -30,7 +30,7 @@ export const setupDirectSecurityMock = (customValues = {}) => {
 export const mockSecurityModule = (customValues = {}) => {
   const mockValues = { ...mockSecurityContextValue, ...customValues };
   
-  vi.mock('@/contexts/SecurityContext', () => ({
+  vi.mock('@/contexts/security/SecurityContext', () => ({
     SecurityProvider: ({ children }: { children: React.ReactNode }) => children,
     useSecurity: vi.fn(() => mockValues),
     SecurityContext: {},

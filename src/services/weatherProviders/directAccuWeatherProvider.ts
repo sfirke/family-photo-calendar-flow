@@ -9,6 +9,41 @@ import { WeatherProvider, WeatherData, WeatherProviderConfig } from './types';
 import { mapAccuWeatherCondition } from '@/utils/weatherIcons';
 import { weatherStorageService } from '@/services/weatherStorageService';
 
+// Reuse minimal AccuWeather response shape definitions (subset only)
+interface AccuWeatherCurrentConditions {
+  LocationText?: string;
+  Temperature?: { Imperial?: { Value?: number } };
+  WeatherText?: string;
+  RelativeHumidity?: number;
+  Wind?: { Speed?: { Imperial?: { Value?: number } } };
+  UVIndex?: number;
+  [key: string]: unknown;
+}
+
+interface AccuWeatherDailyForecastDayPart {
+  IconPhrase?: string;
+  LongPhrase?: string;
+  RelativeHumidity?: { Average?: number };
+  Wind?: { Speed?: { Value?: number } };
+  UVIndex?: number;
+  [key: string]: unknown;
+}
+
+interface AccuWeatherDailyForecastEntry {
+  Date: string;
+  Temperature: { Maximum: { Value: number }; Minimum: { Value: number } };
+  Day: AccuWeatherDailyForecastDayPart;
+  Night?: AccuWeatherDailyForecastDayPart;
+  [key: string]: unknown;
+}
+
+interface AccuWeatherForecastData {
+  DailyForecasts?: AccuWeatherDailyForecastEntry[];
+  [key: string]: unknown;
+}
+
+type AccuWeatherLocationLookup = Array<{ Key: string }> | { Key: string } | unknown;
+
 export class DirectAccuWeatherProvider implements WeatherProvider {
   name = 'accuweather-direct';
   displayName = 'AccuWeather Direct';
@@ -113,18 +148,17 @@ export class DirectAccuWeatherProvider implements WeatherProvider {
       throw new Error(`Location lookup failed: ${response.status} ${response.statusText}`);
     }
 
-    const data = await response.json();
-    
-    if (Array.isArray(data) && data.length > 0) {
-      return data[0].Key;
-    } else if (data.Key) {
-      return data.Key;
+    const data: AccuWeatherLocationLookup = await response.json();
+    if (Array.isArray(data) && data.length > 0 && typeof (data[0] as { Key?: unknown })?.Key === 'string') {
+      return (data[0] as { Key: string }).Key;
+    } else if (!Array.isArray(data) && data && typeof (data as { Key?: unknown }).Key === 'string') {
+      return (data as { Key: string }).Key; // minimal narrowing
     }
     
     throw new Error('Location not found');
   }
 
-  private async fetchCurrentConditions(locationKey: string, apiKey: string): Promise<any> {
+  private async fetchCurrentConditions(locationKey: string, apiKey: string): Promise<AccuWeatherCurrentConditions> {
     const url = `${this.corsProxyUrl}${encodeURIComponent(`${this.baseUrl}/currentconditions/v1/${locationKey}?apikey=${apiKey}&details=true`)}`;
     
     const response = await fetch(url);
@@ -132,11 +166,11 @@ export class DirectAccuWeatherProvider implements WeatherProvider {
       throw new Error(`Current conditions fetch failed: ${response.status} ${response.statusText}`);
     }
 
-    const data = await response.json();
-    return Array.isArray(data) ? data[0] : data;
+    const data: unknown = await response.json();
+    return Array.isArray(data) ? (data[0] as AccuWeatherCurrentConditions) : (data as AccuWeatherCurrentConditions);
   }
 
-  private async fetchForecast(locationKey: string, apiKey: string): Promise<any> {
+  private async fetchForecast(locationKey: string, apiKey: string): Promise<AccuWeatherForecastData> {
     const url = `${this.corsProxyUrl}${encodeURIComponent(`${this.baseUrl}/forecasts/v1/daily/15day/${locationKey}?apikey=${apiKey}&details=true&metric=false`)}`;
     
     const response = await fetch(url);
@@ -144,7 +178,7 @@ export class DirectAccuWeatherProvider implements WeatherProvider {
       throw new Error(`Forecast fetch failed: ${response.status} ${response.statusText}`);
     }
 
-    return response.json();
+  return response.json();
   }
 
   private async loadFromCache(): Promise<WeatherData | null> {
@@ -190,7 +224,7 @@ export class DirectAccuWeatherProvider implements WeatherProvider {
     }
   }
 
-  private extractLocationName(currentData: any, originalLocation?: string): string {
+  private extractLocationName(currentData: AccuWeatherCurrentConditions | null, originalLocation?: string): string {
     // Try to extract location from current conditions
     if (currentData?.LocationText) {
       return currentData.LocationText;
@@ -200,49 +234,49 @@ export class DirectAccuWeatherProvider implements WeatherProvider {
     return originalLocation || 'Current Location';
   }
 
-  private extractTemperature(currentData: any): number {
+  private extractTemperature(currentData: AccuWeatherCurrentConditions | null): number {
     if (currentData?.Temperature?.Imperial?.Value !== undefined) {
       return Math.round(currentData.Temperature.Imperial.Value);
     }
     return 72; // Fallback temperature
   }
 
-  private extractCondition(currentData: any): string {
+  private extractCondition(currentData: AccuWeatherCurrentConditions | null): string {
     if (currentData?.WeatherText) {
       return this.mapCondition(currentData.WeatherText);
     }
     return 'Clear';
   }
 
-  private extractDescription(currentData: any): string {
+  private extractDescription(currentData: AccuWeatherCurrentConditions | null): string {
     if (currentData?.WeatherText) {
       return currentData.WeatherText;
     }
     return 'Weather conditions unavailable';
   }
 
-  private extractHumidity(currentData: any): number {
+  private extractHumidity(currentData: AccuWeatherCurrentConditions | null): number {
     if (currentData?.RelativeHumidity !== undefined) {
       return currentData.RelativeHumidity;
     }
     return 50; // Fallback humidity
   }
 
-  private extractWindSpeed(currentData: any): number {
+  private extractWindSpeed(currentData: AccuWeatherCurrentConditions | null): number {
     if (currentData?.Wind?.Speed?.Imperial?.Value !== undefined) {
       return currentData.Wind.Speed.Imperial.Value;
     }
     return 5; // Fallback wind speed
   }
 
-  private extractUVIndex(currentData: any): number {
+  private extractUVIndex(currentData: AccuWeatherCurrentConditions | null): number {
     if (currentData?.UVIndex !== undefined) {
       return currentData.UVIndex;
     }
     return 3; // Fallback UV index
   }
 
-  private extractForecast(forecastData: any): Array<{
+  private extractForecast(forecastData: AccuWeatherForecastData | null): Array<{
     date: string;
     high: number;
     low: number;
@@ -254,13 +288,13 @@ export class DirectAccuWeatherProvider implements WeatherProvider {
     uvIndex?: number;
   }> {
     if (forecastData?.DailyForecasts && Array.isArray(forecastData.DailyForecasts)) {
-      return forecastData.DailyForecasts.map((day: any) => ({
+      return forecastData.DailyForecasts.map((day) => ({
         date: new Date(day.Date).toISOString().split('T')[0],
         high: Math.round(day.Temperature.Maximum.Value),
         low: Math.round(day.Temperature.Minimum.Value),
         temp: Math.round((day.Temperature.Maximum.Value + day.Temperature.Minimum.Value) / 2),
-        condition: this.mapCondition(day.Day.IconPhrase),
-        description: day.Day.LongPhrase || day.Day.IconPhrase,
+        condition: this.mapCondition(day.Day.IconPhrase || ''),
+        description: day.Day.LongPhrase || day.Day.IconPhrase || '',
         humidity: day.Day.RelativeHumidity?.Average,
         windSpeed: day.Day.Wind?.Speed?.Value,
         uvIndex: day.Day.UVIndex

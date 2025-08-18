@@ -94,10 +94,11 @@ export class EnhancedWeatherService {
         message: `Successfully connected to ${data.provider}`,
         data
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
       return {
         success: false,
-        message: `Connection failed: ${error.message}`
+        message: `Connection failed: ${message}`
       };
     }
   }

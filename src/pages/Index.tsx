@@ -5,7 +5,7 @@ import SettingsModal from '@/components/SettingsModal';
 import NotionEventModal from '@/components/NotionEventModal';
 import { Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useSettings } from '@/contexts/SettingsContext';
+import { useSettings } from '@/contexts/settings/SettingsContext';
 import { getImagesFromAlbum, getDefaultBackgroundImages } from '@/utils/googlePhotosUtils';
 import { PerformanceMonitor, IntervalManager, displayOptimizations } from '@/utils/performanceUtils';
 import { Event } from '@/types/calendar';

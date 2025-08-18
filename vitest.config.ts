@@ -1,31 +1,18 @@
-
 import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react-swc';
 import path from 'path';
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    // Type mismatch between vitest's bundled vite types and project vite types
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    react() as any
+  ],
   test: {
     globals: true,
     environment: 'jsdom',
-    setupFiles: ['./src/test/setup.ts'],
+  setupFiles: [path.resolve(__dirname, './src/test/setup.ts')],
     css: true,
-    // Memory and performance optimizations
-    pool: 'forks',
-    poolOptions: {
-      forks: {
-        singleFork: true,
-      },
-    },
-    // Increase memory limits
-    maxMemory: 8192, // 8GB
-    // Force garbage collection between tests
-    sequence: {
-      hooks: 'parallel',
-    },
-    // Timeout settings
-    testTimeout: 15000,
-    hookTimeout: 10000,
   },
   resolve: {
     alias: {

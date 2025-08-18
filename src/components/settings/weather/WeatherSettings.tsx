@@ -3,7 +3,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { MapPin, Lock, AlertTriangle, Navigation } from 'lucide-react';
-import { useSecurity } from '@/contexts/SecurityContext';
+import { useSecurity } from '@/contexts/security/SecurityContext';
 
 interface WeatherSettingsProps {
   coordinates: string;

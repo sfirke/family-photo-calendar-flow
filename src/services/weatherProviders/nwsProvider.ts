@@ -9,11 +9,21 @@ import { WeatherProvider, WeatherData, WeatherProviderConfig } from './types';
 import { mapNWSCondition } from '@/utils/weatherIcons';
 import { weatherStorageService } from '@/services/weatherStorageService';
 
+// Minimal NWS API response type definitions (scoped locally to provider)
+interface NWSPointsData { properties: { forecast: string; observationStations: string; gridId: string; gridX: number; gridY: number; relativeLocation?: { properties?: { city?: string; state?: string; name?: string } } } }
+interface NWSForecastPeriod { startTime: string; isDaytime: boolean; temperature: number; shortForecast: string; detailedForecast: string }
+interface NWSForecastData { properties: { periods: NWSForecastPeriod[] } }
+interface NWSStationFeature { properties: { stationIdentifier: string; name?: string } }
+interface NWSStationsData { features: NWSStationFeature[] }
+interface NWSObservationData { properties?: { textDescription?: string; temperature?: { value: number | null }; relativeHumidity?: { value: number | null }; windSpeed?: { value: number | null }; name?: string; station?: string } }
+interface NWSRawAggregate { points: NWSPointsData; forecast: NWSForecastData; current: NWSObservationData | null; stations: NWSStationsData | null; lastUpdated: string }
+
 export class NWSProvider implements WeatherProvider {
   name = 'nws';
   displayName = 'National Weather Service';
   maxForecastDays = 7;
   requiresApiKey = false;
+
 
   async fetchWeather(coordinates: string, config: WeatherProviderConfig): Promise<WeatherData> {
   // debug removed: fetchWeather invocation details
@@ -37,7 +47,7 @@ export class NWSProvider implements WeatherProvider {
         throw new Error(`Failed to get grid points: ${pointsResponse.status} ${pointsResponse.statusText}`);
       }
       
-  const pointsData = await pointsResponse.json();
+  const pointsData: NWSPointsData = await pointsResponse.json();
 
       // Step 2: Get current conditions and forecast URLs
       const forecastUrl = pointsData.properties.forecast;
@@ -53,16 +63,16 @@ export class NWSProvider implements WeatherProvider {
         throw new Error(`Failed to get forecast: ${forecastResponse.status} ${forecastResponse.statusText}`);
       }
       
-  const forecastData = await forecastResponse.json();
+  const forecastData: NWSForecastData = await forecastResponse.json();
 
       // Step 4: Get current observations
-      let currentData = null;
-      let stationsData = null;
+  let currentData: NWSObservationData | null = null;
+  let stationsData: NWSStationsData | null = null;
       try {
   // debug removed: fetching observation stations
         const stationsResponse = await fetch(observationStationsUrl);
         if (stationsResponse.ok) {
-          stationsData = await stationsResponse.json();
+          stationsData = await stationsResponse.json() as NWSStationsData;
           const stations = stationsData.features;
           
           if (stations && stations.length > 0) {
@@ -74,7 +84,7 @@ export class NWSProvider implements WeatherProvider {
                 
                 const observationResponse = await fetch(observationsUrl);
                 if (observationResponse.ok) {
-                  currentData = await observationResponse.json();
+                  currentData = await observationResponse.json() as NWSObservationData;
                   break; // Success, stop trying other stations
                 }
               } catch (error) {
@@ -89,7 +99,7 @@ export class NWSProvider implements WeatherProvider {
       }
 
       // Store raw data in tiered storage
-      const rawData = {
+  const rawData: NWSRawAggregate = {
         points: pointsData,
         forecast: forecastData,
         current: currentData,
@@ -128,12 +138,12 @@ export class NWSProvider implements WeatherProvider {
           temperature: this.extractTemperature(cachedRawData.current, cachedRawData.forecast),
           condition: this.extractCondition(cachedRawData.current, cachedRawData.forecast),
           description: this.extractDescription(cachedRawData.current, cachedRawData.forecast),
-          humidity: this.extractHumidity(cachedRawData.current),
-          windSpeed: this.extractWindSpeed(cachedRawData.current),
-          uvIndex: this.extractUVIndex(cachedRawData.current),
-          forecast: this.extractForecast(cachedRawData.forecast),
-          lastUpdated: cachedRawData.lastUpdated || new Date().toISOString(),
-          provider: `${this.displayName} (Cached)`
+            humidity: this.extractHumidity(cachedRawData.current),
+            windSpeed: this.extractWindSpeed(cachedRawData.current),
+            uvIndex: this.extractUVIndex(cachedRawData.current),
+            forecast: this.extractForecast(cachedRawData.forecast),
+            lastUpdated: cachedRawData.lastUpdated || new Date().toISOString(),
+            provider: `${this.displayName} (Cached)`
         };
         return weatherData;
       }
@@ -142,7 +152,7 @@ export class NWSProvider implements WeatherProvider {
     }
   }
 
-  private async storeWeatherDataInTieredStorage(data: any, coordinates: string): Promise<void> {
+  private async storeWeatherDataInTieredStorage(data: NWSRawAggregate, coordinates: string): Promise<void> {
     try {
       // Store raw data
       await weatherStorageService.saveRawNWSData(data);
@@ -174,8 +184,8 @@ export class NWSProvider implements WeatherProvider {
     }
   }
 
-  private groupForecastsByDay(periods: any[]): any[] {
-    const dailyForecasts = new Map();
+  private groupForecastsByDay(periods: NWSForecastPeriod[]): Array<{ date: string; high: number | null; low: number | null; condition: string; description: string }> {
+    const dailyForecasts = new Map<string, { date: string; high: number | null; low: number | null; condition: string; description: string }>();
     
     periods.forEach(period => {
       const date = new Date(period.startTime).toISOString().split('T')[0];
@@ -206,7 +216,7 @@ export class NWSProvider implements WeatherProvider {
     return Array.from(dailyForecasts.values()).slice(0, this.maxForecastDays);
   }
 
-  private extractLocationName(pointsData: any, currentData?: any, stationsData?: any): string {
+  private extractLocationName(pointsData: NWSPointsData, currentData?: NWSObservationData | null, stationsData?: NWSStationsData | null): string {
     // Use station name from stations API if available
     if (stationsData?.features?.[0]?.properties?.name) {
       return stationsData.features[0].properties.name;
@@ -232,7 +242,7 @@ export class NWSProvider implements WeatherProvider {
     return 'Current Location';
   }
 
-  private extractTemperature(currentData: any, forecastData?: any): number {
+  private extractTemperature(currentData: NWSObservationData | null, forecastData?: NWSForecastData | null): number {
     if (currentData?.properties?.temperature?.value !== null) {
       // Convert Celsius to Fahrenheit
       const celsius = currentData.properties.temperature.value;
@@ -247,7 +257,7 @@ export class NWSProvider implements WeatherProvider {
     return 72; // Default fallback
   }
 
-  private extractCondition(currentData: any, forecastData?: any): string {
+  private extractCondition(currentData: NWSObservationData | null, forecastData?: NWSForecastData | null): string {
     if (currentData?.properties?.textDescription) {
       return this.mapCondition(currentData.properties.textDescription);
     }
@@ -259,7 +269,7 @@ export class NWSProvider implements WeatherProvider {
     return 'Clear';
   }
 
-  private extractDescription(currentData: any, forecastData?: any): string {
+  private extractDescription(currentData: NWSObservationData | null, forecastData?: NWSForecastData | null): string {
     if (currentData?.properties?.textDescription) {
       return currentData.properties.textDescription;
     }
@@ -271,14 +281,14 @@ export class NWSProvider implements WeatherProvider {
     return 'Weather conditions unavailable';
   }
 
-  private extractHumidity(currentData: any): number {
+  private extractHumidity(currentData: NWSObservationData | null): number {
     if (currentData?.properties?.relativeHumidity?.value !== null) {
       return Math.round(currentData.properties.relativeHumidity.value);
     }
     return 50; // Default fallback
   }
 
-  private extractWindSpeed(currentData: any): number {
+  private extractWindSpeed(currentData: NWSObservationData | null): number {
     if (currentData?.properties?.windSpeed?.value !== null) {
       // Convert m/s to mph
       const mps = currentData.properties.windSpeed.value;
@@ -287,26 +297,25 @@ export class NWSProvider implements WeatherProvider {
     return 5; // Default fallback
   }
 
-  private extractUVIndex(currentData: any): number {
+  private extractUVIndex(_currentData: NWSObservationData | null): number {
     // NWS doesn't typically provide UV index in current observations
     return 3; // Default fallback
   }
 
-  private extractForecast(forecastData: any): Array<{
-    date: string;
-    high: number;
-    low: number;
-    condition: string;
-    description: string;
-  }> {
-    if (forecastData?.properties?.periods && Array.isArray(forecastData.properties.periods)) {
-      return this.groupForecastsByDay(forecastData.properties.periods);
-    }
-
-    return this.getMinimalForecast();
+  private extractForecast(forecastData: NWSForecastData | null): Array<{ date: string; high: number; low: number; condition: string; description: string }> {
+      if (forecastData?.properties?.periods && Array.isArray(forecastData.properties.periods)) {
+        return this.groupForecastsByDay(forecastData.properties.periods).map(f => ({
+          date: f.date,
+          high: f.high ?? 0,
+          low: f.low ?? 0,
+          condition: f.condition,
+          description: f.description
+        }));
+      }
+      return this.getMinimalForecast();
   }
 
-  private getMinimalForecast() {
+  private getMinimalForecast(): Array<{ date: string; high: number; low: number; condition: string; description: string }> {
     const today = new Date();
     return Array.from({ length: 7 }, (_, i) => {
       const date = new Date(today);

@@ -6,7 +6,7 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { Info } from 'lucide-react';
-import { useSecurity } from '@/contexts/SecurityContext';
+import { useSecurity } from '@/contexts/security/SecurityContext';
 import { getInstalledVersion, getVersionInfo } from '@/utils/versionManager';
 import { VersionInfo } from '@/types/ical';
 import OfflineIndicator from '@/components/OfflineIndicator';
@@ -60,10 +60,8 @@ const SettingsModalHeader = () => {
         <OfflineIndicator />
       </div>
       <DialogDescription className="text-gray-600 dark:text-gray-400 text-sm sm:text-base">
-        Configure your family calendar app preferences and manage your calendar feeds
-        <div className="mt-1 text-xs">
-          Security: {getSecurityStatus()}
-        </div>
+        <span>Configure your family calendar app preferences and manage your calendar feeds</span>
+        <span className="block mt-1 text-xs">Security: {getSecurityStatus()}</span>
       </DialogDescription>
     </DialogHeader>
   );

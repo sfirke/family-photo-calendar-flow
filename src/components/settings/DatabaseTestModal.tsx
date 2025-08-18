@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -17,11 +16,24 @@ interface DatabaseTestModalProps {
   onConfirm: (databaseId: string, databaseName: string) => void;
 }
 
+interface ValidationResult { isValid: boolean; id: string; type: 'id' | 'url' | 'invalid'; }
+interface DatabaseProperty { id: string; name: string; type: string }
+interface SamplePage { properties?: Record<string, { title?: { plain_text?: string }[] }> }
+interface DatabaseTestSuccess {
+  success: true;
+  database?: { title?: { plain_text?: string }[] };
+  properties?: Record<string, DatabaseProperty>;
+  samplePages?: SamplePage[];
+}
+interface DatabaseTestFailure { success: false; error?: string }
+
+type DatabaseTestResult = DatabaseTestSuccess | DatabaseTestFailure | null;
+
 const DatabaseTestModal = ({ open, onOpenChange, token, onConfirm }: DatabaseTestModalProps) => {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [testResult, setTestResult] = useState<any>(null);
-  const [validationResult, setValidationResult] = useState<any>(null);
+  const [testResult, setTestResult] = useState<DatabaseTestResult>(null);
+  const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
 
   const validateInput = (value: string) => {
     const result = notionService.validateDatabaseId(value);
@@ -45,7 +57,7 @@ const DatabaseTestModal = ({ open, onOpenChange, token, onConfirm }: DatabaseTes
     setIsLoading(true);
     try {
       const result = await notionService.testDatabaseAccess(validationResult.id, token);
-      setTestResult(result);
+      setTestResult(result as DatabaseTestResult);
     } catch (error) {
       setTestResult({
         success: false,
@@ -161,7 +173,7 @@ const DatabaseTestModal = ({ open, onOpenChange, token, onConfirm }: DatabaseTes
                       <div>
                         <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Properties</div>
                         <div className="flex flex-wrap gap-1">
-                          {testResult.properties && Object.entries(testResult.properties).map(([key, prop]: [string, any]) => (
+                          {testResult.properties && Object.entries(testResult.properties).map(([key, prop]) => (
                             <Badge key={key} variant="secondary" className="text-xs">
                               {prop.name} ({prop.type})
                             </Badge>
@@ -174,7 +186,7 @@ const DatabaseTestModal = ({ open, onOpenChange, token, onConfirm }: DatabaseTes
                             Sample Pages ({testResult.samplePages.length})
                           </div>
                           <div className="space-y-1">
-                            {testResult.samplePages.slice(0, 3).map((page: any, index: number) => (
+                            {testResult.samplePages.slice(0, 3).map((page, index: number) => (
                               <div key={index} className="text-xs text-gray-600 dark:text-gray-400 truncate">
                                 • {page.properties?.Name?.title?.[0]?.plain_text || 
                                    page.properties?.Title?.title?.[0]?.plain_text || 
@@ -192,7 +204,7 @@ const DatabaseTestModal = ({ open, onOpenChange, token, onConfirm }: DatabaseTes
                   <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
                   <AlertDescription className="text-red-800 dark:text-red-200">
                     <div className="font-medium">Database access failed</div>
-                    <div className="text-sm mt-1">{testResult.error}</div>
+                    <div className="text-sm mt-1">{!testResult.success && 'error' in testResult ? testResult.error : null}</div>
                   </AlertDescription>
                 </Alert>
               )}

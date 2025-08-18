@@ -6,8 +6,8 @@ import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ChevronDown, ChevronRight, Bug, Eye, FileText, Calendar } from 'lucide-react';
-import { notionPageScraper } from '@/services/NotionPageScraper';
-import { NotionDebugInfo } from '@/services/NotionTableParser';
+import { notionPageScraper, DebugScrapeResult } from '@/services/NotionPageScraper';
+import { NotionDebugInfo, NotionDebugResult } from '@/services/NotionTableParser';
 
 interface NotionDebugPreviewProps {
   url: string;
@@ -17,7 +17,8 @@ interface NotionDebugPreviewProps {
 
 export const NotionDebugPreview: React.FC<NotionDebugPreviewProps> = ({ url, token, onClose }) => {
   const [isLoading, setIsLoading] = useState(false);
-  const [debugResult, setDebugResult] = useState<any>(null);
+  // Shape returned from scrapePageWithDebug when successful
+  const [debugResult, setDebugResult] = useState<DebugScrapeResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
     elements: true,
@@ -170,7 +171,7 @@ export const NotionDebugPreview: React.FC<NotionDebugPreviewProps> = ({ url, tok
                             <div>
                               <h4 className="font-medium mb-2">Sample Elements:</h4>
                               <div className="space-y-2">
-                                {debugResult.debugInfo.foundElements.sampleElements.map((element: any, index: number) => (
+                                {debugResult.debugInfo.foundElements.sampleElements.map((element, index) => (
                                   <div key={index} className="p-2 bg-muted rounded text-sm">
                                     <div><strong>Block ID:</strong> {element.blockId}</div>
                                     <div><strong>Columns:</strong> {element.columnCount}</div>
@@ -213,7 +214,7 @@ export const NotionDebugPreview: React.FC<NotionDebugPreviewProps> = ({ url, tok
                             <h4 className="font-medium mb-2">All Rows:</h4>
                             <ScrollArea className="h-64 border rounded">
                               <div className="p-2 space-y-2">
-                                {debugResult.debugInfo?.extractedData.allRows?.map((row: any, index: number) => (
+                                {debugResult.debugInfo?.extractedData.allRows?.map((row, index: number) => (
                                   <div key={index} className={`p-2 rounded text-sm border-l-4 ${
                                     row.isHeader ? 'border-l-blue-500 bg-blue-50' :
                                     row.isEmpty ? 'border-l-gray-300 bg-gray-50' :
@@ -250,7 +251,7 @@ export const NotionDebugPreview: React.FC<NotionDebugPreviewProps> = ({ url, tok
                     <CollapsibleContent>
                       <CardContent>
                         <div className="space-y-3">
-                          {Object.entries(debugResult.debugInfo?.columnAnalysis.detectedMappings || {}).map(([column, mapping]: [string, any]) => (
+                          {Object.entries(debugResult.debugInfo?.columnAnalysis.detectedMappings || {}).map(([column, mapping]) => (
                             <div key={column} className="p-3 border rounded">
                               <div className="flex items-center justify-between mb-2">
                                 <span className="font-medium">{column}</span>
@@ -294,7 +295,7 @@ export const NotionDebugPreview: React.FC<NotionDebugPreviewProps> = ({ url, tok
                           <div>
                             <h4 className="font-medium mb-2 text-green-600">Valid Events ({debugResult.debugInfo?.eventCreation.validEvents?.length || 0}):</h4>
                             <div className="space-y-2">
-                              {debugResult.debugInfo?.eventCreation.validEvents?.map((event: any, index: number) => (
+                              {debugResult.debugInfo?.eventCreation.validEvents?.map((event, index: number) => (
                                 <div key={index} className="p-2 bg-green-50 border border-green-200 rounded text-sm">
                                   <div><strong>Row {event.rowIndex}:</strong> {event.title}</div>
                                   <div className="text-muted-foreground">Date: {new Date(event.date).toLocaleDateString()}</div>
@@ -309,7 +310,7 @@ export const NotionDebugPreview: React.FC<NotionDebugPreviewProps> = ({ url, tok
                           <div>
                             <h4 className="font-medium mb-2 text-orange-600">Skipped Rows ({debugResult.debugInfo?.eventCreation.skippedRows?.length || 0}):</h4>
                             <div className="space-y-2">
-                              {debugResult.debugInfo?.eventCreation.skippedRows?.map((row: any, index: number) => (
+                              {debugResult.debugInfo?.eventCreation.skippedRows?.map((row, index: number) => (
                                 <div key={index} className="p-2 bg-orange-50 border border-orange-200 rounded text-sm">
                                   <div><strong>Row {row.rowIndex}:</strong> {formatCellData(row.cellData)}</div>
                                   <div className="text-xs text-orange-600">{row.reason}</div>

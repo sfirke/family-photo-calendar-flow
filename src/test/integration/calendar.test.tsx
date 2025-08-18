@@ -170,7 +170,7 @@ vi.mock('@/hooks/useCalendarSelection', () => ({
 }));
 
 // Enhanced weather context mock with synchronous data
-vi.mock('@/contexts/WeatherContext', () => ({
+vi.mock('@/contexts/weather/WeatherContext', () => ({
   WeatherProvider: ({ children }: { children: React.ReactNode }) => children,
   useWeather: vi.fn(() => ({
     weatherData: {

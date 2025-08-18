@@ -42,13 +42,13 @@ interface ForecastDayData {
 
 interface NWSRawData {
   id: string;
-  rawData: any;
+  rawData: unknown;
   timestamp: number;
   expiresAt: number;
 }
 
 class WeatherStorageService {
-  private cache = new Map<string, any>();
+  private cache = new Map<string, unknown>();
   private dbName = 'WeatherDataDB';
   private dbVersion = 1;
   private currentWeatherStore = 'current_weather';
@@ -183,7 +183,7 @@ class WeatherStorageService {
   /**
    * Save raw NWS API response data
    */
-  async saveRawNWSData(rawData: any): Promise<void> {
+  async saveRawNWSData(rawData: unknown): Promise<void> {
     try {
       const now = Date.now();
       const rawRecord: NWSRawData = {
@@ -217,9 +217,8 @@ class WeatherStorageService {
   async getCurrentWeather(): Promise<CurrentWeatherData | null> {
     try {
       // 1. Check memory cache first
-      const cached = this.cache.get('current_weather');
+      const cached = this.cache.get('current_weather') as CurrentWeatherData | undefined;
       if (cached && cached.expiresAt > Date.now()) {
-        // debug removed: current weather loaded from memory
         return cached;
       }
 
@@ -256,9 +255,8 @@ class WeatherStorageService {
   async getForecastForDate(date: string): Promise<ForecastDayData | null> {
     try {
       // 1. Check memory cache first
-      const cached = this.cache.get(`forecast_${date}`);
+      const cached = this.cache.get(`forecast_${date}`) as ForecastDayData | undefined;
       if (cached && cached.expiresAt > Date.now()) {
-        // debug removed: forecast loaded from memory
         return cached;
       }
 
@@ -292,12 +290,11 @@ class WeatherStorageService {
   /**
    * Get raw NWS data for fallback processing
    */
-  async getRawNWSData(): Promise<any | null> {
+  async getRawNWSData(): Promise<unknown | null> {
     try {
       // 1. Check memory cache first
-      const cached = this.cache.get('nws_raw');
+      const cached = this.cache.get('nws_raw') as NWSRawData | undefined;
       if (cached && cached.expiresAt > Date.now()) {
-        // debug removed: raw NWS data loaded from memory
         return cached.rawData;
       }
 

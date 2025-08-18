@@ -53,7 +53,7 @@ vi.mock('@/contexts/settings/useSettingsInitialization', () => ({
 }));
 
 // Mock ThemeContext
-vi.mock('@/contexts/ThemeContext', () => ({
+vi.mock('@/contexts/theme/ThemeContext', () => ({
   ThemeProvider: ({ children }: { children: React.ReactNode }) => children,
   useTheme: vi.fn(() => ({
     theme: 'light',
@@ -62,7 +62,7 @@ vi.mock('@/contexts/ThemeContext', () => ({
 }));
 
 // Mock WeatherContext
-vi.mock('@/contexts/WeatherContext', () => ({
+vi.mock('@/contexts/weather/WeatherContext', () => ({
   WeatherProvider: ({ children }: { children: React.ReactNode }) => children,
   useWeather: vi.fn(() => ({
     weatherData: null,

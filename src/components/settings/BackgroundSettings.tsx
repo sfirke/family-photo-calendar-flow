@@ -3,7 +3,7 @@ import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
-import { useSettings } from '@/contexts/SettingsContext';
+import { useSettings } from '@/contexts/settings/SettingsContext';
 
 const BackgroundSettings = () => {
   const { backgroundDuration, setBackgroundDuration } = useSettings();

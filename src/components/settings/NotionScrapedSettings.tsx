@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Plus, RefreshCw, Calendar } from 'lucide-react';
 import { useNotionScrapedCalendars } from '@/hooks/useNotionScrapedCalendars';
 import { useCalendarSelection } from '@/hooks/useCalendarSelection';
-import { useSettings } from '@/contexts/SettingsContext';
+import { useSettings } from '@/contexts/settings/SettingsContext';
 import { NotionUrlForm } from './NotionUrlForm';
 import ScrapedCalendarCard from './ScrapedCalendarCard';
 import { toast } from 'sonner';

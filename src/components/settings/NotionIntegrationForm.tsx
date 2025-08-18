@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,12 +6,25 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
-import { useSettings } from '@/contexts/SettingsContext';
+import { useSettings } from '@/contexts/settings/SettingsContext';
 import { Loader2, CheckCircle, AlertCircle, TestTube, Shield, Users, Database, ExternalLink } from 'lucide-react';
 import { notionService } from '@/services/notionService';
 
 interface NotionIntegrationFormProps {
   onIntegrationComplete?: (token: string, databaseId: string) => void;
+}
+
+// Added minimal types to replace any
+interface IntegrationInfo {
+  name?: string;
+  type?: string;
+  workspace?: { name?: string };
+}
+
+interface TestedDatabaseInfo {
+  database?: { title?: { plain_text?: string }[] };
+  properties?: Record<string, { id: string; name: string; type: string }>;
+  samplePages?: unknown[];
 }
 
 const NotionIntegrationForm = ({ onIntegrationComplete }: NotionIntegrationFormProps) => {
@@ -28,13 +40,13 @@ const NotionIntegrationForm = ({ onIntegrationComplete }: NotionIntegrationFormP
   const [tokenValidation, setTokenValidation] = useState<{
     status: 'idle' | 'success' | 'error';
     error?: string;
-    integrationInfo?: any;
+    integrationInfo?: IntegrationInfo;
   }>({ status: 'idle' });
   
   const [databaseValidation, setDatabaseValidation] = useState<{
     status: 'idle' | 'success' | 'error';
     error?: string;
-    databaseInfo?: any;
+    databaseInfo?: TestedDatabaseInfo;
   }>({ status: 'idle' });
 
   // Initialize form with existing values

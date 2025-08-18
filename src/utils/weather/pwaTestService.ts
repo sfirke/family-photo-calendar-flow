@@ -13,7 +13,7 @@ export interface PWATestResult {
   proxyUsed?: string;
   error?: string;
   responseTime: number;
-  data?: any;
+  data?: unknown;
 }
 
 export class PWAWeatherTestService {
@@ -39,8 +39,9 @@ export class PWAWeatherTestService {
     };
 
     // If IP location was successful, test current conditions
-    if (results.ipLocation.success && results.ipLocation.data?.Key) {
-      const locationKey = results.ipLocation.data.Key;
+    const ipData = results.ipLocation.data as { Key?: string } | undefined;
+    if (results.ipLocation.success && ipData?.Key) {
+      const locationKey = ipData.Key;
       results.currentConditions = await this.testCurrentConditions(locationKey, apiKey);
       results.forecast = await this.testForecast(locationKey, apiKey);
     }
@@ -140,7 +141,7 @@ export class PWAWeatherTestService {
   /**
    * Generate test summary and recommendations
    */
-  private static generateTestSummary(results: any) {
+  private static generateTestSummary(results: { ipLocation: PWATestResult; currentConditions: PWATestResult; forecast: PWATestResult }) {
     const allSuccessful = results.ipLocation.success && 
                          results.currentConditions.success && 
                          results.forecast.success;
@@ -213,7 +214,8 @@ export class PWAWeatherTestService {
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
     
     // Check for PWA-specific navigator properties
-    const isNavigatorStandalone = (window.navigator as any).standalone === true;
+  const nav = window.navigator as Navigator & { standalone?: boolean };
+  const isNavigatorStandalone = nav.standalone === true;
     
     // Check user agent for PWA indicators
     const userAgent = navigator.userAgent;

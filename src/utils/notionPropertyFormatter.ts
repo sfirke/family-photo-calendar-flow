@@ -1,133 +1,143 @@
+// Narrow types for subset of Notion property value shapes we actually format
+interface RichTextObject { plain_text?: string }
+interface TitleProperty { type: 'title'; title?: RichTextObject[] }
+interface RichTextProperty { type: 'rich_text'; rich_text?: RichTextObject[] }
+interface NumberProperty { type: 'number'; number?: number }
+interface SelectProperty { type: 'select'; select?: { name?: string } | null }
+interface MultiSelectProperty { type: 'multi_select'; multi_select?: Array<{ name: string }> }
+interface DateProperty { type: 'date'; date?: { start?: string; end?: string | null } }
+interface CheckboxProperty { type: 'checkbox'; checkbox?: boolean }
+interface UrlProperty { type: 'url'; url?: string }
+interface EmailProperty { type: 'email'; email?: string }
+interface PhoneNumberProperty { type: 'phone_number'; phone_number?: string }
+interface FormulaString { type: 'string'; string?: string | null }
+interface FormulaNumber { type: 'number'; number?: number | null }
+interface FormulaBoolean { type: 'boolean'; boolean?: boolean | null }
+interface FormulaDate { type: 'date'; date?: { start?: string } | null }
+interface FormulaProperty { type: 'formula'; formula?: FormulaString | FormulaNumber | FormulaBoolean | FormulaDate | { type: string } }
+interface RelationProperty { type: 'relation'; relation?: Array<unknown> }
+interface PeopleProperty { type: 'people'; people?: Array<{ name?: string }> }
+interface FilesProperty { type: 'files'; files?: Array<unknown> }
+interface CreatedTimeProperty { type: 'created_time'; created_time?: string }
+interface LastEditedTimeProperty { type: 'last_edited_time'; last_edited_time?: string }
+interface CreatedByProperty { type: 'created_by'; created_by?: { name?: string } }
+interface LastEditedByProperty { type: 'last_edited_by'; last_edited_by?: { name?: string } }
+interface ArrayProperty { type: 'array'; array?: unknown[] }
+
+type FormattableNotionProperty =
+  | TitleProperty
+  | RichTextProperty
+  | NumberProperty
+  | SelectProperty
+  | MultiSelectProperty
+  | DateProperty
+  | CheckboxProperty
+  | UrlProperty
+  | EmailProperty
+  | PhoneNumberProperty
+  | FormulaProperty
+  | RelationProperty
+  | PeopleProperty
+  | FilesProperty
+  | CreatedTimeProperty
+  | LastEditedTimeProperty
+  | CreatedByProperty
+  | LastEditedByProperty
+  | ArrayProperty
+  | { type: string; [key: string]: unknown };
+
 // Utility function to format Notion properties for display
-export const formatNotionProperty = (property: any): string | null => {
-  if (!property || typeof property !== 'object' || !property.type) {
-    return null;
-  }
+export const formatNotionProperty = (property: FormattableNotionProperty | null | undefined): string | null => {
+  if (!property || typeof property !== 'object' || !('type' in property)) return null;
 
   switch (property.type) {
     case 'title':
-      if (property.title && Array.isArray(property.title)) {
-        return property.title.map((text: any) => text.plain_text || '').join('');
-      }
-      break;
-    
+      return Array.isArray(property.title) ? property.title.map(t => t.plain_text || '').join('') : null;
     case 'rich_text':
-      if (property.rich_text && Array.isArray(property.rich_text)) {
-        return property.rich_text.map((text: any) => text.plain_text || '').join('');
-      }
-      break;
-    
+      return Array.isArray(property.rich_text) ? property.rich_text.map(t => t.plain_text || '').join('') : null;
     case 'number':
-      return property.number?.toString() || null;
-    
+      return property.number != null ? String(property.number) : null;
     case 'select':
       return property.select?.name || null;
-    
     case 'multi_select':
-      if (property.multi_select && Array.isArray(property.multi_select)) {
-        return property.multi_select.map((option: any) => option.name).join(', ');
-      }
-      break;
-    
+      return Array.isArray(property.multi_select) ? property.multi_select.map(o => o.name).join(', ') : null;
     case 'date':
       if (property.date?.start) {
-        const date = new Date(property.date.start);
+        const start = new Date(property.date.start);
         if (property.date.end) {
-          const endDate = new Date(property.date.end);
-          return `${date.toLocaleDateString()} - ${endDate.toLocaleDateString()}`;
+          const end = new Date(property.date.end);
+          return `${start.toLocaleDateString()} - ${end.toLocaleDateString()}`;
         }
-        return date.toLocaleDateString();
+        return start.toLocaleDateString();
       }
-      break;
-    
+      return null;
     case 'checkbox':
       return property.checkbox ? 'Yes' : 'No';
-    
     case 'url':
       return property.url || null;
-    
     case 'email':
       return property.email || null;
-    
     case 'phone_number':
       return property.phone_number || null;
-    
     case 'formula':
-      // Handle different formula result types
       if (property.formula) {
-        switch (property.formula.type) {
+        const f = property.formula as FormulaString | FormulaNumber | FormulaBoolean | FormulaDate | { type: string };
+        switch (f.type) {
           case 'string':
-            return property.formula.string;
+            return (f as FormulaString).string || null;
           case 'number':
-            return property.formula.number?.toString();
+            return (f as FormulaNumber).number != null ? String((f as FormulaNumber).number) : null;
           case 'boolean':
-            return property.formula.boolean ? 'Yes' : 'No';
+            return (f as FormulaBoolean).boolean ? 'Yes' : 'No';
           case 'date':
-            return property.formula.date ? new Date(property.formula.date.start).toLocaleDateString() : null;
+            return (f as FormulaDate).date?.start ? new Date((f as FormulaDate).date!.start!).toLocaleDateString() : null;
           default:
             return null;
         }
       }
-      break;
-    
+      return null;
     case 'relation':
-      if (property.relation && Array.isArray(property.relation)) {
-        return `${property.relation.length} related item(s)`;
-      }
-      break;
-    
+      return Array.isArray(property.relation) ? `${property.relation.length} related item(s)` : null;
     case 'people':
-      if (property.people && Array.isArray(property.people)) {
-        return property.people.map((person: any) => person.name || 'Unknown').join(', ');
-      }
-      break;
-    
+      return Array.isArray(property.people)
+        ? property.people.map(p => p.name || 'Unknown').join(', ')
+        : null;
     case 'files':
-      if (property.files && Array.isArray(property.files)) {
-        return `${property.files.length} file(s)`;
-      }
-      break;
-    
+      return Array.isArray(property.files) ? `${property.files.length} file(s)` : null;
     case 'created_time':
-      return property.created_time ? new Date(property.created_time).toLocaleString() : null;
-    
+      return property.created_time ? new Date(property.created_time as string).toLocaleString() : null;
     case 'last_edited_time':
-      return property.last_edited_time ? new Date(property.last_edited_time).toLocaleString() : null;
-    
+      return property.last_edited_time ? new Date(property.last_edited_time as string).toLocaleString() : null;
     case 'created_by':
       return property.created_by?.name || 'Unknown';
-    
     case 'last_edited_by':
       return property.last_edited_by?.name || 'Unknown';
-    
     case 'array':
-      // Handle array properties specially for ingredients and notes
-      return null; // Will be handled specially in the modal
-    
+      return null; // intentionally handled elsewhere
     default:
-      // Try to stringify unknown property types
       try {
-        return JSON.stringify(property[property.type]);
+        // Attempt to serialize any nested object named by its type
+        const value = (property as Record<string, unknown>)[property.type];
+        return typeof value === 'string' ? value : JSON.stringify(value);
       } catch {
         return 'Unsupported property type';
       }
   }
-
-  return null;
 };
 
 // Function to extract ingredients from array property
-export const extractIngredientsFromArray = (arrayProperty: any): string[] => {
+export const extractIngredientsFromArray = (arrayProperty: ArrayProperty | null | undefined): string[] => {
   if (!arrayProperty?.array || !Array.isArray(arrayProperty.array)) {
     return [];
   }
 
   const ingredients: string[] = [];
   
-  arrayProperty.array.forEach((item: any) => {
-    if (item.type === 'rich_text' && item.rich_text) {
+  arrayProperty.array.forEach((item) => {
+    const candidate = item as { type?: string; rich_text?: RichTextObject[] };
+    if (candidate.type === 'rich_text' && candidate.rich_text) {
       // Combine all rich text parts into a single string
-      const fullText = item.rich_text.map((text: any) => text.plain_text || '').join('');
+      const fullText = candidate.rich_text.map(text => text.plain_text || '').join('');
       
       if (fullText.trim()) {
         // Check if it contains bullet points or newlines
@@ -157,24 +167,22 @@ export const extractIngredientsFromArray = (arrayProperty: any): string[] => {
 };
 
 // Function to extract notes from array property
-export const extractNotesFromArray = (arrayProperty: any): Array<{type: 'url' | 'text', content: string}> => {
+export const extractNotesFromArray = (arrayProperty: ArrayProperty | null | undefined): Array<{type: 'url' | 'text', content: string}> => {
   if (!arrayProperty?.array || !Array.isArray(arrayProperty.array)) {
     return [];
   }
 
   const notes: Array<{type: 'url' | 'text', content: string}> = [];
   
-  arrayProperty.array.forEach((item: any) => {
-    if (item.type === 'url') {
-      // Handle URL items, skip if URL is null or empty
-      if (item.url && item.url.trim()) {
-        notes.push({ type: 'url', content: item.url });
+  arrayProperty.array.forEach((item) => {
+    const candidate = item as { type?: string; url?: string; rich_text?: RichTextObject[] };
+    if (candidate.type === 'url') {
+      if (candidate.url && candidate.url.trim()) {
+        notes.push({ type: 'url', content: candidate.url });
       }
-    } else if (item.type === 'rich_text' && item.rich_text) {
-      const textContent = item.rich_text.map((text: any) => text.plain_text || '').join('');
-      if (textContent.trim()) {
-        notes.push({ type: 'text', content: textContent });
-      }
+    } else if (candidate.type === 'rich_text' && candidate.rich_text) {
+      const textContent = candidate.rich_text.map(text => text.plain_text || '').join('');
+      if (textContent.trim()) notes.push({ type: 'text', content: textContent });
     }
   });
 

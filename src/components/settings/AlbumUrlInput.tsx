@@ -4,7 +4,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Camera, RefreshCw, AlertCircle, CheckCircle, ExternalLink, TestTube } from 'lucide-react';
-import { useSettings } from '@/contexts/SettingsContext';
+import { useSettings } from '@/contexts/settings/SettingsContext';
 import { useToast } from '@/hooks/use-toast';
 import { validateGooglePhotosUrl } from '@/utils/googlePhotos/urlExtractor';
 

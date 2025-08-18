@@ -4,10 +4,11 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { ThemeProvider } from "@/contexts/ThemeContext";
-import { SecurityProvider } from "@/contexts/SecurityContext";
-import { SettingsProvider } from "@/contexts/SettingsContext";
-import { WeatherProvider } from "@/contexts/WeatherContext";
+import { ThemeProvider } from "@/contexts/theme/ThemeProvider";
+import { SecurityProvider } from "@/contexts/security/SecurityProvider";
+import { SettingsProvider } from "@/contexts/settings/SettingsProvider";
+import { WeatherProvider } from "@/contexts/weather/WeatherProvider";
+import { CalendarSelectionProvider } from "@/hooks/useCalendarSelection";
 import InstallPrompt from "@/components/InstallPrompt";
 import UpdateNotification from "@/components/UpdateNotification";
 import Index from "./pages/Index";
@@ -41,6 +42,7 @@ const App = () => {
         <SecurityProvider>
           <SettingsProvider>
             <WeatherProvider>
+              <CalendarSelectionProvider>
               <TooltipProvider>
                 <Toaster />
                 <Sonner />
@@ -57,6 +59,7 @@ const App = () => {
                   </Routes>
                 </BrowserRouter>
               </TooltipProvider>
+              </CalendarSelectionProvider>
             </WeatherProvider>
           </SettingsProvider>
         </SecurityProvider>

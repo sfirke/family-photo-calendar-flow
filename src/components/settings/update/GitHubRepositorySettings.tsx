@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { GitBranch } from 'lucide-react';
-import { useSettings } from '@/contexts/SettingsContext';
+import { useSettings } from '@/contexts/settings/SettingsContext';
 import { getRepositoryDisplayName } from '@/utils/upstreamVersionManager';
 import { useRepositoryValidation } from '@/hooks/useRepositoryValidation';
 import { useToast } from '@/hooks/use-toast';

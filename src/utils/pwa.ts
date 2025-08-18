@@ -24,8 +24,23 @@ class PWAManager {
 
   private setupEventListeners(): void {
     window.addEventListener('beforeinstallprompt', (e) => {
-      e.preventDefault();
-      this.installPromptEvent = e as BeforeInstallPromptEvent;
+      // Only call preventDefault (suppress native banner) in production unless explicitly overridden.
+      // Rationale: The Chrome warning "Banner not shown: beforeinstallpromptevent.preventDefault() called..." is
+      // noisy in development and offers no value, so we allow the native banner when developing locally.
+      // You can force the native banner at any time via: sessionStorage.setItem('allowNativeInstallPrompt','1')
+      // or force the custom prompt in dev via: sessionStorage.setItem('forceCustomInstallPrompt','1').
+      const allowNative = !!sessionStorage.getItem('allowNativeInstallPrompt');
+      const forceCustom = !!sessionStorage.getItem('forceCustomInstallPrompt');
+      const isDev = typeof import.meta !== 'undefined' && (import.meta as any).env?.DEV;
+      const shouldUseCustomPrompt = (forceCustom || !isDev) && !allowNative;
+
+      if (shouldUseCustomPrompt) {
+        e.preventDefault();
+        this.installPromptEvent = e as BeforeInstallPromptEvent;
+      } else {
+        // Ensure we clear any stale captured event if switching modes mid-session.
+        this.installPromptEvent = null;
+      }
       this.notifyStateChange();
     });
 

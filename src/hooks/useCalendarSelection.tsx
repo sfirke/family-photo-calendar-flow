@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, createContext, useContext } from 'react';
 import { useICalCalendars } from './useICalCalendars';
 import { useNotionScrapedCalendars } from './useNotionScrapedCalendars';
 import { useCalendarRefresh } from './useCalendarRefresh';
@@ -15,7 +15,8 @@ export interface CalendarFromEvents {
   source?: 'ical' | 'notion' | 'notion-scraped' | 'local';
 }
 
-export const useCalendarSelection = () => {
+// Internal logic extracted so it can be provided via context
+const useProvideCalendarSelection = () => {
   const [selectedCalendarIds, setSelectedCalendarIds] = useState<string[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
   const [hasUserMadeSelection, setHasUserMadeSelection] = useState(false);
@@ -246,4 +247,36 @@ export const useCalendarSelection = () => {
     cleanupDeletedCalendar,
     forceRefresh
   };
+  return {
+    allCalendars,
+    enabledCalendars,
+    selectedCalendarIds: safeSelectedCalendarIds,
+    notionEvents: [],
+    scrapedEvents: safeScrapedEvents,
+    calendarsFromEvents,
+    isLoading,
+    toggleCalendar,
+    selectAllCalendars,
+    deselectAllCalendars: clearAllCalendars,
+    setSelectedCalendarIds,
+    clearAllCalendars,
+    selectCalendarsWithEvents,
+    updateSelectedCalendars,
+    cleanupDeletedCalendar,
+    forceRefresh
+  };
+};
+
+type CalendarSelectionValue = ReturnType<typeof useProvideCalendarSelection>;
+const CalendarSelectionContext = createContext<CalendarSelectionValue | null>(null);
+
+export const CalendarSelectionProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const value = useProvideCalendarSelection();
+  return <CalendarSelectionContext.Provider value={value}>{children}</CalendarSelectionContext.Provider>;
+};
+
+// Public hook consumers use. Falls back to independent instance if no provider (backward compatibility)
+export const useCalendarSelection = () => {
+  const ctx = useContext(CalendarSelectionContext);
+  return ctx ?? useProvideCalendarSelection();
 };

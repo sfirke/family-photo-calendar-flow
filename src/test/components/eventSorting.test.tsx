@@ -13,16 +13,6 @@ mockSecurityModule();
 // Mock weather function
 const mockGetWeatherForDate = vi.fn().mockReturnValue({ temp: 75, condition: 'Sunny' });
 
-// Mock the Settings context to avoid provider errors
-vi.mock('@/contexts/SettingsContext', () => ({
-  SettingsProvider: ({ children }: { children: React.ReactNode }) => children,
-  useSettings: vi.fn(() => ({
-    theme: 'light',
-    defaultView: 'month',
-    zipCode: '90210',
-    weatherApiKey: '',
-  })),
-}));
 
 // Sample events with various time formats for testing
 const createTestEvents = (): Event[] => [

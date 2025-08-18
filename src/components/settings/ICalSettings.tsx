@@ -111,14 +111,33 @@ const ICalSettings = ({
       return;
     }
 
-    // Basic URL validation
-    if (!newCalendar.url.includes('.ics') && !newCalendar.url.includes('ical')) {
+    // Enhanced, flexible URL validation
+    const isLikelyICalUrl = (raw: string): boolean => {
+      const url = raw.trim();
+      try {
+        const u = new URL(url);
+        const full = u.href.toLowerCase();
+        // Accept common patterns: .ics links, format=ical exports, Google Calendar /ical/ paths, Outlook share endpoints
+        if (/\.ics($|[?#])/i.test(full)) return true;
+        if (/[?&]format=ical(&|$)/i.test(full)) return true;
+        if (/\/ical\//i.test(full)) return true; // e.g. Google: /calendar/ical/.../basic.ics
+        if (/outlook\.office|office365|icloud|calendar\.google/i.test(u.host)) return true;
+        // Fallback: if contains 'ical' anywhere
+        if (full.includes('ical')) return true;
+        return false;
+      } catch {
+        return false;
+      }
+    };
+
+    const looksValid = isLikelyICalUrl(newCalendar.url);
+    if (!looksValid) {
+      // Don't block user completely; allow attempt so sync phase can surface real error.
       toast({
-        title: "Invalid URL",
-        description: "Please enter a valid iCal URL (should contain '.ics' or 'ical').",
-        variant: "destructive"
+        title: "Unusual URL",
+        description: "This URL doesn't look like a typical iCal feed, attempting to add anyway…",
+        variant: "default"
       });
-      return;
     }
     
     try {
@@ -419,7 +438,7 @@ const ICalSettings = ({
             <p>• Click the edit icon to modify calendar name, URL, or color</p>
             <p>• Use the sync buttons to manually refresh calendar data</p>
             <p>• Look for "Export" or "Share" options in your calendar application</p>
-            <p>• The URL should end with .ics or contain "ical" in the path</p>
+            <p>• Typical feed URLs end with .ics, include /ical/ in the path, or use format=ical</p>
           </AlertDescription>
         </Alert>
       </CardContent>

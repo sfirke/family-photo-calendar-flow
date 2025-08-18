@@ -1,3 +1,8 @@
+import type {
+  PageObjectResponse,
+  DatabaseObjectResponse,
+  QueryDatabaseResponse,
+} from '@notionhq/client/build/src/api-endpoints';
 
 /**
  * Notion API Client with CORS Proxy
@@ -23,7 +28,7 @@ export class NotionAPIClient {
   private readonly corsProxy = 'https://api.allorigins.win/raw';
   private readonly baseURL = 'https://api.notion.com/v1';
   
-  private async makeRequest(endpoint: string, token: string, options: RequestInit = {}): Promise<any> {
+  private async makeRequest<T = unknown>(endpoint: string, token: string, options: RequestInit = {}): Promise<T> {
     const url = `${this.baseURL}${endpoint}`;
     
     // Prepare headers
@@ -52,37 +57,38 @@ export class NotionAPIClient {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
-      const data = await response.json();
-      return data;
+  const data = await response.json();
+  return data as T;
     } catch (error) {
       console.error(`Notion API request failed for ${endpoint}:`, error);
       throw this.handleError(error);
     }
   }
 
-  private handleError(error: any): Error {
-    if (error?.code) {
-      switch (error.code) {
-        case 'unauthorized':
-          return new Error('Invalid Notion token. Please check your integration token and ensure it has the correct permissions.');
-        case 'restricted_resource':
-          return new Error('Access forbidden. Please ensure your integration has access to the requested page or database.');
-        case 'object_not_found':
-          return new Error('Page or database not found. Please check the URL and ensure the page/database exists and is shared with your integration.');
-        case 'rate_limited':
-          return new Error('Rate limit exceeded. Please wait a moment and try again.');
-        default:
-          return new Error(`Notion API error: ${error.message || 'Unknown error'}`);
+  private handleError(error: unknown): Error {
+    if (error && typeof error === 'object') {
+      const errObj = error as { code?: string; message?: string };
+      if (errObj.code) {
+        switch (errObj.code) {
+          case 'unauthorized':
+            return new Error('Invalid Notion token. Please check your integration token and ensure it has the correct permissions.');
+          case 'restricted_resource':
+            return new Error('Access forbidden. Please ensure your integration has access to the requested page or database.');
+          case 'object_not_found':
+            return new Error('Page or database not found. Please check the URL and ensure the page/database exists and is shared with your integration.');
+          case 'rate_limited':
+            return new Error('Rate limit exceeded. Please wait a moment and try again.');
+          default:
+            return new Error(`Notion API error: ${errObj.message || 'Unknown error'}`);
+        }
+      }
+      if (errObj.message) {
+        if (errObj.message.includes('Failed to fetch') || errObj.message.includes('NetworkError')) {
+          return new Error('Network error: Unable to reach Notion API. Please check your internet connection and try again.');
+        }
+        return new Error(`Unexpected error: ${errObj.message}`);
       }
     }
-
-    if (error?.message) {
-      if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
-        return new Error('Network error: Unable to reach Notion API. Please check your internet connection and try again.');
-      }
-      return new Error(`Unexpected error: ${error.message}`);
-    }
-
     return new Error('An unknown error occurred while connecting to Notion.');
   }
 
@@ -96,15 +102,15 @@ export class NotionAPIClient {
     }
   }
 
-  async getIntegrationInfo(token: string): Promise<any> {
+  async getIntegrationInfo(token: string): Promise<{ type?: string; name?: string; workspace?: { name?: string; id?: string } }> {
     return this.makeRequest('/users/me', token);
   }
 
-  async getDatabase(databaseId: string, token: string): Promise<any> {
+  async getDatabase(databaseId: string, token: string): Promise<DatabaseObjectResponse> {
     return this.makeRequest(`/databases/${databaseId}`, token);
   }
 
-  async queryDatabase(databaseId: string, token: string, filter?: any): Promise<any> {
+  async queryDatabase(databaseId: string, token: string, filter?: unknown): Promise<QueryDatabaseResponse> {
     return this.makeRequest(`/databases/${databaseId}/query`, token, {
       method: 'POST',
       body: JSON.stringify({
@@ -119,7 +125,7 @@ export class NotionAPIClient {
     });
   }
 
-  async getPage(pageId: string, token: string): Promise<any> {
+  async getPage(pageId: string, token: string): Promise<PageObjectResponse> {
     return this.makeRequest(`/pages/${pageId}`, token);
   }
 }

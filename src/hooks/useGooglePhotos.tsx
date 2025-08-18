@@ -1,6 +1,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
-import { useSettings } from '@/contexts/SettingsContext';
+import { useSettings } from '@/contexts/settings/SettingsContext';
 import { fetchAlbumImages } from '@/utils/googlePhotos/fetcher';
 import { validateGooglePhotosUrl } from '@/utils/googlePhotos/urlExtractor';
 import { photosCache } from '@/utils/photosCache';
@@ -92,15 +92,15 @@ export const useGooglePhotos = () => {
           variant: "destructive"
         });
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to fetch photos from album';
       console.error('🖼️ Error fetching photos:', err);
       console.error('🖼️ Error details:', {
-        message: err.message,
-        stack: err.stack,
+        message,
         url: normalizedUrl
       });
       
-      setError(err.message || 'Failed to fetch photos from album');
+      setError(message);
       
       // Try to load from cache as fallback
       if (!loadPhotosFromCache()) {
@@ -109,7 +109,7 @@ export const useGooglePhotos = () => {
       
       toast({
         title: "Failed to load photos",
-        description: err.message || 'Could not fetch photos from the album.',
+        description: message || 'Could not fetch photos from the album.',
         variant: "destructive"
       });
     } finally {
@@ -157,17 +157,17 @@ export const useGooglePhotos = () => {
         });
         return false;
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Could not access the album.';
       console.error('🖼️ Error testing album connection:', err);
       console.error('🖼️ Test error details:', {
-        message: err.message,
-        stack: err.stack,
+        message,
         url: testUrl
       });
       
       toast({
         title: "Connection failed",
-        description: err.message || 'Could not access the album.',
+        description: message,
         variant: "destructive"
       });
       return false;

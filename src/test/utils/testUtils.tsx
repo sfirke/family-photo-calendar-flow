@@ -115,5 +115,6 @@ export const createMockUseIntegratedEvents = () => ({
   selectedCalendarIds: [],
 });
 
-export * from '@testing-library/react';
+// Re-export explicit members instead of wildcard to satisfy react-refresh rule
+export { render as rtlRender, cleanup, within } from '@testing-library/react';
 export { customRender as render, screen, fireEvent, waitFor, act };

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { getWeatherIcon } from '@/utils/weatherIcons';
 import { fetchWeatherData, WeatherData } from '@/services/weatherService';
-import { useSettings } from '@/contexts/SettingsContext';
-import { useWeather } from '@/contexts/WeatherContext';
+import { useSettings } from '@/contexts/settings/SettingsContext';
+import { useWeather } from '@/contexts/weather/WeatherContext';
 const WeatherWidget = () => {
   const {
     getCurrentWeather,
@@ -10,10 +10,8 @@ const WeatherWidget = () => {
     refreshWeather
   } = useWeather();
   
-  // Refresh weather data to get updated location name
-  React.useEffect(() => {
-    refreshWeather(true);
-  }, [refreshWeather]);
+  // Avoid forcing an immediate refresh; provider already loads & rate-limits.
+  // If a manual refresh is needed later, another UI element can trigger it.
   if (isLoading) {
     return <div className="flex items-center gap-3 text-white">
         <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>

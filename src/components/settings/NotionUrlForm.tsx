@@ -31,11 +31,12 @@ export const NotionUrlForm: React.FC<NotionUrlFormProps> = ({
   });
   const [isValidating, setIsValidating] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [validationResult, setValidationResult] = useState<{
+  // ValidationResult tracks connection test status (no database object stored yet)
+  interface ValidationResult {
     status: 'idle' | 'success' | 'error';
     error?: string;
-    database?: any;
-  }>({ status: 'idle' });
+  }
+  const [validationResult, setValidationResult] = useState<ValidationResult>({ status: 'idle' });
 
   const extractDatabaseIdFromUrl = (url: string): string | null => {
     const patterns = [

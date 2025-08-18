@@ -55,7 +55,7 @@ export interface NotionEvent {
   calendarName: string;
   source: 'notion';
   color: string;
-  properties?: Record<string, any>;
+  properties?: Record<string, unknown>;
   notionPageId: string;
   notionUrl: string;
 }
@@ -81,9 +81,9 @@ export interface DatabaseProperties {
 
 export interface DatabaseTestResult {
   success: boolean;
-  database?: any;
+  database?: NotionDatabase;
   properties?: DatabaseProperties;
-  samplePages?: any[];
+  samplePages?: NotionPage[];
   error?: string;
 }
 
@@ -104,23 +104,22 @@ export interface NotionScrapedEvent {
   status?: 'confirmed' | 'tentative' | 'cancelled' | string;
   categories?: string[];
   priority?: 'high' | 'medium' | 'low' | string;
-  properties: Record<string, any>;
+  properties: Record<string, unknown>;
   sourceUrl: string;
   scrapedAt: Date;
   calendarId?: string;
-  customProperties?: Record<string, any>;
+  customProperties?: Record<string, unknown>;
   dateRange?: {
     startDate: Date;
     endDate?: Date;
   };
 }
 
-export interface NotionColumnMapping {
-  [columnName: string]: {
-    type: 'date' | 'title' | 'status' | 'category' | 'location' | 'description' | 'time' | 'priority' | 'custom';
-    propertyName: string;
-  };
+export interface NotionColumnMappingEntry {
+  type: 'date' | 'title' | 'status' | 'category' | 'location' | 'description' | 'time' | 'priority' | 'custom';
+  propertyName: string;
 }
+export type NotionColumnMapping = Record<string, NotionColumnMappingEntry>;
 
 export interface NotionPageMetadata {
   url: string;

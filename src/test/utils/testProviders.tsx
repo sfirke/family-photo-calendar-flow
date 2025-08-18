@@ -1,8 +1,8 @@
 import React from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { ThemeProvider } from '@/contexts/ThemeContext';
-import { SettingsProvider } from '@/contexts/SettingsContext';
-import { WeatherProvider } from '@/contexts/WeatherContext';
+import { ThemeProvider } from '@/contexts/theme/ThemeProvider';
+import { SettingsProvider } from '@/contexts/settings/SettingsProvider';
+import { WeatherProvider } from '@/contexts/weather/WeatherProvider';
 
 // Enhanced AllTheProviders with proper provider chain order - removed MockSecurityProvider
 export const AllTheProviders = ({ children }: { children: React.ReactNode }) => {

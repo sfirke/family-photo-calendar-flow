@@ -27,7 +27,7 @@ import {
   DialogContent,
 } from '@/components/ui/dialog';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
-import { useSettings } from '@/contexts/SettingsContext';
+import { useSettings } from '@/contexts/settings/SettingsContext';
 import { useSettingsModal } from '@/hooks/useSettingsModal';
 import SettingsModalHeader from './settings/SettingsModalHeader';
 import SettingsTabNavigation from './settings/SettingsTabNavigation';

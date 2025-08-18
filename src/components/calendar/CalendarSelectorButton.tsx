@@ -13,17 +13,13 @@ interface CalendarSelectorButtonProps {
 const CalendarSelectorButton = React.forwardRef<HTMLButtonElement, CalendarSelectorButtonProps>(
   ({ selectedCount, totalCount, disabled = false, onClick }, ref) => {
     
-    const handleClick = (e?: React.MouseEvent<HTMLButtonElement>) => {
-  // debug removed: calendar selector button click
-      
-      // Prevent default if event exists
-      if (e) {
-        e.preventDefault();
-        e.stopPropagation();
-      }
-      
-      if (onClick) {
-        onClick();
+    const handleClick = (e?: unknown) => {
+      try {
+        // We intentionally ignore the event object; just call the consumer callback
+        onClick?.();
+      } catch (err) {
+        // Soft-fail instead of throwing to avoid UI breakage
+        console.warn('CalendarSelectorButton onClick handler error:', err);
       }
     };
     

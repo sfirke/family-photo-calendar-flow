@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Shield } from 'lucide-react';
-import { useSecurity } from '@/contexts/SecurityContext';
+import { useSecurity } from '@/contexts/security/SecurityContext';
 import SecurityUnlockBanner from '@/components/security/SecurityUnlockBanner';
 import SecurityStatusDisplay from './security/SecurityStatusDisplay';
 import SecurityEnableForm from './security/SecurityEnableForm';

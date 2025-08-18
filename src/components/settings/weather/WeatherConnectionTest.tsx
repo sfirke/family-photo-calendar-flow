@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { CheckCircle, XCircle, Loader2, Key, Eye, ChevronDown, ChevronUp, Smartphone } from 'lucide-react';
 import { enhancedWeatherService } from '@/services/enhancedWeatherService';
-import { useWeather } from '@/contexts/WeatherContext';
+import { useWeather } from '@/contexts/weather/WeatherContext';
 import { useWeatherSettings } from '@/contexts/settings/useWeatherSettings';
 import { WeatherTestResult } from '@/types/weather';
 import { PWAWeatherTestService } from '@/utils/weather/pwaTestService';
@@ -85,8 +85,11 @@ const WeatherConnectionTest = ({
       };
       
       setDetailedError(null);
+      // Detect PWA mode (iOS Safari adds non-standard navigator.standalone)
+      const isStandaloneDisplay = window.matchMedia('(display-mode: standalone)').matches;
+      const isIosStandalone = typeof navigator !== 'undefined' && (navigator as Navigator & { standalone?: boolean }).standalone === true;
       setPwaInfo({
-        isPWA: (window.navigator as any).standalone === true || window.matchMedia('(display-mode: standalone)').matches,
+        isPWA: isStandaloneDisplay || isIosStandalone,
         corsProxyRequired: false,
         recommendations: ['NWS API is free and does not require CORS proxy']
       });

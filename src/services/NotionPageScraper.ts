@@ -1,5 +1,5 @@
-import { NotionScrapedEvent, NotionPageMetadata } from '@/types/notion';
-import { notionTableParser, NotionDebugResult } from './NotionTableParser';
+import { NotionScrapedEvent, NotionPageMetadata, NotionColumnMapping } from '@/types/notion';
+import { notionTableParser, NotionDebugResult, NotionDebugInfo } from './NotionTableParser';
 
 interface ScrapeResult {
   success: boolean;
@@ -8,8 +8,8 @@ interface ScrapeResult {
   error?: string;
 }
 
-interface DebugScrapeResult extends ScrapeResult {
-  debugInfo?: Record<string, any>;
+export interface DebugScrapeResult extends ScrapeResult {
+  debugInfo?: NotionDebugInfo;
 }
 
 class NotionPageScraper {
@@ -84,7 +84,11 @@ class NotionPageScraper {
           databaseId: urlInfo.blockId,
           viewId: urlInfo.viewId,
           columnMappings: parseResult.columnMappings,
-          viewType: parseResult.metadata.viewType
+          viewType: ((): NotionPageMetadata['viewType'] => {
+            const vt = parseResult.metadata.viewType;
+            if (vt === 'list' || vt === 'table' || vt === 'database' || vt === 'calendar' || vt === 'board') return vt;
+            return 'table';
+          })()
         }
       };
 
@@ -135,9 +139,13 @@ class NotionPageScraper {
   private parseHtmlForStructuredEvents(htmlContent: string, sourceUrl: string, debug: boolean = false): {
     events: NotionScrapedEvent[];
     title: string;
-    columnMappings: Record<string, any>;
-    metadata: any;
-    debugInfo?: Record<string, any>;
+    columnMappings: NotionColumnMapping;
+    metadata: {
+      viewType: 'list' | 'table' | 'database' | 'calendar' | 'board' | 'legacy-fallback' | 'unknown';
+      totalRows?: number;
+      successfullyParsed?: number;
+    };
+    debugInfo?: NotionDebugInfo;
   } {
     let pageTitle = 'Notion Page';
 

@@ -21,7 +21,7 @@ const PhotosPreview = ({ images, isLoading, error, lastFetch, onRefresh, onClear
         <CardTitle className="flex items-center gap-2 text-gray-900 dark:text-gray-100">
           <Images className="h-5 w-5" />
           Album Preview
-          <div className="ml-auto flex gap-2">
+          <span className="ml-auto inline-flex gap-2">
             <Button
               onClick={onClearCache}
               disabled={isLoading || images.length === 0}
@@ -42,20 +42,19 @@ const PhotosPreview = ({ images, isLoading, error, lastFetch, onRefresh, onClear
               <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
               Refresh
             </Button>
-          </div>
+          </span>
         </CardTitle>
         <CardDescription className="text-gray-600 dark:text-gray-400">
-          {images.length > 0 
+          {images.length > 0
             ? `${images.length} photos loaded${lastFetch ? ` • Last updated ${formatDistanceToNow(lastFetch, { addSuffix: true })}` : ''}`
-            : 'Loading photos from your Google Photos album...'
-          }
-          {lastFetch && (
-            <div className="flex items-center gap-1 mt-1 text-xs text-gray-500 dark:text-gray-400">
-              <Clock className="h-3 w-3" />
-              <span>Photos are cached locally and refresh daily</span>
-            </div>
-          )}
+            : 'Loading photos from your Google Photos album...'}
         </CardDescription>
+        {lastFetch && (
+          <div className="flex items-center gap-1 mt-1 text-xs text-gray-500 dark:text-gray-400 px-6 pt-1">
+            <Clock className="h-3 w-3" />
+            <span>Photos are cached locally and refresh daily</span>
+          </div>
+        )}
       </CardHeader>
       <CardContent>
         {error && (
