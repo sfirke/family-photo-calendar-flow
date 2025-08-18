@@ -27,11 +27,12 @@ export const useGitHubSettings = () => {
         console.warn('Failed to load GitHub settings from tiered storage:', error);
         // Fallback to localStorage for compatibility
         try {
-          const fallbackOwner = localStorage.getItem('githubOwner') || '';
-          const fallbackRepo = localStorage.getItem('githubRepo') || '';
-          
-          setGithubOwner(fallbackOwner);
-          setGithubRepo(fallbackRepo);
+          if (typeof localStorage !== 'undefined') {
+            const fallbackOwner = localStorage.getItem('githubOwner') || '';
+            const fallbackRepo = localStorage.getItem('githubRepo') || '';
+            setGithubOwner(fallbackOwner);
+            setGithubRepo(fallbackRepo);
+          }
         } catch (fallbackError) {
           console.warn('Failed to load GitHub settings from fallback:', fallbackError);
         }
@@ -46,20 +47,22 @@ export const useGitHubSettings = () => {
   // Auto-save GitHub owner to tiered storage (only after initialization)
   useEffect(() => {
     if (!isInitialized) return;
-    
     settingsStorageService.setValue('githubOwner', githubOwner).catch(error => {
       console.warn('Failed to save githubOwner to tiered storage:', error);
-      localStorage.setItem('githubOwner', githubOwner);
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('githubOwner', githubOwner);
+      }
     });
   }, [githubOwner, isInitialized]);
 
   // Auto-save GitHub repo to tiered storage (only after initialization)
   useEffect(() => {
     if (!isInitialized) return;
-    
     settingsStorageService.setValue('githubRepo', githubRepo).catch(error => {
       console.warn('Failed to save githubRepo to tiered storage:', error);
-      localStorage.setItem('githubRepo', githubRepo);
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('githubRepo', githubRepo);
+      }
     });
   }, [githubRepo, isInitialized]);
 

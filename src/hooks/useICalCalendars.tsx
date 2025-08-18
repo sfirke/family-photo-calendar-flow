@@ -44,7 +44,9 @@ const CORS_PROXIES = [
 
 // Optional custom proxy (e.g. Supabase Edge Function or self-hosted) configured via Vite env
 // Provide a URL where the raw ICS feed can be fetched with ?url= encoded param or path style
-const CUSTOM_ICAL_PROXY = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_ICAL_PROXY_URL) || '';
+interface ViteEnvLike { VITE_ICAL_PROXY_URL?: string; DEV?: boolean }
+// Narrow import.meta typing to avoid any
+const CUSTOM_ICAL_PROXY = (typeof import.meta !== 'undefined' ? (import.meta as unknown as { env: ViteEnvLike }).env?.VITE_ICAL_PROXY_URL : '') || '';
 
 // Basic normalization & sanity validation to avoid sending obviously invalid tokens like 'Family'
 const normalizeICalUrl = (raw: string): { url: string; valid: boolean; reason?: string } => {

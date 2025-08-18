@@ -8,6 +8,7 @@
 import { useState, useEffect } from 'react';
 import { InputValidator } from '@/utils/security/inputValidation';
 import { settingsStorageService } from '@/services/settingsStorageService';
+import { safeLocalStorage } from '@/utils/storage/safeLocalStorage';
 
 export const usePhotoSettings = () => {
   const [publicAlbumUrl, setPublicAlbumUrl] = useState('');
@@ -32,9 +33,9 @@ export const usePhotoSettings = () => {
         console.warn('Failed to load photo settings from tiered storage:', error);
         // Fallback to localStorage for compatibility
         try {
-          const fallbackUrl = localStorage.getItem('publicAlbumUrl') || '';
-          const fallbackDuration = parseInt(localStorage.getItem('backgroundDuration') || '30');
-          const fallbackAlbum = localStorage.getItem('selectedAlbum');
+          const fallbackUrl = safeLocalStorage.getItem('publicAlbumUrl') || '';
+          const fallbackDuration = parseInt(safeLocalStorage.getItem('backgroundDuration') || '30');
+          const fallbackAlbum = safeLocalStorage.getItem('selectedAlbum');
           
           // debug removed: loading fallback from localStorage
           setPublicAlbumUrl(fallbackUrl);
@@ -58,7 +59,7 @@ export const usePhotoSettings = () => {
   // debug removed: auto-saving album url
     settingsStorageService.setValue('publicAlbumUrl', publicAlbumUrl).catch(error => {
       console.warn('Failed to save publicAlbumUrl to tiered storage:', error);
-      localStorage.setItem('publicAlbumUrl', publicAlbumUrl);
+      safeLocalStorage.setItem('publicAlbumUrl', publicAlbumUrl);
     });
   }, [publicAlbumUrl, isInitialized]);
 
@@ -68,7 +69,7 @@ export const usePhotoSettings = () => {
     
     settingsStorageService.setValue('backgroundDuration', backgroundDuration.toString()).catch(error => {
       console.warn('Failed to save backgroundDuration to tiered storage:', error);
-      localStorage.setItem('backgroundDuration', backgroundDuration.toString());
+      safeLocalStorage.setItem('backgroundDuration', backgroundDuration.toString());
     });
   }, [backgroundDuration, isInitialized]);
 
@@ -79,12 +80,12 @@ export const usePhotoSettings = () => {
     if (selectedAlbum) {
       settingsStorageService.setValue('selectedAlbum', selectedAlbum).catch(error => {
         console.warn('Failed to save selectedAlbum to tiered storage:', error);
-        localStorage.setItem('selectedAlbum', selectedAlbum);
+        safeLocalStorage.setItem('selectedAlbum', selectedAlbum);
       });
     } else {
       settingsStorageService.removeValue('selectedAlbum').catch(error => {
         console.warn('Failed to remove selectedAlbum from tiered storage:', error);
-        localStorage.removeItem('selectedAlbum');
+        safeLocalStorage.removeItem('selectedAlbum');
       });
     }
   }, [selectedAlbum, isInitialized]);

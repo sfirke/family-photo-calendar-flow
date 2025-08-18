@@ -88,6 +88,10 @@ class SettingsStorageService {
    */
   async getValue(key: string): Promise<string | null> {
     try {
+      // Environment guard: if localStorage is unavailable (SSR/test edge), skip
+      if (typeof localStorage === 'undefined') {
+        return null;
+      }
       // 1. Check in-memory cache first
       const cached = this.cache.get(key);
       if (cached) {
@@ -158,6 +162,12 @@ class SettingsStorageService {
    */
   async setValue(key: string, value: string): Promise<void> {
     try {
+      // Environment guard: if localStorage is unavailable, just cache and exit
+      if (typeof localStorage === 'undefined') {
+        const isSensitive = this.isSensitiveKey(key);
+        this.cache.set(key, { key, value, isSensitive, lastUpdated: Date.now() });
+        return;
+      }
       const isSensitive = this.isSensitiveKey(key);
       const settingsItem: SettingsItem = {
         key,
@@ -200,6 +210,10 @@ class SettingsStorageService {
    */
   async removeValue(key: string): Promise<void> {
     try {
+      if (typeof localStorage === 'undefined') {
+        this.cache.delete(key);
+        return;
+      }
       // Remove from cache
       this.cache.delete(key);
 

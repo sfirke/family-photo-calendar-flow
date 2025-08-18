@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useCalendarSelection } from '@/hooks/useCalendarSelection';
+import { CalendarSelectionProvider } from '@/hooks/CalendarSelectionProvider';
 import { mockSecurityModule, resetSecurityMocks } from '../utils/securityMocks';
 
 // Apply security mock
@@ -82,8 +83,12 @@ describe('useCalendarSelection', () => {
     localStorageMock.getItem.mockReturnValue(null);
   });
 
+  const wrapper: React.FC<{children: React.ReactNode}> = ({ children }) => (
+    <CalendarSelectionProvider>{children}</CalendarSelectionProvider>
+  );
+
   it('should initialize with empty selected calendars', () => {
-    const { result } = renderHook(() => useCalendarSelection());
+    const { result } = renderHook(() => useCalendarSelection(), { wrapper });
 
     // The hook auto-selects calendars with events, so we expect the enabled calendars
     expect(result.current.selectedCalendarIds).toEqual(['ical-calendar-1', 'notion-calendar-1']);
@@ -91,8 +96,7 @@ describe('useCalendarSelection', () => {
 
   it('should load selected calendars from localStorage', () => {
     localStorageMock.getItem.mockReturnValue('["calendar-1", "calendar-2"]');
-    
-    const { result } = renderHook(() => useCalendarSelection());
+    const { result } = renderHook(() => useCalendarSelection(), { wrapper });
 
     // The hook auto-selects calendars with events, so we need to check if our stored IDs are included
     // or if the component properly loads from storage when no auto-selection occurs
@@ -101,7 +105,7 @@ describe('useCalendarSelection', () => {
   });
 
   it('should combine calendars from all sources', () => {
-    const { result } = renderHook(() => useCalendarSelection());
+    const { result } = renderHook(() => useCalendarSelection(), { wrapper });
 
     expect(result.current.allCalendars).toHaveLength(2);
     expect(result.current.allCalendars[0].name).toBe('iCal Calendar');
@@ -109,14 +113,14 @@ describe('useCalendarSelection', () => {
   });
 
   it('should filter enabled calendars', () => {
-    const { result } = renderHook(() => useCalendarSelection());
+    const { result } = renderHook(() => useCalendarSelection(), { wrapper });
 
     expect(result.current.enabledCalendars).toHaveLength(2);
     expect(result.current.enabledCalendars.every(cal => cal.enabled)).toBe(true);
   });
 
   it('should create calendarsFromEvents with proper event counts', () => {
-    const { result } = renderHook(() => useCalendarSelection());
+    const { result } = renderHook(() => useCalendarSelection(), { wrapper });
 
     expect(result.current.calendarsFromEvents).toHaveLength(2);
     
@@ -134,7 +138,7 @@ describe('useCalendarSelection', () => {
   });
 
   it('should toggle calendar selection', () => {
-    const { result } = renderHook(() => useCalendarSelection());
+    const { result } = renderHook(() => useCalendarSelection(), { wrapper });
 
     act(() => {
       result.current.toggleCalendar('test-calendar', true);
@@ -150,7 +154,7 @@ describe('useCalendarSelection', () => {
   });
 
   it('should select all calendars', () => {
-    const { result } = renderHook(() => useCalendarSelection());
+    const { result } = renderHook(() => useCalendarSelection(), { wrapper });
 
     act(() => {
       result.current.selectAllCalendars();
@@ -162,7 +166,7 @@ describe('useCalendarSelection', () => {
   });
 
   it('should clear all calendar selections', () => {
-    const { result } = renderHook(() => useCalendarSelection());
+    const { result } = renderHook(() => useCalendarSelection(), { wrapper });
 
     // First select some calendars
     act(() => {
@@ -180,7 +184,7 @@ describe('useCalendarSelection', () => {
   });
 
   it('should select calendars with events', () => {
-    const { result } = renderHook(() => useCalendarSelection());
+    const { result } = renderHook(() => useCalendarSelection(), { wrapper });
 
     act(() => {
       result.current.selectCalendarsWithEvents();
@@ -192,7 +196,7 @@ describe('useCalendarSelection', () => {
   });
 
   it('should cleanup deleted calendar', () => {
-    const { result } = renderHook(() => useCalendarSelection());
+    const { result } = renderHook(() => useCalendarSelection(), { wrapper });
 
     // First select a calendar
     act(() => {

@@ -7,6 +7,7 @@
 
 import { useState, useEffect } from 'react';
 import { settingsStorageService } from '@/services/settingsStorageService';
+import { safeLocalStorage } from '@/utils/storage/safeLocalStorage';
 
 const NOTION_TOKEN_KEY = 'notion_token';
 const NOTION_DATABASE_ID_KEY = 'notion_database_id';
@@ -29,8 +30,8 @@ export const useNotionSettings = () => {
         console.warn('Failed to load Notion settings from tiered storage:', error);
         // Fallback to localStorage for compatibility
         try {
-          const fallbackToken = localStorage.getItem(NOTION_TOKEN_KEY) || '';
-          const fallbackDatabaseId = localStorage.getItem(NOTION_DATABASE_ID_KEY) || '';
+          const fallbackToken = safeLocalStorage.getItem(NOTION_TOKEN_KEY) || '';
+          const fallbackDatabaseId = safeLocalStorage.getItem(NOTION_DATABASE_ID_KEY) || '';
           
           setNotionTokenState(fallbackToken);
           setNotionDatabaseIdState(fallbackDatabaseId);
@@ -52,7 +53,7 @@ export const useNotionSettings = () => {
     } catch (error) {
       console.warn('Failed to save notionToken to tiered storage:', error);
       // Fallback to localStorage
-      localStorage.setItem(NOTION_TOKEN_KEY, token);
+  safeLocalStorage.setItem(NOTION_TOKEN_KEY, token);
     }
   };
 
@@ -63,7 +64,7 @@ export const useNotionSettings = () => {
     } catch (error) {
       console.warn('Failed to save notionDatabaseId to tiered storage:', error);
       // Fallback to localStorage
-      localStorage.setItem(NOTION_DATABASE_ID_KEY, databaseId);
+  safeLocalStorage.setItem(NOTION_DATABASE_ID_KEY, databaseId);
     }
   };
 

@@ -12,7 +12,7 @@
 //   200 text/calendar (or text/plain) with Access-Control-Allow-Origin:* on success.
 
 // deno-lint-ignore-file no-explicit-any
-// @ts-ignore: Deno deploy provides this remote module at runtime
+// @ts-expect-error Deno deploy provides this remote module at runtime; type defs not bundled
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 
 const corsHeaders: Record<string, string> = {
@@ -32,7 +32,7 @@ const DEFAULT_ALLOWED = [
   'caldav.icloud.com'
 ];
 
-// @ts-ignore: Deno global available in Edge runtime
+// @ts-expect-error Deno global available in Edge runtime when executed
 const envAllowed = (Deno.env.get('ALLOWED_ICAL_HOSTS') || '')
   .split(',')
   .map(s => s.trim())

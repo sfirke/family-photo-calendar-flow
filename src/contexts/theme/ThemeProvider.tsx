@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { ThemeContext, Theme } from './ThemeContext';
+import { safeLocalStorage } from '@/utils/storage/safeLocalStorage';
 
 export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
   const [theme, setTheme] = useState<Theme>(() => {
-    const stored = localStorage.getItem('theme') as Theme;
+    const stored = safeLocalStorage.getItem('theme') as Theme | null;
     return stored || 'system';
   });
   const [actualTheme, setActualTheme] = useState<'light' | 'dark'>('light');
@@ -32,7 +33,7 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
 
   const handleSetTheme = (newTheme: Theme) => {
     setTheme(newTheme);
-    localStorage.setItem('theme', newTheme);
+  safeLocalStorage.setItem('theme', newTheme);
   };
 
   return (

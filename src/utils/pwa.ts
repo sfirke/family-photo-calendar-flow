@@ -31,7 +31,8 @@ class PWAManager {
       // or force the custom prompt in dev via: sessionStorage.setItem('forceCustomInstallPrompt','1').
       const allowNative = !!sessionStorage.getItem('allowNativeInstallPrompt');
       const forceCustom = !!sessionStorage.getItem('forceCustomInstallPrompt');
-      const isDev = typeof import.meta !== 'undefined' && (import.meta as any).env?.DEV;
+  interface ViteEnv { DEV?: boolean }
+  const isDev = typeof import.meta !== 'undefined' && (import.meta as unknown as { env: ViteEnv }).env?.DEV;
       const shouldUseCustomPrompt = (forceCustom || !isDev) && !allowNative;
 
       if (shouldUseCustomPrompt) {

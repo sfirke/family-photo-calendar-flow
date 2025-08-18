@@ -8,7 +8,7 @@ import { ThemeProvider } from "@/contexts/theme/ThemeProvider";
 import { SecurityProvider } from "@/contexts/security/SecurityProvider";
 import { SettingsProvider } from "@/contexts/settings/SettingsProvider";
 import { WeatherProvider } from "@/contexts/weather/WeatherProvider";
-import { CalendarSelectionProvider } from "@/hooks/useCalendarSelection";
+import { CalendarSelectionProvider } from "@/hooks/CalendarSelectionProvider";
 import InstallPrompt from "@/components/InstallPrompt";
 import UpdateNotification from "@/components/UpdateNotification";
 import Index from "./pages/Index";
