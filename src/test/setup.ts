@@ -44,6 +44,26 @@ global.IntersectionObserver = vi.fn().mockImplementation(() => ({
   disconnect: vi.fn(),
 }));
 
+// Mock geolocation
+if (!('geolocation' in navigator)) {
+  // @ts-expect-error adding geolocation
+  navigator.geolocation = {};
+}
+navigator.geolocation.getCurrentPosition = vi.fn((success, error) => {
+  success({
+    coords: {
+      latitude: 39.8283,
+      longitude: -98.5795,
+      accuracy: 10,
+      altitude: null,
+      altitudeAccuracy: null,
+      heading: null,
+      speed: null,
+    },
+    timestamp: Date.now(),
+  });
+});
+
 // Enhanced Mock Web Crypto API for testing environment with better error handling
 const mockCrypto = {
   getRandomValues: vi.fn((array) => {

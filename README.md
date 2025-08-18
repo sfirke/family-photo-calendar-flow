@@ -101,7 +101,6 @@ A sophisticated, privacy-focused family calendar application built with React an
    # or
    yarn install
    ```
-
 3. **Start development server**
    ```bash
    npm run dev
@@ -121,6 +120,41 @@ npm run build
 # Preview the build locally
 npm run preview
 ```
+
+## Deployment (GitHub Pages)
+
+This project is configured to deploy automatically to **GitHub Pages** when changes are pushed to the `main` branch.
+
+### How it works
+
+1. The workflow in `.github/workflows/deploy-pages.yml` runs on every push to `main` (and can be triggered manually).
+2. It installs dependencies, lints, runs tests, and builds the site with a dynamic Vite base path of `/<repo-name>/`.
+3. The built `dist` folder is uploaded as a Pages artifact and then deployed using the official `actions/deploy-pages` action.
+
+### Accessing the site
+
+Once enabled in your repository settings (Settings → Pages → Source: GitHub Actions), the site is configured for the custom domain:
+
+```
+https://calendar.willineau.com
+```
+
+Make sure you add the appropriate DNS records (see below).
+
+### Local preview with the Pages base path
+
+Local preview (custom domain uses root path so default preview works):
+
+```bash
+npm run build && npm run preview
+```
+
+### Notes
+
+- A `.nojekyll` file is added during deployment to avoid GitHub Pages ignoring files that start with an underscore.
+- Custom domain `CNAME` file (`public/CNAME`) ensures GitHub Pages serves at `calendar.willineau.com`.
+- DNS: Create a CNAME record `calendar` pointing to `<username>.github.io` (e.g. `cardner.github.io`).
+- If you fork this repo, change or remove the `CNAME` file; otherwise Pages will fail for the fork.
 
 ## ⚙️ Configuration
 
