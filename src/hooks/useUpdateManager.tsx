@@ -35,7 +35,7 @@ export const useUpdateManager = () => {
   const loadCurrentInfo = useCallback(async () => {
     try {
       const installed = getInstalledVersion();
-      setCurrentVersion(installed?.version || '1.4.2');
+  setCurrentVersion(installed?.version || '0.0.0');
       
       const lastCheck = getLastUpstreamCheckTime();
       setLastCheckTimeState(lastCheck);

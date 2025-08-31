@@ -1,10 +1,11 @@
-const CACHE_NAME = 'family-photo-calendar-v1.2.0';
-const urlsToCache = [
-  '/',
-  '/static/js/bundle.js',
-  '/static/css/main.css',
-  '/manifest.json',
-  '/version.json'
+// Increment CACHE_NAME when making breaking cache changes
+const CACHE_NAME = 'family-photo-calendar-v3';
+// Base path support for GitHub Pages; defaults to '/'
+const BASE = self.registration.scope.replace(self.location.origin, '') || '/';
+const PRECACHE_URLS = [
+  BASE,
+  BASE + 'manifest.json',
+  BASE + 'version.json'
 ];
 
 // External API domains that should bypass the service worker
@@ -12,7 +13,8 @@ const EXTERNAL_API_DOMAINS = [
   'api.codetabs.com',
   'cors-anywhere.herokuapp.com',
   'thingproxy.freeboard.io',
-  'cors.bridged.cc'
+  'cors.bridged.cc',
+  'api.github.com'
 ];
 
 // Check if a URL should bypass the service worker
@@ -32,9 +34,8 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
-        // Use Promise.allSettled to handle individual failures gracefully
         return Promise.allSettled(
-          urlsToCache.map(url => 
+          PRECACHE_URLS.map(url => 
             cache.add(url).catch(err => {
               console.warn(`Failed to cache ${url}:`, err);
               return null;
@@ -42,6 +43,7 @@ self.addEventListener('install', (event) => {
           )
         );
       })
+      .then(() => self.skipWaiting())
       .catch(err => {
         console.error('Cache installation failed:', err);
       })
@@ -61,37 +63,46 @@ self.addEventListener('fetch', (event) => {
     return; // Don't intercept, let the request go through normally
   }
 
+  const req = event.request;
+  const url = new URL(req.url);
+
+  // Network-first for HTML and version.json to avoid stale app shells and version info
+  const isHtml = req.headers.get('accept')?.includes('text/html');
+  const isVersionJson = url.origin === self.location.origin && url.pathname.endsWith('/version.json');
+
+  if (isHtml || isVersionJson) {
+    event.respondWith(
+      fetch(req)
+        .then((networkResp) => {
+          const respClone = networkResp.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(req, respClone)).catch(() => {});
+          return networkResp;
+        })
+        .catch(() => caches.match(req).then(resp => resp || new Response('Offline', { status: 200, headers: { 'Content-Type': 'text/plain' } })))
+    );
+    return;
+  }
+
+  // Stale-while-revalidate for same-origin static assets
+  if (url.origin === self.location.origin) {
+    event.respondWith(
+      caches.match(req).then(cached => {
+        const fetchPromise = fetch(req)
+          .then(networkResp => {
+            const respClone = networkResp.clone();
+            caches.open(CACHE_NAME).then(cache => cache.put(req, respClone)).catch(() => {});
+            return networkResp;
+          })
+          .catch(() => cached || Promise.reject('Network error'));
+        return cached || fetchPromise;
+      })
+    );
+    return;
+  }
+
+  // Default: try network then cache
   event.respondWith(
-    caches.match(event.request)
-      .then((response) => {
-        // Return cached version or fetch from network
-        if (response) {
-          return response;
-        }
-        
-        // Clone the request since it's a stream and can only be consumed once
-        const fetchRequest = event.request.clone();
-        
-        return fetch(fetchRequest).catch(err => {
-          console.warn('Fetch failed for internal resource:', err);
-          // Only return offline response for internal resources
-          return new Response('Offline', { 
-            status: 200, 
-            statusText: 'OK',
-            headers: { 'Content-Type': 'text/plain' }
-          });
-        });
-      })
-      .catch(err => {
-        console.error('Cache match failed:', err);
-        return fetch(event.request).catch(() => {
-          return new Response('Offline', { 
-            status: 200, 
-            statusText: 'OK',
-            headers: { 'Content-Type': 'text/plain' }
-          });
-        });
-      })
+    fetch(req).catch(() => caches.match(req))
   );
 });
 
@@ -335,8 +346,10 @@ self.addEventListener('activate', (event) => {
       })
       .catch(err => {
         console.error('Cache cleanup failed:', err);
-      })
+    })
   );
+  // Take control of uncontrolled clients immediately
+  self.clients.claim();
 });
 
 // Handle messages from the main thread
