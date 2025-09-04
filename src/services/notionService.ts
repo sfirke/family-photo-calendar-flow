@@ -103,16 +103,12 @@ class NotionService {
     }
   }
 
-  // Get database with full query capability
-  async queryDatabaseFull(databaseId: string, token: string, options: {
-  filter?: Record<string, unknown>;
-  sorts?: Array<Record<string, unknown>>;
-    pageSize?: number;
-  } = {}): Promise<unknown> {
+  // Get ALL pages from a database (auto-paginated)
+  async queryDatabaseFull(databaseId: string, token: string, options: { filter?: Record<string, unknown>; pageSize?: number } = {}): Promise<PageObjectResponse[]> {
     try {
-      const { filter, sorts } = options;
-      
-      return await notionAPIClient.queryDatabase(databaseId, token, filter);
+      const { filter, pageSize } = options;
+      const pages = await notionAPIClient.queryAll(databaseId, token, filter, pageSize);
+      return pages as PageObjectResponse[];
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       throw new Error(errorMessage);
@@ -165,9 +161,10 @@ class NotionService {
     }
   }
 
-  async queryDatabase(databaseId: string, token: string, filter?: Record<string, unknown>): Promise<unknown> {
+  async queryDatabase(databaseId: string, token: string, filter?: Record<string, unknown>): Promise<PageObjectResponse[]> {
     try {
-      return await notionAPIClient.queryDatabase(databaseId, token, filter);
+      const pages = await notionAPIClient.queryAll(databaseId, token, filter);
+      return pages as PageObjectResponse[];
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       throw new Error(errorMessage);

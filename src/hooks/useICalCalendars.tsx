@@ -591,6 +591,7 @@ export const useICalCalendars = () => {
   const syncCalendar = useCallback(async (calendar: ICalCalendar) => {
     setIsLoading(true);
     setSyncStatus(prev => ({ ...prev, [calendar.id]: 'syncing' }));
+  CalendarRefreshUtils.triggerICalRefreshStart(calendar.id);
 
     try {
       if (!calendar.url || calendar.url.trim() === '') {
@@ -712,6 +713,9 @@ export const useICalCalendars = () => {
   const syncAllCalendars = useCallback(async () => {
     const enabledCalendars = calendars.filter(cal => cal.enabled);
     
+  // Emit bulk start event
+  CalendarRefreshUtils.triggerAllRefreshStart();
+
     // Try background sync first if supported
     if (isBackgroundSyncSupported && enabledCalendars.length > 0) {
       try {

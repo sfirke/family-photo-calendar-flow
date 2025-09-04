@@ -1,6 +1,6 @@
 
 {
-  "name": "Family Photo Calendar Flow",
+  "name": "HailStorm Family Calendar",
   "short_name": "PhotoCalendar",
   "description": "A family photo calendar application with weather integration",
   "start_url": "/",
@@ -11,13 +11,13 @@
   "scope": "/",
   "icons": [
     {
-      "src": "/placeholder.svg",
+      "src": "/assets/hailstorm-icon.svg",
       "sizes": "192x192",
       "type": "image/svg+xml",
       "purpose": "any maskable"
     },
     {
-      "src": "/placeholder.svg",
+      "src": "/assets/hailstorm-icon.svg",
       "sizes": "512x512",
       "type": "image/svg+xml",
       "purpose": "any maskable"
@@ -26,15 +26,15 @@
   "categories": ["productivity", "lifestyle"],
   "screenshots": [
     {
-      "src": "/placeholder.svg",
+      "src": "/assets/calendar-screen.png",
       "sizes": "1280x720",
-      "type": "image/svg+xml",
+      "type": "image/png",
       "form_factor": "wide"
     },
     {
-      "src": "/placeholder.svg",
+      "src": "/assets/calendar-screen-narrow.png",
       "sizes": "750x1334",
-      "type": "image/svg+xml",
+      "type": "image/png",
       "form_factor": "narrow"
     }
   ]

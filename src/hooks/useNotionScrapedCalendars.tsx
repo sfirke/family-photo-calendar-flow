@@ -12,7 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 // NOTE: If CORS errors arise in the browser, consider adding a lightweight
 // proxy service or adjusting the NotionAPIClient to use a different proxy.
 import { notionAPIClient } from '@/services/NotionAPIClient';
-import type { QueryDatabaseResponse, PageObjectResponse, DatabaseObjectResponse } from '@notionhq/client/build/src/api-endpoints';
+import type { PageObjectResponse, DatabaseObjectResponse } from '@notionhq/client/build/src/api-endpoints';
 import { notionPageScraper } from '@/services/NotionPageScraper';
 import { RateLimiter, createDebounce } from '@/lib/rateLimiter';
 import { CalendarRefreshUtils } from '@/hooks/useCalendarRefresh';
@@ -164,60 +164,59 @@ export const useNotionScrapedCalendars = () => {
     }
   }, [loadCalendars, loadEvents, toast]);
 
-  // Transform a Notion query response into internal NotionApiEvent objects
-  const transformQueryResponse = useCallback((query: QueryDatabaseResponse): NotionApiEvent[] => {
+  // Transform an array of Notion pages (already fully paginated) into internal NotionApiEvent objects
+  const transformPages = useCallback((pages: PageObjectResponse[]): NotionApiEvent[] => {
     const events: NotionApiEvent[] = [];
-    if (!Array.isArray(query.results)) return events;
-    for (const raw of query.results) {
-      const page = raw as PageObjectResponse;
-      if (page.object !== 'page' || !page.properties) continue;
-      // Find title property
+    for (const page of pages) {
+      if (!page || page.object !== 'page' || !page.properties) continue;
+
+      // Title
       let title = page.id;
-      for (const propKey of Object.keys(page.properties)) {
-        const prop: any = (page.properties as any)[propKey];
+      for (const key of Object.keys(page.properties)) {
+        const prop: any = (page.properties as any)[key];
         if (prop?.type === 'title' && Array.isArray(prop.title) && prop.title.length) {
           title = prop.title.map((t: any) => t?.plain_text || '').join('').trim() || title;
           break;
         }
       }
-      // Find date property (first 'date' type)
-      let datePropKey: string | undefined;
+
+      // Date (first date property)
       let dateStart: string | undefined;
       let dateEnd: string | undefined;
-      for (const propKey of Object.keys(page.properties)) {
-        const prop: any = (page.properties as any)[propKey];
+      for (const key of Object.keys(page.properties)) {
+        const prop: any = (page.properties as any)[key];
         if (prop?.type === 'date' && prop.date?.start) {
-          datePropKey = propKey;
           dateStart = prop.date.start;
           dateEnd = prop.date.end;
           break;
         }
       }
-      if (!dateStart) continue; // skip pages without a date
-      // Build simplified properties map limited to supported primitive types
+      if (!dateStart) continue;
+
       const simplified: NotionPropertyMap = {};
-      for (const propKey of Object.keys(page.properties)) {
-        const prop: any = (page.properties as any)[propKey];
+      for (const key of Object.keys(page.properties)) {
+        const prop: any = (page.properties as any)[key];
         switch (prop?.type) {
           case 'title':
-            simplified[propKey] = { type: 'title', title: prop.title?.map((t: any) => ({ plain_text: t.plain_text })) } as NotionTitleProperty;
+            simplified[key] = { type: 'title', title: prop.title?.map((t: any) => ({ plain_text: t.plain_text })) } as NotionTitleProperty;
             break;
           case 'rich_text':
-            simplified[propKey] = { type: 'rich_text', rich_text: prop.rich_text?.map((t: any) => ({ plain_text: t.plain_text })) } as NotionRichTextProperty;
+            simplified[key] = { type: 'rich_text', rich_text: prop.rich_text?.map((t: any) => ({ plain_text: t.plain_text })) } as NotionRichTextProperty;
             break;
           case 'select':
-            simplified[propKey] = { type: 'select', select: prop.select ? { name: prop.select.name } : null } as NotionSelectProperty;
+            simplified[key] = { type: 'select', select: prop.select ? { name: prop.select.name } : null } as NotionSelectProperty;
             break;
           case 'multi_select':
-            simplified[propKey] = { type: 'multi_select', multi_select: prop.multi_select?.map((o: any) => ({ name: o.name })) } as NotionMultiSelectProperty;
+            simplified[key] = { type: 'multi_select', multi_select: prop.multi_select?.map((o: any) => ({ name: o.name })) } as NotionMultiSelectProperty;
             break;
           case 'date':
-            simplified[propKey] = { type: 'date', date: { start: prop.date?.start, end: prop.date?.end } } as NotionDateProperty;
+            simplified[key] = { type: 'date', date: { start: prop.date?.start, end: prop.date?.end } } as NotionDateProperty;
             break;
           default:
-            break; // ignore other property types to keep payload light
+            break;
         }
       }
+
       events.push({
         id: page.id,
         title,
@@ -274,17 +273,19 @@ export const useNotionScrapedCalendars = () => {
       throw new Error('Database ID is required for this calendar');
     }
 
-    setSyncStatus(prev => ({ ...prev, [calendar.id]: 'syncing' }));
+  setSyncStatus(prev => ({ ...prev, [calendar.id]: 'syncing' }));
+  // Emit start event for progress bar
+  CalendarRefreshUtils.triggerNotionRefreshStart(calendar.id);
 
     try {
   // debug removed: syncing Notion calendar start
       
-      // Direct Notion API query
-      const queryResponse = await notionAPIClient.queryDatabase(
+      // Direct Notion API fully paginated query
+      const pages = await notionAPIClient.queryAll(
         calendar.metadata.databaseId,
         calendar.metadata.token
       );
-      const apiEvents: NotionApiEvent[] = transformQueryResponse(queryResponse);
+      const apiEvents: NotionApiEvent[] = transformPages(pages as PageObjectResponse[]);
       if (apiEvents.length === 0) {
         console.warn('No events returned from Notion database query');
       }
