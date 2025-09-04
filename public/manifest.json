@@ -3,21 +3,21 @@
   "name": "HailStorm Family Calendar",
   "short_name": "PhotoCalendar",
   "description": "A family photo calendar application with weather integration",
-  "start_url": "/",
+  "start_url": "./",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#2d2d2e",
   "orientation": "any",
-  "scope": "/",
+  "scope": "./",
   "icons": [
     {
-      "src": "/assets/hailstorm-icon.svg",
+      "src": "./assets/hailstorm-icon.svg",
       "sizes": "192x192",
       "type": "image/svg+xml",
       "purpose": "any maskable"
     },
     {
-      "src": "/assets/hailstorm-icon.svg",
+      "src": "./assets/hailstorm-icon.svg",
       "sizes": "512x512",
       "type": "image/svg+xml",
       "purpose": "any maskable"
@@ -26,13 +26,13 @@
   "categories": ["productivity", "lifestyle"],
   "screenshots": [
     {
-      "src": "/assets/calendar-screen.png",
+      "src": "./assets/calendar-screen.png",
       "sizes": "1280x720",
       "type": "image/png",
       "form_factor": "wide"
     },
     {
-      "src": "/assets/calendar-screen-narrow.png",
+      "src": "./assets/calendar-screen-narrow.png",
       "sizes": "750x1334",
       "type": "image/png",
       "form_factor": "narrow"

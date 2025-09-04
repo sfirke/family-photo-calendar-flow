@@ -32,25 +32,14 @@ export const getInstalledVersion = (): InstalledVersionInfo | null => {
   try {
     const version = localStorage.getItem(INSTALLED_VERSION_KEY);
     const installDate = localStorage.getItem(INSTALL_DATE_KEY);
-    
-    if (!version) {
-      // If no installed version is tracked, assume this is the initial version
-      return {
-        version: '1.4.2', // From current version.json as baseline
-        installDate: new Date().toISOString()
-      };
-    }
-    
+    if (!version) return null;
     return {
       version,
       installDate: installDate || new Date().toISOString()
     };
   } catch (error) {
     console.error('Failed to get installed version:', error);
-    return {
-      version: '1.4.2',
-      installDate: new Date().toISOString()
-    };
+    return null;
   }
 };
 
@@ -78,15 +67,17 @@ export const setInstalledVersion = (versionInfo: Partial<InstalledVersionInfo>) 
  */
 export const getCurrentVersion = async (): Promise<string> => {
   try {
-    const response = await fetch('/version.json');
+  // Add cache-busting and respect base path under GitHub Pages
+  const base = (import.meta as unknown as { env: { BASE_URL: string } }).env?.BASE_URL || '/';
+  const response = await fetch(`${base}version.json?ts=${Date.now()}`);
     if (!response.ok) {
       throw new Error('Failed to load version.json');
     }
     const versionData = await response.json();
-    return versionData.version || '1.4.2';
+  return versionData.version || '0.0.0';
   } catch (error) {
     console.error('Failed to get current version:', error);
-    return '1.4.2';
+  return '0.0.0';
   }
 };
 
@@ -118,13 +109,14 @@ export const setStoredVersion = (version: string): void => {
  */
 export const getVersionInfo = async (): Promise<VersionInfo | null> => {
   try {
-    const response = await fetch('/version.json');
+  const base = (import.meta as unknown as { env: { BASE_URL: string } }).env?.BASE_URL || '/';
+  const response = await fetch(`${base}version.json?ts=${Date.now()}`);
     if (!response.ok) {
       throw new Error('Failed to load version.json');
     }
     const versionData = await response.json();
     return {
-      version: versionData.version || '1.4.2',
+      version: versionData.version || '0.0.0',
       buildDate: versionData.buildDate,
       gitHash: versionData.gitHash,
       buildNumber: versionData.buildNumber,
@@ -133,7 +125,7 @@ export const getVersionInfo = async (): Promise<VersionInfo | null> => {
   } catch (error) {
     console.error('Failed to get version info:', error);
     return {
-      version: '1.4.2'
+      version: '0.0.0'
     };
   }
 };
@@ -162,7 +154,6 @@ export const compareVersions = (version1: string, version2: string): number => {
 export const isUpdateAvailable = (upstreamVersion: string): boolean => {
   const installed = getInstalledVersion();
   if (!installed) return true;
-  
   return compareVersions(upstreamVersion, installed.version) > 0;
 };
 

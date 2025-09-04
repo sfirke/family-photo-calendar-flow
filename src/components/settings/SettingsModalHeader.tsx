@@ -13,7 +13,7 @@ import OfflineIndicator from '@/components/OfflineIndicator';
 
 const SettingsModalHeader = () => {
   const [versionInfo, setVersionInfo] = useState<VersionInfo | null>(null);
-  const [installedVersion, setInstalledVersion] = useState<string>('1.4.2');
+  const [installedVersion, setInstalledVersion] = useState<string>('0.0.0');
   const { getSecurityStatus } = useSecurity();
 
   useEffect(() => {
@@ -24,7 +24,7 @@ const SettingsModalHeader = () => {
         
         // Get the installed version instead of current version
         const installed = getInstalledVersion();
-        setInstalledVersion(installed?.version || '1.4.2');
+  setInstalledVersion(installed?.version || '0.0.0');
       } catch (error) {
         console.error('Failed to load version info:', error);
       }
