@@ -87,21 +87,21 @@ const EditableCalendarCard = ({
   }, [editData, isEditing, draftKey]);
 
   const handleSave = () => {
-  onUpdate(calendar.id, editData);
-    setIsEditing(false);
-  try { localStorage.removeItem(draftKey); } catch {}
-  };
+    onUpdate(calendar.id, editData);
+      setIsEditing(false);
+    try { localStorage.removeItem(draftKey); } catch (e) { /* ignore remove draft errors */ }
+    };
 
   const handleCancel = () => {
-    setEditData({
-      name: calendar.name,
-      url: calendar.url,
-  color: calendar.color,
-  syncFrequencyPerDay: calendar.syncFrequencyPerDay || 0
-    });
-    setIsEditing(false);
-  try { localStorage.removeItem(draftKey); } catch {}
-  };
+      setEditData({
+        name: calendar.name,
+        url: calendar.url,
+    color: calendar.color,
+    syncFrequencyPerDay: calendar.syncFrequencyPerDay || 0
+      });
+      setIsEditing(false);
+    try { localStorage.removeItem(draftKey); } catch (e) { /* ignore remove draft errors */ }
+    };
 
   const getSyncStatusBadge = () => {
     if (syncStatus === 'syncing') {
