@@ -13,6 +13,8 @@ export interface ICalCalendar {
   enabled: boolean;
   lastSync?: string;
   eventCount?: number;
+  // Number of automatic syncs per day (0/undefined = manual only)
+  syncFrequencyPerDay?: number;
 }
 
 export interface ICalEventOccurrence {
@@ -390,7 +392,8 @@ export const useICalCalendars = () => {
   }, [processBackgroundSyncData]);
 
   // Add a new iCal calendar
-  const addCalendar = useCallback(async (calendar: Omit<ICalCalendar, 'id'>) => {
+  // Allow optional syncFrequencyPerDay when adding
+  const addCalendar = useCallback(async (calendar: Omit<ICalCalendar, 'id'> & { syncFrequencyPerDay?: number }) => {
     if (!calendar.name || !calendar.url) {
       throw new Error('Calendar name and URL are required');
     }
@@ -422,7 +425,8 @@ export const useICalCalendars = () => {
       url: trimmedUrl,
       color: calendar.color || '#3b82f6',
       enabled: calendar.enabled !== undefined ? calendar.enabled : true,
-      eventCount: 0
+  eventCount: 0,
+  syncFrequencyPerDay: (calendar as any).syncFrequencyPerDay || 0
     };
     
     try {
@@ -748,6 +752,70 @@ export const useICalCalendars = () => {
       `Synced ${successCount}/${totalCount} calendars`
     );
   }, [calendars, syncCalendar, isBackgroundSyncSupported, triggerBackgroundSync]);
+
+  // Auto-sync scheduler: sets timeouts per calendar based on frequency
+  useEffect(() => {
+    // Clear existing timers stored on window to avoid duplication
+    const globalAny = window as any;
+    if (!globalAny.__icalAutoSyncTimers) {
+      globalAny.__icalAutoSyncTimers = new Map<string, number>();
+    }
+    const timers: Map<string, number> = globalAny.__icalAutoSyncTimers;
+    // Clear timers for calendars that no longer exist or frequency changed to 0
+    timers.forEach((timeoutId, calId) => {
+      const calendar = calendars.find(c => c.id === calId);
+      if (!calendar || !calendar.enabled || !calendar.syncFrequencyPerDay) {
+        clearTimeout(timeoutId);
+        timers.delete(calId);
+      }
+    });
+
+    calendars.forEach(calendar => {
+      if (!calendar.enabled || !calendar.syncFrequencyPerDay || calendar.syncFrequencyPerDay <= 0) return;
+      const existing = timers.get(calendar.id);
+      if (existing) return; // already scheduled
+      const intervalHours = 24 / calendar.syncFrequencyPerDay;
+      const intervalMs = intervalHours * 60 * 60 * 1000;
+      // Stagger first run slightly after mount to avoid burst; schedule next after each completion
+      const scheduleNext = () => {
+        const id = window.setTimeout(async () => {
+          try {
+            const latest = calendars.find(c => c.id === calendar.id);
+            if (latest && latest.enabled) {
+              await syncCalendar(latest);
+            }
+          } catch (e) {
+            console.warn('Auto-sync failed for calendar', calendar.id, e);
+          } finally {
+            // Reschedule
+            timers.delete(calendar.id);
+            scheduleNext();
+          }
+        }, intervalMs);
+        timers.set(calendar.id, id);
+      };
+      // Initial schedule uses a randomized jitter up to 10% of interval to spread load
+      const initialDelay = Math.min(intervalMs * 0.1, 5 * 60 * 1000) * Math.random();
+      const firstId = window.setTimeout(async () => {
+        try {
+          const latest = calendars.find(c => c.id === calendar.id);
+          if (latest && latest.enabled) {
+            await syncCalendar(latest);
+          }
+        } catch (e) {
+          console.warn('Initial auto-sync failed for calendar', calendar.id, e);
+        } finally {
+          timers.delete(calendar.id);
+          scheduleNext();
+        }
+      }, initialDelay);
+      timers.set(calendar.id, firstId);
+    });
+
+    return () => {
+      // Do not clear timers globally on unmount of effect unless component unmounts; timers map persists
+    };
+  }, [calendars, syncCalendar]);
 
   const getICalEvents = useCallback((): ICalEventOccurrence[] => {
     try {

@@ -37,6 +37,8 @@ export interface NotionCalendar {
   pageId?: string;
   resourceType?: 'page' | 'database';
   hasAccess?: boolean;
+  // Number of times per day to auto-sync (0/undefined = manual only)
+  syncFrequencyPerDay?: number;
 }
 
 // Use official SDK types
@@ -143,4 +145,5 @@ export interface NotionScrapedCalendar {
   eventCount?: number;
   type: 'notion-scraped';
   metadata?: NotionPageMetadata;
+  syncFrequencyPerDay?: number; // per-day auto-sync frequency
 }

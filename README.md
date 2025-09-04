@@ -1,88 +1,98 @@
 
-# Family Calendar - Modern Web Calendar Application
+# Family Photo Calendar Flow
 
-A sophisticated, privacy-focused family calendar application built with React and TypeScript. Features client-side encryption, automatic updates, security hardening, weather integration, photo backgrounds, and multiple calendar feed support.
+Privacy-first family calendar + rotating photo display with offline support, encrypted settings, Notion + iCal aggregation, background sync, weather, and installable PWA – all running 100% in the browser (no backend required).
 
-![Family Calendar Screenshot](public/placeholder.svg)
+![Calendar Screenshot Placeholder](public/screenshots/calendar-screen.png)
+*Main calendar interface (placeholder illustration – replace with a real screenshot)*
 
-## 🌟 Features
+![Settings Modal Placeholder](public/screenshots/calendar-screenshot-setting.png)
+*Settings modal with tabbed navigation (placeholder illustration)*
 
-### 📅 Calendar Management
-- **Multiple View Modes**: Month, Week, and Timeline views with responsive design
-- **iCal Feed Support**: Import external calendar feeds (Google Calendar, Outlook, etc.)
-- **Local Event Management**: Create, edit, and delete events locally
-- **Smart Event Filtering**: Filter events by calendar source
-- **Recurring Events**: Full support for recurring event patterns
+## 🌟 Feature Overview
+
+### 📅 Calendars & Events
+
+- Month, Week, and Timeline views (responsive)
+- iCal feed support (Google Calendar, Outlook, iCloud, etc.)
+- Notion database scraping (multiple pages via automatic pagination)
+- Local events (fully offline capable)
+- Integrated unified event layer (merges local + feeds + Notion)
+- Fast filtering by calendar sources
+- Recurring event expansion (RRULE parsing)
+- Day modal & timeline drill‑downs
 
 ### 🔒 Security & Privacy
-- **Client-Side Encryption**: AES-256-GCM encryption for sensitive data
-- **Password Protection**: Secure your API keys and personal information
-- **Input Validation**: Comprehensive validation against XSS and injection attacks
-- **Path Traversal Protection**: URL validation against directory traversal attacks
-- **API Key Security**: Format validation and secure handling of API keys
-- **No Server Required**: All data stored locally in your browser
-- **PBKDF2 Key Derivation**: Industry-standard password-based encryption
 
-### 🔄 Automatic Updates
-- **Dual Update System**: Service Worker updates + GitHub Releases integration
-- **Smart Detection**: Automatic detection of both immediate and upstream updates
-- **Background Checks**: Hourly checks for GitHub releases with intelligent caching
-- **Update Dashboard**: Comprehensive update status in settings with version comparison
-- **Release Notes**: Display detailed release notes from GitHub releases
-- **One-Click Updates**: Easy installation of service worker updates
-- **Version Tracking**: Semantic version comparison and update type detection
+- Client-side encryption (AES‑256‑GCM) for sensitive settings
+- PBKDF2 key derivation – keys never written to disk
+- Optional password lock for protected settings (weather location, album URLs, etc.)
+- Strict input validation & sanitization (XSS / traversal / protocol guards)
+- No external servers: all persistence in local browser storage (IndexedDB + localStorage)
 
-### 🌤️ Weather Integration
-- **Weather Overlays**: See weather information on calendar dates
-- **National Weather Service Only**: Simplified to a single free provider (no API key required)
-- **Location-Based**: Automatic geolocation with optional manual coordinates
-- **Forecast Display**: Extended weather forecasts for planning
+### 🚀 Progressive Web App & Updates
 
-### 📸 Photo Backgrounds
-- **Google Photos Integration**: Use your photo albums as rotating backgrounds
-- **Dynamic Rotation**: Photos change automatically at configurable intervals
-- **Cache Management**: Intelligent photo caching for offline usage
-- **Privacy Focused**: Direct integration without third-party services
+- Installable PWA (offline-first)
+- Service worker asset updates (auto detection + in‑app notification)
+- Version JSON manifest (`public/version.json`)
+- Lightweight top progress bar reflects real sync phases (start → complete)
+- (Optional) Upstream release comparison (GitHub) – can be re‑enabled if needed
 
-### 🔄 Synchronization
-- **Background Sync**: Automatic calendar updates when online
-- **Offline Support**: Full functionality without internet connection
-- **PWA Support**: Install as a native app on any device
-- **Service Worker**: Intelligent caching and background updates
+### 🌤️ Weather
 
-## 🏗️ Architecture
+- National Weather Service (no API key required)
+- Auto geolocation (fallback to manual lat,long)
+- Daily + extended forecasts (cached)
+- Offline reuse of last-known forecast
+
+### 📸 Rotating Photo Backgrounds
+
+- Google Photos public album scraping
+- Lightweight heuristic filtering (skips profile/UI artifacts, tiny images <50px)
+- Interval-based rotation & prefetch
+- Local caching for offline continuity
+
+### 🔄 Sync & Performance
+
+- Background refresh for feeds & Notion sources
+- Start/complete phase events for accurate loader timing
+- IndexedDB event cache
+- Graceful offline behavior (reads cached events + photos)
+
+## 🏗️ Architecture Snapshot
 
 ### Frontend Stack
-- **React 18** - Modern React with hooks and context
-- **TypeScript** - Full type safety and IntelliSense
-- **Vite** - Fast development and optimized builds
-- **Tailwind CSS** - Utility-first styling with responsive design
-- **Shadcn/UI** - Beautiful, accessible component library
 
-### Data Management
-- **Context API** - Centralized state management
-- **LocalStorage** - Persistent data storage with encryption
-- **IndexedDB** - Large data caching (photos, events)
-- **Web Crypto API** - Client-side encryption
+- React 18 + TypeScript
+- Vite build tooling
+- Tailwind CSS + shadcn/ui + Radix primitives
+- Custom hook-driven modular data layer
+
+### Data & Storage
+
+- React Context + custom hooks
+- IndexedDB (events, photos)
+- localStorage (lightweight flags + encrypted blobs)
+- Web Crypto API abstraction layer
 
 ### Security Implementation
-- **AES-256-GCM** - Authenticated encryption for data
-- **PBKDF2** - Password-based key derivation (100,000 iterations)
-- **Input Validation** - Comprehensive sanitization and validation
-- **XSS Prevention** - Text sanitization and dangerous protocol detection
-- **Random Salt Generation** - Unique encryption salt per user
-- **Session-Based Keys** - Encryption keys never persisted
 
-### Update Management
-- **Version Manager** - Centralized version tracking and comparison
-- **Update Manager** - Dual-layer update detection (Service Worker + GitHub)
-- **GitHub Integration** - API integration for upstream release checking
-- **Semantic Versioning** - Proper version comparison and update type detection
-- **Caching System** - Intelligent caching of version data with hourly refresh
+- AES-256-GCM
+- PBKDF2 (100k iterations)
+- Random per-user salt + per-encryption IV
+- Sanitizers for URL & text inputs
+- Ephemeral in‑memory key lifecycle
+
+### Update / Versioning Layer
+
+- Service worker + version manifest
+- Optional GitHub release polling (currently minimized)
+- UI toast + in-app notification pattern
 
 ## 🚀 Quick Start
 
 ### Prerequisites
+
 - **Node.js** 18.0 or higher
 - **npm** or **yarn** package manager
 - Modern web browser with Web Crypto API support
@@ -90,25 +100,31 @@ A sophisticated, privacy-focused family calendar application built with React an
 ### Installation
 
 1. **Clone the repository**
+
    ```bash
    git clone https://github.com/your-username/family-calendar.git
    cd family-calendar
    ```
 
-2. **Install dependencies**
-   ```bash
-   npm install
-   # or
-   yarn install
-   ```
-3. **Start development server**
-   ```bash
-   npm run dev
-   # or
-   yarn dev
-   ```
 
-4. **Open your browser**
+2. **Install dependencies**
+
+```bash
+npm install
+# or
+yarn install
+```
+
+1. **Start development server**
+
+```bash
+npm run dev
+# or
+yarn dev
+```
+
+1. **Open your browser**
+
    Navigate to `http://localhost:5173`
 
 ### Building for Production
@@ -121,47 +137,249 @@ npm run build
 npm run preview
 ```
 
-## Deployment (GitHub Pages)
+## 🌐 Hosting & CI/CD (GitHub Pages + Workflows)
 
-This project is configured to deploy automatically to **GitHub Pages** when changes are pushed to the `main` branch.
+This repository ships with a fully automated GitHub Actions pipeline covering: build/test/lint/security, auto & manual releases, and GitHub Pages deployment.
 
-### How it works
+### 🔁 Overview Matrix
 
-1. The workflow in `.github/workflows/deploy-pages.yml` runs on every push to `main` (and can be triggered manually).
-2. It installs dependencies, lints, runs tests, and builds the site with a dynamic Vite base path of `/<repo-name>/`.
-3. The built `dist` folder is uploaded as a Pages artifact and then deployed using the official `actions/deploy-pages` action.
+| Area | File | Trigger | Purpose |
+|------|------|---------|---------|
+| Deploy (Pages) | `.github/workflows/deploy-pages.yml` | push to `main`, manual dispatch | Builds & publishes `dist/` to GitHub Pages |
+| CI (quality) | `.github/workflows/ci.yml` | push & PR to `main` | Lint, tests (Node 18 & 20), security audit |
+| Auto release | `.github/workflows/auto-release.yml` | push to `main` (filtered) | Semantic-ish auto bump + tag + release + `version.json` update |
+| Manual release | `.github/workflows/release.yml` | manual (workflow_dispatch) | Controlled version bump & changelog generation |
 
-### Accessing the site
+---
 
-Once enabled in your repository settings (Settings → Pages → Source: GitHub Actions), the site is configured for the custom domain:
+### 🚀 GitHub Pages Deployment
 
+The app deploys automatically on each push to `main` using `deploy-pages.yml`.
+
+Key characteristics:
+
+- Concurrency guarded (only one deployment runs at a time)
+- Uses Node `24.1.0` (aligns with `package.json` engines for production build)
+- Builds with `vite build --base=/` because a custom domain + `public/CNAME` is present
+- Adds `.nojekyll` & copies `CNAME` into `dist/`
+
+#### 1. Enable Pages
+
+In the GitHub repository UI:
+
+1. Settings → Pages
+2. Source: GitHub Actions (this workflow handles deployment)
+
+#### 2. Custom Domain (Optional)
+
+Add a DNS CNAME record:
+
+```text
+calendar  CNAME  <your-username>.github.io
 ```
-https://calendar.willineau.com
-```
 
-Make sure you add the appropriate DNS records (see below).
+Then keep (or create) `public/CNAME` containing your domain (already present for this repo).
 
-### Local preview with the Pages base path
+#### 3. Forking / Using Under a Project Page
 
-Local preview (custom domain uses root path so default preview works):
+If you are *not* using a custom domain (project page like `https://<user>.github.io/<repo>/`):
+
+1. Delete or rename `public/CNAME`
+1. Change build step in `deploy-pages.yml` to:
+
+   ```bash
+   npx vite build --base="/${{ github.event.repository.name }}/"
+   ```
+
+1. Or add a script in `package.json`:
+
+   ```json
+   "build:pages": "vite build --base=/${npm_package_name}/" 
+   ```
+
+1. Update workflow to run `npm run build:pages` instead of the current custom build command.
+
+#### 4. Local Preview
 
 ```bash
-npm run build && npm run preview
+npm run build
+npm run preview
 ```
 
-### Notes
+#### 5. Common Deployment Adjustments
 
-- A `.nojekyll` file is added during deployment to avoid GitHub Pages ignoring files that start with an underscore.
-- Custom domain `CNAME` file (`public/CNAME`) ensures GitHub Pages serves at `calendar.willineau.com`.
-- DNS: Create a CNAME record `calendar` pointing to `<username>.github.io` (e.g. `cardner.github.io`).
-- If you fork this repo, change or remove the `CNAME` file; otherwise Pages will fail for the fork.
+| Goal | Change |
+|------|--------|
+| Use different Node version | Update `node-version` in workflow(s) |
+| Add environment banner | Inject `VITE_APP_ENV` via build step (`echo 'VITE_APP_ENV=prod' >> $GITHUB_ENV`) |
+| Skip lint/tests on deploy | Remove or comment out steps (not recommended) |
+| Force re-deploy only | Re-run workflow manually (Actions → Deploy to GitHub Pages → Run workflow) |
 
-## ⚙️ Configuration
+---
 
-### Update System Setup
-1. **GitHub Repository**: Configure in `src/utils/upstreamVersionManager.ts`
-2. **Update Frequency**: Modify check intervals in version manager utilities
-3. **Update Notifications**: Customize toast and notification settings
+### ✅ CI Quality Pipeline (`ci.yml`)
+
+Jobs:
+
+1. `validate-commits` (PR only): commitlint checks conventional commit style
+2. `test` (matrix Node 18 & 20): install → ESLint → Vitest → build → upload build artifact (Node 18 only)
+3. `security`: `npm audit` (auto-fix high severity where possible). Fails build if high/critical vulnerabilities remain.
+
+Notes:
+
+- Engines mismatch: production deploy uses Node 24.1.0; CI tests 18 & 20. Align if features rely on Node 20+ APIs.
+- Commitlint only runs in PR context (push to `main` bypasses it). Enable for pushes if desired.
+
+---
+
+### 🤖 Auto Release (`auto-release.yml`)
+
+Runs on push to `main` excluding docs / config changes. Skips if commit message contains `[skip-release]` or is itself a release commit (`chore(release)`).
+
+Flow:
+
+1. Install deps
+2. Attempt security auto-fix
+3. Run tests
+4. Gate on high/critical vulnerabilities
+5. Decide bump type:
+   - BREAKING CHANGE / `!` → major
+   - `feat:` → minor
+   - else → patch
+6. Safely find next available version tag (avoids collisions)
+7. Update `public/version.json` (increments `buildNumber`, adds git hash & timestamp)
+8. Commit with `[skip-release]` to prevent recursion
+9. Create tag + GitHub Release with minimal notes
+
+Commit message examples:
+
+| Commit | Resulting Bump |
+|--------|----------------|
+| `feat(calendar): add multi-select` | minor |
+| `fix(photos): handle empty album` | patch |
+| `refactor: optimize query` | patch |
+| `feat!: change encryption default` | major |
+
+Disable auto release: rename file, change `on.push`, or add a path filter.
+
+---
+
+### 🎛 Manual Release (`release.yml`)
+
+Triggered via Actions → Release → Run workflow (inputs available):
+
+- `version_type`: `auto | patch | minor | major`
+- `skip_tests`: boolean
+
+Pipeline uses composite actions (setup, version, changelog, git ops) then creates a full GitHub Release with optional build artifact zip.
+
+Use manual release when:
+
+- You want a curated changelog
+- Bundling multiple small commits into one semantic version
+- Overriding auto bump logic
+
+---
+
+### 🔄 Version & Build Metadata
+
+`public/version.json` is the canonical runtime version manifest (used by in‑app update detection). Auto & manual releases should keep this file current. If you create custom pipelines, be sure to update:
+
+```json
+{
+  "version": "x.y.z",
+  "buildDate": "ISO-8601",
+  "gitHash": "shortSHA",
+  "buildNumber": <int>,
+  "environment": "production"
+}
+```
+
+Incrementing `buildNumber` helps the PWA detect asset freshness even if semantic version stays constant.
+
+---
+
+### 🔐 Secrets & Permissions
+
+Current workflows rely only on the default `GITHUB_TOKEN`.
+
+Add secrets (e.g. `NOTION_API_KEY`) by:
+
+1. Settings → Secrets and variables → Actions → New repository secret
+2. Reference in workflow: `${{ secrets.NOTION_API_KEY }}`
+
+Avoid printing secret-derived values to logs.
+
+---
+
+### 🧪 Recommended Pre-Deployment Checklist
+
+1. `npm run lint`
+2. `npm test`
+3. `npm run build` (verify no warnings you care about)
+4. Open `dist/` via `npm run preview`
+5. Increment version (manual or rely on auto release)
+
+---
+
+### 🛠 Migrating to Another Host
+
+For Netlify / Vercel:
+
+| Platform | Build Command | Publish Dir | Extra |
+|----------|---------------|-------------|-------|
+| Netlify | `npm run build` | `dist` | Set environment vars in dashboard |
+| Vercel | `npm run build` | `dist` | Add `"output": "export"` if using static export features |
+
+Ensure you remove GitHub Pages specific `--base` overrides if you add them for project pages.
+
+---
+
+### 🧹 Disabling Components
+
+| Need | Action |
+|------|--------|
+| Stop auto releases | Delete / rename `auto-release.yml` |
+| Skip security audit | Remove `security` job in `ci.yml` |
+| Keep manual only | Use `release.yml` exclusively |
+| Disable Pages | Turn off in Settings → Pages + remove workflow |
+
+---
+
+### ⚠️ Common Hosting Pitfalls
+
+| Issue | Cause | Fix |
+|-------|-------|-----|
+| Blank screen after deploy | Wrong `--base` path | Match `--base` to deployment URL or `/` for custom domain |
+| Old assets served | SW cache not updated | Hard refresh or bump `buildNumber` in `version.json` |
+| Release not created | Commit message filtered | Remove `[skip-release]` or adjust auto release conditions |
+| CSS missing | Dist not deployed fully | Ensure `dist/` artifact includes all assets |
+
+---
+
+### 📌 TL;DR
+
+Push to `main` → CI validates → Auto release (if eligible) bumps version & publishes → Pages deploy updates live site.
+
+Manual override always possible via Release workflow & re-run of Deploy workflow.
+
+## ⚙️ Configuration & Setup
+
+### Notion Integration (Scraped Calendars)
+
+1. Create a Notion database with event rows (Date / Title fields recommended)
+2. Share the database with the integration token you generate
+3. Add the Notion API key & database ID in Settings → Calendars (encrypted if security enabled)
+4. The app automatically paginates all results (no 100-item cap)
+5. Events appear merged with other sources
+
+### Update System (Optional Advanced)
+
+If you re‑enable upstream release checks:
+
+1. Set repository owner/name in the version manager utility
+2. Ensure `public/version.json` syncs with build version
+3. Service worker will prompt when assets change
 
 ### Weather Setup
 
@@ -189,7 +407,7 @@ npm run build && npm run preview
 
 ## 🔧 Development
 
-### Project Structure
+### Project Structure (High-Level)
 
 ```text
 src/
@@ -219,14 +437,10 @@ src/
 - `encryption.ts` - Web Crypto API utilities
 - `inputValidation.ts` - Input sanitization and validation
 
-#### Update Management System
+#### Progress & Sync Feedback
 
-- `versionManager.ts` - Version tracking and comparison utilities
-- `upstreamVersionManager.ts` - GitHub API integration and upstream checking
-- `updateManager.ts` - Centralized update detection and management
-- `useUpdateManager.tsx` - React hook for update management
-- `UpdateNotification.tsx` - Update notification component
-- `UpdateTab.tsx` - Settings panel for update management
+- Top progress bar (portal, high z-index, phased animation)
+- Events dispatched via custom `calendar-refresh` with `phase: 'start' | 'complete'`
 
 #### Calendar System
 
@@ -236,8 +450,8 @@ src/
 
 #### Settings System
 
-- `SettingsModal.tsx` - Main configuration interface
-- `SettingsContext.tsx` - Settings state management
+- `SettingsModal.tsx` (tabbed: Calendars, Photos, Display, Weather, Security)
+- Footer with manual global refresh
 
 ### Testing
 
@@ -287,7 +501,7 @@ npm run test:e2e
 - **Limitations**: Not protected against malware or browser vulnerabilities
 - **Recovery**: No password recovery - users must remember passwords
 
-## 🔄 Update Management
+## 🔄 Update Management (Condensed)
 
 ### Update Detection System
 
@@ -311,19 +525,11 @@ npm run test:e2e
 - **Update Types**: Classification of updates as major, minor, or patch
 - **Rollback Support**: Version history and rollback capabilities
 
-## 🌐 Deployment
-
-### Lovable Platform (Recommended)
-
-1. **Publish**: Click "Publish" in the Lovable editor
-2. **Custom Domain**: Configure your domain in Project Settings
-3. **SSL**: Automatic HTTPS certificate provisioning
-
-### Self-Hosting
+## 🛠 Self-Hosting Notes
 
 ```bash
 # Build for production
-npm run build
+yarn run build
 
 # Deploy dist/ folder to your web server
 # Ensure HTTPS is enabled for Web Crypto API
@@ -382,7 +588,7 @@ EXPOSE 80
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🆘 Support
+## 🆘 Support & Troubleshooting
 
 ### Common Issues
 
@@ -415,4 +621,4 @@ See [CHANGELOG.md](CHANGELOG.md) for detailed version history and updates.
 
 ---
 
-Built with ❤️ for families who value privacy, security, and functionality.
+Built with ❤️ for families who value privacy, security, and calm, reliable planning.

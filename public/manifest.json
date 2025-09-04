@@ -26,13 +26,13 @@
   "categories": ["productivity", "lifestyle"],
   "screenshots": [
     {
-      "src": "./assets/calendar-screen.png",
+      "src": "./assets/screenshots/calendar-screen.png",
       "sizes": "1280x720",
       "type": "image/png",
       "form_factor": "wide"
     },
     {
-      "src": "./assets/calendar-screen-narrow.png",
+      "src": "./assets/screenshots/calendar-screen-narrow.png",
       "sizes": "750x1334",
       "type": "image/png",
       "form_factor": "narrow"

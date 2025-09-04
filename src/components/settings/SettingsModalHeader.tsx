@@ -5,13 +5,18 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog';
-import { Info } from 'lucide-react';
+import { Info, X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { useSecurity } from '@/contexts/security/SecurityContext';
-import { getInstalledVersion, getVersionInfo } from '@/utils/versionManager';
+import { getVersionInfo } from '@/utils/versionManager';
 import { VersionInfo } from '@/types/ical';
 import OfflineIndicator from '@/components/OfflineIndicator';
 
-const SettingsModalHeader = () => {
+interface SettingsModalHeaderProps {
+  onClose?: () => void;
+}
+
+const SettingsModalHeader = ({ onClose }: SettingsModalHeaderProps) => {
   const [versionInfo, setVersionInfo] = useState<VersionInfo | null>(null);
   const [installedVersion, setInstalledVersion] = useState<string>('0.0.0');
   const { getSecurityStatus } = useSecurity();
@@ -19,12 +24,9 @@ const SettingsModalHeader = () => {
   useEffect(() => {
     const loadVersionInfo = async () => {
       try {
-        const info = await getVersionInfo();
-        setVersionInfo(info);
-        
-        // Get the installed version instead of current version
-        const installed = getInstalledVersion();
-  setInstalledVersion(installed?.version || '0.0.0');
+  const info = await getVersionInfo();
+  setVersionInfo(info);
+  setInstalledVersion(info?.version || 'unknown');
       } catch (error) {
         console.error('Failed to load version info:', error);
       }
@@ -34,8 +36,8 @@ const SettingsModalHeader = () => {
   }, []);
 
   return (
-    <DialogHeader>
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-0">
+  <DialogHeader className="sticky top-0 z-20 bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm border-b border-gray-200 dark:border-gray-700 -mx-4 sm:-mx-6 px-4 sm:px-6 pt-6 pb-3">
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2 sm:gap-0">
         <div>
           <DialogTitle className="text-gray-900 dark:text-gray-100 text-lg sm:text-xl">App Settings</DialogTitle>
           <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mt-1">
@@ -50,14 +52,23 @@ const SettingsModalHeader = () => {
                 Built: {new Date(versionInfo.buildDate).toLocaleDateString()}
               </span>
             )}
-            {versionInfo?.gitHash && versionInfo.gitHash !== 'unknown' && (
-              <span className="text-xs font-mono text-gray-500 dark:text-gray-400 sm:ml-2">
-                #{versionInfo.gitHash.substring(0, 7)}
-              </span>
-            )}
           </div>
         </div>
-        <OfflineIndicator />
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          <OfflineIndicator />
+          {onClose && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={onClose}
+              aria-label="Close settings"
+              className="h-8 w-8 p-0 rounded-full"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
       </div>
       <DialogDescription className="text-gray-600 dark:text-gray-400 text-sm sm:text-base">
         <span>Configure your family calendar app preferences and manage your calendar feeds</span>

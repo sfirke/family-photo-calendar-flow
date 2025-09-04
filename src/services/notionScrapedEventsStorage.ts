@@ -2,7 +2,7 @@
 import { NotionScrapedEvent, NotionScrapedCalendar } from '@/types/notion';
 
 const DB_NAME = 'NotionScrapedEventsDB';
-const DB_VERSION = 2; // Increment version for new schema
+const DB_VERSION = 3; // Increment version for new schema (added syncFrequencyPerDay on calendars)
 const CALENDARS_STORE = 'calendars';
 const EVENTS_STORE = 'events';
 
@@ -26,6 +26,20 @@ class NotionScrapedEventsStorage {
         if (!db.objectStoreNames.contains(CALENDARS_STORE)) {
           const calendarsStore = db.createObjectStore(CALENDARS_STORE, { keyPath: 'id' });
           calendarsStore.createIndex('enabled', 'enabled', { unique: false });
+          calendarsStore.createIndex('syncFrequencyPerDay', 'syncFrequencyPerDay', { unique: false });
+        } else {
+          // Upgrade existing calendar store with new index if missing
+          const transaction = (event.target as IDBOpenDBRequest).transaction;
+          if (transaction) {
+            const calendarsStore = transaction.objectStore(CALENDARS_STORE);
+            try {
+              if (!calendarsStore.indexNames.contains('syncFrequencyPerDay')) {
+                calendarsStore.createIndex('syncFrequencyPerDay', 'syncFrequencyPerDay', { unique: false });
+              }
+            } catch (e) {
+              // ignore if already exists
+            }
+          }
         }
 
         // Create events store if it doesn't exist

@@ -9,6 +9,12 @@ export interface ICalCalendar {
   eventCount?: number;
   hasEvents?: boolean;
   source?: string;
+  /**
+   * Number of times per day this calendar should auto-sync.
+   * 0 or undefined means manual only.
+   * Example values: 1,2,4,6,8,12,24
+   */
+  syncFrequencyPerDay?: number;
 }
 
 export interface SyncStatus {

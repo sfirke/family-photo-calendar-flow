@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -7,6 +7,7 @@ import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Edit2, Save, X, RefreshCw, Trash2, ExternalLink } from 'lucide-react';
 import { ICalCalendar } from '@/types/ical';
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
 
 const CALENDAR_COLORS = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899'];
 
@@ -14,6 +15,7 @@ interface EditData {
   name: string;
   url: string;
   color: string;
+  syncFrequencyPerDay?: number;
 }
 
 interface EditableCalendarCardProps {
@@ -39,21 +41,66 @@ const EditableCalendarCard = ({
   const [editData, setEditData] = useState<EditData>({
     name: calendar.name,
     url: calendar.url,
-    color: calendar.color
+  color: calendar.color,
+  syncFrequencyPerDay: calendar.syncFrequencyPerDay || 0
   });
+  const ORIGINAL_REF = useRef(calendar);
+  const draftKey = `calendar_edit_draft_${calendar.id}`;
+
+  // Load draft on mount (auto-enter editing if draft present)
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(draftKey);
+      if (raw) {
+        const draft = JSON.parse(raw) as EditData;
+        // Basic validation: ensure URL or name differs before applying
+        const differs = draft.url !== calendar.url || draft.name !== calendar.name || draft.color !== calendar.color || draft.syncFrequencyPerDay !== calendar.syncFrequencyPerDay;
+        if (differs) {
+          setEditData(draft);
+          setIsEditing(true);
+        } else {
+          // Cleanup stale identical draft
+          localStorage.removeItem(draftKey);
+        }
+      }
+    } catch (e) {
+      // ignore
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [calendar.id]);
+
+  // Persist draft while editing
+  useEffect(() => {
+    if (!isEditing) return;
+    const original = ORIGINAL_REF.current;
+    const changed = editData.name !== original.name || editData.url !== original.url || editData.color !== original.color || (editData.syncFrequencyPerDay || 0) !== (original.syncFrequencyPerDay || 0);
+    if (changed) {
+      try {
+        localStorage.setItem(draftKey, JSON.stringify(editData));
+      } catch (e) {
+        // ignore persistence errors
+      }
+    } else {
+      // If user reverted back to original values, remove draft
+      localStorage.removeItem(draftKey);
+    }
+  }, [editData, isEditing, draftKey]);
 
   const handleSave = () => {
-    onUpdate(calendar.id, editData);
+  onUpdate(calendar.id, editData);
     setIsEditing(false);
+  try { localStorage.removeItem(draftKey); } catch {}
   };
 
   const handleCancel = () => {
     setEditData({
       name: calendar.name,
       url: calendar.url,
-      color: calendar.color
+  color: calendar.color,
+  syncFrequencyPerDay: calendar.syncFrequencyPerDay || 0
     });
     setIsEditing(false);
+  try { localStorage.removeItem(draftKey); } catch {}
   };
 
   const getSyncStatusBadge = () => {
@@ -110,6 +157,27 @@ const EditableCalendarCard = ({
                     />
                   ))}
                 </div>
+                <div className="mt-3">
+                  <label className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1 block">Auto Sync (per day)</label>
+                  <Select
+                    value={String(editData.syncFrequencyPerDay || 0)}
+                    onValueChange={(val) => setEditData(prev => ({ ...prev, syncFrequencyPerDay: Number(val) }))}
+                  >
+                    <SelectTrigger className="h-8 text-xs bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600">
+                      <SelectValue placeholder="Manual only" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="0">Manual only</SelectItem>
+                      <SelectItem value="1">1 / day</SelectItem>
+                      <SelectItem value="2">2 / day (every 12h)</SelectItem>
+                      <SelectItem value="4">4 / day (every 6h)</SelectItem>
+                      <SelectItem value="6">6 / day (every 4h)</SelectItem>
+                      <SelectItem value="8">8 / day (every 3h)</SelectItem>
+                      <SelectItem value="12">12 / day (every 2h)</SelectItem>
+                      <SelectItem value="24">24 / day (hourly)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             ) : (
               <>
@@ -124,6 +192,9 @@ const EditableCalendarCard = ({
                   <p className="text-xs text-gray-400 dark:text-gray-500">
                     Last synced: {new Date(calendar.lastSync).toLocaleString()}
                     {calendar.eventCount !== undefined && ` • ${calendar.eventCount} events`}
+                    {typeof calendar.syncFrequencyPerDay === 'number' && calendar.syncFrequencyPerDay > 0 && (
+                      <> • Auto: {calendar.syncFrequencyPerDay}/day</>
+                    )}
                   </p>
                 )}
               </>

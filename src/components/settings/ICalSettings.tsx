@@ -50,7 +50,8 @@ const ICalSettings = ({
     name: '',
     url: '',
     color: CALENDAR_COLORS[0],
-    enabled: true
+  enabled: true,
+  syncFrequencyPerDay: 0
   });
 
   // Debug logging for calendar state
@@ -178,7 +179,8 @@ const ICalSettings = ({
         name: '',
         url: '',
         color: CALENDAR_COLORS[0],
-        enabled: true
+  enabled: true,
+  syncFrequencyPerDay: 0
       });
       setShowAddDialog(false);
     } catch (error) {
@@ -381,6 +383,25 @@ const ICalSettings = ({
                 </div>
               </div>
               <div className="flex justify-end gap-2">
+                <div className="flex-1">
+                  <Label className="text-gray-700 dark:text-gray-300">Auto Sync (per day)</Label>
+                  <select
+                    value={newCalendar.syncFrequencyPerDay}
+                    onChange={(e) => setNewCalendar(prev => ({ ...prev, syncFrequencyPerDay: Number(e.target.value) }))}
+                    className="mt-1 w-full h-10 rounded-md border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 px-3 text-sm text-gray-900 dark:text-gray-100 focus:outline-none"
+                  >
+                    <option value={0}>Manual only</option>
+                    <option value={1}>1 / day</option>
+                    <option value={2}>2 / day (12h)</option>
+                    <option value={4}>4 / day (6h)</option>
+                    <option value={6}>6 / day (4h)</option>
+                    <option value={8}>8 / day (3h)</option>
+                    <option value={12}>12 / day (2h)</option>
+                    <option value={24}>24 / day (hourly)</option>
+                  </select>
+                </div>
+                </div>
+                <div className="flex justify-end gap-2">
                 <Button
                   variant="outline"
                   onClick={() => setShowAddDialog(false)}
