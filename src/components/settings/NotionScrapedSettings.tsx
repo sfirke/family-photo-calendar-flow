@@ -36,6 +36,7 @@ const NotionScrapedSettings = ({ selectedCalendarIds, onToggleSelection }: Notio
         url: data.url, 
         color: data.color,
         enabled: true,
+  syncFrequencyPerDay: 0,
         metadata: {
           token: data.token,
           databaseId: data.databaseId,
@@ -102,6 +103,15 @@ const NotionScrapedSettings = ({ selectedCalendarIds, onToggleSelection }: Notio
     } catch (error) {
       console.error('Error syncing all calendars:', error);
       toast.error('Failed to sync calendars');
+    }
+  };
+
+  const handleUpdateFrequency = async (id: string, freq: number) => {
+    try {
+      await updateCalendar(id, { syncFrequencyPerDay: freq });
+      toast.success(freq ? `Auto sync set to ${freq}/day` : 'Auto sync disabled');
+    } catch (e) {
+      toast.error('Failed to update frequency');
     }
   };
 
@@ -199,7 +209,8 @@ const NotionScrapedSettings = ({ selectedCalendarIds, onToggleSelection }: Notio
               enabled: calendar.enabled,
               eventCount: calendar.eventCount || 0,
               lastSync: calendar.lastSync,
-              type: calendar.type
+              type: calendar.type,
+              syncFrequencyPerDay: calendar.syncFrequencyPerDay
             }}
             onToggle={handleToggleCalendar}
             onDelete={handleDeleteCalendar}
@@ -207,6 +218,7 @@ const NotionScrapedSettings = ({ selectedCalendarIds, onToggleSelection }: Notio
             isSyncing={syncStatus[calendar.id] === 'syncing'}
             isSelected={selectedCalendarIds.includes(calendar.id)}
             onToggleSelection={handleToggleSelection}
+            onUpdateFrequency={handleUpdateFrequency}
           />
         ))}
       </div>

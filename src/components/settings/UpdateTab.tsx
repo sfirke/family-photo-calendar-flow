@@ -71,25 +71,6 @@ const UpdateTab = () => {
       {/* Information */}
       <UpdateInfoSection />
 
-      {/* Manual Refresh */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Manual Refresh</CardTitle>
-          <CardDescription>
-            Refresh the application to reload all components and clear cache
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Button 
-            onClick={handleRefreshApp}
-            variant="outline"
-            className="w-full"
-          >
-            <RefreshCw className="mr-2 h-4 w-4" />
-            Refresh Application
-          </Button>
-        </CardContent>
-      </Card>
     </div>
   );
 };

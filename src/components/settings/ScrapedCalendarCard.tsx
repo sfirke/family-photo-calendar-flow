@@ -15,6 +15,7 @@ export interface ScrapedCalendarData {
   eventCount: number;
   lastSync?: string;
   type: 'notion-scraped';
+  syncFrequencyPerDay?: number;
 }
 
 interface ScrapedCalendarCardProps {
@@ -25,6 +26,7 @@ interface ScrapedCalendarCardProps {
   isSyncing?: boolean;
   isSelected?: boolean;
   onToggleSelection?: (id: string, selected: boolean) => void;
+  onUpdateFrequency?: (id: string, freq: number) => void;
 }
 
 const ScrapedCalendarCard = ({ 
@@ -34,7 +36,8 @@ const ScrapedCalendarCard = ({
   onSync, 
   isSyncing = false,
   isSelected = false,
-  onToggleSelection
+  onToggleSelection,
+  onUpdateFrequency
 }: ScrapedCalendarCardProps) => {
   const handleToggle = (checked: boolean) => {
     onToggle(calendar.id, checked);
@@ -138,6 +141,33 @@ const ScrapedCalendarCard = ({
             <RefreshCw className={`h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
             {isSyncing ? 'Syncing...' : 'Sync Now'}
           </Button>
+        </div>
+
+        {/* Auto Sync Frequency */}
+        <div className="space-y-1">
+          <label className="text-sm font-medium flex items-center gap-2">
+            Auto Sync (per day)
+            {calendar.syncFrequencyPerDay ? (
+              <Badge variant="secondary">{calendar.syncFrequencyPerDay}/day</Badge>
+            ) : (
+              <Badge variant="outline">Manual</Badge>
+            )}
+          </label>
+          <select
+            value={calendar.syncFrequencyPerDay || 0}
+            onChange={e => onUpdateFrequency && onUpdateFrequency(calendar.id, Number(e.target.value))}
+            className="w-full h-8 rounded border border-gray-300 bg-white text-xs px-2"
+            disabled={!calendar.enabled}
+          >
+            <option value={0}>Manual only</option>
+            <option value={1}>1 / day</option>
+            <option value={2}>2 / day (12h)</option>
+            <option value={4}>4 / day (6h)</option>
+            <option value={6}>6 / day (4h)</option>
+            <option value={8}>8 / day (3h)</option>
+            <option value={12}>12 / day (2h)</option>
+            <option value={24}>24 / day (hourly)</option>
+          </select>
         </div>
       </CardContent>
 

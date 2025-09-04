@@ -7,6 +7,8 @@ interface CalendarFeed {
   enabled: boolean;
   lastSync?: string;
   eventCount?: number;
+  // Number of times per day to sync automatically (0/undefined = manual only)
+  syncFrequencyPerDay?: number;
 }
 
 class CalendarStorageService {

@@ -576,6 +576,63 @@ export const useNotionScrapedCalendars = () => {
     loadEvents();
   }, [loadCalendars, loadEvents]);
 
+  // Auto-sync scheduler for Notion calendars based on syncFrequencyPerDay
+  useEffect(() => {
+    const globalAny = window as any;
+    if (!globalAny.__notionAutoSyncTimers) {
+      globalAny.__notionAutoSyncTimers = new Map<string, number>();
+    }
+    const timers: Map<string, number> = globalAny.__notionAutoSyncTimers;
+
+    // Clear timers for calendars no longer applicable
+    timers.forEach((timeoutId, calId) => {
+      const cal = calendars.find(c => c.id === calId);
+      if (!cal || !cal.enabled || !cal.syncFrequencyPerDay) {
+        clearTimeout(timeoutId);
+        timers.delete(calId);
+      }
+    });
+
+    calendars.forEach(calendar => {
+      if (!calendar.enabled || !calendar.syncFrequencyPerDay || calendar.syncFrequencyPerDay <= 0) return;
+      if (timers.has(calendar.id)) return; // already scheduled
+      const intervalHours = 24 / calendar.syncFrequencyPerDay;
+      const intervalMs = intervalHours * 60 * 60 * 1000;
+      const scheduleNext = () => {
+        const id = window.setTimeout(async () => {
+          try {
+            const latest = calendars.find(c => c.id === calendar.id);
+            if (latest && latest.enabled) {
+              await syncCalendar(latest);
+            }
+          } catch (e) {
+            console.warn('Notion auto-sync failed', calendar.id, e);
+          } finally {
+            timers.delete(calendar.id);
+            scheduleNext();
+          }
+        }, intervalMs);
+        timers.set(calendar.id, id);
+      };
+      // Spread initial load with jitter up to 10% of interval (max 5m)
+      const initialDelay = Math.min(intervalMs * 0.1, 5 * 60 * 1000) * Math.random();
+      const firstId = window.setTimeout(async () => {
+        try {
+          const latest = calendars.find(c => c.id === calendar.id);
+          if (latest && latest.enabled) {
+            await syncCalendar(latest);
+          }
+        } catch (e) {
+          console.warn('Initial Notion auto-sync failed', calendar.id, e);
+        } finally {
+          timers.delete(calendar.id);
+          scheduleNext();
+        }
+      }, initialDelay);
+      timers.set(calendar.id, firstId);
+    });
+  }, [calendars, syncCalendar]);
+
   return {
     calendars,
     events,

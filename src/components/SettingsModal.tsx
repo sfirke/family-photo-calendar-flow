@@ -21,11 +21,10 @@
  * - GitHub repository configuration for release checking
  */
 
-import React from 'react';
-import {
-  Dialog,
-  DialogContent,
-} from '@/components/ui/dialog';
+import React, { useCallback } from 'react';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { RefreshCw, X } from 'lucide-react';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { useSettings } from '@/contexts/settings/SettingsContext';
 import { useSettingsModal } from '@/hooks/useSettingsModal';
@@ -36,7 +35,6 @@ import PhotosTab from './settings/PhotosTab';
 import DisplayTab from './settings/DisplayTab';
 import WeatherTab from './settings/WeatherTab';
 import CalendarsTab from './settings/CalendarsTab';
-import UpdateTab from './settings/UpdateTab';
 
 interface SettingsModalProps {
   /** Controls modal visibility */
@@ -58,7 +56,7 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
     setDefaultView
   } = useSettings();
   
-  const { handleThemeChange } = useSettingsModal();
+  const { handleThemeChange, versionInfo } = useSettingsModal();
 
   /**
    * Handle theme changes and apply them immediately
@@ -69,11 +67,15 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
     handleThemeChange(newTheme);
   };
 
+  const handleRefreshApp = useCallback(() => {
+    window.location.reload();
+  }, []);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-full max-w-[95vw] sm:max-w-[90vw] md:max-w-4xl max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 p-0 fixed top-[5vh] left-[50%] translate-x-[-50%] translate-y-0">
-        <div className="p-4 sm:p-6">
-          <SettingsModalHeader />
+      <DialogContent className="w-full max-w-[95vw] sm:max-w-[90vw] md:max-w-4xl max-h-[90vh] overflow-hidden bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 p-0 fixed top-[5vh] left-[50%] translate-x-[-50%] translate-y-0 flex flex-col">
+  <div className="px-4 sm:px-6 pb-4 sm:pb-6 pt-0 overflow-y-auto flex-1">
+          <SettingsModalHeader onClose={() => onOpenChange(false)} />
 
           {/* Main tabbed interface - responsive grid layout */}
           <Tabs defaultValue="calendars" className="w-full mt-4 sm:mt-6">
@@ -105,10 +107,6 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
                 <WeatherTab />
               </TabsContent>
 
-              {/* App updates content */}
-              <TabsContent value="updates" className="space-y-4 mt-0">
-                <UpdateTab />
-              </TabsContent>
 
               {/* Security settings content */}
               <TabsContent value="security" className="space-y-4 mt-0">
@@ -116,6 +114,15 @@ const SettingsModal = ({ open, onOpenChange }: SettingsModalProps) => {
               </TabsContent>
             </div>
           </Tabs>
+        </div>
+        {/* Persistent Footer */}
+        <div className="border-t border-gray-200 dark:border-gray-700 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm px-4 sm:px-6 py-3 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+          <div className="text-xs text-gray-500 dark:text-gray-400">Changes are saved automatically.</div>
+          <div className="flex gap-2 justify-end">
+            <Button variant="outline" size="sm" onClick={handleRefreshApp}>
+              <RefreshCw className="h-4 w-4 mr-1" /> Refresh App
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
