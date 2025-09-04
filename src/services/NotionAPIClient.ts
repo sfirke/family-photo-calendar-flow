@@ -125,19 +125,76 @@ export class NotionAPIClient {
     return this.makeRequest(`/databases/${databaseId}`, token);
   }
 
-  async queryDatabase(databaseId: string, token: string, filter?: unknown): Promise<QueryDatabaseResponse> {
+  // Overload signatures for queryDatabase for ergonomic usage
+  async queryDatabase(databaseId: string, token: string, filter?: unknown): Promise<QueryDatabaseResponse>;
+  async queryDatabase(
+    databaseId: string,
+    token: string,
+    params: { filter?: unknown; start_cursor?: string; page_size?: number }
+  ): Promise<QueryDatabaseResponse>;
+  /**
+   * Implementation - accepts either a filter (legacy) or params object with pagination.
+   */
+  async queryDatabase(
+    databaseId: string,
+    token: string,
+    third?: unknown | { filter?: unknown; start_cursor?: string; page_size?: number }
+  ): Promise<QueryDatabaseResponse> {
+    const params = (third && typeof third === 'object' && !Array.isArray(third) && ('filter' in third || 'start_cursor' in third || 'page_size' in third))
+      ? (third as { filter?: unknown; start_cursor?: string; page_size?: number })
+      : { filter: third } as { filter?: unknown; start_cursor?: string; page_size?: number };
+
+    const { filter, start_cursor, page_size } = params;
     return this.makeRequest(`/databases/${databaseId}/query`, token, {
       method: 'POST',
       body: JSON.stringify({
         filter,
+        start_cursor,
+        page_size: page_size && page_size > 0 ? Math.min(page_size, 100) : undefined,
         sorts: [
           {
             property: 'Date',
-            direction: 'ascending'
-          }
-        ]
+            direction: 'ascending',
+          },
+        ],
       }),
     });
+  }
+
+  /**
+   * Fetches ALL pages from a database by following cursors until has_more is false.
+   * NOTE: Notion caps page_size at 100; we iterate to gather full result set.
+   *
+   * @param databaseId The target database id
+   * @param token User-supplied integration token
+   * @param filter Optional Notion filter object
+   * @param pageSize Optional page size (<=100). Defaults to 100 for efficiency.
+   * @returns Array of PageObjectResponse objects (flattened from all pages)
+   */
+  async queryAll(
+    databaseId: string,
+    token: string,
+    filter?: unknown,
+    pageSize: number = 100
+  ): Promise<PageObjectResponse[]> {
+    const all: PageObjectResponse[] = [];
+    let cursor: string | undefined = undefined;
+
+    do {
+      const res = await this.queryDatabase(databaseId, token, {
+        filter,
+        start_cursor: cursor,
+        page_size: pageSize,
+      });
+
+      // Append current batch
+      all.push(...(res.results as PageObjectResponse[]));
+
+      // Prepare for next loop
+      cursor = res.has_more ? (res.next_cursor as string | null) || undefined : undefined;
+    } while (cursor);
+
+    return all;
   }
 
   async getPage(pageId: string, token: string): Promise<PageObjectResponse> {

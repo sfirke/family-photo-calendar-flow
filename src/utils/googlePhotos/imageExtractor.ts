@@ -82,40 +82,54 @@ const isValidAlbumPhoto = (url: string, html: string): boolean => {
   // Check the HTML context where this URL appears
   const urlIndex = html.indexOf(url);
   if (urlIndex !== -1) {
-    // Get surrounding HTML context (500 chars before and after)
     const start = Math.max(0, urlIndex - 500);
     const end = Math.min(html.length, urlIndex + url.length + 500);
-    const context = html.substring(start, end).toLowerCase();
-    
-    // Check for profile-related HTML context
+    const context = html.substring(start, end);
+    const contextLower = context.toLowerCase();
+
+    // Extract the <img ...> tag containing this URL (best-effort)
+    const imgTagMatch = context.match(new RegExp(`<img[^>]*src=["']${url.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}[^>]*>`, 'i'));
+    const imgTag = imgTagMatch ? imgTagMatch[0] : '';
+
+    // Parse width/height attributes (treat very small images as profile/UI elements)
+    if (imgTag) {
+      const widthAttr = imgTag.match(/\bwidth=["']?(\d+)["']?/i);
+      const heightAttr = imgTag.match(/\bheight=["']?(\d+)["']?/i);
+      const styleMatch = imgTag.match(/style=["'][^"']*[; ]width:\s*(\d+)px[^"']*/i);
+      const styleHeightMatch = imgTag.match(/style=["'][^"']*[; ]height:\s*(\d+)px[^"']*/i);
+      const w = widthAttr ? parseInt(widthAttr[1]) : styleMatch ? parseInt(styleMatch[1]) : undefined;
+      const h = heightAttr ? parseInt(heightAttr[1]) : styleHeightMatch ? parseInt(styleHeightMatch[1]) : undefined;
+      if ((w !== undefined && w < 50) && (h !== undefined && h < 50)) {
+        return false; // treat tiny (<50px) images as profile/UI
+      }
+      // If title attribute exists, treat as profile/UI per new requirement
+      if (/\btitle=\s*['"][^'"]+['"]/i.test(imgTag)) {
+        return false;
+      }
+    }
+
+    // Profile-related textual context
     const profileContextPatterns = [
       'data-profile', 'profile-photo', 'user-avatar', 'owner-photo',
       'header-avatar', 'account-photo', 'member-photo', 'contributor',
       'aria-label="profile"', 'class="profile', 'id="profile',
-      'data-testid="profile', 'role="img".*profile', 'alt="profile',
+      'data-testid="profile', 'role="img"', 'alt="profile',
       'profile-image', 'profile-pic', 'user-photo', 'avatar-image',
       'circular', 'round-image', 'face-crop', 'initials',
       'letter-avatar', 'monogram', 'user-initial', 'profile-circle',
       'account-avatar', 'user-badge', 'profile-badge'
     ];
-    
     for (const contextPattern of profileContextPatterns) {
-      if (context.includes(contextPattern)) {
-        return false;
-      }
+      if (contextLower.includes(contextPattern)) return false;
     }
-    
-    // Additional check: if URL appears in header section or navigation
+
+    // Header / nav area
     const headerSectionPatterns = [
       '<header', '</header>', 'class="header', 'id="header',
       'class="nav', 'id="nav', 'class="toolbar', 'class="topbar'
     ];
-    
     for (const headerPattern of headerSectionPatterns) {
-      const headerIndex = context.indexOf(headerPattern);
-      if (headerIndex !== -1 && Math.abs(headerIndex - 250) < 200) { // Within 200 chars of our URL position in context
-        return false;
-      }
+      if (contextLower.includes(headerPattern)) return false;
     }
   }
   
@@ -134,14 +148,9 @@ const isValidAlbumPhoto = (url: string, html: string): boolean => {
   if (squareDimensionMatch) {
     const width = parseInt(squareDimensionMatch[1]);
     const height = parseInt(squareDimensionMatch[2]);
-    // Square images under 400px are likely profile photos
-    if (width === height && width < 400) {
-      return false;
-    }
-    // Very small rectangular images are also likely profile elements
-    if (width < 300 || height < 300) {
-      return false;
-    }
+    // Treat only very small (<50px) images as profile/UI (per updated requirement)
+    if (width === height && width < 50) return false;
+    if (width < 50 || height < 50) return false;
   }
   
   // Check for metadata, thumbnail, and profile photo indicators in the URL
