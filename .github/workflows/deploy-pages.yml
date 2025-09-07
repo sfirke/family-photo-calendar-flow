@@ -4,6 +4,14 @@ on:
   push:
     branches: [ main ]
   workflow_dispatch: {}
+  workflow_call: {}
+  # Also run when the Auto Release workflow completes successfully. This covers
+  # the case where the auto-release job creates a commit (with a token) that
+  # otherwise wouldn't trigger subsequent workflows.
+  workflow_run:
+    workflows: ["Auto Release"]
+    types:
+      - completed
 
 # Allow one concurrent deployment
 concurrency:
@@ -18,6 +26,10 @@ permissions:
 jobs:
   build:
     name: Build site
+    # Only run the build job on a direct push to main, or when the Auto Release
+    # workflow completes successfully. This avoids rerunning for failed
+    # auto-release executions.
+    if: "${{ github.event_name == 'push' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') }}"
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
