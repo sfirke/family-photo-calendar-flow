@@ -14,9 +14,12 @@ jobs:
   auto-release:
     name: Auto Release
     runs-on: ubuntu-latest
+    outputs:
+      skip: ${{ steps.check-release.outputs.skip }}
+      version: ${{ steps.set-version.outputs.new_version }}
     permissions:
       contents: write
-    if: "!contains(github.event.head_commit.message, '[skip-release]') && !contains(github.event.head_commit.message, 'chore(release)')"
+    if: "${{ !contains(github.event.head_commit.message, '[skip-release]') && !contains(github.event.head_commit.message, 'chore(release)') }}"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -88,6 +91,7 @@ jobs:
           git config --local user.name "GitHub Action"
 
       - name: Bump version and create release
+        id: set-version
         if: steps.check-release.outputs.skip == 'false'
         run: |
           # Get current version from package.json
@@ -187,6 +191,7 @@ jobs:
           echo "- $COMMIT_MSG" >> RELEASE_NOTES.md
           
           echo "version=$NEW_VERSION" >> $GITHUB_ENV
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
 
       - name: Create GitHub Release
         if: steps.check-release.outputs.skip == 'false'
@@ -194,8 +199,20 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: "v${{ env.version }}"
-          release_name: "Auto Release v${{ env.version }}"
+          tag_name: "v${{ steps.set-version.outputs.new_version }}"
+          release_name: "Auto Release v${{ steps.set-version.outputs.new_version }}"
           body_path: RELEASE_NOTES.md
           draft: false
           prerelease: false
+
+  # Top-level job: invoke the deploy workflow as a reusable workflow
+  deploy-pages-bridge:
+    name: Invoke Deploy Pages
+    needs: auto-release
+    uses: ./.github/workflows/deploy-pages.yml
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    if: ${{ needs.auto-release.result == 'success' && needs.auto-release.outputs.skip == 'false' }}
+    secrets: inherit

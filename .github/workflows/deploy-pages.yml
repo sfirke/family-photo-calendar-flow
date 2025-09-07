@@ -4,6 +4,7 @@ on:
   push:
     branches: [ main ]
   workflow_dispatch: {}
+  workflow_call: {}
   # Also run when the Auto Release workflow completes successfully. This covers
   # the case where the auto-release job creates a commit (with a token) that
   # otherwise wouldn't trigger subsequent workflows.
